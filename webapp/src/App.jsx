@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useKeyboardViewport } from './hooks/useKeyboardViewport';
 import { initI18n, getLanguage } from './i18n';
 import TabBar from './components/Layout/TabBar';
 import CartSheet from './components/Cart/CartSheet';
@@ -27,9 +28,23 @@ function App() {
     loadLanguage()
   }, [])
 
+  // Инициализация Telegram WebApp
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+
+      tg.setHeaderColor('#0A0A0A');
+      tg.setBackgroundColor('#0A0A0A');
+    }
+  }, []);
+
+  // Keyboard viewport management
+  useKeyboardViewport();
+
   useEffect(() => {
     if (isReady && user) {
-      // Сохраняем пользователя в store
       useStore.getState().setUser(user);
     }
   }, [isReady, user]);
@@ -76,8 +91,10 @@ function App() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden">
-      {/* Fixed background gradient - никогда не двигается */}
+    <div
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ height: 'var(--vh-dynamic)' }}
+    >
       <div
         className="fixed inset-0 z-0"
         style={{
@@ -85,7 +102,6 @@ function App() {
         }}
       />
 
-      {/* Subtle orange glow - barely visible, fixed */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
@@ -94,7 +110,6 @@ function App() {
         }}
       />
 
-      {/* WebSocket connection indicator (dev mode only) */}
       {import.meta.env.DEV && (
         <div className="fixed top-2 right-2 z-50">
           <div
@@ -109,14 +124,12 @@ function App() {
         </div>
       )}
 
-      {/* Scrollable content area - только контент скроллится */}
       <div className="scroll-container relative z-10 flex-1">
         <AnimatePresence mode="wait">
           {renderPage()}
         </AnimatePresence>
       </div>
 
-      {/* Fixed components at bottom - всегда видны */}
       <div className="relative z-20">
         <TabBar />
         <CartSheet />

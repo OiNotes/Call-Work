@@ -8,7 +8,7 @@ exports[`Main Menu - WebApp Button Position (P0) buyer menu: exactly 1 WebApp bu
         "hide": false,
         "text": "📱 Открыть Menu",
         "web_app": {
-          "url": "https://9ebdd4ac652a.ngrok-free.app",
+          "url": "https://07c37f27b37f.ngrok-free.app",
         },
       },
     ],
@@ -78,7 +78,7 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu without shop: exact
         "hide": false,
         "text": "📱 Открыть Menu",
         "web_app": {
-          "url": "https://9ebdd4ac652a.ngrok-free.app",
+          "url": "https://07c37f27b37f.ngrok-free.app",
         },
       },
     ],
@@ -129,7 +129,7 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu: exactly 1 WebApp b
         "hide": false,
         "text": "📱 Открыть Menu",
         "web_app": {
-          "url": "https://9ebdd4ac652a.ngrok-free.app",
+          "url": "https://07c37f27b37f.ngrok-free.app",
         },
       },
     ],
