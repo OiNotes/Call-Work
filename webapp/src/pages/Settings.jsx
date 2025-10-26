@@ -158,9 +158,19 @@ export default function Settings() {
             animate={{ opacity: 1, y: 0 }}
           >
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-orange-primary flex items-center justify-center text-white text-2xl font-bold">
-                {user.first_name?.[0] || 'U'}
-              </div>
+              {user.photo_url ? (
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-dark-elevated">
+                  <img
+                    src={user.photo_url}
+                    alt={user.first_name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-orange-primary flex items-center justify-center text-white text-2xl font-bold">
+                  {user.first_name?.[0] || 'U'}
+                </div>
+              )}
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-white mb-1">
                   {user.first_name} {user.last_name}

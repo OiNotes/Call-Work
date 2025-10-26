@@ -35,6 +35,14 @@ export default function Catalog() {
     }
   }, [currentShop, myShop]);
 
+  // Автоматически установить myShop как displayShop при первой загрузке
+  useEffect(() => {
+    if (myShop && !currentShop) {
+      // Товары автоматически загрузятся через предыдущий useEffect
+      console.log('Auto-loading my shop products:', myShop.name);
+    }
+  }, [myShop, currentShop]);
+
   const loadMyShop = async () => {
     try {
       const { data, error: apiError } = await get('/shops/my');
@@ -99,30 +107,6 @@ export default function Catalog() {
   const displayShopLogo = displayShop?.logo || displayShop?.image || null;
   const isViewingOwnShop = !currentShop && myShop;
   const isViewingSubscription = currentShop && myShop && currentShop.id !== myShop.id;
-
-  // Если нет ни currentShop, ни myShop - пустой экран
-  if (!displayShop) {
-    return (
-      <div
-        className="pb-24"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
-      >
-        <Header title={t('catalog.title')} />
-
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-          <svg className="w-20 h-20 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-          <h3 className="text-xl font-bold text-white mb-2">
-            {t('catalog.selectShop')}
-          </h3>
-          <p className="text-gray-400 mb-6">
-            {t('catalog.selectShopDesc')}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

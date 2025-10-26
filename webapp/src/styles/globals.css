@@ -74,22 +74,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom scrollbar */
+/* Hide scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #0A0A0A;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #FF6B00;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #FF8533;
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Smooth scroll */

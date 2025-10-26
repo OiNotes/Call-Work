@@ -20,10 +20,7 @@ export default function PageHeader({ title, onBack, action }) {
     <div
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        background: 'rgba(10, 10, 10, 0.95)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+        paddingTop: 'env(safe-area-inset-top)'
       }}
     >
       <div
@@ -34,12 +31,10 @@ export default function PageHeader({ title, onBack, action }) {
         {onBack ? (
           <motion.button
             onClick={handleBack}
-            className="flex items-center justify-center rounded-xl text-white"
+            className="flex items-center justify-center text-orange-primary"
             style={{
               width: '40px',
-              height: '40px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)'
+              height: '40px'
             }}
             whileTap={{ scale: 0.9 }}
           >

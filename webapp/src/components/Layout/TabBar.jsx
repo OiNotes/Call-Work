@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useKeyboardVisibility } from '../../hooks/useKeyboardVisibility';
 
 const getTabsConfig = (t) => [
   {
@@ -38,6 +39,7 @@ export default function TabBar() {
   const { activeTab, setActiveTab } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const keyboardVisible = useKeyboardVisibility();
 
   const tabs = getTabsConfig(t);
 
@@ -47,7 +49,14 @@ export default function TabBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+    <motion.div
+      className="fixed bottom-0 left-0 right-0 z-50 pb-safe"
+      animate={{
+        y: keyboardVisible ? 0 : 0,
+        opacity: keyboardVisible ? 0.5 : 1
+      }}
+      transition={{ duration: 0.2 }}
+    >
       <div
         className="rounded-t-3xl"
         style={{
@@ -110,6 +119,6 @@ export default function TabBar() {
           })}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
