@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -60,6 +60,19 @@ function App() {
       useStore.getState().setUser(user);
     }
   }, [isReady, user]);
+
+  // Page transition variants
+  const pageVariants = {
+    initial: { opacity: 0, x: -20 },
+    enter: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 20 }
+  };
+
+  const pageTransition = {
+    type: "spring",
+    stiffness: 380,
+    damping: 30
+  };
 
   const renderPage = () => {
     switch (activeTab) {
@@ -139,7 +152,16 @@ function App() {
       <div className="scroll-container relative z-10 flex-1">
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
-            {renderPage()}
+            <motion.div
+              key={activeTab}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+              variants={pageVariants}
+              transition={pageTransition}
+            >
+              {renderPage()}
+            </motion.div>
           </AnimatePresence>
         </Suspense>
       </div>

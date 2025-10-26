@@ -117,13 +117,53 @@ export default function CartSheet() {
               {/* Cart Items */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <h3 className="text-lg font-semibold text-gray-400 mb-2">{t('cart.empty')}</h3>
-                    <p className="text-sm text-gray-500">{t('cart.emptyDesc')}</p>
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center py-20"
+                  >
+                    {/* Animated cart icon */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: [0, -10, 10, 0]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatDelay: 1
+                      }}
+                      className="text-6xl mb-4"
+                    >
+                      🛒
+                    </motion.div>
+
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      {t('cart.empty')}
+                    </h3>
+                    <p className="text-gray-400 text-sm mb-6 text-center px-8">
+                      {t('cart.emptyDesc')}
+                    </p>
+
+                    {/* CTA Button */}
+                    <motion.button
+                      onClick={() => {
+                        setCartOpen(false);
+                        // User will naturally navigate to catalog via TabBar
+                      }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 rounded-xl font-semibold text-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)',
+                        boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3)',
+                        letterSpacing: '-0.01em'
+                      }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    >
+                      Browse Catalog
+                    </motion.button>
+                  </motion.div>
                 ) : (
                   <AnimatePresence>
                     {cart.map((item) => (
@@ -165,8 +205,20 @@ export default function CartSheet() {
                       `,
                       letterSpacing: '-0.01em'
                     }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileHover={{ 
+                      scale: 1.01, 
+                      boxShadow: '0 4px 8px rgba(255, 107, 0, 0.3), 0 8px 20px rgba(255, 107, 0, 0.25), 0 0 40px rgba(255, 107, 0, 0.2)'
+                    }}
+                    whileTap={{ 
+                      scale: 0.98,
+                      boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+                    }}
+                    transition={{ 
+                      type: 'spring', 
+                      stiffness: 400, 
+                      damping: 30,
+                      boxShadow: { duration: 0.2 }
+                    }}
                   >
                     {t('cart.checkout')}
                   </motion.button>

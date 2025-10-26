@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, memo } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useStore } from '../../store/useStore';
@@ -7,6 +7,7 @@ const ProductCard = memo(function ProductCard({ product }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
   const [isHovered, setIsHovered] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   const isAvailable = product.isAvailable ?? product.is_available ?? true;
   const stock = product.stock ?? product.stock_quantity ?? 0;
@@ -15,8 +16,12 @@ const ProductCard = memo(function ProductCard({ product }) {
   const handleAddToCart = (e) => {
     e.stopPropagation();
     if (isDisabled) return;
-    triggerHaptic('medium');
+    triggerHaptic('success');
     addToCart(product);
+
+    // Show "Added to Cart" confirmation
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
   };
 
   return (
@@ -51,6 +56,50 @@ const ProductCard = memo(function ProductCard({ product }) {
         }}
       />
 
+      {/* Stock Badge - только когда stock <= 5 и > 0 */}
+      {stock <= 5 && stock > 0 && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold z-10"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.9))',
+            boxShadow: '0 2px 8px rgba(255, 193, 7, 0.3)',
+            color: '#000',
+            fontWeight: 600,
+            letterSpacing: '0.01em'
+          }}
+        >
+          Only {stock} left
+        </motion.div>
+      )}
+
+      {/* "Added to Cart" Confirmation Animation */}
+      <AnimatePresence>
+        {justAdded && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center rounded-3xl z-20"
+            style={{
+              background: 'rgba(0, 0, 0, 0.7)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 15 }}
+              className="text-5xl"
+            >
+              ✓
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="relative p-5 h-full flex flex-col justify-between">
         {/* Product Name */}
         <h3
@@ -83,9 +132,27 @@ const ProductCard = memo(function ProductCard({ product }) {
           <motion.button
             onClick={handleAddToCart}
             disabled={isDisabled}
-            whileTap={{ scale: 0.92 }}
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            whileHover={{
+              y: -2,
+              scale: 1.05,
+              boxShadow: `
+                1px 2px 2px hsl(0deg 0% 0% / 0.4),
+                4px 8px 8px hsl(0deg 0% 0% / 0.4),
+                8px 16px 16px hsl(0deg 0% 0% / 0.3),
+                0 0 40px rgba(255, 107, 0, 0.15)
+              `
+            }}
+            whileTap={{ 
+              scale: 0.98, 
+              y: 0,
+              boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 400, 
+              damping: 25,
+              boxShadow: { duration: 0.2 }
+            }}
             className="relative w-11 h-11 rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
               background: isDisabled
@@ -100,7 +167,7 @@ const ProductCard = memo(function ProductCard({ product }) {
                 `
             }}
           >
-            {/* Shine effect on hover */}
+            {/* Shimmer effect (keep existing) */}
             {isDisabled ? null : (
               <motion.div
                 className="absolute inset-0"
