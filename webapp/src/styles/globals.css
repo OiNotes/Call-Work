@@ -172,7 +172,6 @@ input, textarea {
   bottom: var(--safe-bottom);
   height: var(--tabbar-h);
   z-index: 50;
-  transition: opacity 0.16s ease-out;
 }
 
 .scroll-container {
@@ -181,7 +180,7 @@ input, textarea {
 
 /* Keyboard Viewport Management */
 html.kb-open .tabbar {
-  display: none;
+  display: none !important;
 }
 
 html.kb-open .scroll-container {

@@ -1,7 +1,6 @@
 ---
 name: design-researcher
 description: Use PROACTIVELY for researching design trends, UI/UX patterns, and visual inspiration. MUST BE USED when design decisions are needed.
-tools: WebSearch, WebFetch
 model: inherit
 ---
 

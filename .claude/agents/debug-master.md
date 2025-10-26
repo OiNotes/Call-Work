@@ -1,7 +1,6 @@
 ---
 name: debug-master
 description: Use PROACTIVELY when there are ANY errors, crashes, or bugs in backend, bot, or webapp. MUST BE USED for debugging and fixing issues automatically across the entire project.
-tools: Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: backend-architect
 description: Use PROACTIVELY for backend architecture, API design, and database schema. Expert in Node.js, Express, PostgreSQL.
-tools: Write, Read, Edit, Glob, Grep
 model: inherit
 ---
 

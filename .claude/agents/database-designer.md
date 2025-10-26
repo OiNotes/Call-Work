@@ -1,7 +1,6 @@
 ---
 name: database-designer
 description: Use PROACTIVELY for PostgreSQL schema design, migrations, and optimization.
-tools: Write, Read, Edit
 model: inherit
 ---
 

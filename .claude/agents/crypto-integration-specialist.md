@@ -1,7 +1,6 @@
 ---
 name: crypto-integration-specialist
 description: Use when implementing cryptocurrency payment verification. Expert in Bitcoin, Ethereum, USDT APIs.
-tools: WebSearch, Write, Read, Edit
 model: inherit
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: telegram-bot-expert
 description: Use PROACTIVELY for Telegram bot development with Telegraf.js. Expert in bot UI/UX and Telegram API.
-tools: Write, Read, Edit, Glob, Grep
 model: inherit
 ---
 
