@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTelegram } from './useTelegram';
 
 /**
@@ -21,16 +21,22 @@ import { useTelegram } from './useTelegram';
  */
 export function useBackButton(onBack) {
   const { tg } = useTelegram();
+  const onBackRef = useRef(onBack);
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
 
   useEffect(() => {
     if (!tg) return;
 
-    if (typeof onBack !== 'function') {
+    if (typeof onBackRef.current !== 'function') {
       tg.BackButton.hide();
       return undefined;
     }
 
-    const handler = () => onBack();
+    const handler = () => onBackRef.current?.();
 
     tg.BackButton.show();
     tg.BackButton.onClick(handler);
@@ -39,5 +45,5 @@ export function useBackButton(onBack) {
       tg.BackButton.offClick(handler);
       tg.BackButton.hide();
     };
-  }, [tg, onBack]);
+  }, [tg]); // Only tg in dependencies - prevents jitter
 }

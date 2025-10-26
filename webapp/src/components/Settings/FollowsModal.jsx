@@ -533,9 +533,6 @@ export default function FollowsModal({ isOpen, onClose }) {
             <p className="text-gray-400 text-sm mb-4">
               Используйте бота для подписки на магазины
             </p>
-            <p className="text-xs text-gray-500">
-              Команда: /search_shop
-            </p>
           </div>
         )}
             </div>

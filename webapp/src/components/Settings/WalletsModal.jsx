@@ -89,57 +89,84 @@ export default function WalletsModal({ isOpen, onClose }) {
   const { triggerHaptic, alert } = useTelegram();
   const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
-  const [address, setAddress] = useState('');
-  const [detectedType, setDetectedType] = useState(null);
-  const [isValid, setIsValid] = useState(false);
+  const [btcAddress, setBtcAddress] = useState('');
+  const [ethAddress, setEthAddress] = useState('');
+  const [usdtAddress, setUsdtAddress] = useState('');
+  const [ltcAddress, setLtcAddress] = useState('');
+
+  // Validation helpers
+  const isValidBTC = (addr) => WALLET_PATTERNS.BTC.test(addr);
+  const isValidLTC = (addr) => WALLET_PATTERNS.LTC.test(addr);
+  const isValidETH = (addr) => WALLET_PATTERNS.ETH.test(addr);
+  const hasValidAddress = (btcAddress && isValidBTC(btcAddress)) || 
+                          (ethAddress && isValidETH(ethAddress)) ||
+                          (usdtAddress && isValidETH(usdtAddress)) ||
+                          (ltcAddress && isValidLTC(ltcAddress));
 
   const handleClose = useCallback(() => {
     setShowForm(false);
-    setAddress('');
-    setDetectedType(null);
-    setIsValid(false);
+    setBtcAddress('');
+    setEthAddress('');
+    setUsdtAddress('');
+    setLtcAddress('');
     onClose();
   }, [onClose]);
 
   useBackButton(isOpen ? handleClose : null);
 
-  const handleAddressChange = (e) => {
-    const value = e.target.value.trim();
-    setAddress(value);
-
-    if (value) {
-      const type = detectWalletType(value);
-      setDetectedType(type);
-      setIsValid(!!type);
-    } else {
-      setDetectedType(null);
-      setIsValid(false);
-    }
+  const handleCancelForm = () => {
+    triggerHaptic('light');
+    setShowForm(false);
+    setBtcAddress('');
+    setEthAddress('');
+    setUsdtAddress('');
+    setLtcAddress('');
   };
 
-  const handleAddWallet = async () => {
-    if (!isValid || !detectedType) {
-      await alert(t('wallet.invalid'));
+  const handleSaveWallets = async () => {
+    if (!hasValidAddress) {
+      await alert('Введите хотя бы один валидный адрес');
       return;
     }
 
-    // Проверка на дубликат
-    const exists = wallets.some(w => w.address === address);
-    if (exists) {
-      await alert(t('wallet.exists'));
+    const walletsToAdd = [];
+
+    if (btcAddress && isValidBTC(btcAddress)) {
+      if (!wallets.some(w => w.address === btcAddress)) {
+        walletsToAdd.push({ address: btcAddress, type: 'BTC', addedAt: new Date().toISOString() });
+      }
+    }
+
+    if (ethAddress && isValidETH(ethAddress)) {
+      if (!wallets.some(w => w.address === ethAddress)) {
+        walletsToAdd.push({ address: ethAddress, type: 'ETH', addedAt: new Date().toISOString() });
+      }
+    }
+
+    if (usdtAddress && isValidETH(usdtAddress)) {
+      if (!wallets.some(w => w.address === usdtAddress)) {
+        walletsToAdd.push({ address: usdtAddress, type: 'USDT', addedAt: new Date().toISOString() });
+      }
+    }
+
+    if (ltcAddress && isValidLTC(ltcAddress)) {
+      if (!wallets.some(w => w.address === ltcAddress)) {
+        walletsToAdd.push({ address: ltcAddress, type: 'LTC', addedAt: new Date().toISOString() });
+      }
+    }
+
+    if (walletsToAdd.length === 0) {
+      await alert('Все адреса уже добавлены');
       return;
     }
 
     triggerHaptic('success');
-    addWallet({
-      address,
-      type: detectedType,
-      addedAt: new Date().toISOString()
-    });
+    walletsToAdd.forEach(wallet => addWallet(wallet));
 
-    setAddress('');
-    setDetectedType(null);
-    setIsValid(false);
+    setBtcAddress('');
+    setEthAddress('');
+    setUsdtAddress('');
+    setLtcAddress('');
     setShowForm(false);
   };
 
@@ -181,55 +208,79 @@ export default function WalletsModal({ isOpen, onClose }) {
         <AnimatePresence>
           {showForm && (
             <motion.div
-              className="glass-card rounded-2xl p-4 space-y-3"
+              className="glass-card rounded-2xl p-4 space-y-4"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
             >
+              {/* BTC Input */}
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">
-                  {t('wallet.addressLabel')}
-                </label>
+                <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
                 <input
                   type="text"
-                  value={address}
-                  onChange={handleAddressChange}
-                  placeholder={t('wallet.placeholder')}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary transition-colors"
+                  value={btcAddress}
+                  onChange={(e) => setBtcAddress(e.target.value)}
+                  placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                 />
+                {btcAddress && (isValidBTC(btcAddress) ? 
+                  <span className="text-green-500 text-sm">✓ Valid BTC</span> :
+                  <span className="text-red-500 text-sm">⚠️ Invalid BTC</span>
+                )}
               </div>
 
-              {/* Индикатор типа */}
-              {address && (
-                <div className="flex items-center gap-2">
-                  {isValid ? (
-                    <>
-                      <span className="text-green-500 text-xl">✓</span>
-                      <span className="text-green-500 text-sm font-semibold">
-                        {detectedType}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-red-500 text-xl">⚠️</span>
-                      <span className="text-red-500 text-sm">
-                        {t('wallet.invalid')}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+              {/* ETH Input */}
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
+                <input
+                  type="text"
+                  value={ethAddress}
+                  onChange={(e) => setEthAddress(e.target.value)}
+                  placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                />
+                {ethAddress && (isValidETH(ethAddress) ? 
+                  <span className="text-green-500 text-sm">✓ Valid ETH</span> :
+                  <span className="text-red-500 text-sm">⚠️ Invalid ETH</span>
+                )}
+              </div>
 
-              {/* Кнопки действий */}
+              {/* USDT Input */}
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
+                <input
+                  type="text"
+                  value={usdtAddress}
+                  onChange={(e) => setUsdtAddress(e.target.value)}
+                  placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                />
+                {usdtAddress && (isValidETH(usdtAddress) ? 
+                  <span className="text-green-500 text-sm">✓ Valid USDT</span> :
+                  <span className="text-red-500 text-sm">⚠️ Invalid USDT</span>
+                )}
+              </div>
+
+              {/* LTC Input */}
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
+                <input
+                  type="text"
+                  value={ltcAddress}
+                  onChange={(e) => setLtcAddress(e.target.value)}
+                  placeholder="LQTpS7vVUqFcCW8vJhEJhd8wNEZ3WCqkEu"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                />
+                {ltcAddress && (isValidLTC(ltcAddress) ? 
+                  <span className="text-green-500 text-sm">✓ Valid LTC</span> :
+                  <span className="text-red-500 text-sm">⚠️ Invalid LTC</span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
                 <motion.button
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setShowForm(false);
-                    setAddress('');
-                    setDetectedType(null);
-                    setIsValid(false);
-                  }}
+                  onClick={handleCancelForm}
                   className="flex-1 h-11 rounded-xl font-medium text-gray-300"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
@@ -237,20 +288,20 @@ export default function WalletsModal({ isOpen, onClose }) {
                   }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {t('common.cancel')}
+                  Отмена
                 </motion.button>
                 <motion.button
-                  onClick={handleAddWallet}
-                  disabled={!isValid}
+                  onClick={handleSaveWallets}
+                  disabled={!hasValidAddress}
                   className="flex-1 h-11 rounded-xl font-semibold text-white disabled:opacity-50"
                   style={{
-                    background: isValid
+                    background: hasValidAddress
                       ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
                       : 'rgba(255, 255, 255, 0.1)'
                   }}
-                  whileTap={isValid ? { scale: 0.98 } : {}}
+                  whileTap={hasValidAddress ? { scale: 0.98 } : {}}
                 >
-                  {t('common.add')}
+                  Сохранить
                 </motion.button>
               </div>
             </motion.div>

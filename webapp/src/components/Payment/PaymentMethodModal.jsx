@@ -43,7 +43,7 @@ export default function PaymentMethodModal() {
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 max-h-[92vh] flex flex-col"
             initial={{ y: '100%' }}
-            animate={{ y: 0 }}
+            animate={{ y: '-8vh' }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
           >

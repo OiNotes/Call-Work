@@ -82,7 +82,7 @@ export default function PaymentDetailsModal() {
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
             initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            animate={{ y: '-10vh', opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
           >

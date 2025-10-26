@@ -242,11 +242,6 @@ export default function Settings() {
             </motion.div>
           ))}
         </div>
-
-        {/* App Version */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-500">{t('settings.version')} 1.0.0</p>
-        </div>
       </div>
 
       {/* Modals - wrapped in Suspense for lazy loading */}

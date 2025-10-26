@@ -232,7 +232,7 @@ export default function SubscriptionModal({ isOpen, onClose }) {
         >
           <PageHeader title="Подписка" onBack={handleClose} />
           <div
-            className="min-h-screen pb-24"
+            className="h-screen pb-24 overflow-y-auto"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
           >
             <div className="px-4 py-6 space-y-6">
