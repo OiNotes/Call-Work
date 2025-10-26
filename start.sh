@@ -134,27 +134,20 @@ fi
 echo ""
 
 #############################################
-# Step 5: Start Backend (includes Bot)
+# Step 5: Start Backend
 #############################################
-echo -e "${YELLOW}[5/6]${NC} Starting Backend + Bot..."
+echo -e "${YELLOW}[5/6]${NC} Starting Backend..."
 
 cd "$PROJECT_ROOT/backend"
 npm run dev > "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
-echo "  └─ Waiting for services to initialize..."
-sleep 8
+echo "  └─ Waiting for backend to initialize..."
+sleep 5
 
 # Check if backend started successfully
 if lsof -ti:3000 >/dev/null 2>&1; then
   echo -e "  ${GREEN}✓${NC} Backend running on port 3000"
-
-  # Check logs for bot startup
-  if grep -q "Bot started successfully" "$LOG_DIR/backend.log" 2>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} Telegram Bot started"
-  else
-    echo -e "  ${YELLOW}!${NC} Bot may not have started - check logs"
-  fi
 else
   echo -e "  ${RED}✗${NC} Backend failed to start"
   echo -e "  ${YELLOW}!${NC} Check logs: ${BLUE}tail -f $LOG_DIR/backend.log${NC}"
@@ -164,9 +157,30 @@ fi
 echo ""
 
 #############################################
-# Step 6: Summary
+# Step 6: Start Telegram Bot
 #############################################
-echo -e "${YELLOW}[6/6]${NC} Startup complete!"
+echo -e "${YELLOW}[6/7]${NC} Starting Telegram Bot..."
+
+cd "$PROJECT_ROOT/bot"
+npm start > "$LOG_DIR/bot.log" 2>&1 &
+BOT_PID=$!
+
+echo "  └─ Waiting for bot to initialize..."
+sleep 3
+
+# Check logs for bot startup
+if grep -q "Bot started successfully" "$LOG_DIR/bot.log" 2>/dev/null; then
+  echo -e "  ${GREEN}✓${NC} Telegram Bot started"
+else
+  echo -e "  ${YELLOW}!${NC} Bot may not have started - check logs"
+fi
+
+echo ""
+
+#############################################
+# Step 7: Summary
+#############################################
+echo -e "${YELLOW}[7/7]${NC} Startup complete!"
 echo ""
 echo -e "${BLUE}╔════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║                   🎉 READY!                        ║${NC}"
@@ -180,12 +194,14 @@ echo -e "  └─ ngrok Dashboard: ${BLUE}http://localhost:4040${NC}"
 echo ""
 echo -e "${GREEN}Logs:${NC}"
 echo -e "  ├─ Backend: ${BLUE}tail -f $LOG_DIR/backend.log${NC}"
+echo -e "  ├─ Bot:     ${BLUE}tail -f $LOG_DIR/bot.log${NC}"
 echo -e "  ├─ Webapp:  ${BLUE}cat $LOG_DIR/webapp-build.log${NC}"
 echo -e "  └─ ngrok:   ${BLUE}tail -f $LOG_DIR/ngrok.log${NC}"
 echo ""
 echo -e "${GREEN}Process IDs:${NC}"
 echo -e "  ├─ ngrok:   ${BLUE}$NGROK_PID${NC}"
-echo -e "  └─ Backend: ${BLUE}$BACKEND_PID${NC}"
+echo -e "  ├─ Backend: ${BLUE}$BACKEND_PID${NC}"
+echo -e "  └─ Bot:     ${BLUE}$BOT_PID${NC}"
 echo ""
 echo -e "${YELLOW}To stop all services:${NC}"
 echo -e "  ${BLUE}./stop.sh${NC} or ${BLUE}lsof -ti:3000 | xargs kill -9 && pkill ngrok${NC}"

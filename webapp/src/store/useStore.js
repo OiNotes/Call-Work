@@ -3,6 +3,17 @@ import axios from 'axios';
 import { mockShops, mockProducts, mockSubscriptions, mockUser } from '../utils/mockData';
 import { generateWalletAddress, generateOrderId } from '../utils/paymentUtils';
 
+const normalizeProduct = (product) => ({
+  ...product,
+  price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+  stock: product.stock_quantity ?? product.stock ?? 0,
+  stock_quantity: product.stock_quantity ?? product.stock ?? 0,
+  is_available: product.is_available ?? product.isActive ?? true,
+  isAvailable: product.is_available ?? product.isActive ?? true,
+  currency: product.currency || 'USD',
+  image: product.image || product.images?.[0] || null,
+});
+
 export const useStore = create((set, get) => ({
       // User data
       user: mockUser,
@@ -73,8 +84,9 @@ export const useStore = create((set, get) => ({
       setShops: (shops) => set({ shops }),
 
       // Products
-      products: mockProducts,
-      setProducts: (products) => set({ products }),
+      products: mockProducts.map(normalizeProduct),
+      productsShopId: null,
+      setProducts: (products, shopId = null) => set({ products, productsShopId: shopId }),
 
       // Current shop
       currentShop: null,
@@ -185,16 +197,17 @@ export const useStore = create((set, get) => ({
       refetchProducts: async (shopId) => {
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-          const response = await axios.get(`${API_URL}/products?shop_id=${shopId}`);
+          const response = await axios.get(`${API_URL}/products`, {
+            params: { shopId }
+          });
 
-          if (response.data.success) {
-            set((state) => ({
-              products: state.products.map(p =>
-                p.shop_id === shopId
-                  ? response.data.data.find(np => np.id === p.id) || p
-                  : p
-              )
-            }));
+          const payload = Array.isArray(response.data?.data) ? response.data.data : [];
+          const normalized = payload.map(normalizeProduct);
+          const { currentShop, productsShopId } = get();
+          const shouldUpdate = currentShop?.id === shopId || productsShopId === shopId;
+
+          if (shouldUpdate) {
+            set({ products: normalized, productsShopId: shopId });
           }
         } catch (error) {
           console.error('Failed to refetch products:', error);

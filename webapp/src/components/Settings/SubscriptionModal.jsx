@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useApi } from '../../hooks/useApi';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // Plan Card Component
 function PlanCard({ plan, planName, isActive, onUpgrade, canUpgrade }) {
@@ -127,6 +128,12 @@ export default function SubscriptionModal({ isOpen, onClose }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
+
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -166,10 +173,6 @@ export default function SubscriptionModal({ isOpen, onClose }) {
     // TODO: Deep link to bot upgrade flow
   };
 
-  const handleClose = () => {
-    onClose();
-  };
-
   // No shop - show empty state
   if (!loading && !myShop) {
     return (
@@ -183,7 +186,10 @@ export default function SubscriptionModal({ isOpen, onClose }) {
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             <PageHeader title="Подписка" onBack={handleClose} />
-            <div className="min-h-screen pb-24 pt-20">
+            <div
+              className="min-h-screen pb-24"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            >
               <div className="px-4 py-6">
                 <div className="text-center py-12">
                   <svg
@@ -225,7 +231,10 @@ export default function SubscriptionModal({ isOpen, onClose }) {
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
           <PageHeader title="Подписка" onBack={handleClose} />
-          <div className="min-h-screen pb-24 pt-20">
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-6">
         {loading ? (
           <div className="text-center py-12">

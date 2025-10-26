@@ -11,11 +11,9 @@ export const useWebSocket = () => {
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
 
-  const {
-    refetchProducts,
-    updateOrderStatus,
-    incrementSubscribers
-  } = useStore();
+  const refetchProducts = useStore((state) => state.refetchProducts);
+  const updateOrderStatus = useStore((state) => state.updateOrderStatus);
+  const incrementSubscribers = useStore((state) => state.incrementSubscribers);
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';

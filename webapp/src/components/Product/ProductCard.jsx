@@ -5,11 +5,16 @@ import { useStore } from '../../store/useStore';
 
 export default function ProductCard({ product }) {
   const { triggerHaptic } = useTelegram();
-  const { addToCart } = useStore();
+  const addToCart = useStore((state) => state.addToCart);
   const [isHovered, setIsHovered] = useState(false);
+
+  const isAvailable = product.isAvailable ?? product.is_available ?? true;
+  const stock = product.stock ?? product.stock_quantity ?? 0;
+  const isDisabled = !isAvailable || stock <= 0;
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if (isDisabled) return;
     triggerHaptic('medium');
     addToCart(product);
   };
@@ -77,16 +82,16 @@ export default function ProductCard({ product }) {
 
           <motion.button
             onClick={handleAddToCart}
-            disabled={!product.isAvailable || product.stock === 0}
+            disabled={isDisabled}
             whileTap={{ scale: 0.92 }}
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
             className="relative w-11 h-11 rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
-              background: !product.isAvailable || product.stock === 0
+              background: isDisabled
                 ? 'rgba(74, 74, 74, 0.5)'
                 : 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)',
-              boxShadow: !product.isAvailable || product.stock === 0
+              boxShadow: isDisabled
                 ? 'none'
                 : `
                   0 2px 4px rgba(255, 107, 0, 0.25),
@@ -96,7 +101,7 @@ export default function ProductCard({ product }) {
             }}
           >
             {/* Shine effect on hover */}
-            {(!product.isAvailable || product.stock === 0) ? null : (
+            {isDisabled ? null : (
               <motion.div
                 className="absolute inset-0"
                 initial={{ x: '-100%', opacity: 0 }}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import { useShopApi } from '../hooks/useApi';
@@ -7,7 +7,7 @@ import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
 
 export default function Subscriptions() {
-  const [shops, setShops] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getSubscriptions } = useShopApi();
@@ -28,8 +28,16 @@ export default function Subscriptions() {
         setError('Failed to load subscriptions');
         console.error('Subscriptions error:', apiError);
       } else {
-        // Backend returns { subscriptions: [...] }
-        setShops(data?.subscriptions || []);
+        const normalized = (data?.data || []).map((item) => ({
+          shopId: item.shop_id,
+          shopName: item.shop_name,
+          tier: item.tier,
+          subscribedAt: item.subscribed_at,
+          sellerUsername: item.seller_username,
+          sellerFirstName: item.seller_first_name,
+        }));
+
+        setSubscriptions(normalized);
       }
     } catch (err) {
       setError('Failed to load subscriptions');
@@ -39,10 +47,14 @@ export default function Subscriptions() {
     }
   };
 
-  const handleShopClick = (shop) => {
+  const handleShopClick = (subscription) => {
     triggerHaptic('medium');
     const { setCurrentShop, setActiveTab } = useStore.getState();
-    setCurrentShop(shop);
+    setCurrentShop({
+      id: subscription.shopId,
+      name: subscription.shopName,
+      tier: subscription.tier,
+    });
     setActiveTab('catalog');
   };
 
@@ -55,8 +67,13 @@ export default function Subscriptions() {
     // setSubscriptions(subscriptions.filter(sub => sub.shopId !== shopId));
   };
 
+  const hasSubscriptions = useMemo(() => subscriptions.length > 0, [subscriptions]);
+
   return (
-    <div className="pb-24 pt-20">
+    <div
+      className="pb-24"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+    >
       <Header title={t('subscriptions.title')} />
 
       <div className="px-4 py-6">
@@ -78,7 +95,7 @@ export default function Subscriptions() {
               Retry
             </motion.button>
           </div>
-        ) : shops.length === 0 ? (
+        ) : !hasSubscriptions ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -95,37 +112,23 @@ export default function Subscriptions() {
           </div>
         ) : (
           <div className="space-y-4">
-            {shops.map((subscription) => (
+            {subscriptions.map((subscription) => (
               <motion.div
-                key={subscription.id}
-                onClick={() => handleShopClick(subscription.shop)}
+                key={subscription.shopId}
+                onClick={() => handleShopClick(subscription)}
                 className="glass-card rounded-2xl p-4 cursor-pointer"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="flex items-center gap-4">
-                  {subscription.shop?.image && (
-                    <div className="w-16 h-16 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
-                      <img
-                        src={subscription.shop.image}
-                        alt={subscription.shop.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-white mb-1">
-                      {subscription.shop?.name}
+                      {subscription.shopName}
                     </h3>
                     <p className="text-sm text-gray-400">
                       {new Date(subscription.subscribedAt).toLocaleDateString('ru-RU')}
                     </p>
-                    {subscription.shop?.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                        {subscription.shop.description}
-                      </p>
-                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <motion.button

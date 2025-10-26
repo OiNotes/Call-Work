@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useApi } from '../../hooks/useApi';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // Follow Card Component
 function FollowCard({ follow, onModeSwitch, onDelete }) {
@@ -106,6 +107,15 @@ export default function FollowsModal({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setShowAddForm(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
 
   useEffect(() => {
     if (isOpen) {
@@ -310,13 +320,6 @@ export default function FollowsModal({ isOpen, onClose }) {
     }
   };
 
-  const handleClose = () => {
-    setShowAddForm(false);
-    setSearchQuery('');
-    setSearchResults([]);
-    onClose();
-  };
-
   const canCreateFollow = limitInfo ? (limitInfo.canFollow !== false && !limitInfo.reached) : true;
 
   if (!loading && !myShop) {
@@ -331,7 +334,10 @@ export default function FollowsModal({ isOpen, onClose }) {
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             <PageHeader title="Follows" onBack={handleClose} />
-            <div className="min-h-screen pb-24 pt-20">
+            <div
+              className="min-h-screen pb-24"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            >
               <div className="px-4 py-6">
                 <div className="text-center py-12">
                   <svg
@@ -400,7 +406,10 @@ export default function FollowsModal({ isOpen, onClose }) {
               )
             }
           />
-          <div className="min-h-screen pb-24 pt-20">
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-4">
         {/* Add Follow Form */}
         <AnimatePresence>

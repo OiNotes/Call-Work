@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // Регулярные выражения для определения типа кошелька
 const WALLET_PATTERNS = {
@@ -92,6 +93,16 @@ export default function WalletsModal({ isOpen, onClose }) {
   const [detectedType, setDetectedType] = useState(null);
   const [isValid, setIsValid] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setShowForm(false);
+    setAddress('');
+    setDetectedType(null);
+    setIsValid(false);
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
+
   const handleAddressChange = (e) => {
     const value = e.target.value.trim();
     setAddress(value);
@@ -132,14 +143,6 @@ export default function WalletsModal({ isOpen, onClose }) {
     setShowForm(false);
   };
 
-  const handleClose = () => {
-    setShowForm(false);
-    setAddress('');
-    setDetectedType(null);
-    setIsValid(false);
-    onClose();
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -151,7 +154,10 @@ export default function WalletsModal({ isOpen, onClose }) {
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
           <PageHeader title={t('wallet.title')} onBack={handleClose} />
-          <div className="min-h-screen pb-24 pt-20">
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-4">
         {/* Кнопка добавления кошелька */}
         {!showForm && (

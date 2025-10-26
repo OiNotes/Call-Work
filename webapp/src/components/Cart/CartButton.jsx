@@ -1,15 +1,23 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 
 export default function CartButton({ onClick }) {
-  const { getCartCount, getCartTotal } = useStore();
+  const cart = useStore((state) => state.cart);
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  const itemCount = getCartCount();
-  const total = getCartTotal();
+  const itemCount = useMemo(
+    () => cart.reduce((count, item) => count + item.quantity, 0),
+    [cart]
+  );
+
+  const total = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2),
+    [cart]
+  );
 
   const handleClick = () => {
     triggerHaptic('medium');

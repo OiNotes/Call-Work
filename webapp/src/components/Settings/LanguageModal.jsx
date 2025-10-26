@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useTelegram } from '../../hooks/useTelegram';
@@ -24,7 +25,11 @@ export default function LanguageModal({ isOpen, onClose }) {
   const { t, lang, setLanguage } = useTranslation();
 
   // Используем Telegram BackButton API для закрытия модалки
-  useBackButton(isOpen ? onClose : null);
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
 
   const handleSelectLanguage = async (languageId) => {
     triggerHaptic('light');
@@ -49,8 +54,11 @@ export default function LanguageModal({ isOpen, onClose }) {
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
-          <PageHeader title={t('language.title')} />
-          <div className="min-h-screen pb-24 pt-20">
+          <PageHeader title={t('language.title')} onBack={handleClose} />
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-3">
         {LANGUAGES.map((language) => (
           <motion.button

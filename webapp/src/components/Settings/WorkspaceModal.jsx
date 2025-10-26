@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useApi } from '../../hooks/useApi';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // Worker Card Component
 function WorkerCard({ worker, onRemove, isOwner }) {
@@ -72,6 +73,14 @@ export default function WorkspaceModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [telegramId, setTelegramId] = useState('');
+
+  const handleClose = useCallback(() => {
+    setShowForm(false);
+    setTelegramId('');
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
 
   useEffect(() => {
     if (isOpen) {
@@ -183,12 +192,6 @@ export default function WorkspaceModal({ isOpen, onClose }) {
     }
   };
 
-  const handleClose = () => {
-    setShowForm(false);
-    setTelegramId('');
-    onClose();
-  };
-
   // No shop - show empty state
   if (!loading && !myShop) {
     return (
@@ -202,7 +205,10 @@ export default function WorkspaceModal({ isOpen, onClose }) {
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             <PageHeader title="Workspace" onBack={handleClose} />
-            <div className="min-h-screen pb-24 pt-20">
+            <div
+              className="min-h-screen pb-24"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            >
               <div className="px-4 py-6">
                 <div className="text-center py-12">
                   <svg
@@ -244,7 +250,10 @@ export default function WorkspaceModal({ isOpen, onClose }) {
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
           <PageHeader title="Workspace" onBack={handleClose} />
-          <div className="min-h-screen pb-24 pt-20">
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-4">
         {/* Info / Upgrade card */}
         {isPro ? (

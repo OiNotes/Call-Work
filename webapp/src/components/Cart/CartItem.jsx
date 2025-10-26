@@ -3,7 +3,8 @@ import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 
 export default function CartItem({ item }) {
-  const { updateCartQuantity, removeFromCart } = useStore();
+  const updateCartQuantity = useStore((state) => state.updateCartQuantity);
+  const removeFromCart = useStore((state) => state.removeFromCart);
   const { triggerHaptic } = useTelegram();
 
   const handleIncrease = () => {

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
-import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useApi } from '../../hooks/useApi';
+import { useBackButton } from '../../hooks/useBackButton';
 
 // Product Card Component
 function ProductCard({ product, onEdit, onDelete }) {
@@ -88,7 +88,7 @@ function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
     name: product?.name || '',
     description: product?.description || '',
     price: product?.price || '',
-    stock: product?.stock || '',
+    stock: product?.stock ?? product?.stock_quantity ?? '',
     is_available: product?.is_available ?? true
   });
 
@@ -99,7 +99,17 @@ function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
       return;
     }
     triggerHaptic('success');
-    onSubmit(formData);
+    const price = Number(formData.price);
+    const stockValue = formData.stock === '' || formData.stock === null || formData.stock === undefined
+      ? undefined
+      : Number(formData.stock);
+
+    onSubmit({
+      ...formData,
+      price: Number.isFinite(price) ? price : formData.price,
+      stock: stockValue,
+      stockQuantity: stockValue,
+    });
   };
 
   return (
@@ -196,6 +206,23 @@ export default function ProductsModal({ isOpen, onClose }) {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  const mapProduct = useCallback((product) => ({
+    ...product,
+    price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+    stock: product.stock_quantity ?? product.stock ?? 0,
+    stock_quantity: product.stock_quantity ?? product.stock ?? 0,
+    is_available: product.is_available ?? product.isActive ?? true,
+    isAvailable: product.is_available ?? product.isActive ?? true,
+  }), []);
+
+  const handleClose = useCallback(() => {
+    setShowForm(false);
+    setEditingProduct(null);
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
+
   // Fetch shop and products
   useEffect(() => {
     if (isOpen) {
@@ -214,7 +241,8 @@ export default function ProductsModal({ isOpen, onClose }) {
 
         // Get products
         const productsRes = await fetchApi(`/products?shopId=${shop.id}`);
-        setProducts(productsRes.data || []);
+        const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
+        setProducts(items.map(mapProduct));
 
         // Get limit status
         const limitRes = await fetchApi(`/products/limit-status/${shop.id}`);
@@ -229,11 +257,17 @@ export default function ProductsModal({ isOpen, onClose }) {
 
   const handleAddProduct = async (formData) => {
     try {
+      if (!myShop?.id) {
+        await alert('Не удалось определить магазин');
+        return;
+      }
+
       await fetchApi('/products', {
         method: 'POST',
         body: JSON.stringify({
           ...formData,
-          shop_id: myShop.id
+          stockQuantity: formData.stock ?? formData.stockQuantity,
+          shopId: myShop.id
         })
       });
 
@@ -249,7 +283,10 @@ export default function ProductsModal({ isOpen, onClose }) {
     try {
       await fetchApi(`/products/${editingProduct.id}`, {
         method: 'PUT',
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          stockQuantity: formData.stock ?? formData.stockQuantity,
+        })
       });
 
       triggerHaptic('success');
@@ -274,12 +311,6 @@ export default function ProductsModal({ isOpen, onClose }) {
     }
   };
 
-  const handleClose = () => {
-    setShowForm(false);
-    setEditingProduct(null);
-    onClose();
-  };
-
   // No shop - show empty state
   if (!loading && !myShop) {
     return (
@@ -293,7 +324,10 @@ export default function ProductsModal({ isOpen, onClose }) {
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             <PageHeader title="Мои товары" onBack={handleClose} />
-            <div className="min-h-screen pb-24 pt-20">
+            <div
+              className="min-h-screen pb-24"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            >
               <div className="px-4 py-6">
                 <div className="text-center py-12">
                   <svg
@@ -349,7 +383,10 @@ export default function ProductsModal({ isOpen, onClose }) {
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
           <PageHeader title="Мои товары" onBack={handleClose} />
-          <div className="min-h-screen pb-24 pt-12">
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-4">
         {/* Add product button */}
         {!showForm && !loading && (
@@ -408,7 +445,7 @@ export default function ProductsModal({ isOpen, onClose }) {
                   key={product.id}
                   product={product}
                   onEdit={(p) => {
-                    setEditingProduct(p);
+                    setEditingProduct(mapProduct(p));
                     setShowForm(true);
                   }}
                   onDelete={handleDeleteProduct}

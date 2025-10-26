@@ -143,7 +143,10 @@ export default function Settings() {
   };
 
   return (
-    <div className="pb-24 pt-20">
+    <div
+      className="pb-24"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+    >
       <Header title={t('settings.title')} />
 
       <div className="px-4 py-6">

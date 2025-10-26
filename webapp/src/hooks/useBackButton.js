@@ -25,16 +25,19 @@ export function useBackButton(onBack) {
   useEffect(() => {
     if (!tg) return;
 
-    // Показать BackButton
-    tg.BackButton.show();
-
-    // Установить обработчик клика
-    tg.BackButton.onClick(onBack);
-
-    // Cleanup: скрыть BackButton и удалить обработчик
-    return () => {
+    if (typeof onBack !== 'function') {
       tg.BackButton.hide();
-      tg.BackButton.offClick(onBack);
+      return undefined;
+    }
+
+    const handler = () => onBack();
+
+    tg.BackButton.show();
+    tg.BackButton.onClick(handler);
+
+    return () => {
+      tg.BackButton.offClick(handler);
+      tg.BackButton.hide();
     };
   }, [tg, onBack]);
 }

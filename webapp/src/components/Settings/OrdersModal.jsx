@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useShopApi } from '../../hooks/useApi';
@@ -121,7 +121,11 @@ export default function OrdersModal({ isOpen, onClose }) {
   const [error, setError] = useState(null);
 
   // Используем Telegram BackButton API для закрытия модалки
-  useBackButton(isOpen ? onClose : null);
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  useBackButton(isOpen ? handleClose : null);
 
   useEffect(() => {
     if (isOpen) {
@@ -153,8 +157,11 @@ export default function OrdersModal({ isOpen, onClose }) {
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
-          <PageHeader title={t('orders.title')} />
-          <div className="min-h-screen pb-24 pt-20">
+          <PageHeader title={t('orders.title')} onBack={handleClose} />
+          <div
+            className="min-h-screen pb-24"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
             <div className="px-4 py-6 space-y-4">
         {/* Loading state */}
         {loading && (

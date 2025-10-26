@@ -28,7 +28,7 @@ export function initTelegramApp() {
     }
 
     // Проверка fullscreen режима
-    console.log('📱 Fullscreen mode:', tg.isExpanded ? tg.isExpanded() : 'unknown');
+    console.log('📱 Fullscreen mode:', tg.isExpanded);
     console.log('📱 Viewport height:', tg.viewportHeight);
     console.log('📱 Platform:', tg.platform);
     console.log('📱 Version:', tg.version);
@@ -78,7 +78,7 @@ export function initTelegramApp() {
       tg,
       platform: tg.platform,
       version: tg.version,
-      isExpanded: tg.isExpanded ? tg.isExpanded() : true,
+      isExpanded: tg.isExpanded,
     };
   } catch (error) {
     console.error('Telegram WebApp initialization error:', error);

@@ -9,12 +9,15 @@ import { useTranslation } from '../i18n/useTranslation';
 import { useApi } from '../hooks/useApi';
 
 export default function Catalog() {
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [myShop, setMyShop] = useState(null);
 
-  const { currentShop, setCurrentShop, setCartOpen } = useStore();
+  const products = useStore((state) => state.products);
+  const setStoreProducts = useStore((state) => state.setProducts);
+  const currentShop = useStore((state) => state.currentShop);
+  const setCurrentShop = useStore((state) => state.setCurrentShop);
+  const setCartOpen = useStore((state) => state.setCartOpen);
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const { get } = useApi();
@@ -57,7 +60,19 @@ export default function Catalog() {
         setError('Failed to load products');
         console.error('Products error:', apiError);
       } else {
-        setProducts(data?.products || []);
+        const items = Array.isArray(data?.data) ? data.data : [];
+        const normalized = items.map((product) => ({
+          ...product,
+          price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+          stock: product.stock_quantity ?? product.stock ?? 0,
+          stock_quantity: product.stock_quantity ?? product.stock ?? 0,
+          is_available: product.is_available ?? product.isActive ?? true,
+          isAvailable: product.is_available ?? product.isActive ?? true,
+          currency: product.currency || 'USD',
+          image: product.image || product.images?.[0] || null,
+        }));
+
+        setStoreProducts(normalized, shopId);
       }
     } catch (err) {
       setError('Failed to load products');
@@ -70,7 +85,7 @@ export default function Catalog() {
   const handleBack = () => {
     triggerHaptic('light');
     setCurrentShop(null);
-    setProducts([]);
+    setStoreProducts([], null);
   };
 
   const handleBackToMyShop = () => {
@@ -81,13 +96,17 @@ export default function Catalog() {
 
   // Определяем, какой магазин показывать
   const displayShop = currentShop || myShop;
+  const displayShopLogo = displayShop?.logo || displayShop?.image || null;
   const isViewingOwnShop = !currentShop && myShop;
   const isViewingSubscription = currentShop && myShop && currentShop.id !== myShop.id;
 
   // Если нет ни currentShop, ни myShop - пустой экран
   if (!displayShop) {
     return (
-      <div className="pb-24 pt-20">
+      <div
+        className="pb-24"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+      >
         <Header title={t('catalog.title')} />
 
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -106,7 +125,10 @@ export default function Catalog() {
   }
 
   return (
-    <div className="pb-24">
+    <div
+      className="pb-24"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+    >
       {/* Shop Header with Navigation */}
       <div className="bg-dark-card/80 backdrop-blur-lg p-4 sticky top-0 z-10">
         {/* Back button - показывать только если просматриваем подписку */}
@@ -138,10 +160,10 @@ export default function Catalog() {
         )}
 
         <div className="flex items-center gap-4">
-          {displayShop.image && (
-            <div className="w-12 h-12 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
-              <img
-                src={displayShop.image}
+        {displayShopLogo && (
+          <div className="w-12 h-12 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
+            <img
+                src={displayShopLogo}
                 alt={displayShop.name}
                 className="w-full h-full object-cover"
               />

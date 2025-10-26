@@ -1,15 +1,22 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import CartItem from './CartItem';
 
 export default function CartSheet() {
-  const { cart, isCartOpen, setCartOpen, getCartTotal, clearCart, startCheckout } = useStore();
+  const cart = useStore((state) => state.cart);
+  const isCartOpen = useStore((state) => state.isCartOpen);
+  const setCartOpen = useStore((state) => state.setCartOpen);
+  const clearCart = useStore((state) => state.clearCart);
+  const startCheckout = useStore((state) => state.startCheckout);
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  const total = getCartTotal();
+  const total = useMemo(() => (
+    cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  ), [cart]);
 
   const handleClose = () => {
     triggerHaptic('light');
