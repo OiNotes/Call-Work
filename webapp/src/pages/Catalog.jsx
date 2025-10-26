@@ -8,6 +8,33 @@ import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
 import { useApi } from '../hooks/useApi';
 
+// Skeleton loader component
+function ProductCardSkeleton() {
+  return (
+    <div
+      className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
+      style={{
+        background: 'rgba(26, 26, 26, 0.6)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.06)'
+      }}
+    >
+      {/* Image skeleton */}
+      <div className="w-full aspect-square rounded-xl bg-white/5" />
+      {/* Title skeleton */}
+      <div className="h-5 bg-white/10 rounded-lg w-3/4" />
+      {/* Description skeleton */}
+      <div className="h-3 bg-white/5 rounded w-full" />
+      <div className="h-3 bg-white/5 rounded w-2/3" />
+      {/* Price & button skeleton */}
+      <div className="flex items-center justify-between mt-4">
+        <div className="h-6 bg-white/10 rounded-lg w-20" />
+        <div className="h-9 bg-white/5 rounded-lg w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function Catalog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -211,8 +238,19 @@ export default function Catalog() {
         </div>
       </div>
 
+      {/* Loading Skeleton */}
+      {loading && (
+        <div className="px-4 py-6">
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Error State */}
-      {error && (
+      {!loading && error && (
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
           <svg className="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

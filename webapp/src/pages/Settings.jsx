@@ -146,8 +146,8 @@ export default function Settings() {
 
   return (
     <div
-      className="pb-24"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+      className="pb-24 scroll-smooth"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)', scrollBehavior: 'smooth' }}
     >
       <Header title={t('settings.title')} />
 

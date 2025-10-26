@@ -59,14 +59,14 @@ export default function CartSheet() {
 
           {/* Sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] flex flex-col"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
           >
             <div
-              className="rounded-t-[32px] flex flex-col max-h-[80vh]"
+              className="rounded-t-[32px] flex flex-col max-h-[90vh]"
               style={{
                 background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%)',
                 backdropFilter: 'blur(40px) saturate(180%)',
@@ -135,7 +135,7 @@ export default function CartSheet() {
 
               {/* Footer */}
               {cart.length > 0 && (
-                <div className="p-5 pb-20 border-t border-white/10 space-y-4">
+                <div className="p-5 pb-8 border-t border-white/10 space-y-4">
                   {/* Total */}
                   <div className="flex items-center justify-between">
                     <span

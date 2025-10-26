@@ -101,14 +101,7 @@ export default function Subscriptions() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             <h3 className="text-lg font-semibold text-gray-400 mb-2">{t('subscriptions.empty')}</h3>
-            <p className="text-sm text-gray-500 mb-6">{t('subscriptions.emptyDesc')}</p>
-            <motion.button
-              onClick={() => useStore.getState().setActiveTab('catalog')}
-              className="touch-target bg-orange-primary hover:bg-orange-light text-white font-semibold px-6 rounded-xl transition-colors duration-300"
-              whileTap={{ scale: 0.95 }}
-            >
-              {t('catalog.goToSubscriptions')}
-            </motion.button>
+            <p className="text-sm text-gray-500">{t('subscriptions.emptyDesc')}</p>
           </div>
         ) : (
           <div className="space-y-4">

@@ -103,13 +103,11 @@ export default function FollowsModal({ isOpen, onClose }) {
   const [myShop, setMyShop] = useState(null);
   const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
   const handleClose = useCallback(() => {
-    setShowAddForm(false);
     setSearchQuery('');
     setSearchResults([]);
     onClose();
@@ -310,7 +308,6 @@ export default function FollowsModal({ isOpen, onClose }) {
       });
 
       triggerHaptic('success');
-      setShowAddForm(false);
       setSearchQuery('');
       setSearchResults([]);
       await loadData();
@@ -381,45 +378,14 @@ export default function FollowsModal({ isOpen, onClose }) {
           <PageHeader
             title="Follows"
             onBack={handleClose}
-            action={
-              !showAddForm && (
-                <motion.button
-                  onClick={() => {
-                    if (canCreateFollow) {
-                      triggerHaptic('light');
-                      setShowAddForm(true);
-                    } else {
-                      alert(`Лимит достигнут! Тариф: ${limitInfo?.tier || 'BASIC'}`);
-                    }
-                  }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-orange-primary"
-                  style={{
-                    background: 'rgba(255, 107, 0, 0.1)',
-                    border: '1px solid rgba(255, 107, 0, 0.2)'
-                  }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </motion.button>
-              )
-            }
           />
           <div
             className="min-h-screen pb-24"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
           >
             <div className="px-4 py-6 space-y-4">
-        {/* Add Follow Form */}
-        <AnimatePresence>
-          {showAddForm && (
-            <motion.div
-              className="glass-card rounded-2xl p-4 space-y-3"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
+        {/* Add Follow Form - Always Visible */}
+        <div className="glass-card rounded-2xl p-4 space-y-3">
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">
                   Поиск магазина
@@ -480,28 +446,27 @@ export default function FollowsModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              <motion.button
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowAddForm(false);
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
-                className="w-full h-11 rounded-xl font-medium text-gray-300"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Отмена
-              </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {searchResults.length > 0 && (
+                <motion.button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className="w-full h-11 rounded-xl font-medium text-gray-300"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Очистить результаты
+                </motion.button>
+              )}
+            </div>
 
         {/* Info card */}
-        {!showAddForm && (
+        {searchResults.length === 0 && (
           <div className="glass-card rounded-2xl p-4">
             <div className="flex items-start gap-3">
               <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

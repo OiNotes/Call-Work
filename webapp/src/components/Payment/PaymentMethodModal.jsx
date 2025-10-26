@@ -41,14 +41,14 @@ export default function PaymentMethodModal() {
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[92vh] flex flex-col"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
           >
             <div
-              className="rounded-t-[32px] flex flex-col max-h-[85vh]"
+              className="rounded-t-[32px] flex flex-col max-h-[92vh]"
               style={{
                 background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
                 backdropFilter: 'blur(40px) saturate(180%)',
@@ -86,7 +86,7 @@ export default function PaymentMethodModal() {
               </div>
 
               {/* Crypto Options */}
-              <div className="flex-1 overflow-y-auto px-6 pt-6 pb-20">
+              <div className="flex-1 overflow-y-auto px-6 pt-4 pb-8">
                 <div className="grid grid-cols-2 gap-3">
                   {CRYPTO_OPTIONS.map((crypto) => (
                     <motion.button

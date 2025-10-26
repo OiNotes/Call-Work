@@ -17,6 +17,7 @@ export default function PaymentDetailsModal() {
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
 
   const isOpen = paymentStep === 'details';
 
@@ -33,6 +34,17 @@ export default function PaymentDetailsModal() {
       setCopied(true);
       triggerHaptic('success');
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyAmount = async () => {
+    try {
+      await navigator.clipboard.writeText(`${cryptoAmount} ${selectedCrypto}`);
+      setCopiedAmount(true);
+      triggerHaptic('success');
+      setTimeout(() => setCopiedAmount(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -182,22 +194,31 @@ export default function PaymentDetailsModal() {
                   </motion.button>
                 </motion.div>
 
-                {/* Amount Summary - Compact & Centered */}
-                <motion.div
+                {/* Amount Summary - Compact & Centered & Copyable */}
+                <motion.button
+                  onClick={handleCopyAmount}
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="rounded-xl p-4 text-center space-y-2"
+                  className="w-full rounded-xl p-4 text-center space-y-2 cursor-pointer"
                   style={{
                     background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
                     backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: copiedAmount ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
                     boxShadow: '1px 2px 2px hsl(0deg 0% 0% / 0.333), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
                   }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <p className="text-gray-400 text-xs">
-                    {t('cart.items', { count: itemCount })}
-                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-gray-400 text-xs">
+                      {t('cart.items', { count: itemCount })}
+                    </p>
+                    {copiedAmount && (
+                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"
                     style={{ letterSpacing: '-0.01em' }}
@@ -205,9 +226,9 @@ export default function PaymentDetailsModal() {
                     {cryptoAmount} {selectedCrypto}
                   </div>
                   <p className="text-gray-500 text-[10px] mt-2">
-                    {t('payment.sendExact')}
+                    {copiedAmount ? 'Скопировано!' : 'Нажмите для копирования'}
                   </p>
-                </motion.div>
+                </motion.button>
               </div>
 
               {/* Footer - Compact */}
