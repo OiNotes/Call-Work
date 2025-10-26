@@ -8,6 +8,8 @@ import { initI18n, getLanguage } from './i18n';
 import TabBarPortal from './components/TabBarPortal';
 import CartSheet from './components/Cart/CartSheet';
 import PaymentFlowManager from './components/Payment/PaymentFlowManager';
+import { ToastContainer } from './components/common/Toast';
+import { useToastStore } from './hooks/useToast';
 import './styles/globals.css';
 
 // Lazy load pages for code splitting
@@ -29,6 +31,7 @@ function App() {
   const { activeTab } = useStore();
   const { user, isReady, isValidating, error } = useTelegram();
   const { isConnected } = useWebSocket();
+  const { toasts, removeToast } = useToastStore();
 
   // Инициализация i18n
   useEffect(() => {
@@ -170,6 +173,7 @@ function App() {
         <TabBarPortal />
         <CartSheet />
         <PaymentFlowManager />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     </div>
   );

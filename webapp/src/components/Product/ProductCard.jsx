@@ -2,10 +2,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, memo } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useStore } from '../../store/useStore';
+import { useToast } from '../../hooks/useToast';
+import Badge from '../common/Badge';
 
 const ProductCard = memo(function ProductCard({ product }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
+  const toast = useToast();
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -15,9 +18,13 @@ const ProductCard = memo(function ProductCard({ product }) {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
-    if (isDisabled) return;
+    if (isDisabled) {
+      toast.warning('This product is out of stock', 2000);
+      return;
+    }
     triggerHaptic('success');
     addToCart(product);
+    toast.success(`${product.name} added to cart!`, 2000);
 
     // Show "Added to Cart" confirmation
     setJustAdded(true);
@@ -58,21 +65,20 @@ const ProductCard = memo(function ProductCard({ product }) {
 
       {/* Stock Badge - только когда stock <= 5 и > 0 */}
       {stock <= 5 && stock > 0 && (
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold z-10"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.9))',
-            boxShadow: '0 2px 8px rgba(255, 193, 7, 0.3)',
-            color: '#000',
-            fontWeight: 600,
-            letterSpacing: '0.01em'
-          }}
-        >
-          Only {stock} left
-        </motion.div>
+        <div className="absolute top-3 right-3 z-10">
+          <Badge variant="gold" shimmer={stock <= 2}>
+            Only {stock} left
+          </Badge>
+        </div>
+      )}
+      
+      {/* Premium Badge - для VIP товаров (если есть флаг isPremium) */}
+      {product.isPremium && (
+        <div className="absolute top-3 left-3 z-10">
+          <Badge variant="premium" shimmer>
+            Premium
+          </Badge>
+        </div>
       )}
 
       {/* "Added to Cart" Confirmation Animation */}

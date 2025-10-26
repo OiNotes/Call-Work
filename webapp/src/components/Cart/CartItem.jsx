@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
@@ -12,6 +12,7 @@ const CartItem = memo(function CartItem({ item }) {
     }))
   );
   const { triggerHaptic } = useTelegram();
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleIncrease = () => {
     triggerHaptic('light');
@@ -32,14 +33,52 @@ const CartItem = memo(function CartItem({ item }) {
     removeFromCart(item.id);
   };
 
+  const handleDragEnd = (event, info) => {
+    setIsDragging(false);
+    
+    // Если свайпнули влево больше 80px - удалить
+    if (info.offset.x < -80) {
+      triggerHaptic('warning');
+      removeFromCart(item.id);
+    }
+  };
+
   return (
     <motion.div
-      className="glass-card rounded-xl p-4"
+      className="relative"
+      drag="x"
+      dragConstraints={{ left: -100, right: 0 }}
+      dragElastic={{ left: 0.2, right: 0 }}
+      onDragStart={() => setIsDragging(true)}
+      onDragEnd={handleDragEnd}
+      whileDrag={{ scale: 0.98 }}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.2 }}
     >
+      {/* Delete indicator (показывается при swipe) */}
+      <motion.div
+        className="absolute right-0 top-0 h-full w-20 flex items-center justify-center rounded-r-xl"
+        style={{
+          background: 'linear-gradient(90deg, transparent, #EF4444)',
+        }}
+        animate={{
+          opacity: isDragging ? 1 : 0,
+        }}
+      >
+        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </motion.div>
+      
+      {/* Existing CartItem content */}
+      <motion.div
+        className="glass-card rounded-xl p-4 relative z-10"
+        style={{
+          background: 'rgba(33, 33, 33, 0.6)',
+        }}
+      >
       <div className="flex gap-4">
         {/* Product Image */}
         <div className="w-20 h-20 rounded-lg bg-dark-elevated flex-shrink-0 overflow-hidden">
@@ -110,6 +149,7 @@ const CartItem = memo(function CartItem({ item }) {
           </div>
         </div>
       </div>
+      </motion.div>
     </motion.div>
   );
 });
