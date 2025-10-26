@@ -145,7 +145,21 @@ export const productController = {
         offset
       };
 
+      logger.info('[Products List] Request:', {
+        shopId: filters.shopId,
+        isActive: filters.isActive,
+        limit: filters.limit,
+        offset: filters.offset,
+        userId: req.user?.id
+      });
+
       const products = await productQueries.list(filters);
+
+      logger.info('[Products List] Results:', {
+        count: products.length,
+        shopId: filters.shopId,
+        productIds: products.map(p => p.id)
+      });
 
       return res.status(200).json({
         success: true,

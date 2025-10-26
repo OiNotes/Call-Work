@@ -84,7 +84,7 @@ export const useStore = create((set, get) => ({
       setShops: (shops) => set({ shops }),
 
       // Products
-      products: mockProducts.map(normalizeProduct),
+      products: [],
       productsShopId: null,
       setProducts: (products, shopId = null) => set({ products, productsShopId: shopId }),
 

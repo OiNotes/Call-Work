@@ -45,9 +45,15 @@ export default function Catalog() {
 
   const loadMyShop = async () => {
     try {
+      console.log('[Catalog] Loading my shops...');
       const { data, error: apiError } = await get('/shops/my');
-      if (!apiError && data && data.length > 0) {
-        setMyShop(data[0]); // Берем первый магазин владельца
+      console.log('[Catalog] My shops response:', { data, error: apiError });
+
+      if (!apiError && data?.data && data.data.length > 0) {
+        setMyShop(data.data[0]); // Берем первый магазин владельца
+        console.log('[Catalog] My shop set:', data.data[0]);
+      } else {
+        console.log('[Catalog] No shops found');
       }
     } catch (err) {
       console.error('Failed to load my shop:', err);
@@ -59,16 +65,19 @@ export default function Catalog() {
       setLoading(true);
       setError(null);
 
+      console.log('[Catalog] Loading products for shopId:', shopId);
       // GET /api/products?shopId=<shopId>
       const { data, error: apiError } = await get('/products', {
         params: { shopId }
       });
+      console.log('[Catalog] API response:', { data, error: apiError, shopId });
 
       if (apiError) {
         setError('Failed to load products');
         console.error('Products error:', apiError);
       } else {
         const items = Array.isArray(data?.data) ? data.data : [];
+        console.log('[Catalog] Parsed items:', { count: items.length, items });
         const normalized = items.map((product) => ({
           ...product,
           price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
@@ -79,8 +88,10 @@ export default function Catalog() {
           currency: product.currency || 'USD',
           image: product.image || product.images?.[0] || null,
         }));
+        console.log('[Catalog] Normalized products:', { count: normalized.length, normalized });
 
         setStoreProducts(normalized, shopId);
+        console.log('[Catalog] Products set to store:', { count: normalized.length, shopId });
       }
     } catch (err) {
       setError('Failed to load products');
