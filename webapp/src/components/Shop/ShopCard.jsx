@@ -25,6 +25,7 @@ export default function ShopCard({ shop, onClick }) {
           <img
             src={shop.image}
             alt={shop.name}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
           {shop.badge && (

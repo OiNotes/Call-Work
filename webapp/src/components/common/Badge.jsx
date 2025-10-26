@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { memo } from 'react';
+import { usePlatform } from '../../hooks/usePlatform';
+import { isAndroid } from '../../utils/platform';
 
 const badgeVariants = {
   gold: {
@@ -19,14 +21,16 @@ const badgeVariants = {
   },
 };
 
-const Badge = memo(function Badge({ 
-  variant = 'premium', 
-  children, 
+const Badge = memo(function Badge({
+  variant = 'premium',
+  children,
   shimmer = false,
-  className = '' 
+  className = ''
 }) {
+  const platform = usePlatform();
+  const android = isAndroid(platform);
   const styles = badgeVariants[variant];
-  
+
   return (
     <motion.div
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold relative overflow-hidden ${className}`}
@@ -39,7 +43,7 @@ const Badge = memo(function Badge({
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
-      {shimmer && (
+      {shimmer && !android && (
         <motion.div
           className="absolute inset-0"
           style={{

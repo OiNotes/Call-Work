@@ -14,7 +14,10 @@
   --tg-safe-area-inset-right: 0px;
 
   /* TabBar & Keyboard management */
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: var(
+    --tg-content-safe-area-inset-bottom,
+    var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+  );
   --tabbar-h: 60px;
   --vh-dynamic: 100dvh;
 }
@@ -35,6 +38,17 @@ html {
   -webkit-overflow-scrolling: touch;
 }
 
+html.platform-android {
+  text-rendering: optimizeLegibility;
+  --safe-bottom: calc(
+    var(
+      --tg-content-safe-area-inset-bottom,
+      var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+    )
+    + 12px
+  );
+}
+
 body {
   width: 100%;
   height: 100%;
@@ -52,6 +66,8 @@ body {
   touch-action: pan-x pan-y;
   -webkit-user-select: none;
   user-select: none;
+
+  contain: layout paint style;
 }
 
 #root {
@@ -106,6 +122,30 @@ body {
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
   }
+}
+
+/* Android: Полное отключение blur для максимальной производительности */
+html.platform-android .glass-subtle {
+  background: rgba(33, 33, 33, 0.75);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+html.platform-android .glass-card {
+  background: rgba(33, 33, 33, 0.85);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+html.platform-android .glass-elevated {
+  background: rgba(33, 33, 33, 0.95);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
 /* Tabular numbers utility */
@@ -170,6 +210,15 @@ input, textarea {
     16px 32px 32px hsl(0deg 0% 0% / 0.2);
 }
 
+/* Android: Упрощённые тени (1 слой вместо 3-5) */
+html.platform-android .shadow-premium-lg {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+html.platform-android .shadow-premium-md {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* Orange gradient utilities */
 .gradient-orange {
   background: linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%);
@@ -179,13 +228,19 @@ input, textarea {
   background: linear-gradient(135deg, #FF8C42 0%, #FFB366 100%);
 }
 
-/* Scroll container utility - для внутренних скроллов при фиксированном фоне */
+/**
+ * Scroll optimization
+ * Note: Add { passive: true } to scroll event listeners in components
+ * for better Android performance
+ */
 .scroll-container {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
   height: 100%;
+  contain: layout paint;
+  will-change: transform;
 }
 
 /* TabBar positioning - fixed above safe area */
@@ -196,6 +251,15 @@ input, textarea {
   bottom: var(--safe-bottom);
   height: var(--tabbar-h);
   z-index: 50;
+}
+
+html.platform-android .tabbar {
+  backdrop-filter: none;
+}
+
+html.platform-android .backdrop-blur-lg {
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
 }
 
 .scroll-container {
@@ -289,4 +353,10 @@ html.kb-open .scroll-container {
   50% {
     opacity: 0.8;
   }
+}
+
+/* Android: Отключаем бесконечную анимацию градиента */
+html.platform-android .gradient-mesh {
+  background: #181818;
+  animation: none;
 }

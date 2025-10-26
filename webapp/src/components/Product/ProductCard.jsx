@@ -1,14 +1,31 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, memo } from 'react';
+import { useState, memo, useMemo, useCallback } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useStore } from '../../store/useStore';
 import { useToast } from '../../hooks/useToast';
 import Badge from '../common/Badge';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { gpuAccelStyle } from '../../utils/animationHelpers';
 
 const ProductCard = memo(function ProductCard({ product }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
   const toast = useToast();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+  const cardSurface = useMemo(
+    () => getSurfaceStyle('glassCard', platform),
+    [platform]
+  );
+  const quickSpring = useMemo(
+    () => getSpringPreset('quick', platform),
+    [platform]
+  );
+  const pressSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -16,7 +33,7 @@ const ProductCard = memo(function ProductCard({ product }) {
   const stock = product.stock ?? product.stock_quantity ?? 0;
   const isDisabled = !isAvailable || stock <= 0;
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = useCallback((e) => {
     e.stopPropagation();
     if (isDisabled) {
       toast.warning('This product is out of stock', 2000);
@@ -24,50 +41,46 @@ const ProductCard = memo(function ProductCard({ product }) {
     }
     triggerHaptic('success');
     addToCart(product);
-    toast.success(`${product.name} added to cart!`, 2000);
 
     // Show "Added to Cart" confirmation
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
-  };
+  }, [isDisabled, toast, triggerHaptic, addToCart, product]);
 
   return (
     <motion.div
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+      {...(!android && {
+        onHoverStart: () => setIsHovered(true),
+        onHoverEnd: () => setIsHovered(false),
+      })}
+      whileHover={!android ? { y: -4 } : undefined}
+      whileTap={{ scale: android ? 0.99 : 0.98 }}
+      transition={quickSpring}
       className="relative h-[180px] rounded-3xl overflow-hidden group"
       style={{
-        background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
-        backdropFilter: 'blur(12px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: `
-          1px 2px 2px hsl(0deg 0% 0% / 0.333),
-          2px 4px 4px hsl(0deg 0% 0% / 0.333),
-          3px 6px 6px hsl(0deg 0% 0% / 0.333),
-          0 0 0 1px rgba(255, 255, 255, 0.05),
-          inset 0 1px 0 rgba(255, 255, 255, 0.06)
-        `
+        ...gpuAccelStyle,
+        ...cardSurface,
+        background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)'
       }}
     >
-      {/* Subtle orange gradient overlay on hover */}
-      <motion.div
-        className="absolute inset-0 pointer-events-none"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isHovered ? 1 : 0 }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        style={{
-          background: `radial-gradient(600px circle at center, rgba(255, 107, 0, 0.06), transparent 40%)`
-        }}
-      />
+      {/* Subtle orange gradient overlay on hover - iOS only */}
+      {!android && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isHovered ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          style={{
+            background: `radial-gradient(600px circle at center, rgba(255, 107, 0, 0.06), transparent 40%)`
+          }}
+        />
+      )}
 
       {/* Stock Badge - только когда stock <= 5 и > 0 */}
       {stock <= 5 && stock > 0 && (
         <div className="absolute top-3 right-3 z-10">
           <Badge variant="gold" shimmer={stock <= 2}>
-            Only {stock} left
+            {stock}
           </Badge>
         </div>
       )}
@@ -90,8 +103,8 @@ const ProductCard = memo(function ProductCard({ product }) {
             exit={{ scale: 0, opacity: 0 }}
             className="absolute inset-0 flex items-center justify-center rounded-3xl z-20"
             style={{
-              background: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)',
+              background: android ? 'rgba(0, 0, 0, 0.78)' : 'rgba(0, 0, 0, 0.7)',
+              backdropFilter: android ? 'blur(2px)' : 'blur(4px)'
             }}
           >
             <motion.div
@@ -139,8 +152,8 @@ const ProductCard = memo(function ProductCard({ product }) {
             onClick={handleAddToCart}
             disabled={isDisabled}
             whileHover={{
-              y: -2,
-              scale: 1.05,
+              y: android ? -1 : -2,
+              scale: android ? 1.03 : 1.05,
               boxShadow: `
                 1px 2px 2px hsl(0deg 0% 0% / 0.4),
                 4px 8px 8px hsl(0deg 0% 0% / 0.4),
@@ -149,15 +162,13 @@ const ProductCard = memo(function ProductCard({ product }) {
               `
             }}
             whileTap={{ 
-              scale: 0.98, 
+              scale: android ? 0.985 : 0.98,
               y: 0,
               boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
             }}
             transition={{ 
-              type: "spring", 
-              stiffness: 400, 
-              damping: 25,
-              boxShadow: { duration: 0.2 }
+              ...pressSpring,
+              boxShadow: { duration: 0.18 }
             }}
             className="relative w-11 h-11 rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
@@ -173,8 +184,8 @@ const ProductCard = memo(function ProductCard({ product }) {
                 `
             }}
           >
-            {/* Shimmer effect (keep existing) */}
-            {isDisabled ? null : (
+            {/* Shimmer effect - iOS only */}
+            {!isDisabled && !android && (
               <motion.div
                 className="absolute inset-0"
                 initial={{ x: '-100%', opacity: 0 }}

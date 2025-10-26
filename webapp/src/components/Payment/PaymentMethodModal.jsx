@@ -1,13 +1,48 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
 export default function PaymentMethodModal() {
   const { paymentStep, selectCrypto, setPaymentStep } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const sheetStyle = useMemo(
+    () => getSurfaceStyle('surfacePanel', platform),
+    [platform]
+  );
+
+  const cardBaseStyle = useMemo(
+    () => getSurfaceStyle('glassCard', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
+
+  const controlSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
+
+  const quickSpring = useMemo(
+    () => getSpringPreset('quick', platform),
+    [platform]
+  );
 
   const isOpen = paymentStep === 'method';
 
@@ -31,30 +66,22 @@ export default function PaymentMethodModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
             onClick={handleClose}
-            style={{
-              background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(12px)'
-            }}
+            style={overlayStyle}
           />
 
           {/* Modal */}
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 max-h-[92vh] flex flex-col"
             initial={{ y: '100%' }}
-            animate={{ y: '-8vh' }}
+            animate={{ y: android ? '-6vh' : '-8vh' }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-t-[32px] flex flex-col max-h-[92vh]"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={sheetStyle}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
@@ -73,11 +100,11 @@ export default function PaymentMethodModal() {
                   onClick={handleClose}
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
+                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.08)'
                   }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  whileTap={{ scale: android ? 0.94 : 0.9 }}
+                  transition={controlSpring}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -94,19 +121,12 @@ export default function PaymentMethodModal() {
                       onClick={() => handleSelectCrypto(crypto.id)}
                       className="relative overflow-hidden rounded-2xl p-5 text-left"
                       style={{
-                        background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
-                        backdropFilter: 'blur(12px) saturate(180%)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: `
-                          1px 2px 2px hsl(0deg 0% 0% / 0.333),
-                          2px 4px 4px hsl(0deg 0% 0% / 0.333),
-                          0 0 0 1px rgba(255, 255, 255, 0.05),
-                          inset 0 1px 0 rgba(255, 255, 255, 0.06)
-                        `
+                        ...cardBaseStyle,
+                        background: `linear-gradient(145deg, rgba(26, 26, 26, ${android ? '0.94' : '0.9'}) 0%, rgba(20, 20, 20, ${android ? '0.96' : '0.95'}) 100%)`
                       }}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                      whileHover={{ scale: android ? 1.015 : 1.02, y: android ? -1 : -2 }}
+                      whileTap={{ scale: android ? 0.985 : 0.98 }}
+                      transition={quickSpring}
                     >
                       {/* Gradient overlay */}
                       <motion.div

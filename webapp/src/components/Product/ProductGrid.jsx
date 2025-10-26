@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { useTranslation } from '../../i18n/useTranslation';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset } from '../../utils/platform';
 
 // Memoized animation variants (moved outside component to prevent recreation)
 const container = {
@@ -14,21 +16,19 @@ const container = {
   }
 };
 
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      stiffness: 400,
-      damping: 30
-    }
-  }
-};
-
 function ProductGrid({ products, loading = false }) {
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const springPreset = getSpringPreset('quick', platform);
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: springPreset || { type: 'spring', stiffness: 400, damping: 30 }
+    }
+  };
 
   if (loading) {
     return (

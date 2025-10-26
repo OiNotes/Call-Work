@@ -12,12 +12,7 @@ import { useApi } from '../hooks/useApi';
 function ProductCardSkeleton() {
   return (
     <div
-      className="glass-card rounded-2xl p-4 space-y-3 animate-pulse"
-      style={{
-        background: 'rgba(26, 26, 26, 0.6)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.06)'
-      }}
+      className="glass-card rounded-2xl p-4 space-y-3 animate-pulse border border-white/10"
     >
       {/* Image skeleton */}
       <div className="w-full aspect-square rounded-xl bg-white/5" />

@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSurfaceStyle, getSpringPreset, isAndroid } from '../../utils/platform';
+import { gpuAccelStyle } from '../../utils/animationHelpers';
 
 const getTabsConfig = (t) => [
   {
@@ -38,8 +42,31 @@ export default function TabBar() {
   const { activeTab, setActiveTab } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const platform = usePlatform();
 
   const tabs = getTabsConfig(t);
+
+  const containerStyle = useMemo(
+    () => getSurfaceStyle('tabbar', platform),
+    [platform]
+  );
+
+  const activeIndicatorStyle = useMemo(
+    () => getSurfaceStyle('accentGlow', platform),
+    [platform]
+  );
+
+  const tapSpring = useMemo(
+    () => getSpringPreset('quick', platform),
+    [platform]
+  );
+
+  const indicatorSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
+
+  const android = isAndroid(platform);
 
   const handleTabChange = (tabId) => {
     triggerHaptic('light');
@@ -48,19 +75,7 @@ export default function TabBar() {
 
   return (
     <div className="tabbar">
-      <div
-        className="rounded-t-3xl"
-        style={{
-          background: 'linear-gradient(180deg, rgba(23, 33, 43, 0.7) 0%, rgba(15, 15, 15, 0.9) 100%)',
-          backdropFilter: 'blur(16px) saturate(180%)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: `
-            0 -4px 16px rgba(0, 0, 0, 0.3),
-            0 -8px 32px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08)
-          `
-        }}
-      >
+      <div className="rounded-t-3xl" style={containerStyle}>
         <div className="flex items-center justify-around px-4 py-3">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -75,25 +90,16 @@ export default function TabBar() {
                   className={`flex flex-col items-center gap-1 relative px-4 py-2 ${
                     isActive ? 'text-orange-primary' : 'text-gray-400'
                   }`}
-                  whileTap={{ scale: 0.92 }}
-                  transition={{ type: 'spring', stiffness: 380, damping: 25 }}
+                  whileTap={{ scale: android ? 0.95 : 0.92 }}
+                  transition={tapSpring}
                 >
-                  {/* Active indicator background - positioned behind content */}
                   {isActive && (
                     <motion.div
                       className="absolute inset-0 rounded-xl pointer-events-none"
                       layoutId="activeTab"
                       initial={false}
-                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(255, 107, 0, 0.12) 0%, rgba(255, 140, 66, 0.08) 100%)',
-                        border: '1px solid rgba(255, 107, 0, 0.3)',
-                        boxShadow: `
-                          0 2px 8px rgba(255, 107, 0, 0.15),
-                          inset 0 1px 0 rgba(255, 255, 255, 0.08)
-                        `,
-                        zIndex: -1
-                      }}
+                      transition={indicatorSpring}
+                      style={{ ...gpuAccelStyle, ...activeIndicatorStyle, zIndex: -1 }}
                     />
                   )}
 

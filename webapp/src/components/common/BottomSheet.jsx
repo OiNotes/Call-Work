@@ -1,8 +1,33 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
 export default function BottomSheet({ isOpen, onClose, children, title }) {
   const { triggerHaptic } = useTelegram();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const sheetStyle = useMemo(
+    () => getSurfaceStyle('surfacePanel', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
+
+  const controlSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
 
   const handleClose = () => {
     triggerHaptic('light');
@@ -19,12 +44,9 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
             onClick={handleClose}
-            style={{
-              background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(12px)'
-            }}
+            style={overlayStyle}
           />
 
           {/* Bottom Sheet */}
@@ -33,16 +55,11 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-t-[32px] flex flex-col max-h-[85vh]"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={sheetStyle}
             >
               {/* Handle bar */}
               <div className="flex justify-center pt-3 pb-2">
@@ -65,11 +82,11 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
                     onClick={handleClose}
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.08)'
                     }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileTap={{ scale: android ? 0.94 : 0.9 }}
+                    transition={controlSpring}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -4,6 +4,7 @@ import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useKeyboardViewport } from './hooks/useKeyboardViewport';
+import { usePlatform } from './hooks/usePlatform';
 import { initI18n, getLanguage } from './i18n';
 import TabBarPortal from './components/TabBarPortal';
 import CartSheet from './components/Cart/CartSheet';
@@ -31,6 +32,7 @@ function App() {
   const { activeTab } = useStore();
   const { user, isReady, isValidating, error } = useTelegram();
   const { isConnected } = useWebSocket();
+  const platform = usePlatform();
   const { toasts, removeToast } = useToastStore();
 
   // Инициализация i18n
@@ -152,7 +154,10 @@ function App() {
         </div>
       )}
 
-      <div className="scroll-container relative z-10 flex-1">
+      <div
+        className="scroll-container relative z-10 flex-1"
+        data-platform={platform}
+      >
         <Suspense fallback={<PageLoader />}>
           <AnimatePresence mode="wait">
             <motion.div

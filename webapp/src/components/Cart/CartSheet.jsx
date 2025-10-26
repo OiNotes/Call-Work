@@ -4,6 +4,8 @@ import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 import CartItem from './CartItem';
 
 export default function CartSheet() {
@@ -18,10 +20,74 @@ export default function CartSheet() {
   );
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const sheetStyle = useMemo(
+    () => getSurfaceStyle('surfaceStrong', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
+
+  const controlSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
+
+  const quickSpring = useMemo(
+    () => getSpringPreset('quick', platform),
+    [platform]
+  );
+
+  const checkoutShadow = useMemo(
+    () => (
+      android
+        ? '0 4px 16px rgba(255, 107, 0, 0.26), 0 8px 20px rgba(255, 107, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+        : `
+            0 4px 12px rgba(255, 107, 0, 0.3),
+            0 8px 24px rgba(255, 107, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2)
+          `
+    ),
+    [android]
+  );
+
+  const checkoutHoverShadow = useMemo(
+    () => (
+      android
+        ? '0 4px 10px rgba(255, 107, 0, 0.3), 0 8px 20px rgba(255, 107, 0, 0.2)'
+        : '0 4px 8px rgba(255, 107, 0, 0.3), 0 8px 20px rgba(255, 107, 0, 0.25), 0 0 40px rgba(255, 107, 0, 0.2)'
+    ),
+    [android]
+  );
 
   const total = useMemo(() => (
     cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   ), [cart]);
+
+  const emptyEmojiAnimate = android
+    ? { scale: 1, rotate: 0 }
+    : {
+        scale: [1, 1.1, 1],
+        rotate: [0, -10, 10, 0]
+      };
+
+  const emptyEmojiTransition = android
+    ? { duration: 1.2, ease: 'easeOut' }
+    : {
+        duration: 2,
+        repeat: Infinity,
+        repeatDelay: 1
+      };
 
   const handleClose = () => {
     triggerHaptic('light');
@@ -49,30 +115,22 @@ export default function CartSheet() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
             onClick={handleClose}
-            style={{
-              background: 'rgba(0, 0, 0, 0.6)',
-              backdropFilter: 'blur(8px)'
-            }}
+            style={overlayStyle}
           />
 
           {/* Sheet */}
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] flex flex-col"
             initial={{ y: '100%' }}
-            animate={{ y: '-10vh' }}
+            animate={{ y: android ? '-8vh' : '-10vh' }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-t-[32px] flex flex-col max-h-[90vh]"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={sheetStyle}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-white/10">
@@ -88,11 +146,11 @@ export default function CartSheet() {
                       onClick={handleClearCart}
                       className="text-sm font-semibold text-red-500 hover:text-red-400 px-3 py-1 rounded-lg"
                       style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
+                        background: android ? 'rgba(239, 68, 68, 0.16)' : 'rgba(239, 68, 68, 0.1)',
                         transition: 'all 200ms ease-out'
                       }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      whileTap={{ scale: android ? 0.97 : 0.95 }}
+                      transition={controlSpring}
                     >
                       {t('common.clear')}
                     </motion.button>
@@ -101,11 +159,11 @@ export default function CartSheet() {
                     onClick={handleClose}
                     className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.08)'
                     }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileTap={{ scale: android ? 0.94 : 0.9 }}
+                    transition={controlSpring}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -123,16 +181,9 @@ export default function CartSheet() {
                     className="flex flex-col items-center justify-center py-20"
                   >
                     {/* Animated cart icon */}
-                    <motion.div
-                      animate={{
-                        scale: [1, 1.1, 1],
-                        rotate: [0, -10, 10, 0]
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatDelay: 1
-                      }}
+                  <motion.div
+                      animate={emptyEmojiAnimate}
+                      transition={emptyEmojiTransition}
                       className="text-6xl mb-4"
                     >
                       🛒
@@ -149,17 +200,16 @@ export default function CartSheet() {
                     <motion.button
                       onClick={() => {
                         setCartOpen(false);
-                        // User will naturally navigate to catalog via TabBar
                       }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: android ? 1.02 : 1.05 }}
+                      whileTap={{ scale: android ? 0.97 : 0.95 }}
                       className="px-6 py-3 rounded-xl font-semibold text-white"
                       style={{
                         background: 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)',
-                        boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3)',
+                        boxShadow: android ? '0 4px 12px rgba(255, 107, 0, 0.24)' : '0 4px 12px rgba(255, 107, 0, 0.3)',
                         letterSpacing: '-0.01em'
                       }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      transition={quickSpring}
                     >
                       Browse Catalog
                     </motion.button>
@@ -198,26 +248,20 @@ export default function CartSheet() {
                     className="w-full touch-target text-white font-bold rounded-xl overflow-hidden"
                     style={{
                       background: 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
-                      boxShadow: `
-                        0 4px 12px rgba(255, 107, 0, 0.3),
-                        0 8px 24px rgba(255, 107, 0, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2)
-                      `,
+                      boxShadow: checkoutShadow,
                       letterSpacing: '-0.01em'
                     }}
-                    whileHover={{ 
-                      scale: 1.01, 
-                      boxShadow: '0 4px 8px rgba(255, 107, 0, 0.3), 0 8px 20px rgba(255, 107, 0, 0.25), 0 0 40px rgba(255, 107, 0, 0.2)'
+                    whileHover={{
+                      scale: android ? 1.01 : 1.02,
+                      boxShadow: checkoutHoverShadow
                     }}
-                    whileTap={{ 
-                      scale: 0.98,
+                    whileTap={{
+                      scale: android ? 0.985 : 0.98,
                       boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
                     }}
-                    transition={{ 
-                      type: 'spring', 
-                      stiffness: 400, 
-                      damping: 30,
-                      boxShadow: { duration: 0.2 }
+                    transition={{
+                      ...controlSpring,
+                      boxShadow: { duration: 0.18 }
                     }}
                   >
                     {t('cart.checkout')}

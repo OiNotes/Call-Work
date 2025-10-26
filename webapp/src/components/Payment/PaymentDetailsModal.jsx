@@ -1,10 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS, calculateCryptoAmount } from '../../utils/paymentUtils';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
 export default function PaymentDetailsModal() {
   const {
@@ -16,8 +18,40 @@ export default function PaymentDetailsModal() {
   } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
   const [copied, setCopied] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const sheetStyle = useMemo(
+    () => getSurfaceStyle('surfacePanel', platform),
+    [platform]
+  );
+
+  const cardStyle = useMemo(
+    () => getSurfaceStyle('glassCard', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
+
+  const controlSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
+
+  const quickSpring = useMemo(
+    () => getSpringPreset('quick', platform),
+    [platform]
+  );
 
   const isOpen = paymentStep === 'details';
 
@@ -70,30 +104,22 @@ export default function PaymentDetailsModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
             onClick={handleClose}
-            style={{
-              background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(12px)'
-            }}
+            style={overlayStyle}
           />
 
           {/* Modal */}
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
             initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: '-10vh', opacity: 1 }}
+            animate={{ y: android ? '-7vh' : '-10vh', opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-t-[32px] flex flex-col"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={sheetStyle}
             >
               {/* Header - Compact */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -102,11 +128,11 @@ export default function PaymentDetailsModal() {
                     onClick={handleClose}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.08)'
                     }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileTap={{ scale: android ? 0.94 : 0.9 }}
+                    transition={controlSpring}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -165,8 +191,8 @@ export default function PaymentDetailsModal() {
                   transition={{ delay: 0.2 }}
                   className="flex items-center gap-2 rounded-lg p-2"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                    ...cardStyle,
+                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)'
                   }}
                 >
                   <div className="flex-1 break-all text-white font-mono text-xs tabular-nums">
@@ -176,11 +202,11 @@ export default function PaymentDetailsModal() {
                     onClick={handleCopyWallet}
                     className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
                     style={{
-                      background: copied ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 107, 0, 0.2)',
-                      border: copied ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255, 107, 0, 0.3)'
+                      background: copied ? 'rgba(34, 197, 94, 0.24)' : 'rgba(255, 107, 0, 0.22)',
+                      border: copied ? '1px solid rgba(34, 197, 94, 0.36)' : '1px solid rgba(255, 107, 0, 0.32)'
                     }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileTap={{ scale: android ? 0.95 : 0.9 }}
+                    transition={controlSpring}
                   >
                     {copied ? (
                       <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,15 +225,16 @@ export default function PaymentDetailsModal() {
                   onClick={handleCopyAmount}
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
                   className="w-full rounded-xl p-4 text-center space-y-2 cursor-pointer"
                   style={{
+                    ...cardStyle,
                     background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
-                    backdropFilter: 'blur(12px)',
-                    border: copiedAmount ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '1px 2px 2px hsl(0deg 0% 0% / 0.333), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
+                    border: copiedAmount
+                      ? '1px solid rgba(34, 197, 94, 0.36)'
+                      : '1px solid rgba(255, 255, 255, 0.1)'
                   }}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: android ? 0.985 : 0.98 }}
+                  transition={{ ...quickSpring, delay: 0.3 }}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <p className="text-gray-400 text-xs">
@@ -238,15 +265,17 @@ export default function PaymentDetailsModal() {
                   className="w-full h-12 text-white font-bold rounded-xl overflow-hidden"
                   style={{
                     background: 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
-                    boxShadow: `
-                      0 4px 12px rgba(255, 107, 0, 0.3),
-                      0 8px 24px rgba(255, 107, 0, 0.15),
-                      inset 0 1px 0 rgba(255, 255, 255, 0.2)
-                    `,
+                    boxShadow: android
+                      ? '0 4px 16px rgba(255, 107, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                      : `
+                          0 4px 12px rgba(255, 107, 0, 0.3),
+                          0 8px 24px rgba(255, 107, 0, 0.15),
+                          inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                        `,
                     letterSpacing: '-0.01em'
                   }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  whileTap={{ scale: android ? 0.985 : 0.98 }}
+                  transition={controlSpring}
                 >
                   {t('payment.iPaid')}
                 </motion.button>

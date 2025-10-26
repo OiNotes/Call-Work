@@ -205,14 +205,7 @@ export default function Settings() {
               >
                 {section.title}
               </h3>
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  background: 'rgba(26, 26, 26, 0.6)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)'
-                }}
-              >
+              <div className="rounded-2xl overflow-hidden glass-card border border-white/10">
                 {section.items.map((item, index) => (
                   <motion.button
                     key={item.id}

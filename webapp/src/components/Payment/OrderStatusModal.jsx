@@ -1,13 +1,38 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS, formatTxHash } from '../../utils/paymentUtils';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
 export default function OrderStatusModal() {
   const { paymentStep, currentOrder, selectedCrypto, clearCheckout } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const modalStyle = useMemo(
+    () => getSurfaceStyle('surfacePanel', platform),
+    [platform]
+  );
+
+  const cardStyle = useMemo(
+    () => getSurfaceStyle('glassCard', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
 
   const isOpen = paymentStep === 'success';
 
@@ -34,11 +59,8 @@ export default function OrderStatusModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              background: 'rgba(0, 0, 0, 0.85)',
-              backdropFilter: 'blur(16px)'
-            }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
+            style={overlayStyle}
           />
 
           {/* Modal */}
@@ -47,16 +69,11 @@ export default function OrderStatusModal() {
             initial={{ scale: 0.8, opacity: 0, y: '-40%' }}
             animate={{ scale: 1, opacity: 1, y: '-50%' }}
             exit={{ scale: 0.8, opacity: 0, y: '-40%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-3xl overflow-hidden"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={modalStyle}
             >
               {/* Header with gradient */}
               <div
@@ -135,8 +152,9 @@ export default function OrderStatusModal() {
                 <div
                   className="rounded-xl p-4 space-y-3"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    ...cardStyle,
+                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+                    boxShadow: 'none'
                   }}
                 >
                   <div className="flex items-center justify-between">
@@ -185,8 +203,9 @@ export default function OrderStatusModal() {
                         <div
                           className="px-3 py-2 rounded-lg font-mono text-xs text-gray-300 break-all tabular-nums"
                           style={{
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            ...cardStyle,
+                            background: android ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                            boxShadow: 'none'
                           }}
                         >
                           {formatTxHash(completedOrder.txHash, 24)}

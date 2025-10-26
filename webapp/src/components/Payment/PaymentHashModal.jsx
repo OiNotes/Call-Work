@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { validateTxHash } from '../../utils/paymentUtils';
+import { usePlatform } from '../../hooks/usePlatform';
+import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
 export default function PaymentHashModal() {
   const { paymentStep, submitPaymentHash, setPaymentStep } = useStore();
@@ -11,6 +13,28 @@ export default function PaymentHashModal() {
   const { t } = useTranslation();
   const [txHash, setTxHash] = useState('');
   const [error, setError] = useState('');
+  const platform = usePlatform();
+  const android = isAndroid(platform);
+
+  const overlayStyle = useMemo(
+    () => getSurfaceStyle('overlay', platform),
+    [platform]
+  );
+
+  const sheetStyle = useMemo(
+    () => getSurfaceStyle('surfacePanel', platform),
+    [platform]
+  );
+
+  const sheetSpring = useMemo(
+    () => getSpringPreset('sheet', platform),
+    [platform]
+  );
+
+  const controlSpring = useMemo(
+    () => getSpringPreset('press', platform),
+    [platform]
+  );
 
   const isOpen = paymentStep === 'hash';
 
@@ -48,12 +72,9 @@ export default function PaymentHashModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: android ? 0.24 : 0.2 }}
             onClick={handleClose}
-            style={{
-              background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(12px)'
-            }}
+            style={overlayStyle}
           />
 
           {/* Modal - Compact */}
@@ -62,16 +83,11 @@ export default function PaymentHashModal() {
             initial={{ y: '100%', scale: 0.95 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: '100%', scale: 0.95 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
+            transition={sheetSpring}
           >
             <div
               className="rounded-t-[32px] flex flex-col"
-              style={{
-                background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-              }}
+              style={sheetStyle}
             >
               {/* Header - Compact */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -80,11 +96,11 @@ export default function PaymentHashModal() {
                     onClick={handleClose}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
+                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.08)'
                     }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    whileTap={{ scale: android ? 0.94 : 0.9 }}
+                    transition={controlSpring}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -220,12 +236,14 @@ export default function PaymentHashModal() {
                       ? 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)'
                       : 'rgba(74, 74, 74, 0.5)',
                     boxShadow: validateTxHash(txHash)
-                      ? '0 4px 12px rgba(255, 107, 0, 0.3), 0 8px 24px rgba(255, 107, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                      ? android
+                        ? '0 4px 16px rgba(255, 107, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
+                        : '0 4px 12px rgba(255, 107, 0, 0.3), 0 8px 24px rgba(255, 107, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       : 'none',
                     letterSpacing: '-0.01em'
                   }}
-                  whileTap={validateTxHash(txHash) ? { scale: 0.98 } : {}}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  whileTap={validateTxHash(txHash) ? { scale: android ? 0.985 : 0.98 } : {}}
+                  transition={controlSpring}
                 >
                   {t('payment.confirmPayment')}
                 </motion.button>
