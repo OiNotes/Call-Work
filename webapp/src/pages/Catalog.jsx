@@ -12,17 +12,36 @@ export default function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [myShop, setMyShop] = useState(null);
 
   const { currentShop, setCurrentShop, setCartOpen } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const { get } = useApi();
 
+  // Загрузить свой магазин
   useEffect(() => {
-    if (currentShop) {
-      loadProducts(currentShop.id);
+    loadMyShop();
+  }, []);
+
+  // Загрузить товары при изменении магазина
+  useEffect(() => {
+    const shopToLoad = currentShop || myShop;
+    if (shopToLoad) {
+      loadProducts(shopToLoad.id);
     }
-  }, [currentShop]);
+  }, [currentShop, myShop]);
+
+  const loadMyShop = async () => {
+    try {
+      const { data, error: apiError } = await get('/shops/my');
+      if (!apiError && data && data.length > 0) {
+        setMyShop(data[0]); // Берем первый магазин владельца
+      }
+    } catch (err) {
+      console.error('Failed to load my shop:', err);
+    }
+  };
 
   const loadProducts = async (shopId) => {
     try {
@@ -54,10 +73,21 @@ export default function Catalog() {
     setProducts([]);
   };
 
-  // Если магазин не выбран
-  if (!currentShop) {
+  const handleBackToMyShop = () => {
+    triggerHaptic('light');
+    setCurrentShop(null);
+    // Товары автоматически загрузятся через useEffect
+  };
+
+  // Определяем, какой магазин показывать
+  const displayShop = currentShop || myShop;
+  const isViewingOwnShop = !currentShop && myShop;
+  const isViewingSubscription = currentShop && myShop && currentShop.id !== myShop.id;
+
+  // Если нет ни currentShop, ни myShop - пустой экран
+  if (!displayShop) {
     return (
-      <div className="min-h-screen pb-24 pt-20">
+      <div className="pb-24 pt-20">
         <Header title={t('catalog.title')} />
 
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -70,46 +100,59 @@ export default function Catalog() {
           <p className="text-gray-400 mb-6">
             {t('catalog.selectShopDesc')}
           </p>
-          <motion.button
-            onClick={() => useStore.getState().setActiveTab('subscriptions')}
-            className="bg-orange-primary hover:bg-orange-light text-white font-semibold px-6 py-3 rounded-xl transition-colors"
-            whileTap={{ scale: 0.95 }}
-          >
-            {t('catalog.goToSubscriptions')}
-          </motion.button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* Shop Header with Back Button */}
+    <div className="pb-24">
+      {/* Shop Header with Navigation */}
       <div className="bg-dark-card/80 backdrop-blur-lg p-4 sticky top-0 z-10">
-        <motion.button
-          onClick={handleBack}
-          className="flex items-center gap-2 text-orange-primary mb-2"
-          whileTap={{ scale: 0.95 }}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="font-medium">{t('common.back')}</span>
-        </motion.button>
+        {/* Back button - показывать только если просматриваем подписку */}
+        {isViewingSubscription && (
+          <motion.button
+            onClick={handleBackToMyShop}
+            className="flex items-center gap-2 text-orange-primary mb-2"
+            whileTap={{ scale: 0.95 }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">{t('catalog.backToMyShop')}</span>
+          </motion.button>
+        )}
+
+        {/* Clear selection - показывать если просматриваем НЕ свой магазин */}
+        {currentShop && !isViewingSubscription && (
+          <motion.button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-orange-primary mb-2"
+            whileTap={{ scale: 0.95 }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">{t('common.back')}</span>
+          </motion.button>
+        )}
 
         <div className="flex items-center gap-4">
-          {currentShop.image && (
+          {displayShop.image && (
             <div className="w-12 h-12 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
               <img
-                src={currentShop.image}
-                alt={currentShop.name}
+                src={displayShop.image}
+                alt={displayShop.name}
                 className="w-full h-full object-cover"
               />
             </div>
           )}
           <div className="flex-1">
             <h1 className="text-white text-2xl font-bold">
-              {currentShop.name}
+              {displayShop.name}
+              {isViewingOwnShop && (
+                <span className="ml-2 text-sm text-orange-primary">(Мой магазин)</span>
+              )}
             </h1>
             <p className="text-gray-400 text-sm">
               {products.length} {t('catalog.products')}
@@ -126,7 +169,7 @@ export default function Catalog() {
           </svg>
           <h3 className="text-lg font-semibold text-gray-400 mb-2">{error}</h3>
           <motion.button
-            onClick={() => loadProducts(currentShop.id)}
+            onClick={() => loadProducts(displayShop.id)}
             className="bg-orange-primary hover:bg-orange-light text-white font-semibold px-6 py-3 rounded-xl transition-colors mt-4"
             whileTap={{ scale: 0.95 }}
           >

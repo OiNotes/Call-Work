@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useShopApi } from '../../hooks/useApi';
 import { useTelegram } from '../../hooks/useTelegram';
+import { useBackButton } from '../../hooks/useBackButton';
 import { useTranslation } from '../../i18n/useTranslation';
 
 // Компонент карточки заказа
@@ -119,6 +120,9 @@ export default function OrdersModal({ isOpen, onClose }) {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState(null);
 
+  // Используем Telegram BackButton API для закрытия модалки
+  useBackButton(isOpen ? onClose : null);
+
   useEffect(() => {
     if (isOpen) {
       loadOrders();
@@ -132,7 +136,10 @@ export default function OrdersModal({ isOpen, onClose }) {
     if (error) {
       setError(error);
     } else {
-      setOrders(data || []);
+      // Backend возвращает { success: true, data: [...orders] }
+      // useApi оборачивает в { data: response.data, error: null }
+      // Поэтому нужно извлечь data.data
+      setOrders(data?.data || []);
     }
   };
 
@@ -146,7 +153,7 @@ export default function OrdersModal({ isOpen, onClose }) {
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
-          <PageHeader title={t('orders.title')} onBack={onClose} />
+          <PageHeader title={t('orders.title')} />
           <div className="min-h-screen pb-24 pt-20">
             <div className="px-4 py-6 space-y-4">
         {/* Loading state */}

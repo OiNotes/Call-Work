@@ -116,45 +116,96 @@ export default function FollowsModal({ isOpen, onClose }) {
   const loadData = async () => {
     setLoading(true);
     try {
+      // 1. Get shop - simplified parsing
       const shopsRes = await fetchApi('/shops/my');
-      const shopsPayload = shopsRes?.data ?? shopsRes ?? [];
-      const shop = Array.isArray(shopsPayload) ? shopsPayload[0] : null;
+      console.log('[FollowsModal] Raw shops response:', shopsRes);
 
-      setMyShop(shop || null);
+      let shopsList = [];
+      if (Array.isArray(shopsRes)) {
+        shopsList = shopsRes;
+      } else if (shopsRes && Array.isArray(shopsRes.data)) {
+        shopsList = shopsRes.data;
+      }
+
+      const shop = shopsList.length > 0 ? shopsList[0] : null;
+      console.log('[FollowsModal] Parsed shop:', shop);
+
+      setMyShop(shop);
 
       if (!shop) {
+        console.log('[FollowsModal] No shop - resetting state');
         setIsPro(false);
         setFollows([]);
         setLimitInfo(null);
         return;
       }
 
+      // 2. Check PRO tier
       const proTier = (shop.tier || '').toLowerCase() === 'pro';
+      console.log('[FollowsModal] Shop tier:', shop.tier, '| isPro:', proTier);
       setIsPro(proTier);
 
+      // 3. Load follows and limits in parallel
       const [followsRes, limitRes] = await Promise.all([
         fetchApi(`/follows/my?shopId=${shop.id}`),
         fetchApi(`/follows/check-limit?shopId=${shop.id}`)
       ]);
 
-      const followsPayload = followsRes?.data ?? followsRes ?? {};
-      const followsData = followsPayload?.data ?? followsPayload ?? [];
-      setFollows(Array.isArray(followsData) ? followsData : []);
+      console.log('[FollowsModal] Follows response:', followsRes);
+      console.log('[FollowsModal] Limit response:', limitRes);
 
-      const limitPayload = limitRes?.data ?? limitRes ?? null;
-      const limitData = limitPayload?.data ?? limitPayload ?? null;
-      if (limitData) {
+      // 4. Parse follows - simplified
+      let followsList = [];
+      if (Array.isArray(followsRes)) {
+        followsList = followsRes;
+      } else if (followsRes && Array.isArray(followsRes.data)) {
+        followsList = followsRes.data;
+      }
+      console.log('[FollowsModal] Parsed follows:', followsList.length);
+      setFollows(followsList);
+
+      // 5. Parse limit info - simplified with fallback
+      try {
+        let limitData = null;
+        if (limitRes && typeof limitRes === 'object') {
+          limitData = limitRes.data || limitRes;
+        }
+
+        if (limitData && typeof limitData === 'object') {
+          setLimitInfo({
+            count: Number(limitData.count) || 0,
+            limit: limitData.limit === null ? null : Number(limitData.limit) || 0,
+            remaining: limitData.remaining === null ? null : Number(limitData.remaining) || 0,
+            tier: limitData.tier || shop.tier || 'BASIC',
+            canFollow: limitData.canFollow !== false,
+            reached: limitData.reached === true
+          });
+          console.log('[FollowsModal] Limit info set:', limitData);
+        } else {
+          // Fallback - safe defaults
+          setLimitInfo({
+            count: followsList.length,
+            limit: null,
+            remaining: null,
+            tier: shop.tier || 'BASIC',
+            canFollow: true,
+            reached: false
+          });
+          console.log('[FollowsModal] Using fallback limit info');
+        }
+      } catch (limitError) {
+        console.error('[FollowsModal] Error parsing limit info:', limitError);
         setLimitInfo({
-          ...limitData,
-          count: limitData.count != null ? Number(limitData.count) : 0,
-          limit: limitData.limit === null || limitData.limit === undefined ? null : Number(limitData.limit),
-          remaining: limitData.remaining === null || limitData.remaining === undefined ? null : Number(limitData.remaining)
+          count: followsList.length,
+          limit: null,
+          remaining: null,
+          tier: shop.tier || 'BASIC',
+          canFollow: true,
+          reached: false
         });
-      } else {
-        setLimitInfo(null);
       }
     } catch (error) {
-      console.error('Error loading follows:', error);
+      console.error('[FollowsModal] Error loading data:', error);
       setFollows([]);
       setLimitInfo(null);
       setIsPro(false);

@@ -143,7 +143,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen pb-24 pt-20">
+    <div className="pb-24 pt-20">
       <Header title={t('settings.title')} />
 
       <div className="px-4 py-6">

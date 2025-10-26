@@ -1,11 +1,11 @@
 import { Markup } from 'telegraf';
-import config from '../config/index.js';
+import { getWebAppUrl } from '../utils/webappUrl.js';
 
 // Seller menu (with active shop) - redesigned hierarchical structure
 export const sellerMenu = (shopName) => {
   return Markup.inlineKeyboard([
     // PRIMARY: WebApp button
-    [Markup.button.webApp('📱 Открыть Menu', config.webAppUrl)],
+    [Markup.button.webApp('📱 Открыть Menu', getWebAppUrl())],
 
     // CORE: Main actions
     [Markup.button.callback('💰 Продажи', 'seller:sales')],

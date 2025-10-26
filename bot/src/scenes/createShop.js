@@ -62,7 +62,8 @@ const handleShopName = async (ctx) => {
     });
 
     // Show loading message (will be deleted after)
-    const loadingMsg = await cleanReply(ctx, 'Сохраняем...');
+    let loadingMsg = null;
+    loadingMsg = await cleanReply(ctx, 'Сохраняем...');
 
     if (!ctx.session.token) {
       logger.error('Missing auth token when creating shop', {

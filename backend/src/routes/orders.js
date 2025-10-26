@@ -30,6 +30,13 @@ router.get('/', verifyToken, optionalTelegramAuth, (req, res, next) => {
 });
 
 /**
+ * @route   GET /api/orders/my
+ * @desc    Get current user's orders
+ * @access  Private (WebApp)
+ */
+router.get('/my', verifyToken, optionalTelegramAuth, orderController.getMyOrders);
+
+/**
  * @route   GET /api/orders/sales
  * @desc    Get current user's sales (as seller)
  * @access  Private (WebApp)
@@ -38,13 +45,6 @@ router.get('/sales', verifyToken, optionalTelegramAuth, (req, res, next) => {
   req.query.type = 'seller';
   return orderController.getMyOrders(req, res, next);
 });
-
-/**
- * @route   GET /api/orders/my
- * @desc    Get current user's orders
- * @access  Private (WebApp)
- */
-router.get('/my', verifyToken, optionalTelegramAuth, orderController.getMyOrders);
 
 /**
  * @route   GET /api/orders/:id

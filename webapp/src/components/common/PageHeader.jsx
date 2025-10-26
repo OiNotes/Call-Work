@@ -1,6 +1,13 @@
 import { motion } from 'framer-motion';
 import { useTelegram } from '../../hooks/useTelegram';
 
+/**
+ * PageHeader component
+ *
+ * @param {string} title - Заголовок страницы
+ * @param {Function} onBack - (DEPRECATED) Callback для кнопки назад. Используйте useBackButton hook вместо этого.
+ * @param {ReactNode} action - Опциональный элемент для правой стороны header
+ */
 export default function PageHeader({ title, onBack, action }) {
   const { triggerHaptic } = useTelegram();
 
@@ -19,22 +26,26 @@ export default function PageHeader({ title, onBack, action }) {
         borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
       }}
     >
-      {/* Back Button */}
-      <motion.button
-        onClick={handleBack}
-        className="flex items-center justify-center rounded-xl text-white"
-        style={{
-          width: '40px',
-          height: '40px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.08)'
-        }}
-        whileTap={{ scale: 0.9 }}
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </motion.button>
+      {/* Back Button (только если передан onBack - DEPRECATED) */}
+      {onBack ? (
+        <motion.button
+          onClick={handleBack}
+          className="flex items-center justify-center rounded-xl text-white"
+          style={{
+            width: '40px',
+            height: '40px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
+          }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </motion.button>
+      ) : (
+        <div style={{ width: '40px', height: '40px' }} />
+      )}
 
       {/* Title */}
       <h1

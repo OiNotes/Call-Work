@@ -65,8 +65,13 @@ export const verifyTelegramInitData = (req, res, next) => {
       .update(dataCheckString)
       .digest('hex');
 
-    // Compare hashes (constant-time comparison to prevent timing attacks)
-    if (calculatedHash !== hash) {
+    // Compare hashes using constant-time comparison to prevent timing attacks
+    // CRITICAL: Must use crypto.timingSafeEqual() instead of === operator
+    const hashBuffer = Buffer.from(hash, 'hex');
+    const calculatedHashBuffer = Buffer.from(calculatedHash, 'hex');
+
+    if (hashBuffer.length !== calculatedHashBuffer.length ||
+        !crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer)) {
       logger.warn('Invalid Telegram initData signature', {
         ip: req.ip,
         path: req.path,

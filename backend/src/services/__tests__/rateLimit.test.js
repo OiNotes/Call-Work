@@ -68,9 +68,9 @@ describe('Rate Limit Service', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false for free shop', async () => {
+    it('should return false for basic shop', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'free' }]
+        rows: [{ tier: 'basic' }]
       });
 
       const result = await isProShop(1);
@@ -94,9 +94,9 @@ describe('Rate Limit Service', () => {
       expect(result.data).toBeDefined();
     });
 
-    it('should fail validation for free shop', async () => {
+    it('should fail validation for basic shop', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'free' }]
+        rows: [{ tier: 'basic' }]
       });
 
       const result = await validateMigration(1);

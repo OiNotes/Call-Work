@@ -41,7 +41,15 @@ class TelegramService {
         .update(dataCheckString)
         .digest('hex');
 
-      return calculatedHash === hash;
+      // Use timing-safe comparison to prevent timing attacks
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const calculatedHashBuffer = Buffer.from(calculatedHash, 'hex');
+
+      if (hashBuffer.length !== calculatedHashBuffer.length) {
+        return false;
+      }
+
+      return crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer);
     } catch (error) {
       logger.error('Init data verification error', { error: error.message, stack: error.stack });
       return false;

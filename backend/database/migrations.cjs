@@ -559,7 +559,7 @@ async function addRecurringSubscriptions() {
         CREATE TABLE shop_subscriptions (
           id SERIAL PRIMARY KEY,
           shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-          tier VARCHAR(20) NOT NULL CHECK (tier IN ('free', 'pro')),
+          tier VARCHAR(20) NOT NULL CHECK (tier IN ('basic', 'pro')),
           amount DECIMAL(10, 2) NOT NULL,
           tx_hash VARCHAR(255) UNIQUE NOT NULL,
           currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT', 'TON')),
@@ -582,8 +582,8 @@ async function addRecurringSubscriptions() {
       // Add comments
       log.info('Adding comments to shop_subscriptions...');
       await client.query(`
-        COMMENT ON TABLE shop_subscriptions IS 'Stores monthly subscription payments for shops (free $25/mo, pro $35/mo)';
-        COMMENT ON COLUMN shop_subscriptions.tier IS 'Subscription tier: free ($25) or pro ($35)';
+        COMMENT ON TABLE shop_subscriptions IS 'Stores monthly subscription payments for shops (basic $25/mo, pro $35/mo)';
+        COMMENT ON COLUMN shop_subscriptions.tier IS 'Subscription tier: basic ($25) or pro ($35)';
         COMMENT ON COLUMN shop_subscriptions.amount IS 'Payment amount in USD';
         COMMENT ON COLUMN shop_subscriptions.tx_hash IS 'Blockchain transaction hash for verification';
         COMMENT ON COLUMN shop_subscriptions.period_start IS 'Start date of subscription period';
@@ -600,7 +600,7 @@ async function addRecurringSubscriptions() {
     await client.query(`
       COMMENT ON COLUMN shops.registration_paid IS 'Whether initial subscription payment was confirmed';
       COMMENT ON COLUMN shops.is_active IS 'Shop activation status (deactivated after grace period expires)';
-      COMMENT ON COLUMN shops.tier IS 'Subscription tier: free ($25/month) or pro ($35/month)';
+      COMMENT ON COLUMN shops.tier IS 'Subscription tier: basic ($25/month) or pro ($35/month)';
       COMMENT ON COLUMN shops.subscription_status IS 'active: paid, grace_period: 2 days after expiry, inactive: deactivated';
       COMMENT ON COLUMN shops.next_payment_due IS 'Next monthly subscription payment due date';
       COMMENT ON COLUMN shops.grace_period_until IS 'Grace period end date (2 days after payment due)';
@@ -619,7 +619,7 @@ async function addRecurringSubscriptions() {
 /**
  * Run incremental migration: Add Channel Migration feature for PRO subscribers
  * - Add telegram_id to subscriptions table for broadcast capability
- * - Add tier (free/pro) to shops table
+ * - Add tier (basic/pro) to shops table
  * - Create channel_migrations table for logging migrations
  */
 async function addChannelMigrationFeature() {
@@ -666,7 +666,7 @@ async function addChannelMigrationFeature() {
       log.info('Adding tier column to shops table...');
       await client.query(`
         ALTER TABLE shops
-        ADD COLUMN tier VARCHAR(20) DEFAULT 'free' CHECK (tier IN ('free', 'pro'))
+        ADD COLUMN tier VARCHAR(20) DEFAULT 'basic' CHECK (tier IN ('basic', 'pro'))
       `);
       log.success('Column tier added to shops');
 

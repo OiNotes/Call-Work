@@ -29,7 +29,7 @@ const SUBSCRIPTION_PERIOD_DAYS = 30;
  * Verifies crypto transaction and creates subscription record
  * 
  * @param {number} shopId - Shop ID
- * @param {string} tier - Subscription tier ('free' or 'pro')
+ * @param {string} tier - Subscription tier ('basic' or 'pro')
  * @param {string} txHash - Blockchain transaction hash
  * @param {string} currency - Cryptocurrency (BTC, ETH, USDT, TON)
  * @param {string} expectedAddress - Expected payment address

@@ -87,7 +87,8 @@ export const orderController = {
       }
 
       return res.status(201).json({
-        order: order
+        success: true,
+        data: order
       });
 
     } catch (error) {
@@ -138,7 +139,8 @@ export const orderController = {
       }
 
       return res.status(200).json({
-        order: order
+        success: true,
+        data: order
       });
 
     } catch (error) {
@@ -189,7 +191,8 @@ export const orderController = {
       }
 
       return res.status(200).json({
-        orders: orders
+        success: true,
+        data: orders
       });
 
     } catch (error) {

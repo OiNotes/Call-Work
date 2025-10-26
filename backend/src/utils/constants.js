@@ -81,19 +81,19 @@ export const PAGINATION = {
 export const RATE_LIMITS = {
   AUTH: {
     WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 10
+    MAX_REQUESTS: 1000 // Increased for development testing
   },
   API: {
     WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 100
+    MAX_REQUESTS: 1000 // Increased for development testing
   },
   PAYMENT: {
     WINDOW_MS: 60 * 1000, // 1 minute
-    MAX_REQUESTS: 5
+    MAX_REQUESTS: 50 // Increased for development testing
   },
   WEBHOOK: {
     WINDOW_MS: 60 * 1000, // 1 minute
-    MAX_REQUESTS: 30
+    MAX_REQUESTS: 100
   }
 };
 

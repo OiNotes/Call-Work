@@ -88,6 +88,29 @@ make dev-webapp   # React App на :5173
 npm start
 ```
 
+### 🌐 Development с ngrok (для Telegram Mini App)
+
+**Для разработки Telegram Mini App нужны HTTPS URLs. Используйте автоматизацию ngrok:**
+
+```bash
+# 1. Установить ngrok
+brew install ngrok  # macOS
+
+# 2. Запустить весь stack с HTTPS туннелями
+npm run dev:ngrok
+
+# 3. Настроить BotFather Menu Button
+npm run setup:botfather
+```
+
+**Подробная документация:** [NGROK_SETUP.md](./NGROK_SETUP.md)
+
+**Доступные команды:**
+- `npm run dev:ngrok` - запустить Backend + WebApp с ngrok
+- `npm run ngrok:update-env` - обновить .env с ngrok URLs
+- `npm run ngrok:status` - показать статус туннелей
+- `npm run setup:botfather` - инструкции для BotFather
+
 ### 📌 Ограничения тарифов
 
 - **Workspace (Работники)** — доступен только на PRO ($35/мес). Для BASIC в боте и WebApp показывается подсказка об апгрейде.

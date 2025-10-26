@@ -63,10 +63,12 @@ npm start
 
 ### Authentication
 
+- `POST /api/auth/telegram-validate` - **Secure** Telegram WebApp auth with HMAC-SHA256 (RECOMMENDED)
 - `POST /api/auth/login` - Login via Telegram Web App
 - `POST /api/auth/register` - Register new user
 - `GET /api/auth/profile` - Get current user profile
 - `PUT /api/auth/profile` - Update user profile
+- `PATCH /api/auth/role` - Update selected role
 
 ### Shops
 
@@ -158,12 +160,17 @@ backend/
 
 ## Security
 
+- **HMAC-SHA256 Telegram initData validation** with timing-safe comparison ([docs/TELEGRAM_AUTH.md](docs/TELEGRAM_AUTH.md))
 - Helmet.js для security headers
 - Rate limiting (100 requests / 15 минут по умолчанию)
 - CORS настроен для frontend URL
 - JWT для аутентификации
 - Input validation с express-validator
-- Telegram Web App data verification
+- 24-hour expiration check для предотвращения replay attacks
+
+**Security Documentation:**
+- [Telegram Authentication Guide](docs/TELEGRAM_AUTH.md) - HMAC-SHA256 validation details
+- [Project Security Policy](../SECURITY.md) - Vulnerability reporting & best practices
 
 ## Error Handling
 

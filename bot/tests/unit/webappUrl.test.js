@@ -1,0 +1,85 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { getWebAppUrl, logWebAppConfig } from '../../src/utils/webappUrl.js';
+import logger from '../../src/utils/logger.js';
+
+// Mock logger
+vi.mock('../../src/utils/logger.js', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn()
+  }
+}));
+
+describe('webappUrl utility', () => {
+  let originalEnv;
+
+  beforeEach(() => {
+    // Save original env
+    originalEnv = process.env.WEBAPP_URL;
+    // Clear mocks
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // Restore original env
+    if (originalEnv) {
+      process.env.WEBAPP_URL = originalEnv;
+    } else {
+      delete process.env.WEBAPP_URL;
+    }
+  });
+
+  describe('getWebAppUrl', () => {
+    it('should return valid HTTPS URL', () => {
+      process.env.WEBAPP_URL = 'https://example.com';
+      expect(getWebAppUrl()).toBe('https://example.com');
+    });
+
+    it('should throw error if WEBAPP_URL is not set', () => {
+      delete process.env.WEBAPP_URL;
+      expect(() => getWebAppUrl()).toThrow('WEBAPP_URL is not configured in environment');
+    });
+
+    it('should throw error if URL format is invalid', () => {
+      process.env.WEBAPP_URL = 'not-a-url';
+      expect(() => getWebAppUrl()).toThrow('Invalid WEBAPP_URL format');
+    });
+
+    it('should throw error if URL does not use HTTPS', () => {
+      process.env.WEBAPP_URL = 'http://example.com';
+      expect(() => getWebAppUrl()).toThrow('WEBAPP_URL must use HTTPS');
+    });
+
+    it('should accept ngrok URLs', () => {
+      process.env.WEBAPP_URL = 'https://abc123.ngrok-free.app';
+      expect(getWebAppUrl()).toBe('https://abc123.ngrok-free.app');
+    });
+
+    it('should accept production URLs', () => {
+      process.env.WEBAPP_URL = 'https://statusstock.app';
+      expect(getWebAppUrl()).toBe('https://statusstock.app');
+    });
+  });
+
+  describe('logWebAppConfig', () => {
+    it('should log WebApp URL configuration', () => {
+      process.env.WEBAPP_URL = 'https://example.com';
+
+      logWebAppConfig();
+
+      expect(logger.info).toHaveBeenCalledWith('WebApp URL configured', { url: 'https://example.com' });
+      expect(logger.info).toHaveBeenCalledWith('BotFather Menu Button should be set to:', { url: 'https://example.com' });
+      expect(logger.info).toHaveBeenCalledWith('If URL changed, update in BotFather: /setmenubutton');
+    });
+
+    it('should log error and throw if URL is invalid', () => {
+      delete process.env.WEBAPP_URL;
+
+      expect(() => logWebAppConfig()).toThrow();
+      expect(logger.error).toHaveBeenCalledWith(
+        'WebApp URL configuration error',
+        { error: 'WEBAPP_URL is not configured in environment' }
+      );
+    });
+  });
+});

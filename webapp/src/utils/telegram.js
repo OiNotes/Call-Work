@@ -14,21 +14,71 @@ export function initTelegramApp() {
     tg.ready();
     tg.expand();
 
+    // МАКСИМАЛЬНЫЙ fullscreen режим (Mini Apps 2.0)
+    if (tg.requestFullscreen) {
+      console.log('🚀 Requesting FULL fullscreen mode...');
+      try {
+        tg.requestFullscreen();
+        console.log('✅ Fullscreen requested successfully');
+      } catch (err) {
+        console.warn('⚠️ Fullscreen request failed:', err);
+      }
+    } else {
+      console.log('ℹ️ requestFullscreen() not available, using expand() only');
+    }
+
+    // Проверка fullscreen режима
+    console.log('📱 Fullscreen mode:', tg.isExpanded ? tg.isExpanded() : 'unknown');
+    console.log('📱 Viewport height:', tg.viewportHeight);
+    console.log('📱 Platform:', tg.platform);
+    console.log('📱 Version:', tg.version);
+
     // Настройка цветов
     tg.setHeaderColor('#0A0A0A');
     tg.setBackgroundColor('#0A0A0A');
 
-    // Отключаем вертикальные свайпы
-    tg.disableVerticalSwipes();
+    // Отключаем вертикальные свайпы (важно для iOS)
+    if (tg.disableVerticalSwipes) {
+      tg.disableVerticalSwipes();
+    }
 
     // Включаем подтверждение закрытия
-    tg.enableClosingConfirmation();
+    if (tg.enableClosingConfirmation) {
+      tg.enableClosingConfirmation();
+    }
+
+    // Подписка на viewport события для адаптивности
+    if (tg.onEvent) {
+      tg.onEvent('viewportChanged', (data) => {
+        console.log('📱 Viewport changed:', {
+          isExpanded: data.isExpanded,
+          height: data.height,
+          isStateStable: data.isStateStable
+        });
+
+        // Принудительно установить высоту при изменении viewport
+        if (data.isExpanded) {
+          document.documentElement.style.height = '100vh';
+          document.body.style.height = '100vh';
+        }
+      });
+
+      // Обработчики fullscreen событий (Mini Apps 2.0)
+      tg.onEvent('fullscreenChanged', (data) => {
+        console.log('🖥️ Fullscreen changed:', data);
+      });
+
+      tg.onEvent('fullscreenFailed', (error) => {
+        console.error('❌ Fullscreen failed:', error);
+      });
+    }
 
     return {
       user: tg.initDataUnsafe?.user || null,
       tg,
       platform: tg.platform,
       version: tg.version,
+      isExpanded: tg.isExpanded ? tg.isExpanded() : true,
     };
   } catch (error) {
     console.error('Telegram WebApp initialization error:', error);

@@ -8,6 +8,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 // Регулярные выражения для определения типа кошелька
 const WALLET_PATTERNS = {
   BTC: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  LTC: /^(L|M)[a-zA-HJ-NP-Z0-9]{26,33}$/,
   ETH: /^0x[a-fA-F0-9]{40}$/,
   USDT: /^0x[a-fA-F0-9]{40}$/, // USDT (ERC-20) использует те же адреса что и ETH
 };
@@ -15,6 +16,7 @@ const WALLET_PATTERNS = {
 // Определение типа кошелька
 const detectWalletType = (address) => {
   if (WALLET_PATTERNS.BTC.test(address)) return 'BTC';
+  if (WALLET_PATTERNS.LTC.test(address)) return 'LTC';
   if (WALLET_PATTERNS.ETH.test(address)) return 'ETH/USDT';
   return null;
 };
@@ -35,6 +37,7 @@ function WalletCard({ wallet, onRemove }) {
 
   const typeColors = {
     'BTC': 'text-orange-500',
+    'LTC': 'text-yellow-500',
     'ETH/USDT': 'text-blue-500',
   };
 

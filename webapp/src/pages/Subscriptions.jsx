@@ -56,7 +56,7 @@ export default function Subscriptions() {
   };
 
   return (
-    <div className="min-h-screen pb-24 pt-20">
+    <div className="pb-24 pt-20">
       <Header title={t('subscriptions.title')} />
 
       <div className="px-4 py-6">

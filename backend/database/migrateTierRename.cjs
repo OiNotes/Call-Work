@@ -54,24 +54,31 @@ async function migrate() {
     );
     console.log(`✅ Updated ${subsResult.rowCount} subscription records`);
     
-    // Step 4: Add new CHECK constraints on shops table
-    console.log('📝 Step 4: Adding new shops CHECK constraint...');
+    // Step 4: Update DEFAULT value for shops.tier
+    console.log('📝 Step 4: Updating shops.tier DEFAULT value...');
     await client.query(`
-      ALTER TABLE shops ADD CONSTRAINT shops_tier_check 
+      ALTER TABLE shops ALTER COLUMN tier SET DEFAULT 'basic';
+    `);
+    console.log('✅ shops.tier DEFAULT updated to basic');
+
+    // Step 5: Add new CHECK constraints on shops table
+    console.log('📝 Step 5: Adding new shops CHECK constraint...');
+    await client.query(`
+      ALTER TABLE shops ADD CONSTRAINT shops_tier_check
         CHECK (tier IN ('basic', 'pro'));
     `);
     console.log('✅ shops.tier CHECK constraint updated');
-    
-    // Step 5: Add new CHECK constraints on shop_subscriptions table
-    console.log('📝 Step 5: Adding new shop_subscriptions tier CHECK constraint...');
+
+    // Step 6: Add new CHECK constraints on shop_subscriptions table
+    console.log('📝 Step 6: Adding new shop_subscriptions tier CHECK constraint...');
     await client.query(`
-      ALTER TABLE shop_subscriptions ADD CONSTRAINT shop_subscriptions_tier_check 
+      ALTER TABLE shop_subscriptions ADD CONSTRAINT shop_subscriptions_tier_check
         CHECK (tier IN ('basic', 'pro'));
     `);
     console.log('✅ shop_subscriptions.tier CHECK constraint updated');
-    
-    // Step 6: Add new currency CHECK constraints (remove TON)
-    console.log('📝 Step 6: Adding new currency constraints (TON removed)...');
+
+    // Step 7: Add new currency CHECK constraints (remove TON)
+    console.log('📝 Step 7: Adding new currency constraints (TON removed)...');
     
     // payments table
     await client.query(`
@@ -86,9 +93,9 @@ async function migrate() {
         CHECK (currency IN ('BTC', 'ETH', 'USDT'));
     `);
     console.log('✅ shop_subscriptions.currency CHECK constraint updated (TON removed)');
-    
-    // Step 7: Verify migration
-    console.log('📝 Step 7: Verifying migration...');
+
+    // Step 8: Verify migration
+    console.log('📝 Step 8: Verifying migration...');
     const verifyShops = await client.query(
       "SELECT tier, COUNT(*) as count FROM shops GROUP BY tier"
     );

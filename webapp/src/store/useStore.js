@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import { mockShops, mockProducts, mockSubscriptions, mockUser } from '../utils/mockData';
 import { generateWalletAddress, generateOrderId } from '../utils/paymentUtils';
 
@@ -6,6 +7,18 @@ export const useStore = create((set, get) => ({
       // User data
       user: mockUser,
       setUser: (user) => set({ user }),
+
+      // Auth token
+      token: null,
+      setToken: (token) => {
+        set({ token });
+        // Configure axios default header
+        if (token) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        } else {
+          delete axios.defaults.headers.common['Authorization'];
+        }
+      },
 
       // Cart
       cart: [],
@@ -166,5 +179,51 @@ export const useStore = create((set, get) => ({
 
       // Language
       language: 'ru',
-      setLanguage: (lang) => set({ language: lang })
+      setLanguage: (lang) => set({ language: lang }),
+
+      // WebSocket actions
+      refetchProducts: async (shopId) => {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          const response = await axios.get(`${API_URL}/products?shop_id=${shopId}`);
+
+          if (response.data.success) {
+            set((state) => ({
+              products: state.products.map(p =>
+                p.shop_id === shopId
+                  ? response.data.data.find(np => np.id === p.id) || p
+                  : p
+              )
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to refetch products:', error);
+        }
+      },
+
+      updateOrderStatus: (orderId, status) => {
+        set((state) => ({
+          orders: state.orders?.map(order =>
+            order.id === orderId ? { ...order, status } : order
+          ),
+          currentOrder: state.currentOrder?.id === orderId
+            ? { ...state.currentOrder, status }
+            : state.currentOrder
+        }));
+      },
+
+      incrementSubscribers: (shopId) => {
+        set((state) => ({
+          shops: state.shops.map(shop =>
+            shop.id === shopId
+              ? { ...shop, subscriber_count: (shop.subscriber_count || 0) + 1 }
+              : shop
+          ),
+          subscriptions: state.subscriptions.map(sub =>
+            sub.id === shopId
+              ? { ...sub, subscriber_count: (sub.subscriber_count || 0) + 1 }
+              : sub
+          )
+        }));
+      }
 }));

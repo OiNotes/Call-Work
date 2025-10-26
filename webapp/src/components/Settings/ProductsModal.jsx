@@ -122,19 +122,6 @@ function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
         />
       </div>
 
-      <div>
-        <label className="text-sm text-gray-400 mb-2 block">
-          Описание
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Лицензионный ключ Windows 11 Pro"
-          rows={3}
-          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-primary transition-colors resize-none"
-        />
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-sm text-gray-400 mb-2 block">
@@ -161,19 +148,6 @@ function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-orange-primary transition-colors"
           />
         </div>
-      </div>
-
-      <div className="flex items-center gap-3 pt-2">
-        <input
-          type="checkbox"
-          id="is_available"
-          checked={formData.is_available}
-          onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
-          className="w-5 h-5 rounded bg-white/5 border border-white/10 text-orange-primary focus:ring-orange-primary"
-        />
-        <label htmlFor="is_available" className="text-sm text-white">
-          Товар доступен для продажи
-        </label>
       </div>
 
       {/* Buttons */}
@@ -375,31 +349,8 @@ export default function ProductsModal({ isOpen, onClose }) {
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         >
           <PageHeader title="Мои товары" onBack={handleClose} />
-          <div className="min-h-screen pb-24 pt-20">
+          <div className="min-h-screen pb-24 pt-12">
             <div className="px-4 py-6 space-y-4">
-        {/* Limit status */}
-        {limitStatus && (
-          <div className="glass-card rounded-2xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Товары</p>
-                <p className="text-xl font-bold text-white">
-                  {limitStatus.currentCount} / {limitStatus.limit === 999999 ? '∞' : limitStatus.limit}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                  limitStatus.tier === 'ELITE' ? 'bg-purple-500/20 text-purple-400' :
-                  limitStatus.tier === 'PREMIUM' ? 'bg-orange-500/20 text-orange-400' :
-                  'bg-gray-500/20 text-gray-400'
-                }`}>
-                  {limitStatus.tier}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Add product button */}
         {!showForm && !loading && (
           <motion.button

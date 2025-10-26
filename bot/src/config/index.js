@@ -8,7 +8,6 @@ const config = {
 
   // URLs
   backendUrl: process.env.BACKEND_URL || 'http://localhost:3000',
-  webAppUrl: process.env.WEBAPP_URL || 'https://your-domain.com',
 
   // Environment
   nodeEnv: process.env.NODE_ENV || 'development',

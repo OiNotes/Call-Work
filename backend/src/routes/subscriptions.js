@@ -29,7 +29,7 @@ router.get('/', subscriptionController.getUserSubscriptions);
  *
  * Body: {
  *   shopId: number,
- *   tier: 'free' | 'pro',
+ *   tier: 'basic' | 'pro',
  *   txHash: string,
  *   currency: 'BTC' | 'ETH' | 'USDT' | 'TON',
  *   paymentAddress: string

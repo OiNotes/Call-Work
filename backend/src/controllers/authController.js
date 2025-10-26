@@ -244,6 +244,172 @@ export const authController = {
         error: 'Failed to update role'
       });
     }
+  },
+
+  /**
+   * Validate Telegram initData and return JWT token
+   * Simplified endpoint for WebApp auto-authentication
+   */
+  validateTelegramInitData: async (req, res) => {
+    try {
+      const { initData } = req.body;
+
+      if (!initData) {
+        return res.status(400).json({
+          success: false,
+          error: 'initData is required'
+        });
+      }
+
+      // Verify Telegram init data
+      const isValid = telegramService.verifyInitData(initData);
+
+      if (!isValid) {
+        logger.warn('Invalid Telegram initData validation attempt');
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid Telegram authentication data'
+        });
+      }
+
+      // Parse user data from init data
+      const userData = telegramService.parseInitData(initData);
+
+      // Check if user exists
+      let user = await userQueries.findByTelegramId(userData.id);
+
+      if (!user) {
+        // Create new user
+        user = await userQueries.create({
+          telegramId: userData.id,
+          username: userData.username,
+          firstName: userData.firstName,
+          lastName: userData.lastName
+        });
+        logger.info(`New user auto-registered via WebApp: ${userData.id} (@${userData.username})`);
+      } else {
+        logger.info(`User authenticated via WebApp: ${userData.id} (@${userData.username})`);
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          id: user.id,
+          telegram_id: Number(user.telegram_id),
+          username: user.username
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn }
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          token,
+          user: {
+            id: user.id,
+            telegram_id: Number(user.telegram_id),
+            username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            selected_role: user.selected_role,
+            created_at: user.created_at
+          }
+        }
+      });
+
+    } catch (error) {
+      logger.error('Telegram initData validation error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Authentication failed'
+      });
+    }
+  },
+
+  /**
+   * Telegram WebApp authentication via middleware
+   * SECURE: Uses verifyTelegramInitData middleware with timing-safe comparison
+   * IMPORTANT: initData must be sent in x-telegram-init-data header
+   * This is the RECOMMENDED method for WebApp authentication
+   */
+  telegramValidate: async (req, res) => {
+    try {
+      // req.telegramUser is populated by verifyTelegramInitData middleware
+      const telegramUser = req.telegramUser;
+
+      if (!telegramUser || !telegramUser.id) {
+        return res.status(401).json({
+          success: false,
+          error: 'Telegram user data not found'
+        });
+      }
+
+      // Check if user exists
+      let user = await userQueries.findByTelegramId(telegramUser.id);
+      let isNewUser = false;
+
+      if (!user) {
+        // Create new user
+        user = await userQueries.create({
+          telegramId: telegramUser.id,
+          username: telegramUser.username || null,
+          firstName: telegramUser.first_name || null,
+          lastName: telegramUser.last_name || null
+        });
+        isNewUser = true;
+        logger.info(`New user created via Telegram validation: ${telegramUser.id} (@${telegramUser.username})`);
+      } else {
+        // Update user info if changed
+        const needsUpdate =
+          user.username !== telegramUser.username ||
+          user.first_name !== telegramUser.first_name ||
+          user.last_name !== telegramUser.last_name;
+
+        if (needsUpdate) {
+          user = await userQueries.update(user.id, {
+            username: telegramUser.username || user.username,
+            firstName: telegramUser.first_name || user.first_name,
+            lastName: telegramUser.last_name || user.last_name
+          });
+          logger.info(`User info updated via Telegram validation: ${telegramUser.id}`);
+        } else {
+          logger.info(`Existing user logged in via Telegram validation: ${telegramUser.id} (@${telegramUser.username})`);
+        }
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          id: user.id,
+          telegram_id: Number(user.telegram_id),
+          username: user.username
+        },
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn }
+      );
+
+      return res.status(isNewUser ? 201 : 200).json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          telegram_id: Number(user.telegram_id),
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          selected_role: user.selected_role,
+          created_at: user.created_at
+        }
+      });
+
+    } catch (error) {
+      logger.error('Telegram validate error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
   }
 };
 

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import config from './config/index.js';
 import logger from './utils/logger.js';
 import { reply as cleanReply } from './utils/cleanReply.js';
+import { logWebAppConfig, getWebAppUrl } from './utils/webappUrl.js';
 
 // Middleware
 import authMiddleware from './middleware/auth.js';
@@ -131,10 +132,30 @@ export { bot };
 // Launch function (can be called from backend or standalone)
 export async function startBot() {
   try {
-    await bot.launch();
+    // Log WebApp configuration before launch
+    logWebAppConfig();
+
+    // Automatically set Menu Button with WebApp URL BEFORE launch
+    try {
+      const webappUrl = getWebAppUrl();
+      await bot.telegram.setChatMenuButton({
+        menu_button: {
+          type: 'web_app',
+          text: '🛍 Мой магазин',
+          web_app: { url: webappUrl }
+        }
+      });
+      logger.info(`Menu Button configured: ${webappUrl}`);
+    } catch (menuError) {
+      logger.warn('Failed to set Menu Button automatically:', menuError.message);
+      logger.warn('You can set it manually in BotFather: /setmenubutton');
+    }
+
+    // Launch bot (this starts polling and won't return in polling mode)
+    bot.launch();
+
     logger.info(`Bot started successfully in ${config.nodeEnv} mode`);
     logger.info(`Backend URL: ${config.backendUrl}`);
-    logger.info(`WebApp URL: ${config.webAppUrl}`);
   } catch (error) {
     logger.error('Failed to launch bot:', error);
     throw error;

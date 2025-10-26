@@ -1,9 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { config } from './config/env.js';
 import { testConnection, closePool } from './config/database.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import middleware
 import {
@@ -28,6 +34,7 @@ import walletRoutes from './routes/wallets.js';
 import followRoutes from './routes/follows.js';
 import workerRoutes from './routes/workers.js';
 import webhookRoutes from './routes/webhooks.js';
+import internalRoutes from './routes/internal.js';
 
 // Routes registration (will be added after middleware setup)
 
@@ -37,9 +44,6 @@ import { startSubscriptionJobs, stopSubscriptionJobs } from './jobs/subscription
 
 // Import polling service for crypto payments
 import pollingService from './services/pollingService.js';
-
-// Import Telegram bot
-import { bot, startBot } from '../../bot/src/bot.js';
 
 /**
  * Initialize Express app
@@ -53,12 +57,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "https://telegram.org"],
       imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws://localhost:3000", "wss://localhost:3000", "http://localhost:3000", "https://*.ngrok-free.app"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameAncestors: ["'self'", "https://web.telegram.org", "https://*.telegram.org", "https://telegram.org"],
     },
   },
   crossOriginEmbedderPolicy: false,
+  frameguard: false, // Disable X-Frame-Options to allow Telegram iframe
 }));
 
 /**
@@ -88,8 +96,8 @@ if (config.nodeEnv === 'production' && process.env.HTTPS_ENABLED === 'true') {
 app.use(cors({
   origin: config.frontendUrl,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
 }));
 
 /**
@@ -111,6 +119,18 @@ app.use('/api/', apiLimiter);
  */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * Serve static files from webapp/dist (for production-like testing with single ngrok tunnel)
+ * This allows serving React app from backend when built with npm run build
+ */
+const webappDistPath = path.join(__dirname, '../../webapp/dist');
+if (fs.existsSync(webappDistPath)) {
+  logger.info('Serving webapp static files from:', { path: webappDistPath });
+  app.use(express.static(webappDistPath));
+} else {
+  logger.warn('WebApp dist folder not found. Build webapp with: npm run build:webapp');
+}
 
 /**
  * Health check endpoint
@@ -137,6 +157,28 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/follows', followRoutes);
 app.use('/webhooks', webhookRoutes); // Crypto payment webhooks
+app.use('/api/internal', internalRoutes); // Internal API for bot-backend communication
+
+/**
+ * Fallback for React Router: serve index.html for non-API routes
+ * This allows client-side routing to work when webapp is served from backend
+ */
+app.get('*', (req, res, next) => {
+  // Skip API routes, webhooks, and file requests (with extensions)
+  if (req.path.startsWith('/api') ||
+      req.path.startsWith('/webhooks') ||
+      req.path.includes('.') ||
+      req.path === '/health') {
+    return next();
+  }
+
+  const indexPath = path.join(webappDistPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next();
+  }
+});
 
 /**
  * 404 handler
@@ -182,21 +224,12 @@ const startServer = async () => {
       // Start product sync cron job
       startSyncCron();
 
-      // Start Telegram bot and make it available globally
-      startBot().then(() => {
-        global.botInstance = bot;
-        logger.info('Telegram bot integrated with backend');
+      // Start subscription cron jobs
+      startSubscriptionJobs();
 
-        // Start subscription cron jobs (requires bot instance)
-        startSubscriptionJobs();
-
-        // Start polling service for ETH/TRON payments
-        pollingService.startPolling();
-        logger.info('Payment polling service started');
-      }).catch((error) => {
-        logger.error('Failed to start Telegram bot:', error);
-        // Bot failure is not critical for backend - continue running
-      });
+      // Start polling service for ETH/TRON payments
+      pollingService.startPolling();
+      logger.info('Payment polling service started');
     });
 
     // Setup WebSocket server for real-time updates

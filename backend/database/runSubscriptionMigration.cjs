@@ -81,7 +81,7 @@ async function runSubscriptionMigration() {
         CREATE TABLE IF NOT EXISTS shop_subscriptions (
           id SERIAL PRIMARY KEY,
           shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-          tier VARCHAR(20) NOT NULL CHECK (tier IN ('free', 'pro')),
+          tier VARCHAR(20) NOT NULL CHECK (tier IN ('basic', 'pro')),
           amount DECIMAL(10, 2) NOT NULL,
           tx_hash VARCHAR(255) UNIQUE NOT NULL,
           currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT', 'TON')),

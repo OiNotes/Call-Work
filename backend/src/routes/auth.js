@@ -3,6 +3,7 @@ import { authController } from '../controllers/authController.js';
 import { authValidation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import { verifyTelegramInitData } from '../middleware/telegramAuth.js';
 
 const router = express.Router();
 
@@ -43,5 +44,14 @@ router.put('/profile', verifyToken, authController.updateProfile);
  * @access  Private
  */
 router.patch('/role', verifyToken, authValidation.updateRole, authController.updateRole);
+
+/**
+ * @route   POST /api/auth/telegram-validate
+ * @desc    Validate Telegram WebApp initData and auto-register/login user
+ * @access  Public (but requires valid Telegram initData in x-telegram-init-data header)
+ * @security HMAC-SHA256 signature verification with timing-safe comparison
+ * @important initData must be sent in x-telegram-init-data header (NOT body)
+ */
+router.post('/telegram-validate', verifyTelegramInitData, authController.telegramValidate);
 
 export default router;

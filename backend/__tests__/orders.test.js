@@ -65,10 +65,11 @@ describe('POST /api/orders', () => {
       })
       .expect(201);
 
-    expect(response.body.order).toBeDefined();
-    expect(response.body.order.product_id).toBe(product.id);
-    expect(response.body.order.quantity).toBe(3);
-    expect(response.body.order.status).toBe('pending');
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toBeDefined();
+    expect(response.body.data.product_id).toBe(product.id);
+    expect(response.body.data.quantity).toBe(3);
+    expect(response.body.data.status).toBe('pending');
 
     // Verify stock was decreased
     const updatedProduct = await getProductById(product.id);
@@ -324,10 +325,11 @@ describe('GET /api/orders', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body.orders).toBeDefined();
-    expect(Array.isArray(response.body.orders)).toBe(true);
-    expect(response.body.orders.length).toBeGreaterThan(0);
-    expect(response.body.orders[0].buyer_id).toBe(buyer.id);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toBeDefined();
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data.length).toBeGreaterThan(0);
+    expect(response.body.data[0].buyer_id).toBe(buyer.id);
   });
 
   it('should return empty array for user with no orders', async () => {
@@ -346,7 +348,8 @@ describe('GET /api/orders', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body.orders).toEqual([]);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toEqual([]);
   });
 });
 
@@ -382,7 +385,7 @@ describe('PUT /api/orders/:id/status', () => {
       })
       .expect(201);
 
-    const orderId = orderResponse.body.order.id;
+    const orderId = orderResponse.body.data.id;
 
     // Update order status (as seller)
     const sellerToken = jwt.sign(

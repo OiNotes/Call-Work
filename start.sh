@@ -1,165 +1,195 @@
 #!/bin/bash
 
-# Цвета для вывода
+#############################################
+# Telegram Shop - Full Stack Startup Script
+# Автоматический запуск Backend + Bot + ngrok
+#############################################
+
+set -e  # Exit on error
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$PROJECT_ROOT/logs"
+
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║                                                        ║${NC}"
-echo -e "${BLUE}║   🚀 Telegram Shop Platform                           ║${NC}"
-echo -e "${BLUE}║                                                        ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
+# Create logs directory
+mkdir -p "$LOG_DIR"
+
+echo -e "${BLUE}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║                                                    ║${NC}"
+echo -e "${BLUE}║     🚀 Telegram Shop - Full Stack Startup         ║${NC}"
+echo -e "${BLUE}║                                                    ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Проверка Node.js
-echo -e "${CYAN}📋 Checking requirements...${NC}"
-if ! command -v node &> /dev/null; then
-    echo -e "${RED}❌ Node.js is not installed${NC}"
-    echo -e "${YELLOW}Please install Node.js 18+ from https://nodejs.org/${NC}"
-    exit 1
+#############################################
+# Step 1: Kill existing processes
+#############################################
+echo -e "${YELLOW}[1/6]${NC} Stopping existing processes..."
+
+# Kill processes on port 3000
+if lsof -ti:3000 >/dev/null 2>&1; then
+  echo "  └─ Killing processes on port 3000..."
+  lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 fi
 
-NODE_VERSION=$(node -v)
-echo -e "${GREEN}✓ Node.js ${NODE_VERSION}${NC}"
-
-# Проверка npm
-if ! command -v npm &> /dev/null; then
-    echo -e "${RED}❌ npm is not installed${NC}"
-    exit 1
+# Kill ngrok
+if pgrep -x "ngrok" >/dev/null; then
+  echo "  └─ Stopping ngrok..."
+  pkill -x ngrok 2>/dev/null || true
+  sleep 2
 fi
 
-NPM_VERSION=$(npm -v)
-echo -e "${GREEN}✓ npm v${NPM_VERSION}${NC}"
-
-# Проверка PostgreSQL
-if command -v psql &> /dev/null; then
-    PSQL_VERSION=$(psql --version | awk '{print $3}')
-    echo -e "${GREEN}✓ PostgreSQL ${PSQL_VERSION}${NC}"
-else
-    echo -e "${YELLOW}⚠ PostgreSQL not found in PATH${NC}"
-    echo -e "${YELLOW}  (но может быть установлен через Homebrew)${NC}"
-fi
-
+echo -e "  ${GREEN}✓${NC} Cleanup complete"
 echo ""
 
-# Проверка .env файлов
-echo -e "${CYAN}📝 Checking configuration files...${NC}"
+#############################################
+# Step 2: Start ngrok tunnel
+#############################################
+echo -e "${YELLOW}[2/6]${NC} Starting ngrok tunnel..."
 
-if [ ! -f "backend/.env" ]; then
-    echo -e "${YELLOW}⚠ backend/.env not found${NC}"
-    if [ -f "backend/.env.example" ]; then
-        cp backend/.env.example backend/.env
-        echo -e "${GREEN}✓ Created backend/.env from .env.example${NC}"
-        echo -e "${BLUE}  Please edit backend/.env with your values${NC}"
-    elif [ -f ".env.example" ]; then
-        cp .env.example backend/.env
-        echo -e "${GREEN}✓ Created backend/.env from root .env.example${NC}"
-    else
-        echo -e "${RED}❌ No .env.example file found${NC}"
+ngrok http 3000 --log=stdout > "$LOG_DIR/ngrok.log" 2>&1 &
+NGROK_PID=$!
+
+# Wait for ngrok to start
+echo "  └─ Waiting for ngrok to initialize..."
+sleep 3
+
+# Get ngrok URL
+NGROK_URL=""
+for i in {1..10}; do
+  if NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"https://[^"]*"' | head -1 | cut -d'"' -f4); then
+    if [ -n "$NGROK_URL" ]; then
+      echo -e "  ${GREEN}✓${NC} ngrok URL: ${GREEN}$NGROK_URL${NC}"
+      break
     fi
+  fi
+  sleep 1
+done
+
+if [ -z "$NGROK_URL" ]; then
+  echo -e "  ${RED}✗${NC} Failed to get ngrok URL"
+  echo -e "  ${YELLOW}!${NC} Check if ngrok is installed: ${BLUE}brew install ngrok${NC}"
+  exit 1
+fi
+
+echo ""
+
+#############################################
+# Step 3: Update .env files with ngrok URL
+#############################################
+echo -e "${YELLOW}[3/6]${NC} Updating configuration files..."
+
+# Update backend/.env
+if [ -f "$PROJECT_ROOT/backend/.env" ]; then
+  sed -i '' "s|FRONTEND_URL=.*|FRONTEND_URL=$NGROK_URL|g" "$PROJECT_ROOT/backend/.env"
+  sed -i '' "s|WEBAPP_URL=.*|WEBAPP_URL=$NGROK_URL|g" "$PROJECT_ROOT/backend/.env"
+  echo -e "  ${GREEN}✓${NC} Updated backend/.env"
 else
-    echo -e "${GREEN}✓ backend/.env exists${NC}"
+  echo -e "  ${RED}✗${NC} backend/.env not found"
+  exit 1
 fi
 
-echo ""
-
-# Проверка зависимостей
-echo -e "${CYAN}📦 Checking dependencies...${NC}"
-
-NEED_INSTALL=false
-
-if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}⚠ Root dependencies not found${NC}"
-    NEED_INSTALL=true
-fi
-
-if [ ! -d "backend/node_modules" ]; then
-    echo -e "${YELLOW}⚠ Backend dependencies not found${NC}"
-    NEED_INSTALL=true
-fi
-
-if [ ! -d "webapp/node_modules" ]; then
-    echo -e "${YELLOW}⚠ WebApp dependencies not found${NC}"
-    NEED_INSTALL=true
-fi
-
-if [ "$NEED_INSTALL" = true ]; then
-    echo ""
-    echo -e "${BLUE}📦 Installing dependencies...${NC}"
-    echo -e "${CYAN}This may take a few minutes...${NC}"
-    echo ""
-
-    npm install
-
-    if [ ! -d "backend/node_modules" ]; then
-        echo -e "${CYAN}Installing backend dependencies...${NC}"
-        cd backend && npm install && cd ..
-    fi
-
-    if [ ! -d "webapp/node_modules" ]; then
-        echo -e "${CYAN}Installing webapp dependencies...${NC}"
-        cd webapp && npm install && cd ..
-    fi
-
-    echo ""
-    echo -e "${GREEN}✓ All dependencies installed${NC}"
+# Update bot/.env
+if [ -f "$PROJECT_ROOT/bot/.env" ]; then
+  sed -i '' "s|WEBAPP_URL=.*|WEBAPP_URL=$NGROK_URL|g" "$PROJECT_ROOT/bot/.env"
+  echo -e "  ${GREEN}✓${NC} Updated bot/.env"
 else
-    echo -e "${GREEN}✓ All dependencies are installed${NC}"
+  echo -e "  ${RED}✗${NC} bot/.env not found"
+  exit 1
 fi
 
-echo ""
-
-# Проверка БД
-echo -e "${CYAN}🗄  Checking database...${NC}"
-
-if command -v psql &> /dev/null; then
-    if psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw telegram_shop; then
-        echo -e "${GREEN}✓ Database 'telegram_shop' exists${NC}"
-    else
-        echo -e "${YELLOW}⚠ Database 'telegram_shop' not found${NC}"
-        echo -e "${BLUE}  Create with: ${CYAN}npm run db:setup${NC}"
-    fi
+# Update webapp/.env
+if [ -f "$PROJECT_ROOT/webapp/.env" ]; then
+  sed -i '' "s|VITE_API_URL=.*|VITE_API_URL=$NGROK_URL/api|g" "$PROJECT_ROOT/webapp/.env"
+  echo -e "  ${GREEN}✓${NC} Updated webapp/.env"
 else
-    echo -e "${YELLOW}⚠ Cannot check database (psql not available)${NC}"
+  echo -e "  ${RED}✗${NC} webapp/.env not found"
+  exit 1
 fi
 
 echo ""
 
-# Проверка портов
-echo -e "${CYAN}🔌 Checking ports...${NC}"
+#############################################
+# Step 4: Rebuild webapp with new URL
+#############################################
+echo -e "${YELLOW}[4/6]${NC} Rebuilding webapp..."
 
-if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${YELLOW}⚠ Port 3000 is already in use${NC}"
-    echo -e "${BLUE}  Backend may fail to start${NC}"
+cd "$PROJECT_ROOT/webapp"
+npm run build > "$LOG_DIR/webapp-build.log" 2>&1
+
+if [ $? -eq 0 ]; then
+  echo -e "  ${GREEN}✓${NC} Webapp built successfully"
 else
-    echo -e "${GREEN}✓ Port 3000 is available${NC}"
+  echo -e "  ${RED}✗${NC} Webapp build failed"
+  echo -e "  ${YELLOW}!${NC} Check logs: ${BLUE}cat $LOG_DIR/webapp-build.log${NC}"
+  exit 1
 fi
 
-if lsof -Pi :5173 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${YELLOW}⚠ Port 5173 is already in use${NC}"
-    echo -e "${BLUE}  WebApp may use another port${NC}"
+echo ""
+
+#############################################
+# Step 5: Start Backend (includes Bot)
+#############################################
+echo -e "${YELLOW}[5/6]${NC} Starting Backend + Bot..."
+
+cd "$PROJECT_ROOT/backend"
+npm run dev > "$LOG_DIR/backend.log" 2>&1 &
+BACKEND_PID=$!
+
+echo "  └─ Waiting for services to initialize..."
+sleep 8
+
+# Check if backend started successfully
+if lsof -ti:3000 >/dev/null 2>&1; then
+  echo -e "  ${GREEN}✓${NC} Backend running on port 3000"
+
+  # Check logs for bot startup
+  if grep -q "Bot started successfully" "$LOG_DIR/backend.log" 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} Telegram Bot started"
+  else
+    echo -e "  ${YELLOW}!${NC} Bot may not have started - check logs"
+  fi
 else
-    echo -e "${GREEN}✓ Port 5173 is available${NC}"
+  echo -e "  ${RED}✗${NC} Backend failed to start"
+  echo -e "  ${YELLOW}!${NC} Check logs: ${BLUE}tail -f $LOG_DIR/backend.log${NC}"
+  exit 1
 fi
 
 echo ""
-echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║                                                        ║${NC}"
-echo -e "${BLUE}║   🚀 Starting services...                             ║${NC}"
-echo -e "${BLUE}║                                                        ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${MAGENTA}Backend:${NC}  http://localhost:3000"
-echo -e "${MAGENTA}WebApp:${NC}   http://localhost:5173"
-echo -e "${MAGENTA}Health:${NC}   http://localhost:3000/health"
-echo ""
-echo -e "${CYAN}Press ${YELLOW}Ctrl+C${CYAN} to stop${NC}"
-echo ""
 
-# Запуск
-npm run dev
+#############################################
+# Step 6: Summary
+#############################################
+echo -e "${YELLOW}[6/6]${NC} Startup complete!"
+echo ""
+echo -e "${BLUE}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║                   🎉 READY!                        ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${GREEN}Services:${NC}"
+echo -e "  ├─ Backend API:     ${BLUE}http://localhost:3000/api${NC}"
+echo -e "  ├─ WebApp (ngrok):  ${BLUE}$NGROK_URL${NC}"
+echo -e "  ├─ Health Check:    ${BLUE}http://localhost:3000/health${NC}"
+echo -e "  └─ ngrok Dashboard: ${BLUE}http://localhost:4040${NC}"
+echo ""
+echo -e "${GREEN}Logs:${NC}"
+echo -e "  ├─ Backend: ${BLUE}tail -f $LOG_DIR/backend.log${NC}"
+echo -e "  ├─ Webapp:  ${BLUE}cat $LOG_DIR/webapp-build.log${NC}"
+echo -e "  └─ ngrok:   ${BLUE}tail -f $LOG_DIR/ngrok.log${NC}"
+echo ""
+echo -e "${GREEN}Process IDs:${NC}"
+echo -e "  ├─ ngrok:   ${BLUE}$NGROK_PID${NC}"
+echo -e "  └─ Backend: ${BLUE}$BACKEND_PID${NC}"
+echo ""
+echo -e "${YELLOW}To stop all services:${NC}"
+echo -e "  ${BLUE}./stop.sh${NC} or ${BLUE}lsof -ti:3000 | xargs kill -9 && pkill ngrok${NC}"
+echo ""
+echo -e "${GREEN}Telegram Bot:${NC}"
+echo -e "  └─ Open Telegram → Find your bot → Click Menu Button${NC}"
+echo ""
