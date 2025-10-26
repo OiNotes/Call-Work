@@ -92,8 +92,13 @@ export const orderController = {
       });
 
     } catch (error) {
-      // Rollback transaction on any error
-      await client.query('ROLLBACK');
+      // Rollback transaction on any error (catch potential rollback errors)
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Rollback error', { error: rollbackError.message });
+      }
+      
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
@@ -109,7 +114,7 @@ export const orderController = {
         error: 'Failed to create order'
       });
     } finally {
-      // Always release client back to pool
+      // CRITICAL: Always release client back to pool (prevents connection leak)
       client.release();
     }
   },

@@ -81,6 +81,25 @@ bot.catch((err, ctx) => {
 const userMessageTimestamps = new Map();
 const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW) || 60000; // 1 minute
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 10;
+const CLEANUP_INTERVAL = 600000; // 10 minutes
+const CLEANUP_AGE = 3600000; // 1 hour
+
+// Periodic cleanup to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, timestamps] of userMessageTimestamps.entries()) {
+    // Remove timestamps older than 1 hour
+    const validTimestamps = timestamps.filter(ts => now - ts < CLEANUP_AGE);
+    
+    if (validTimestamps.length === 0) {
+      // Remove user entry if no valid timestamps
+      userMessageTimestamps.delete(userId);
+    } else {
+      userMessageTimestamps.set(userId, validTimestamps);
+    }
+  }
+  console.log(`🧹 Rate limit cleanup: ${userMessageTimestamps.size} active users`);
+}, CLEANUP_INTERVAL);
 
 bot.use(async (ctx, next) => {
   const userId = ctx.from?.id;
@@ -300,6 +319,17 @@ bot.launch().then(() => {
   console.log(`🔗 Backend API: ${process.env.BACKEND_URL}`);
   console.log(`🌐 Web App: ${process.env.WEBAPP_URL}`);
   console.log('\n🤖 Bot is running... Press Ctrl+C to stop\n');
+  
+  // Webhook configuration (alternative to polling)
+  // To enable webhook instead of polling:
+  // 1. Uncomment lines below
+  // 2. Set WEBHOOK_URL in .env (must be HTTPS)
+  // 3. Comment out bot.launch() above
+  // 
+  // const webhookUrl = process.env.WEBHOOK_URL;
+  // bot.telegram.setWebhook(webhookUrl).then(() => {
+  //   console.log(`🔗 Webhook set to: ${webhookUrl}`);
+  // });
 }).catch((error) => {
   console.error('❌ Failed to start bot:', error);
   process.exit(1);

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
 import { useTranslation } from '../../i18n/useTranslation';
 
+// Memoized animation variants (moved outside component to prevent recreation)
 const container = {
   hidden: { opacity: 0 },
   show: {
@@ -26,7 +27,7 @@ const item = {
   }
 };
 
-export default function ProductGrid({ products, loading = false }) {
+function ProductGrid({ products, loading = false }) {
   const { t } = useTranslation();
 
   if (loading) {
@@ -64,3 +65,5 @@ export default function ProductGrid({ products, loading = false }) {
     </motion.div>
   );
 }
+
+export default ProductGrid;

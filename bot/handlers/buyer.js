@@ -112,12 +112,6 @@ export async function handleViewShop(ctx, shopId) {
 
     const telegramId = ctx.from.id;
 
-    // Get shop details
-    const shopResult = await getShopByName(''); // This should be replaced with getShopById
-
-    // For now, we'll use a placeholder
-    // TODO: Implement getShopById in api.js
-
     // Check if user is subscribed
     const subsResult = await getSubscriptions(telegramId);
     let isSubscribed = false;
@@ -127,6 +121,7 @@ export async function handleViewShop(ctx, shopId) {
     }
 
     // Mock shop data for now
+    // TODO: Implement getShopById in api.js
     const shop = {
       id: shopId,
       name: 'Shop Name',
@@ -152,17 +147,19 @@ export async function handleViewShop(ctx, shopId) {
 // Handle subscribe to shop
 export async function handleSubscribe(ctx, shopId) {
   try {
-    await ctx.answerCbQuery('⏳ Подписываемся...');
-
     const telegramId = ctx.from.id;
 
     const result = await subscribeToShop(telegramId, shopId);
 
     if (result.success) {
       await ctx.answerCbQuery('✅ Вы подписались на магазин!');
-
-      // Update the message to show subscribed state
-      await handleViewShop(ctx, shopId);
+      
+      // Show success message instead of re-fetching shop data
+      await ctx.editMessageText(
+        `✅ Вы успешно подписались на магазин!\n\n` +
+        `Теперь вы будете получать уведомления о новых товарах и акциях.`,
+        shopDetailKeyboard(shopId, true)
+      );
     } else {
       await ctx.answerCbQuery(`❌ ${result.error}`);
     }
@@ -175,17 +172,19 @@ export async function handleSubscribe(ctx, shopId) {
 // Handle unsubscribe from shop
 export async function handleUnsubscribe(ctx, shopId) {
   try {
-    await ctx.answerCbQuery('⏳ Отписываемся...');
-
     const telegramId = ctx.from.id;
 
     const result = await unsubscribeFromShop(telegramId, shopId);
 
     if (result.success) {
       await ctx.answerCbQuery('✅ Вы отписались от магазина');
-
-      // Update the message to show unsubscribed state
-      await handleViewShop(ctx, shopId);
+      
+      // Show success message instead of re-fetching shop data
+      await ctx.editMessageText(
+        `✅ Вы отписались от магазина\n\n` +
+        `Вы больше не будете получать уведомления от этого магазина.`,
+        shopDetailKeyboard(shopId, false)
+      );
     } else {
       await ctx.answerCbQuery(`❌ ${result.error}`);
     }

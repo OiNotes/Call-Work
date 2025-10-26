@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 
 export default function CartButton({ onClick }) {
-  const cart = useStore((state) => state.cart);
+  const cart = useStore(useShallow((state) => state.cart));
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 

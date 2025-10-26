@@ -9,7 +9,7 @@ export const userQueries = {
   // Find user by Telegram ID
   findByTelegramId: async (telegramId) => {
     const result = await query(
-      'SELECT * FROM users WHERE telegram_id = $1',
+      'SELECT id, telegram_id, username, first_name, last_name, selected_role, created_at, updated_at FROM users WHERE telegram_id = $1',
       [telegramId]
     );
     return result.rows[0];
@@ -22,7 +22,7 @@ export const userQueries = {
     }
 
     const result = await query(
-      `SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
+      `SELECT id, telegram_id, username, first_name, last_name, selected_role, created_at, updated_at FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
       [username]
     );
     return result.rows[0];
@@ -43,7 +43,7 @@ export const userQueries = {
     const result = await query(
       `INSERT INTO users (telegram_id, username, first_name, last_name)
        VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+       RETURNING id, telegram_id, username, first_name, last_name, selected_role, created_at, updated_at`,
       [telegramId, username, firstName, lastName]
     );
     return result.rows[0];
@@ -59,7 +59,7 @@ export const userQueries = {
            last_name = COALESCE($4, last_name),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING id, telegram_id, username, first_name, last_name, selected_role, created_at, updated_at`,
       [id, username, firstName, lastName]
     );
     return result.rows[0];
@@ -89,7 +89,7 @@ export const shopQueries = {
     const result = await query(
       `INSERT INTO shops (owner_id, name, description, logo)
        VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
       [ownerId, name, description, logo]
     );
     return result.rows[0];
@@ -110,7 +110,7 @@ export const shopQueries = {
   // Find shops by owner ID
   findByOwnerId: async (ownerId) => {
     const result = await query(
-      'SELECT * FROM shops WHERE owner_id = $1 ORDER BY created_at DESC',
+      'SELECT id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at FROM shops WHERE owner_id = $1 ORDER BY created_at DESC',
       [ownerId]
     );
     return result.rows;
@@ -158,7 +158,7 @@ export const shopQueries = {
            is_active = COALESCE($5, is_active),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
       [id, name, description, logo, isActive]
     );
     return result.rows[0];
@@ -167,7 +167,7 @@ export const shopQueries = {
   // Delete shop
   delete: async (id) => {
     const result = await query(
-      'DELETE FROM shops WHERE id = $1 RETURNING *',
+      'DELETE FROM shops WHERE id = $1 RETURNING id, owner_id, name',
       [id]
     );
     return result.rows[0];
@@ -198,7 +198,7 @@ export const shopQueries = {
            wallet_ton = COALESCE($5, wallet_ton),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
       [id, wallet_btc, wallet_eth, wallet_usdt, wallet_ton]
     );
     return result.rows[0];
@@ -215,7 +215,7 @@ export const productQueries = {
     const result = await query(
       `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, is_active, created_at, updated_at`,
       [shopId, name, description, price, currency, stockQuantity || 0]
     );
     return result.rows[0];
@@ -278,7 +278,7 @@ export const productQueries = {
            is_active = COALESCE($6, is_active),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, is_active, created_at, updated_at`,
       [id, name, description, price, stockQuantity, isActive]
     );
     return result.rows[0];
@@ -287,7 +287,7 @@ export const productQueries = {
   // Delete product
   delete: async (id) => {
     const result = await query(
-      'DELETE FROM products WHERE id = $1 RETURNING *',
+      'DELETE FROM products WHERE id = $1 RETURNING id, shop_id, name',
       [id]
     );
     return result.rows[0];
@@ -301,7 +301,7 @@ export const productQueries = {
        SET stock_quantity = stock_quantity + $2,
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING id, shop_id, name, stock_quantity, is_active, updated_at`,
       [id, quantity]
     );
     return result.rows[0];
@@ -310,7 +310,7 @@ export const productQueries = {
   // Bulk delete products by shop ID
   bulkDeleteByShopId: async (shopId) => {
     const result = await query(
-      'DELETE FROM products WHERE shop_id = $1 RETURNING *',
+      'DELETE FROM products WHERE shop_id = $1 RETURNING id, shop_id, name',
       [shopId]
     );
     return result.rows;
@@ -321,7 +321,7 @@ export const productQueries = {
     const result = await query(
       `DELETE FROM products
        WHERE id = ANY($1) AND shop_id = $2
-       RETURNING *`,
+       RETURNING id, shop_id, name`,
       [productIds, shopId]
     );
     return result.rows;

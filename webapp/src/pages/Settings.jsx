@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import { useTelegram } from '../hooks/useTelegram';
 import { useStore } from '../store/useStore';
 import { useTranslation } from '../i18n/useTranslation';
-import WalletsModal from '../components/Settings/WalletsModal';
-import OrdersModal from '../components/Settings/OrdersModal';
-import LanguageModal from '../components/Settings/LanguageModal';
-import ProductsModal from '../components/Settings/ProductsModal';
-import SubscriptionModal from '../components/Settings/SubscriptionModal';
-import WorkspaceModal from '../components/Settings/WorkspaceModal';
-import FollowsModal from '../components/Settings/FollowsModal';
+
+// Lazy load modals - only load when user opens them
+const WalletsModal = lazy(() => import('../components/Settings/WalletsModal'));
+const OrdersModal = lazy(() => import('../components/Settings/OrdersModal'));
+const LanguageModal = lazy(() => import('../components/Settings/LanguageModal'));
+const ProductsModal = lazy(() => import('../components/Settings/ProductsModal'));
+const SubscriptionModal = lazy(() => import('../components/Settings/SubscriptionModal'));
+const WorkspaceModal = lazy(() => import('../components/Settings/WorkspaceModal'));
+const FollowsModal = lazy(() => import('../components/Settings/FollowsModal'));
 
 const getSettingsSections = (t, lang) => {
   const languageNames = { 'ru': 'Русский', 'en': 'English' };
@@ -247,14 +249,16 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Modals */}
-      <ProductsModal isOpen={showProducts} onClose={() => setShowProducts(false)} />
-      <SubscriptionModal isOpen={showSubscription} onClose={() => setShowSubscription(false)} />
-      <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />
-      <FollowsModal isOpen={showFollows} onClose={() => setShowFollows(false)} />
-      <WalletsModal isOpen={showWallets} onClose={() => setShowWallets(false)} />
-      <OrdersModal isOpen={showOrders} onClose={() => setShowOrders(false)} />
-      <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />
+      {/* Modals - wrapped in Suspense for lazy loading */}
+      <Suspense fallback={null}>
+        {showProducts && <ProductsModal isOpen={showProducts} onClose={() => setShowProducts(false)} />}
+        {showSubscription && <SubscriptionModal isOpen={showSubscription} onClose={() => setShowSubscription(false)} />}
+        {showWorkspace && <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />}
+        {showFollows && <FollowsModal isOpen={showFollows} onClose={() => setShowFollows(false)} />}
+        {showWallets && <WalletsModal isOpen={showWallets} onClose={() => setShowWallets(false)} />}
+        {showOrders && <OrdersModal isOpen={showOrders} onClose={() => setShowOrders(false)} />}
+        {showLanguage && <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />}
+      </Suspense>
     </div>
   );
 }

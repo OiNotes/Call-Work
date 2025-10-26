@@ -4,11 +4,31 @@
  * Enforces tier-based product limits:
  * - Basic tier: 4 products max
  * - Pro tier: unlimited products
+ * 
+ * OPTIMIZATIONS:
+ * - Combined shop + count query (1 query instead of 2)
+ * - In-memory cache for limit checks (5 min TTL)
  */
 
 import { pool } from '../config/database.js';
 import { workerQueries } from '../models/db.js';
 import logger from '../utils/logger.js';
+
+// In-memory cache for product counts (5 min TTL)
+const productCountCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Clear expired cache entries
+ */
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of productCountCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      productCountCache.delete(key);
+    }
+  }
+}, 60 * 1000); // Clean every 1 minute
 
 // Product limits per tier
 const PRODUCT_LIMITS = {
@@ -19,6 +39,7 @@ const PRODUCT_LIMITS = {
 /**
  * Check if shop can add more products
  * Middleware for POST /api/products
+ * OPTIMIZED: Combined query + caching
  */
 export async function checkProductLimit(req, res, next) {
   try {
@@ -30,19 +51,46 @@ export async function checkProductLimit(req, res, next) {
       });
     }
     
-    // Get shop tier
-    const shopResult = await pool.query(
-      'SELECT id, tier, owner_id FROM shops WHERE id = $1',
-      [shopId]
-    );
+    // Check cache first
+    const cacheKey = `limit_${shopId}`;
+    const cached = productCountCache.get(cacheKey);
     
-    if (shopResult.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Shop not found'
+    let shop, currentCount;
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      // Use cached data
+      shop = cached.shop;
+      currentCount = cached.count;
+      logger.debug(`[ProductLimit] Cache hit for shop ${shopId}`);
+    } else {
+      // OPTIMIZED: Combined query (1 query instead of 2)
+      const result = await pool.query(
+        `SELECT 
+           s.id, s.tier, s.owner_id,
+           COUNT(p.id)::int as product_count
+         FROM shops s
+         LEFT JOIN products p ON p.shop_id = s.id
+         WHERE s.id = $1
+         GROUP BY s.id, s.tier, s.owner_id`,
+        [shopId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Shop not found'
+        });
+      }
+      
+      shop = result.rows[0];
+      currentCount = shop.product_count;
+      
+      // Cache the result
+      productCountCache.set(cacheKey, {
+        shop: { id: shop.id, tier: shop.tier, owner_id: shop.owner_id },
+        count: currentCount,
+        timestamp: Date.now()
       });
     }
-    
-    const shop = shopResult.rows[0];
 
     // Verify authorization: owner OR worker
     const isOwner = shop.owner_id === req.user.id;
@@ -62,14 +110,6 @@ export async function checkProductLimit(req, res, next) {
     if (tier === 'pro') {
       return next();
     }
-    
-    // Count current products for this shop
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as count FROM products WHERE shop_id = $1',
-      [shopId]
-    );
-    
-    const currentCount = parseInt(countResult.rows[0].count, 10);
     
     // Check if limit reached
     if (currentCount >= limit) {
@@ -108,20 +148,46 @@ export async function checkProductLimit(req, res, next) {
 /**
  * Get product limit status for a shop
  * Used by: GET /api/products/limit-status/:shopId
+ * OPTIMIZED: Combined query + caching
  */
 export async function getProductLimitStatus(shopId, userId) {
   try {
-    // Get shop tier
-    const shopResult = await pool.query(
-      'SELECT id, tier, owner_id FROM shops WHERE id = $1',
-      [shopId]
-    );
+    // Check cache first
+    const cacheKey = `limit_${shopId}`;
+    const cached = productCountCache.get(cacheKey);
     
-    if (shopResult.rows.length === 0) {
-      throw new Error('Shop not found');
+    let shop, currentCount;
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      shop = cached.shop;
+      currentCount = cached.count;
+    } else {
+      // OPTIMIZED: Combined query (1 query instead of 2)
+      const result = await pool.query(
+        `SELECT 
+           s.id, s.tier, s.owner_id,
+           COUNT(p.id)::int as product_count
+         FROM shops s
+         LEFT JOIN products p ON p.shop_id = s.id
+         WHERE s.id = $1
+         GROUP BY s.id, s.tier, s.owner_id`,
+        [shopId]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error('Shop not found');
+      }
+      
+      shop = result.rows[0];
+      currentCount = shop.product_count;
+      
+      // Cache the result
+      productCountCache.set(cacheKey, {
+        shop: { id: shop.id, tier: shop.tier, owner_id: shop.owner_id },
+        count: currentCount,
+        timestamp: Date.now()
+      });
     }
-    
-    const shop = shopResult.rows[0];
 
     // Verify authorization: owner OR worker
     const isOwner = shop.owner_id === userId;
@@ -133,14 +199,6 @@ export async function getProductLimitStatus(shopId, userId) {
     
     const tier = shop.tier || 'basic';
     const limit = PRODUCT_LIMITS[tier];
-    
-    // Count products
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as count FROM products WHERE shop_id = $1',
-      [shopId]
-    );
-    
-    const currentCount = parseInt(countResult.rows[0].count, 10);
     const canAdd = tier === 'pro' || currentCount < limit;
     
     return {
@@ -157,8 +215,18 @@ export async function getProductLimitStatus(shopId, userId) {
   }
 }
 
+/**
+ * Invalidate cache for a shop (call after product create/delete)
+ */
+export function invalidateProductLimitCache(shopId) {
+  const cacheKey = `limit_${shopId}`;
+  productCountCache.delete(cacheKey);
+  logger.debug(`[ProductLimit] Cache invalidated for shop ${shopId}`);
+}
+
 export default {
   checkProductLimit,
   getProductLimitStatus,
+  invalidateProductLimitCache,
   PRODUCT_LIMITS
 };

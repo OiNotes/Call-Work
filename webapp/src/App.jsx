@@ -1,17 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useKeyboardViewport } from './hooks/useKeyboardViewport';
 import { initI18n, getLanguage } from './i18n';
-import TabBar from './components/Layout/TabBar';
+import TabBarPortal from './components/TabBarPortal';
 import CartSheet from './components/Cart/CartSheet';
 import PaymentFlowManager from './components/Payment/PaymentFlowManager';
-import Subscriptions from './pages/Subscriptions';
-import Catalog from './pages/Catalog';
-import Settings from './pages/Settings';
 import './styles/globals.css';
+
+// Lazy load pages for code splitting
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
+const Catalog = lazy(() => import('./pages/Catalog'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+    <div className="text-center">
+      <div className="w-12 h-12 border-4 border-[#FF6B00] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-white/60 text-sm">Loading...</p>
+    </div>
+  </div>
+);
 
 function App() {
   const { activeTab } = useStore();
@@ -125,13 +137,15 @@ function App() {
       )}
 
       <div className="scroll-container relative z-10 flex-1">
-        <AnimatePresence mode="wait">
-          {renderPage()}
-        </AnimatePresence>
+        <Suspense fallback={<PageLoader />}>
+          <AnimatePresence mode="wait">
+            {renderPage()}
+          </AnimatePresence>
+        </Suspense>
       </div>
 
       <div className="relative z-20">
-        <TabBar />
+        <TabBarPortal />
         <CartSheet />
         <PaymentFlowManager />
       </div>

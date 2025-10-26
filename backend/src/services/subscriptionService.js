@@ -109,10 +109,16 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
     
     return subscription;
   } catch (error) {
-    await client.query('ROLLBACK');
+    // CRITICAL: Catch rollback errors to prevent connection leak
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      logger.error('[Subscription] Rollback error:', rollbackError);
+    }
     logger.error('[Subscription] Error processing subscription payment:', error);
     throw error;
   } finally {
+    // CRITICAL: Always release client (prevents connection leak)
     client.release();
   }
 }
@@ -232,10 +238,16 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
     
     return newSubscription;
   } catch (error) {
-    await client.query('ROLLBACK');
+    // CRITICAL: Catch rollback errors to prevent connection leak
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      logger.error('[Subscription] Rollback error:', rollbackError);
+    }
     logger.error('[Subscription] Error upgrading shop to PRO:', error);
     throw error;
   } finally {
+    // CRITICAL: Always release client (prevents connection leak)
     client.release();
   }
 }

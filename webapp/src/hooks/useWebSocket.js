@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 
 /**
@@ -11,9 +11,18 @@ export const useWebSocket = () => {
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
 
-  const refetchProducts = useStore((state) => state.refetchProducts);
-  const updateOrderStatus = useStore((state) => state.updateOrderStatus);
-  const incrementSubscribers = useStore((state) => state.incrementSubscribers);
+  // Wrap store methods in useCallback to prevent dependency changes
+  const refetchProducts = useCallback((shopId) => {
+    useStore.getState().refetchProducts(shopId);
+  }, []);
+
+  const updateOrderStatus = useCallback((orderId, status) => {
+    useStore.getState().updateOrderStatus(orderId, status);
+  }, []);
+
+  const incrementSubscribers = useCallback((shopId) => {
+    useStore.getState().incrementSubscribers(shopId);
+  }, []);
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';

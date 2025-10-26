@@ -26,10 +26,33 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor with retry logic and error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+
+    // Retry logic for network errors and 5xx server errors
+    const shouldRetry = !error.response || (error.response.status >= 500);
+    const retryCount = config.retryCount || 0;
+    
+    if (shouldRetry && retryCount < 3) {
+      config.retryCount = retryCount + 1;
+      
+      // Exponential backoff: 100ms, 300ms, 900ms
+      const delays = [100, 300, 900];
+      const delay = delays[retryCount] || 900;
+      
+      console.warn(
+        `🔄 Retry ${config.retryCount}/3 for ${config.method?.toUpperCase()} ${config.url} ` +
+        `(delay: ${delay}ms)`
+      );
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return apiClient.request(config);
+    }
+
+    // Error logging
     if (error.response) {
       // Server responded with error status
       console.error('API Error:', error.response.status, error.response.data);
@@ -40,6 +63,7 @@ apiClient.interceptors.response.use(
       // Something else happened
       console.error('Request Error:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );

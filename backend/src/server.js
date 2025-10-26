@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -98,6 +99,22 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
+}));
+
+/**
+ * Compression middleware (GZIP for all responses)
+ * Reduces API response size by ~60-70% for JSON
+ */
+app.use(compression({
+  filter: (req, res) => {
+    // Compress all responses except already compressed formats
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  threshold: 1024, // Only compress responses > 1KB
+  level: 6 // Compression level (0-9, 6 is optimal balance)
 }));
 
 /**

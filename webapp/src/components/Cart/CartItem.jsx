@@ -1,10 +1,16 @@
 import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
 
-export default function CartItem({ item }) {
-  const updateCartQuantity = useStore((state) => state.updateCartQuantity);
-  const removeFromCart = useStore((state) => state.removeFromCart);
+const CartItem = memo(function CartItem({ item }) {
+  const { updateCartQuantity, removeFromCart } = useStore(
+    useShallow((state) => ({
+      updateCartQuantity: state.updateCartQuantity,
+      removeFromCart: state.removeFromCart,
+    }))
+  );
   const { triggerHaptic } = useTelegram();
 
   const handleIncrease = () => {
@@ -106,4 +112,6 @@ export default function CartItem({ item }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default CartItem;

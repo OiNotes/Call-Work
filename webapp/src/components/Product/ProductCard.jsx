@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useStore } from '../../store/useStore';
 
-export default function ProductCard({ product }) {
+const ProductCard = memo(function ProductCard({ product }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
   const [isHovered, setIsHovered] = useState(false);
@@ -130,4 +130,6 @@ export default function ProductCard({ product }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default ProductCard;

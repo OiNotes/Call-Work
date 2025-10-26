@@ -6,12 +6,14 @@ const { Pool } = pg;
 
 /**
  * PostgreSQL connection pool
+ * Optimized for high-concurrency workloads
  */
 export const pool = new Pool({
   connectionString: config.databaseUrl,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  max: 35, // Increased from 20 to handle more concurrent requests
+  idleTimeoutMillis: 20000, // Reduced from 30s to 20s (prevent stale connections)
   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection cannot be established
+  statement_timeout: 30000, // 30 second timeout for long-running queries (prevent deadlocks)
 });
 
 /**

@@ -313,8 +313,6 @@ export async function handleViewProductDetail(ctx, productId) {
 // Handle delete product
 export async function handleDeleteProduct(ctx, productId) {
   try {
-    await ctx.answerCbQuery('⏳ Удаляем товар...');
-
     const result = await deleteProduct(productId);
 
     if (result.success) {
@@ -417,17 +415,15 @@ export async function handleOrdersByStatus(ctx, status) {
 // Handle update order status
 export async function handleUpdateOrderStatus(ctx, orderId, newStatus) {
   try {
-    await ctx.answerCbQuery('⏳ Обновляем статус...');
-
     const result = await updateOrderStatus(orderId, newStatus);
 
     if (result.success) {
-      await ctx.answerCbQuery('✅ Статус обновлен');
-
       const statusText = newStatus === 'processing' ? 'принят в обработку' :
                         newStatus === 'shipped' ? 'отправлен' :
                         newStatus === 'completed' ? 'завершен' :
                         newStatus === 'rejected' ? 'отклонен' : 'обновлен';
+      
+      await ctx.answerCbQuery('✅ Статус обновлен');
 
       await ctx.editMessageText(
         `✅ Заказ #${orderId} ${statusText}\n\n` +

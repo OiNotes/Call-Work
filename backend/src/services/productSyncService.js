@@ -171,13 +171,14 @@ export async function handleSourceProductDelete(sourceProductId) {
   try {
     const syncedProducts = await syncedProductQueries.findBySourceProductId(sourceProductId);
     
-    let count = 0;
-    for (const sync of syncedProducts) {
-      // Soft delete: deactivate instead of deleting
-      await productQueries.update(sync.synced_product_id, { isActive: false });
-      count++;
-    }
+    // OPTIMIZED: Batch deactivate with Promise.all (parallel execution)
+    await Promise.all(
+      syncedProducts.map(sync => 
+        productQueries.update(sync.synced_product_id, { isActive: false })
+      )
+    );
     
+    const count = syncedProducts.length;
     logger.info(`Source product ${sourceProductId} deleted, deactivated ${count} synced products`);
     return count;
   } catch (error) {
@@ -212,17 +213,28 @@ export async function syncAllProductsForFollow(followId) {
     
     const results = { synced: 0, skipped: 0, errors: 0 };
     
-    for (const product of sourceProducts) {
-      try {
-        await copyProductWithMarkup(product.id, followId);
+    // OPTIMIZED: Parallel execution with Promise.allSettled (prevents one error from stopping all)
+    const syncPromises = sourceProducts.map(product => 
+      copyProductWithMarkup(product.id, followId)
+        .then(() => ({ status: 'synced', productId: product.id }))
+        .catch(error => ({ 
+          status: error.message.includes('already synced') ? 'skipped' : 'error',
+          productId: product.id,
+          error 
+        }))
+    );
+    
+    const syncResults = await Promise.all(syncPromises);
+    
+    // Count results
+    for (const result of syncResults) {
+      if (result.status === 'synced') {
         results.synced++;
-      } catch (error) {
-        if (error.message.includes('already synced')) {
-          results.skipped++;
-        } else {
-          results.errors++;
-          logger.error(`Failed to sync product ${product.id}:`, error);
-        }
+      } else if (result.status === 'skipped') {
+        results.skipped++;
+      } else {
+        results.errors++;
+        logger.error(`Failed to sync product ${result.productId}:`, result.error);
       }
     }
     
@@ -245,16 +257,21 @@ export async function updateMarkupForFollow(followId, newMarkupPercentage) {
   try {
     const syncedProducts = await syncedProductQueries.findByFollowId(followId);
     
-    let count = 0;
-    for (const sync of syncedProducts) {
-      if (sync.conflict_status === 'synced') {
-        const newPrice = calculatePriceWithMarkup(sync.source_product_price, newMarkupPercentage);
-        await productQueries.update(sync.synced_product_id, { price: newPrice });
-        await syncedProductQueries.updateLastSynced(sync.id);
-        count++;
-      }
-    }
+    // Filter synced products only
+    const productsToUpdate = syncedProducts.filter(sync => sync.conflict_status === 'synced');
     
+    // OPTIMIZED: Batch update with Promise.all (parallel execution)
+    await Promise.all(
+      productsToUpdate.map(async (sync) => {
+        const newPrice = calculatePriceWithMarkup(sync.source_product_price, newMarkupPercentage);
+        await Promise.all([
+          productQueries.update(sync.synced_product_id, { price: newPrice }),
+          syncedProductQueries.updateLastSynced(sync.id)
+        ]);
+      })
+    );
+    
+    const count = productsToUpdate.length;
     logger.info(`Updated markup for follow ${followId}: ${count} products updated`);
     return count;
   } catch (error) {
