@@ -135,30 +135,87 @@ export const formatShopInfo = (shop, products = []) => {
     ? `@${shop.seller_username}`
     : (shop.seller_first_name || 'Продавец');
 
+  const { stock: stockProducts, preorder: preorderProducts } = splitProductsByAvailability(products);
+
   let msg = `ℹ️ ${shop.name} • ${sellerUsername}\n`;
 
-  // Description (if not default)
   if (shop.description && shop.description !== `Магазин ${shop.name}`) {
     msg += `\n${shop.description}\n`;
   }
 
-  // Products count
-  msg += `\n📦 ${products.length} товара\n`;
+  msg += `\n✅ Наличие — ${stockProducts.length}`;
 
-  // Show first 3 products
-  if (products && products.length > 0) {
-    const productsToShow = products.slice(0, 3);
-    productsToShow.forEach((product, index) => {
+  if (stockProducts.length === 0) {
+    msg += `\n• пока пусто`;
+  } else {
+    stockProducts.slice(0, 3).forEach((product, index) => {
       const price = parseFloat(product.price).toFixed(0);
-      msg += `${index + 1}. ${product.name} — $${price}\n`;
+      msg += `\n${index + 1}. ${product.name} — $${price}`;
     });
+    if (stockProducts.length > 3) {
+      msg += `\n… еще ${stockProducts.length - 3}`;
+    }
+  }
 
-    if (products.length > 3) {
-      msg += `\n+${products.length - 3} ещё`;
+  msg += `\n\n🕒 Предзаказ — ${preorderProducts.length}`;
+
+  if (preorderProducts.length === 0) {
+    msg += `\n• ожидаем поставку`;
+  } else {
+    preorderProducts.slice(0, 3).forEach((product, index) => {
+      const price = parseFloat(product.price).toFixed(0);
+      msg += `\n${index + 1}. ${product.name} — $${price}`;
+    });
+    if (preorderProducts.length > 3) {
+      msg += `\n… еще ${preorderProducts.length - 3}`;
     }
   }
 
   return msg;
+};
+
+export const splitProductsByAvailability = (products = []) => {
+  const stock = [];
+  const preorder = [];
+
+  products.forEach((product) => {
+    const quantity = product?.stock_quantity ?? product?.stock ?? 0;
+    const available = product?.is_available ?? product?.isActive ?? true;
+
+    if (!available) {
+      return;
+    }
+
+    if (quantity > 0) {
+      stock.push(product);
+    } else {
+      preorder.push(product);
+    }
+  });
+
+  return { stock, preorder };
+};
+
+export const formatProductSectionList = (section, shopName, products = []) => {
+  const isPreorder = section === 'preorder';
+  const title = isPreorder ? '🕒 Предзаказ' : '✅ Наличие';
+  const header = `${title} • ${shopName}`;
+
+  if (!products.length) {
+    return `${header}\n\n${isPreorder ? 'Пока нет товаров в предзаказе' : 'Все товары распроданы'}`;
+  }
+
+  const lines = products.slice(0, 8).map((product, index) => {
+    const price = parseFloat(product.price).toFixed(0);
+    const stockLabel = isPreorder
+      ? 'предзаказ'
+      : `${product.stock_quantity ?? product.stock ?? 0} шт`;
+    return `${index + 1}. ${product.name} — $${price} (${stockLabel})`;
+  });
+
+  const extra = products.length > 8 ? `\n… ещё ${products.length - 8}` : '';
+
+  return `${header}\n\n${lines.join('\n')}${extra}`;
 };
 
 /**

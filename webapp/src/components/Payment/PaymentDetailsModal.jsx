@@ -6,7 +6,8 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS, calculateCryptoAmount } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentDetailsModal() {
   const {
@@ -20,6 +21,7 @@ export default function PaymentDetailsModal() {
   const { t } = useTranslation();
   const platform = usePlatform();
   const android = isAndroid(platform);
+  const ios = isIOS(platform);
   const [copied, setCopied] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
 
@@ -89,10 +91,13 @@ export default function PaymentDetailsModal() {
     setPaymentStep('hash');
   };
 
+  useBackButton(isOpen ? handleClose : null);
+
   if (!cryptoInfo || !currentOrder) return null;
 
   const cryptoAmount = calculateCryptoAmount(currentOrder.total, selectedCrypto);
   const itemCount = currentOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+  const qrSize = ios ? 140 : 160;
 
   return (
     <AnimatePresence>
@@ -112,8 +117,9 @@ export default function PaymentDetailsModal() {
           {/* Modal */}
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            style={{ maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32) }}
             initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: android ? '-7vh' : '-10vh', opacity: 1 }}
+            animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={sheetSpring}
           >
@@ -161,8 +167,8 @@ export default function PaymentDetailsModal() {
                 </div>
               </div>
 
-              {/* Content - No Scroll */}
-              <div className="p-4 space-y-3">
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
                 {/* QR Code - Compact */}
                 <div className="flex justify-center">
                   <motion.div
@@ -177,7 +183,7 @@ export default function PaymentDetailsModal() {
                   >
                     <QRCodeSVG
                       value={paymentWallet}
-                      size={160}
+                      size={qrSize}
                       level="H"
                       includeMargin={false}
                     />
@@ -246,6 +252,9 @@ export default function PaymentDetailsModal() {
                       </svg>
                     )}
                   </div>
+                  <p className="text-gray-500 text-sm mb-1">
+                    ${currentOrder.total.toFixed(2)} USD
+                  </p>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"
                     style={{ letterSpacing: '-0.01em' }}
@@ -259,7 +268,7 @@ export default function PaymentDetailsModal() {
               </div>
 
               {/* Footer - Compact */}
-              <div className="p-4 pb-20 border-t border-white/10">
+              <div className="p-4 border-t border-white/10" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
                 <motion.button
                   onClick={handlePaid}
                   className="w-full h-12 text-white font-bold rounded-xl overflow-hidden"

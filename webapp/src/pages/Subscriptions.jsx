@@ -71,8 +71,11 @@ export default function Subscriptions() {
 
   return (
     <div
-      className="pb-24 overflow-y-auto"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)', height: '100vh' }}
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+        paddingBottom: 'var(--tabbar-total)',
+        overflowY: subscriptions?.length > 5 ? 'auto' : 'visible'
+      }}
     >
       <Header title={t('subscriptions.title')} />
 

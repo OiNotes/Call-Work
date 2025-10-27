@@ -51,14 +51,15 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
 
           {/* Bottom Sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            style={{ maxHeight: 'calc(90vh - var(--tabbar-total))' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={sheetSpring}
           >
             <div
-              className="rounded-t-[32px] flex flex-col max-h-[85vh]"
+              className="rounded-t-[32px] flex flex-col min-h-0"
               style={sheetStyle}
             >
               {/* Handle bar */}
@@ -96,7 +97,7 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
               )}
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto px-6 pb-20">
+              <div className="flex-1 overflow-y-auto px-6" style={{ paddingBottom: 'var(--tabbar-total)' }}>
                 {children}
               </div>
             </div>

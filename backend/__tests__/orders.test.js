@@ -428,3 +428,196 @@ describe('PUT /api/orders/:id/status', () => {
     expect(response.body).toHaveProperty('error');
   });
 });
+
+describe('GET /api/orders/analytics', () => {
+  it('should return analytics for seller with orders', async () => {
+    // Setup: Create seller, shop, products
+    const seller = await createTestUser({
+      telegram_id: 9000200020,
+      selected_role: 'seller',
+    });
+
+    const shop = await createTestShop(seller.id);
+
+    const product1 = await createTestProduct(shop.id, {
+      name: 'Analytics Product 1',
+      price: '100.00',
+      stock_quantity: 50,
+    });
+
+    const product2 = await createTestProduct(shop.id, {
+      name: 'Analytics Product 2',
+      price: '200.00',
+      stock_quantity: 50,
+    });
+
+    // Setup: Create buyer and orders
+    const buyer = await createTestUser({
+      telegram_id: 9000300020,
+    });
+
+    const buyerToken = jwt.sign(
+      { id: buyer.id, telegram_id: buyer.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const sellerToken = jwt.sign(
+      { id: seller.id, telegram_id: seller.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Create 3 orders
+    const order1Response = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId: product1.id, quantity: 2 })
+      .expect(201);
+
+    const order2Response = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId: product2.id, quantity: 1 })
+      .expect(201);
+
+    const order3Response = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ productId: product1.id, quantity: 1 })
+      .expect(201);
+
+    // Mark two orders as completed
+    await request(app)
+      .put(`/api/orders/${order1Response.body.data.id}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'confirmed' })
+      .expect(200);
+
+    await request(app)
+      .put(`/api/orders/${order2Response.body.data.id}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'delivered' })
+      .expect(200);
+
+    // Leave order3 as pending
+
+    // Get analytics
+    const today = new Date().toISOString().split('T')[0];
+    const response = await request(app)
+      .get(`/api/orders/analytics?from=2024-01-01&to=${today}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toBeDefined();
+    expect(response.body.data.period).toEqual({
+      from: '2024-01-01',
+      to: today,
+    });
+
+    const summary = response.body.data.summary;
+    expect(summary.totalOrders).toBe(3);
+    expect(summary.completedOrders).toBe(2);
+    expect(summary.totalRevenue).toBe(400); // (100*2) + (200*1) = 400
+    expect(summary.avgOrderValue).toBe(200); // 400 / 2 = 200
+
+    const topProducts = response.body.data.topProducts;
+    expect(Array.isArray(topProducts)).toBe(true);
+    expect(topProducts.length).toBeGreaterThan(0);
+    expect(topProducts[0].revenue).toBeGreaterThanOrEqual(topProducts[1]?.revenue || 0);
+  });
+
+  it('should return zero statistics for seller with no orders', async () => {
+    const seller = await createTestUser({
+      telegram_id: 9000200021,
+      selected_role: 'seller',
+    });
+
+    await createTestShop(seller.id);
+
+    const token = jwt.sign(
+      { id: seller.id, telegram_id: seller.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const response = await request(app)
+      .get('/api/orders/analytics?from=2024-01-01&to=2024-12-31')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.summary.totalOrders).toBe(0);
+    expect(response.body.data.summary.totalRevenue).toBe(0);
+    expect(response.body.data.topProducts).toEqual([]);
+  });
+
+  it('should reject analytics request without dates', async () => {
+    const seller = await createTestUser({
+      telegram_id: 9000200022,
+      selected_role: 'seller',
+    });
+
+    const token = jwt.sign(
+      { id: seller.id, telegram_id: seller.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const response = await request(app)
+      .get('/api/orders/analytics')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(response.body.error).toMatch(/missing required parameters/i);
+  });
+
+  it('should reject analytics request with invalid date format', async () => {
+    const seller = await createTestUser({
+      telegram_id: 9000200023,
+      selected_role: 'seller',
+    });
+
+    const token = jwt.sign(
+      { id: seller.id, telegram_id: seller.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const response = await request(app)
+      .get('/api/orders/analytics?from=2024/01/01&to=2024/12/31')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(response.body.error).toMatch(/invalid date format/i);
+  });
+
+  it('should reject analytics request with from > to', async () => {
+    const seller = await createTestUser({
+      telegram_id: 9000200024,
+      selected_role: 'seller',
+    });
+
+    const token = jwt.sign(
+      { id: seller.id, telegram_id: seller.telegram_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const response = await request(app)
+      .get('/api/orders/analytics?from=2024-12-31&to=2024-01-01')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(response.body.error).toMatch(/from date must be before or equal to/i);
+  });
+
+  it('should reject analytics request without authentication', async () => {
+    const response = await request(app)
+      .get('/api/orders/analytics?from=2024-01-01&to=2024-12-31')
+      .expect(401);
+
+    expect(response.body).toHaveProperty('error');
+  });
+});

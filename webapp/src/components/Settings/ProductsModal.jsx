@@ -206,14 +206,22 @@ export default function ProductsModal({ isOpen, onClose }) {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const mapProduct = useCallback((product) => ({
-    ...product,
-    price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
-    stock: product.stock_quantity ?? product.stock ?? 0,
-    stock_quantity: product.stock_quantity ?? product.stock ?? 0,
-    is_available: product.is_available ?? product.isActive ?? true,
-    isAvailable: product.is_available ?? product.isActive ?? true,
-  }), []);
+  const mapProduct = useCallback((product) => {
+    const stock = product.stock_quantity ?? product.stock ?? 0;
+    const isAvailable = product.is_available ?? product.isActive ?? true;
+    const availability = !isAvailable ? 'unavailable' : stock > 0 ? 'stock' : 'preorder';
+
+    return {
+      ...product,
+      price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
+      stock,
+      stock_quantity: stock,
+      is_available: isAvailable,
+      isAvailable,
+      isPreorder: availability === 'preorder',
+      availability,
+    };
+  }, []);
 
   const handleClose = useCallback(() => {
     setShowForm(false);

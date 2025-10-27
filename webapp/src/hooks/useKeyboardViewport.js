@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-const IOS_THRESHOLD = 140;
-const ANDROID_THRESHOLD = 100;
+const IOS_THRESHOLD = window.innerHeight * 0.25;
+const ANDROID_THRESHOLD = window.innerHeight * 0.2;
 
 /**
  * Hook для управления viewport при открытии клавиатуры в Telegram Mini App

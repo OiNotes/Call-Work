@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS, formatTxHash } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export default function OrderStatusModal() {
   const { paymentStep, currentOrder, selectedCrypto, clearCheckout } = useStore();
@@ -42,6 +43,8 @@ export default function OrderStatusModal() {
     triggerHaptic('medium');
     clearCheckout();
   };
+
+  useBackButton(isOpen ? handleClose : null);
 
   if (!currentOrder || !cryptoInfo) return null;
 

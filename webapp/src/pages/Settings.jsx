@@ -4,6 +4,7 @@ import Header from '../components/Layout/Header';
 import { useTelegram } from '../hooks/useTelegram';
 import { useStore } from '../store/useStore';
 import { useTranslation } from '../i18n/useTranslation';
+import InteractiveListItem from '../components/common/InteractiveListItem';
 
 // Lazy load modals - only load when user opens them
 const WalletsModal = lazy(() => import('../components/Settings/WalletsModal'));
@@ -13,6 +14,7 @@ const ProductsModal = lazy(() => import('../components/Settings/ProductsModal'))
 const SubscriptionModal = lazy(() => import('../components/Settings/SubscriptionModal'));
 const WorkspaceModal = lazy(() => import('../components/Settings/WorkspaceModal'));
 const FollowsModal = lazy(() => import('../components/Settings/FollowsModal'));
+const AnalyticsModal = lazy(() => import('../components/Settings/AnalyticsModal'));
 
 const getSettingsSections = (t, lang) => {
   const languageNames = { 'ru': 'Русский', 'en': 'English' };
@@ -21,6 +23,16 @@ const getSettingsSections = (t, lang) => {
     {
       title: 'ПРОДАВЕЦ',
       items: [
+        {
+          id: 'analytics',
+          label: 'Статистика',
+          description: 'Продажи и аналитика',
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          ),
+        },
         {
           id: 'products',
           label: 'Товары',
@@ -111,6 +123,7 @@ export default function Settings() {
   const [showSubscription, setShowSubscription] = useState(false);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showFollows, setShowFollows] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const settingsSections = getSettingsSections(t, lang);
 
@@ -126,6 +139,10 @@ export default function Settings() {
         break;
       case 'language':
         setShowLanguage(true);
+        break;
+      case 'analytics':
+        console.info('[Settings] Открываем статистику');
+        setShowAnalytics(true);
         break;
       case 'products':
         setShowProducts(true);
@@ -146,8 +163,12 @@ export default function Settings() {
 
   return (
     <div
-      className="pb-24 scroll-smooth"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)', scrollBehavior: 'smooth' }}
+      className="scroll-smooth"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+        paddingBottom: 'var(--tabbar-total)',
+        scrollBehavior: 'smooth'
+      }}
     >
       <Header title={t('settings.title')} />
 
@@ -206,31 +227,32 @@ export default function Settings() {
                 {section.title}
               </h3>
               <div className="rounded-2xl overflow-hidden glass-card border border-white/10">
-                {section.items.map((item, index) => (
-                  <motion.button
-                    key={item.id}
-                    onClick={() => handleSettingClick(item.id)}
-                    className={`w-full flex items-center gap-4 text-left transition-colors hover:bg-white/5 active:bg-white/10 ${
-                      index !== section.items.length - 1 ? 'border-b border-white/5' : ''
-                    }`}
-                    style={{
-                      height: '56px',
-                      padding: '0 16px'
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="text-gray-400" style={{ width: '24px', height: '24px' }}>
-                      {item.icon}
-                    </div>
-                    <span className="flex-1 text-white font-medium text-base">{item.label}</span>
-                    {item.value && (
-                      <span className="text-gray-400 text-sm">{item.value}</span>
-                    )}
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </motion.button>
-                ))}
+                {section.items.map((item, index) => {
+                  const isLast = index === section.items.length - 1;
+                  return (
+                    <InteractiveListItem
+                      key={item.id}
+                      onClick={() => handleSettingClick(item.id)}
+                      className={`w-full flex items-center gap-4 text-left ${
+                        !isLast ? 'border-b border-white/5' : ''
+                      }`}
+                      style={{
+                        height: '64px',
+                        padding: '0 18px',
+                        borderRadius: 0,
+                        background: 'transparent',
+                      }}
+                    >
+                      <div className="flex items-center justify-center text-gray-300 rounded-xl bg-white/5 w-10 h-10">
+                        {item.icon}
+                      </div>
+                      <span className="flex-1 text-white font-medium text-base">{item.label}</span>
+                      {item.value && (
+                        <span className="text-gray-300 text-sm">{item.value}</span>
+                      )}
+                    </InteractiveListItem>
+                  );
+                })}
               </div>
             </motion.div>
           ))}
@@ -239,6 +261,7 @@ export default function Settings() {
 
       {/* Modals - wrapped in Suspense for lazy loading */}
       <Suspense fallback={null}>
+        {showAnalytics && <AnalyticsModal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} />}
         {showProducts && <ProductsModal isOpen={showProducts} onClose={() => setShowProducts(false)} />}
         {showSubscription && <SubscriptionModal isOpen={showSubscription} onClose={() => setShowSubscription(false)} />}
         {showWorkspace && <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />}

@@ -5,7 +5,8 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { validateTxHash } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentHashModal() {
   const { paymentStep, submitPaymentHash, setPaymentStep } = useStore();
@@ -15,6 +16,7 @@ export default function PaymentHashModal() {
   const [error, setError] = useState('');
   const platform = usePlatform();
   const android = isAndroid(platform);
+  const ios = isIOS(platform);
 
   const overlayStyle = useMemo(
     () => getSurfaceStyle('overlay', platform),
@@ -42,6 +44,8 @@ export default function PaymentHashModal() {
     triggerHaptic('light');
     setPaymentStep('details');
   };
+
+  useBackButton(isOpen ? handleClose : null);
 
   const handleSubmit = () => {
     setError('');
@@ -80,6 +84,7 @@ export default function PaymentHashModal() {
           {/* Modal - Compact */}
           <motion.div
             className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            style={{ maxHeight: getSheetMaxHeight(platform, ios ? -20 : 32) }}
             initial={{ y: '100%', scale: 0.95 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: '100%', scale: 0.95 }}
@@ -120,8 +125,8 @@ export default function PaymentHashModal() {
                 </div>
               </div>
 
-              {/* Content - Compact */}
-              <div className="p-5 space-y-4">
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {/* Icon - Smaller */}
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
@@ -226,7 +231,7 @@ export default function PaymentHashModal() {
               </div>
 
               {/* Footer - Compact */}
-              <div className="p-4 pb-20 border-t border-white/10">
+              <div className="p-4 border-t border-white/10" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
                 <motion.button
                   onClick={handleSubmit}
                   disabled={!validateTxHash(txHash)}

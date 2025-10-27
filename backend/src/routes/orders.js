@@ -47,6 +47,14 @@ router.get('/sales', verifyToken, optionalTelegramAuth, (req, res, next) => {
 });
 
 /**
+ * @route   GET /api/orders/analytics
+ * @desc    Get sales analytics for seller
+ * @access  Private (WebApp)
+ * @query   from (YYYY-MM-DD), to (YYYY-MM-DD)
+ */
+router.get('/analytics', verifyToken, optionalTelegramAuth, orderController.getAnalytics);
+
+/**
  * @route   GET /api/orders/:id
  * @desc    Get order by ID
  * @access  Private (WebApp)

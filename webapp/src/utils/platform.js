@@ -122,18 +122,30 @@ export function getSurfaceStyle(token, platform) {
   return isAndroidPlatform ? preset.android : preset.default;
 }
 
+export function getSheetMaxHeight(platform, extra = 0) {
+  const addition =
+    typeof extra === 'number' && extra !== 0
+      ? `${extra > 0 ? ' + ' : ' - '}${Math.abs(extra)}px`
+      : '';
+
+  const base = `calc(var(--vh-dynamic, 100dvh) - var(--tabbar-total)${addition})`;
+  const clampLimit = isAndroid(platform) ? '94dvh' : '96dvh';
+
+  return `min(${base}, ${clampLimit})`;
+}
+
 const SPRING_PRESETS = {
   sheet: {
     default: { type: 'spring', damping: 30, stiffness: 420, mass: 1 },
-    android: { type: 'spring', damping: 28, stiffness: 250, mass: 0.85 },
+    android: { type: 'spring', damping: 26, stiffness: 210, mass: 0.95 },
   },
   quick: {
     default: { type: 'spring', stiffness: 380, damping: 25 },
-    android: { type: 'spring', stiffness: 220, damping: 26 },
+    android: { type: 'spring', stiffness: 180, damping: 24, mass: 0.9 },
   },
   press: {
     default: { type: 'spring', stiffness: 380, damping: 32 },
-    android: { type: 'spring', stiffness: 200, damping: 25 },
+    android: { type: 'spring', stiffness: 170, damping: 24 },
   },
 };
 

@@ -14,10 +14,13 @@
   --tg-safe-area-inset-right: 0px;
 
   /* TabBar & Keyboard management */
-  --safe-bottom: var(
-    --tg-content-safe-area-inset-bottom,
-    var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+  --safe-bottom: max(
+    var(--tg-content-safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    env(safe-area-inset-bottom, 0px)
   );
+  --tabbar-height: 80px;
+  --tabbar-total: calc(var(--tabbar-height) + var(--safe-bottom));
   --tabbar-h: 60px;
   --vh-dynamic: 100dvh;
 }
@@ -40,12 +43,9 @@ html {
 
 html.platform-android {
   text-rendering: optimizeLegibility;
-  --safe-bottom: calc(
-    var(
-      --tg-content-safe-area-inset-bottom,
-      var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
-    )
-    + 12px
+  --safe-bottom: var(
+    --tg-content-safe-area-inset-bottom,
+    var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
   );
 }
 
@@ -236,21 +236,18 @@ html.platform-android .shadow-premium-md {
 .scroll-container {
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none;
+  overscroll-behavior-y: contain;
   height: 100%;
-  contain: layout paint;
-  will-change: transform;
+  min-height: 0;
 }
 
-/* TabBar positioning - fixed above safe area */
+/* TabBar positioning - fixed at bottom */
 .tabbar {
   position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: var(--safe-bottom);
-  height: var(--tabbar-h);
-  z-index: 50;
+  z-index: 999;
 }
 
 html.platform-android .tabbar {
@@ -262,9 +259,6 @@ html.platform-android .backdrop-blur-lg {
   -webkit-backdrop-filter: blur(6px) !important;
 }
 
-.scroll-container {
-  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
-}
 
 /* Keyboard Viewport Management */
 html.kb-open .tabbar {
@@ -359,4 +353,42 @@ html.kb-open .scroll-container {
 html.platform-android .gradient-mesh {
   background: #181818;
   animation: none;
+}
+
+/* Analytics Components */
+.bar-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 107, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FF6B00 0%, #FF8C3A 100%);
+  border-radius: 4px;
+}
+
+.period-btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: rgba(255, 107, 0, 0.08);
+  color: #FF6B00;
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  min-height: 44px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.period-btn.active {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF8C3A 100%);
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+}
+
+.period-btn:active {
+  transform: scale(0.98);
 }

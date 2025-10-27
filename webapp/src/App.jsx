@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, LazyMotion, domAnimation } from 'framer-motion';
 import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -121,10 +121,11 @@ function App() {
   }
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col overflow-hidden"
-      style={{ height: 'var(--vh-dynamic)' }}
-    >
+    <LazyMotion features={domAnimation}>
+      <div
+        className="fixed inset-0 flex flex-col overflow-hidden"
+        style={{ height: 'var(--vh-dynamic)' }}
+      >
       <div
         className="fixed inset-0 z-0"
         style={{
@@ -180,7 +181,8 @@ function App() {
         <PaymentFlowManager />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
-    </div>
+      </div>
+    </LazyMotion>
   );
 }
 

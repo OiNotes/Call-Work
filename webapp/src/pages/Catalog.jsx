@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import ProductGrid from '../components/Product/ProductGrid';
 import CartButton from '../components/Cart/CartButton';
+import PreorderSheet from '../components/Catalog/PreorderSheet';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
@@ -43,6 +44,8 @@ export default function Catalog() {
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const { get } = useApi();
+  const [activeSection, setActiveSection] = useState('stock');
+  const [preorderProduct, setPreorderProduct] = useState(null);
 
   // Загрузить свой магазин
   useEffect(() => {
@@ -100,20 +103,8 @@ export default function Catalog() {
       } else {
         const items = Array.isArray(data?.data) ? data.data : [];
         console.log('[Catalog] Parsed items:', { count: items.length, items });
-        const normalized = items.map((product) => ({
-          ...product,
-          price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
-          stock: product.stock_quantity ?? product.stock ?? 0,
-          stock_quantity: product.stock_quantity ?? product.stock ?? 0,
-          is_available: product.is_available ?? product.isActive ?? true,
-          isAvailable: product.is_available ?? product.isActive ?? true,
-          currency: product.currency || 'USD',
-          image: product.image || product.images?.[0] || null,
-        }));
-        console.log('[Catalog] Normalized products:', { count: normalized.length, normalized });
-
-        setStoreProducts(normalized, shopId);
-        console.log('[Catalog] Products set to store:', { count: normalized.length, shopId });
+        setStoreProducts(items, shopId);
+        console.log('[Catalog] Products set to store:', { count: items.length, shopId });
       }
     } catch (err) {
       setError('Failed to load products');
@@ -140,6 +131,52 @@ export default function Catalog() {
   const displayShopLogo = displayShop?.logo || displayShop?.image || null;
   const isViewingOwnShop = !currentShop && myShop;
   const isViewingSubscription = currentShop && myShop && currentShop.id !== myShop.id;
+
+  const productSections = useMemo(() => {
+    const byStock = [];
+    const byPreorder = [];
+
+    (products || []).forEach((product) => {
+      if (product.availability === 'preorder') {
+        byPreorder.push(product);
+      } else if (product.availability === 'stock') {
+        byStock.push(product);
+      }
+    });
+
+    return {
+      stock: byStock,
+      preorder: byPreorder,
+    };
+  }, [products]);
+
+  const displayedProducts = activeSection === 'preorder'
+    ? productSections.preorder
+    : productSections.stock;
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (activeSection === 'stock' && productSections.stock.length === 0 && productSections.preorder.length > 0) {
+      setActiveSection('preorder');
+    }
+
+    if (activeSection === 'preorder' && productSections.preorder.length === 0 && productSections.stock.length > 0) {
+      setActiveSection('stock');
+    }
+  }, [loading, activeSection, productSections.stock.length, productSections.preorder.length]);
+
+  const handleSectionChange = (sectionId) => {
+    if (sectionId === activeSection) return;
+    triggerHaptic('light');
+    setActiveSection(sectionId);
+  };
+
+  const openPreorder = useCallback((product) => {
+    setPreorderProduct(product);
+  }, []);
+
+  const closePreorder = useCallback(() => setPreorderProduct(null), []);
 
   // Если нет магазина - показываем loading или пустой экран
   if (!displayShop) {
@@ -227,9 +264,49 @@ export default function Catalog() {
               )}
             </h1>
             <p className="text-gray-400 text-sm">
-              {products.length} {t('catalog.products')}
+              {activeSection === 'preorder'
+                ? `${productSections.preorder.length} в предзаказе`
+                : `${productSections.stock.length} в наличии`
+              }
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="px-4 pt-4">
+        <div className="relative flex bg-white/5 backdrop-blur rounded-2xl p-1">
+          {['stock', 'preorder'].map((sectionId) => {
+            const isActive = activeSection === sectionId;
+            const label = sectionId === 'stock' ? 'Наличие' : 'Предзаказ';
+            const count = sectionId === 'stock'
+              ? productSections.stock.length
+              : productSections.preorder.length;
+
+            return (
+              <button
+                key={sectionId}
+                type="button"
+                onClick={() => handleSectionChange(sectionId)}
+                className={`relative flex-1 py-2.5 rounded-xl transition-colors ${
+                  isActive ? 'text-white' : 'text-white/60'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="catalog-section-highlight"
+                    className="absolute inset-0 bg-white/16 shadow-[0_10px_30px_rgba(10,10,10,0.35)] rounded-xl"
+                    transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                  />
+                )}
+                <span className="relative z-10 text-sm font-semibold" style={{ letterSpacing: '-0.01em' }}>
+                  {label}
+                </span>
+                <span className={`relative z-10 ml-2 text-xs font-semibold ${isActive ? 'text-orange-primary' : 'text-white/35'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -264,13 +341,27 @@ export default function Catalog() {
       {/* Products Grid */}
       {!error && (
         <ProductGrid
-          products={products}
+          products={displayedProducts}
           loading={loading}
+          emptyTitle={activeSection === 'preorder' ? 'Нет товаров в предзаказе' : t('catalog.empty')}
+          emptyDescription={activeSection === 'preorder'
+            ? 'Мы сообщим, как только появятся новые позиции для предзаказа'
+            : t('catalog.emptyDesc')
+          }
+          emptyIcon={activeSection === 'preorder' ? '🕒' : '📦'}
+          onPreorder={openPreorder}
         />
       )}
 
       {/* Floating Cart Button */}
       <CartButton onClick={() => setCartOpen(true)} />
+
+      <PreorderSheet
+        product={preorderProduct}
+        shop={displayShop}
+        isOpen={Boolean(preorderProduct)}
+        onClose={closePreorder}
+      />
     </div>
   );
 }

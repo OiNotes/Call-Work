@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.12",
     "@telegram-apps/sdk": "^2.11.3",
     "axios": "^1.6.0",
     "framer-motion": "^10.16.0",

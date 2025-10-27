@@ -1,12 +1,16 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LazyMotion } from 'framer-motion';
 import { useMemo } from 'react';
+
+// Lazy load domMax for drag gestures
+const loadDomMax = () => import('framer-motion').then(mod => mod.domMax);
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
 import CartItem from './CartItem';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export default function CartSheet() {
   const { cart, isCartOpen, setCartOpen, clearCart, startCheckout } = useStore(
@@ -105,10 +109,12 @@ export default function CartSheet() {
     clearCart();
   };
 
+  useBackButton(isCartOpen ? handleClose : null);
+
   return (
     <AnimatePresence>
       {isCartOpen && (
-        <>
+        <LazyMotion features={loadDomMax}>
           {/* Backdrop */}
           <motion.div
             className="fixed inset-0 z-50"
@@ -122,14 +128,15 @@ export default function CartSheet() {
 
           {/* Sheet */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            style={{ maxHeight: getSheetMaxHeight(platform, 24) }}
             initial={{ y: '100%' }}
-            animate={{ y: android ? '-8vh' : '-10vh' }}
+            animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%' }}
             transition={sheetSpring}
           >
             <div
-              className="rounded-t-[32px] flex flex-col max-h-[90vh]"
+              className="rounded-t-[32px] flex flex-col"
               style={sheetStyle}
             >
               {/* Header */}
@@ -173,7 +180,10 @@ export default function CartSheet() {
               </div>
 
               {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+                style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+              >
                 {cart.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -215,7 +225,7 @@ export default function CartSheet() {
                     </motion.button>
                   </motion.div>
                 ) : (
-                  <AnimatePresence>
+                  <AnimatePresence initial={false}>
                     {cart.map((item) => (
                       <CartItem key={item.id} item={item} />
                     ))}
@@ -225,7 +235,7 @@ export default function CartSheet() {
 
               {/* Footer */}
               {cart.length > 0 && (
-                <div className="p-5 pb-8 border-t border-white/10 space-y-4">
+                <div className="p-5 border-t border-white/10 space-y-4" style={{ paddingBottom: 'calc(var(--tabbar-total) + 20px)' }}>
                   {/* Total */}
                   <div className="flex items-center justify-between">
                     <span
@@ -270,7 +280,7 @@ export default function CartSheet() {
               )}
             </div>
           </motion.div>
-        </>
+        </LazyMotion>
       )}
     </AnimatePresence>
   );

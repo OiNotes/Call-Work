@@ -39,7 +39,7 @@ const getTabsConfig = (t) => [
 ];
 
 export default function TabBar() {
-  const { activeTab, setActiveTab } = useStore();
+  const { activeTab, setActiveTab, setCartOpen, setPaymentStep } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const platform = usePlatform();
@@ -70,12 +70,18 @@ export default function TabBar() {
 
   const handleTabChange = (tabId) => {
     triggerHaptic('light');
+    
+    // Close all modals BEFORE switching tabs
+    setCartOpen(false);
+    setPaymentStep('idle'); // Closes all payment modals
+    
+    // Switch tab
     setActiveTab(tabId);
   };
 
   return (
     <div className="tabbar">
-      <div className="rounded-t-3xl" style={containerStyle}>
+      <div className="rounded-t-3xl" style={{ ...containerStyle, paddingBottom: 'var(--safe-bottom)' }}>
         <div className="flex items-center justify-around px-4 py-3">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -99,7 +105,7 @@ export default function TabBar() {
                       layoutId="activeTab"
                       initial={false}
                       transition={indicatorSpring}
-                      style={{ ...gpuAccelStyle, ...activeIndicatorStyle, zIndex: -1 }}
+                      style={{ willChange: 'transform', ...activeIndicatorStyle, zIndex: -1 }}
                     />
                   )}
 

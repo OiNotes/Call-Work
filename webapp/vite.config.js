@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const dropConsole = process.env.DROP_CONSOLE === 'true'
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -13,8 +15,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
+        drop_console: dropConsole,
+        drop_debugger: dropConsole,
       },
     },
     rollupOptions: {

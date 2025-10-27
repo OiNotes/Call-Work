@@ -286,6 +286,149 @@ export const orderController = {
         error: 'Failed to update order status'
       });
     }
+  },
+
+  /**
+   * Get sales analytics for seller
+   */
+  getAnalytics: async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const userId = req.user.id;
+
+      // Validate required parameters
+      if (!from || !to) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required parameters: from and to dates (YYYY-MM-DD format)'
+        });
+      }
+
+      // Validate date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(from) || !dateRegex.test(to)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid date format. Use YYYY-MM-DD (e.g., 2025-01-01)'
+        });
+      }
+
+      // Parse dates
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+
+      // Validate date range
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid date values'
+        });
+      }
+
+      if (fromDate > toDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'from date must be before or equal to to date'
+        });
+      }
+
+      // Check if dates are in the future
+      const now = new Date();
+      if (fromDate > now) {
+        return res.status(400).json({
+          success: false,
+          error: 'from date cannot be in the future'
+        });
+      }
+
+      // Add 1 day to toDate for exclusive upper bound (to include the entire day)
+      const toDateExclusive = new Date(toDate);
+      toDateExclusive.setDate(toDateExclusive.getDate() + 1);
+
+      // Query analytics data
+      const client = await getClient();
+      try {
+        // Get summary statistics
+        const summaryResult = await client.query(
+          `SELECT
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN o.status IN ('confirmed', 'shipped', 'delivered') THEN 1 ELSE 0 END) as completed_orders,
+            SUM(CASE WHEN o.status IN ('confirmed', 'shipped', 'delivered') THEN o.total_price ELSE 0 END) as total_revenue,
+            AVG(CASE WHEN o.status IN ('confirmed', 'shipped', 'delivered') THEN o.total_price ELSE NULL END) as avg_order_value
+          FROM orders o
+          JOIN products p ON o.product_id = p.id
+          JOIN shops s ON p.shop_id = s.id
+          WHERE s.owner_id = $1
+            AND o.created_at >= $2
+            AND o.created_at < $3`,
+          [userId, fromDate, toDateExclusive]
+        );
+
+        // Get top products
+        const topProductsResult = await client.query(
+          `SELECT
+            p.id,
+            p.name,
+            COUNT(o.id) as quantity,
+            SUM(o.total_price) as revenue
+          FROM orders o
+          JOIN products p ON o.product_id = p.id
+          JOIN shops s ON p.shop_id = s.id
+          WHERE s.owner_id = $1
+            AND o.created_at >= $2
+            AND o.created_at < $3
+            AND o.status IN ('confirmed', 'shipped', 'delivered')
+          GROUP BY p.id, p.name
+          ORDER BY revenue DESC
+          LIMIT 10`,
+          [userId, fromDate, toDateExclusive]
+        );
+
+        const summary = summaryResult.rows[0];
+        const topProducts = topProductsResult.rows;
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            period: {
+              from,
+              to
+            },
+            summary: {
+              totalRevenue: parseFloat(summary.total_revenue || 0),
+              totalOrders: parseInt(summary.total_orders || 0, 10),
+              completedOrders: parseInt(summary.completed_orders || 0, 10),
+              avgOrderValue: parseFloat(summary.avg_order_value || 0)
+            },
+            topProducts: topProducts.map(product => ({
+              id: product.id,
+              name: product.name,
+              quantity: parseInt(product.quantity, 10),
+              revenue: parseFloat(product.revenue)
+            }))
+          }
+        });
+
+      } finally {
+        client.release();
+      }
+
+    } catch (error) {
+      if (error.code) {
+        const handledError = dbErrorHandler(error);
+        return res.status(handledError.statusCode).json({
+          success: false,
+          error: handledError.message,
+          ...(handledError.details ? { details: handledError.details } : {})
+        });
+      }
+
+      logger.error('Get analytics error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to get analytics'
+      });
+    }
   }
 };
 

@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { memo, useMemo, useState, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -6,6 +6,7 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSurfaceStyle, getSpringPreset, isAndroid } from '../../utils/platform';
 import { gpuAccelStyle } from '../../utils/animationHelpers';
+import OptimizedImage from '../common/OptimizedImage';
 
 const CartItem = memo(function CartItem({ item }) {
   const { updateCartQuantity, removeFromCart } = useStore(
@@ -18,6 +19,13 @@ const CartItem = memo(function CartItem({ item }) {
   const [isDragging, setIsDragging] = useState(false);
   const platform = usePlatform();
   const android = isAndroid(platform);
+
+  // Drag controls для iOS swipe-to-delete
+  const dragControls = useDragControls();
+
+  const startDrag = (e) => {
+    dragControls.start(e);
+  };
 
   const cardSurface = useMemo(
     () => getSurfaceStyle('glassCard', platform),
@@ -68,18 +76,21 @@ const CartItem = memo(function CartItem({ item }) {
     ? {}
     : {
         drag: 'x',
+        dragControls,
+        dragListener: false,  // КРИТИЧНО: убираем глобальный слушатель
+        dragDirectionLock: true,
+        dragElastic: 0.08,
+        dragMomentum: false,
         dragConstraints: { left: -100, right: 0 },
-        dragElastic: { left: 0.2, right: 0 },
-        onDragStart: () => setIsDragging(true),
         onDragEnd: handleDragEnd,
-        whileDrag: { scale: 0.98 },
+        whileDrag: { scale: 0.985 },
       };
 
   return (
     <motion.div
       className="relative"
       {...swipeProps}
-      style={gpuAccelStyle}
+      style={{ ...gpuAccelStyle, touchAction: android ? 'pan-y' : 'pan-x' }}
       initial={{ opacity: 0, y: android ? 12 : 0, x: android ? 0 : -20 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
       exit={{ opacity: 0, y: android ? 12 : 0, x: android ? 0 : 20 }}
@@ -99,6 +110,17 @@ const CartItem = memo(function CartItem({ item }) {
         </motion.div>
       )}
 
+      {/* Drag handle (iOS only) */}
+      {!android && (
+        <div
+          onPointerDown={startDrag}
+          className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center cursor-grab active:cursor-grabbing z-20"
+          style={{ touchAction: 'none' }}
+        >
+          <div className="w-1 h-8 rounded-full bg-gray-600 opacity-40" />
+        </div>
+      )}
+
       <motion.div
         className="glass-card rounded-xl p-4 relative z-10"
         style={cardSurface}
@@ -106,11 +128,12 @@ const CartItem = memo(function CartItem({ item }) {
         <div className="flex gap-4">
           <div className="w-20 h-20 rounded-lg bg-dark-elevated flex-shrink-0 overflow-hidden">
             {item.image ? (
-              <img
+              <OptimizedImage
                 src={item.image}
                 alt={item.name}
-                loading="lazy"
                 className="w-full h-full object-cover"
+                width={80}
+                height={80}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-600">

@@ -1,7 +1,7 @@
 import { buyerMenu, buyerMenuNoShop, shopActionsKeyboard } from '../../keyboards/buyer.js';
 import { subscriptionApi, shopApi, authApi, orderApi, productApi } from '../../utils/api.js';
 import { formatPrice, formatOrderStatus } from '../../utils/format.js';
-import { formatBuyerOrders, formatSubscriptions, formatShopInfo } from '../../utils/minimalist.js';
+import { formatBuyerOrders, formatSubscriptions, formatShopInfo, splitProductsByAvailability, formatProductSectionList } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
 import * as smartMessage from '../../utils/smartMessage.js';
 
@@ -35,6 +35,35 @@ export const setupBuyerHandlers = (bot) => {
 
   // View shop details
   bot.action(/^shop:view:(.+)$/, handleShopView);
+
+  // View shop sections
+  bot.action(/^shop:stock:(.+)$/, handleShopStock);
+  bot.action(/^shop:preorder:(.+)$/, handleShopPreorder);
+};
+
+const resolveSubscription = async (ctx, shopId) => {
+  if (!ctx.session.token) return false;
+  try {
+    const checkResult = await subscriptionApi.checkSubscription(shopId, ctx.session.token);
+    return checkResult.subscribed || false;
+  } catch (error) {
+    logger.error('Failed to check subscription status:', error);
+    return false;
+  }
+};
+
+const resolveSectionCounts = async (shopId, products = null) => {
+  try {
+    const list = products || await productApi.getShopProducts(shopId);
+    const split = splitProductsByAvailability(list);
+    return {
+      stock: split.stock.length,
+      preorder: split.preorder.length,
+    };
+  } catch (error) {
+    logger.error('Failed to resolve section counts:', error);
+    return { stock: 0, preorder: 0 };
+  }
 };
 
 /**
@@ -180,10 +209,12 @@ const handleSubscribe = async (ctx) => {
       const shop = await shopApi.getShop(shopId);
 
       // Update message with subscribed state
-      await smartMessage.send(ctx, {
-        text: `✓ Подписка активна: ${shop.name}`,
-        keyboard: shopActionsKeyboard(shopId, true)
-      });
+    const counts = await resolveSectionCounts(shopId);
+
+    await smartMessage.send(ctx, {
+      text: `✓ Подписка активна: ${shop.name}`,
+      keyboard: shopActionsKeyboard(shopId, true, counts)
+    });
 
       logger.info(`User ${ctx.from.id} already subscribed to shop ${shopId}`);
       return;
@@ -191,16 +222,15 @@ const handleSubscribe = async (ctx) => {
 
     // Not subscribed - proceed with subscription (pass telegram_id for broadcast feature)
     await subscriptionApi.subscribe(shopId, ctx.session.token, ctx.from.id);
-
-    // Get shop details
     const shop = await shopApi.getShop(shopId);
+    const counts = await resolveSectionCounts(shopId);
 
     // Success - answer callback query
     await ctx.answerCbQuery('✅ Подписались!');
 
     await smartMessage.send(ctx, {
       text: `✓ Подписались: ${shop.name}`,
-      keyboard: shopActionsKeyboard(shopId, true)
+      keyboard: shopActionsKeyboard(shopId, true, counts)
     });
 
     logger.info(`User ${ctx.from.id} subscribed to shop ${shopId}`);
@@ -236,15 +266,15 @@ const handleUnsubscribe = async (ctx) => {
     // MEDIUM severity fix - move answerCbQuery AFTER API call to avoid double call
     await subscriptionApi.unsubscribe(shopId, ctx.session.token);
 
-    // Get shop details
     const shop = await shopApi.getShop(shopId);
+    const counts = await resolveSectionCounts(shopId);
 
     // Answer callback query AFTER successful API call
     await ctx.answerCbQuery('✓ Отписались');
 
     await smartMessage.send(ctx, {
       text: `✓ Отписались: ${shop.name}`,
-      keyboard: shopActionsKeyboard(shopId, false)
+      keyboard: shopActionsKeyboard(shopId, false, counts)
     });
 
     logger.info(`User ${ctx.from.id} unsubscribed from shop ${shopId}`);
@@ -312,27 +342,17 @@ const handleShopView = async (ctx) => {
     // Get shop details
     const shop = await shopApi.getShop(shopId);
 
-    // Get shop products
     const products = await productApi.getShopProducts(shopId);
-
-    // Use minimalist formatter (13 lines → 7 lines)
+    const sectioned = splitProductsByAvailability(products);
     const message = formatShopInfo(shop, products);
-
-    // Check subscription status (MEDIUM severity fix - add token check)
-    let isSubscribed = false;
-    if (ctx.session.token) {
-      try {
-        const checkResult = await subscriptionApi.checkSubscription(shopId, ctx.session.token);
-        isSubscribed = checkResult.subscribed || false;
-      } catch (error) {
-        logger.error('Failed to check subscription status:', error);
-        // Continue with isSubscribed = false on error
-      }
-    }
+    const isSubscribed = await resolveSubscription(ctx, shopId);
 
     await smartMessage.send(ctx, {
       text: message,
-      keyboard: shopActionsKeyboard(shopId, isSubscribed)
+      keyboard: shopActionsKeyboard(shopId, isSubscribed, {
+        stock: sectioned.stock.length,
+        preorder: sectioned.preorder.length,
+      })
     });
 
     logger.info(`User ${ctx.from.id} viewed shop ${shopId} details`);
@@ -340,6 +360,42 @@ const handleShopView = async (ctx) => {
     logger.error('Error viewing shop:', error);
     await smartMessage.send(ctx, {
       text: 'Не удалось загрузить информацию о магазине\n\nПопробуйте позже',
+      keyboard: buyerMenu
+    });
+  }
+};
+
+const handleShopStock = async (ctx) => handleShopSection(ctx, 'stock');
+const handleShopPreorder = async (ctx) => handleShopSection(ctx, 'preorder');
+
+const handleShopSection = async (ctx, section) => {
+  try {
+    const shopId = ctx.match[1];
+    await ctx.answerCbQuery();
+
+    const [shop, products] = await Promise.all([
+      shopApi.getShop(shopId),
+      productApi.getShopProducts(shopId),
+    ]);
+
+    const sectioned = splitProductsByAvailability(products);
+    const list = section === 'preorder' ? sectioned.preorder : sectioned.stock;
+    const message = formatProductSectionList(section, shop.name, list);
+    const isSubscribed = await resolveSubscription(ctx, shopId);
+
+    await smartMessage.send(ctx, {
+      text: message,
+      keyboard: shopActionsKeyboard(shopId, isSubscribed, {
+        stock: sectioned.stock.length,
+        preorder: sectioned.preorder.length,
+      })
+    });
+
+    logger.info(`User ${ctx.from.id} viewed section ${section} for shop ${shopId}`);
+  } catch (error) {
+    logger.error('Error viewing shop section:', error);
+    await smartMessage.send(ctx, {
+      text: 'Не удалось загрузить товары\n\nПопробуйте позже',
       keyboard: buyerMenu
     });
   }

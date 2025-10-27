@@ -21,7 +21,8 @@ export const buyerMenuNoShop = Markup.inlineKeyboard([
 ]);
 
 // Shop actions (subscribe/unsubscribe/open)
-export const shopActionsKeyboard = (shopId, isSubscribed = false) => {
+export const shopActionsKeyboard = (shopId, isSubscribed = false, counts = { stock: 0, preorder: 0 }) => {
+  const { stock = 0, preorder = 0 } = counts;
   const buttons = [];
 
   if (!isSubscribed) {
@@ -34,6 +35,8 @@ export const shopActionsKeyboard = (shopId, isSubscribed = false) => {
   }
 
   buttons.push(
+    [Markup.button.callback(`✅ Наличие (${stock})`, `shop:stock:${shopId}`)],
+    [Markup.button.callback(`🕒 Предзаказ (${preorder})`, `shop:preorder:${shopId}`)],
     [Markup.button.callback('ℹ️ О магазине', `shop:view:${shopId}`)],
     [Markup.button.callback('◀️ Назад', 'buyer:main')]
   );

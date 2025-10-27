@@ -16,7 +16,14 @@ const container = {
   }
 };
 
-function ProductGrid({ products, loading = false }) {
+function ProductGrid({
+  products,
+  loading = false,
+  emptyTitle,
+  emptyDescription,
+  emptyIcon,
+  onPreorder,
+}) {
   const { t } = useTranslation();
   const platform = usePlatform();
   const springPreset = getSpringPreset('quick', platform);
@@ -41,11 +48,19 @@ function ProductGrid({ products, loading = false }) {
   if (!products || products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-        <h3 className="text-lg font-semibold text-gray-400 mb-2">{t('catalog.empty')}</h3>
-        <p className="text-sm text-gray-500">{t('catalog.emptyDesc')}</p>
+        <div className="text-4xl mb-4">
+          {emptyIcon || (
+            <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          )}
+        </div>
+        <h3 className="text-lg font-semibold text-gray-300 mb-2">
+          {emptyTitle || t('catalog.empty')}
+        </h3>
+        <p className="text-sm text-gray-500">
+          {emptyDescription || t('catalog.emptyDesc')}
+        </p>
       </div>
     );
   }
@@ -59,7 +74,7 @@ function ProductGrid({ products, loading = false }) {
     >
       {products.map((product) => (
         <motion.div key={product.id} variants={item}>
-          <ProductCard product={product} />
+          <ProductCard product={product} onPreorder={onPreorder} />
         </motion.div>
       ))}
     </motion.div>

@@ -8,6 +8,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Telegram Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Platform Detection (BEFORE React hydration) -->
+    <script>
+      (function(){
+        var p = (window.Telegram && Telegram.WebApp && Telegram.WebApp.platform) || 'unknown';
+        document.documentElement.setAttribute('data-platform', p);
+
+        // Backward compatibility (старый код использует class)
+        if (p === 'android') {
+          document.documentElement.classList.add('platform-android');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

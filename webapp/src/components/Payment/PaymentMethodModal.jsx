@@ -5,7 +5,8 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
+import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentMethodModal() {
   const { paymentStep, selectCrypto, setPaymentStep } = useStore();
@@ -56,6 +57,8 @@ export default function PaymentMethodModal() {
     selectCrypto(cryptoId);
   };
 
+  useBackButton(isOpen ? handleClose : null);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -73,14 +76,15 @@ export default function PaymentMethodModal() {
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[92vh] flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            style={{ maxHeight: getSheetMaxHeight(platform, 32) }}
             initial={{ y: '100%' }}
-            animate={{ y: android ? '-6vh' : '-8vh' }}
+            animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={sheetSpring}
           >
             <div
-              className="rounded-t-[32px] flex flex-col max-h-[92vh]"
+              className="rounded-t-[32px] flex flex-col"
               style={sheetStyle}
             >
               {/* Header */}
@@ -113,7 +117,10 @@ export default function PaymentMethodModal() {
               </div>
 
               {/* Crypto Options */}
-              <div className="flex-1 overflow-y-auto px-6 pt-4 pb-8">
+              <div
+                className="flex-1 overflow-y-auto px-6 pt-4"
+                style={{ paddingBottom: 'calc(var(--tabbar-total) + 72px)' }}
+              >
                 <div className="grid grid-cols-2 gap-3">
                   {CRYPTO_OPTIONS.map((crypto) => (
                     <motion.button

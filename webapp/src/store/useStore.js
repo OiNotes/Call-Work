@@ -3,16 +3,30 @@ import axios from 'axios';
 import { mockShops, mockProducts, mockSubscriptions, mockUser } from '../utils/mockData';
 import { generateWalletAddress, generateOrderId } from '../utils/paymentUtils';
 
-const normalizeProduct = (product) => ({
-  ...product,
-  price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
-  stock: product.stock_quantity ?? product.stock ?? 0,
-  stock_quantity: product.stock_quantity ?? product.stock ?? 0,
-  is_available: product.is_available ?? product.isActive ?? true,
-  isAvailable: product.is_available ?? product.isActive ?? true,
-  currency: product.currency || 'USD',
-  image: product.image || product.images?.[0] || null,
-});
+export const normalizeProduct = (product) => {
+  const rawStock = product?.stock_quantity ?? product?.stock ?? 0;
+  const price = typeof product?.price === 'number' ? product.price : Number(product?.price) || 0;
+  const isAvailable = product?.is_available ?? product?.isActive ?? true;
+  const isPreorder = isAvailable && rawStock <= 0;
+  const availability = !isAvailable
+    ? 'unavailable'
+    : isPreorder
+      ? 'preorder'
+      : 'stock';
+
+  return {
+    ...product,
+    price,
+    stock: rawStock,
+    stock_quantity: rawStock,
+    is_available: isAvailable,
+    isAvailable,
+    currency: product?.currency || 'USD',
+    image: product?.image || product?.images?.[0] || null,
+    isPreorder,
+    availability,
+  };
+};
 
 export const useStore = create((set, get) => ({
       // User data
@@ -86,7 +100,10 @@ export const useStore = create((set, get) => ({
       // Products
       products: [],
       productsShopId: null,
-      setProducts: (products, shopId = null) => set({ products, productsShopId: shopId }),
+      setProducts: (products, shopId = null) => {
+        const normalized = Array.isArray(products) ? products.map(normalizeProduct) : [];
+        set({ products: normalized, productsShopId: shopId });
+      },
 
       // Current shop
       currentShop: null,
