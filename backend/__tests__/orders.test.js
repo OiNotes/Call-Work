@@ -481,7 +481,7 @@ describe('GET /api/orders/analytics', () => {
       .send({ productId: product2.id, quantity: 1 })
       .expect(201);
 
-    const order3Response = await request(app)
+    const _order3Response = await request(app)
       .post('/api/orders')
       .set('Authorization', `Bearer ${buyerToken}`)
       .send({ productId: product1.id, quantity: 1 })

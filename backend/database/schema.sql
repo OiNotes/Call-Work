@@ -40,7 +40,7 @@ CREATE TABLE shops (
   id SERIAL PRIMARY KEY,
   owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   registration_paid BOOLEAN DEFAULT false,
-  name VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
   description TEXT,
   logo TEXT,
   wallet_btc VARCHAR(255),
@@ -76,15 +76,18 @@ CREATE TABLE products (
   price DECIMAL(18, 8) NOT NULL CHECK (price > 0),
   currency VARCHAR(10) DEFAULT 'USD',
   stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
+  reserved_quantity INT DEFAULT 0 CHECK (reserved_quantity >= 0),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_available_stock CHECK (stock_quantity >= reserved_quantity)
 );
 
 COMMENT ON TABLE products IS 'Stores products for each shop';
 COMMENT ON COLUMN products.price IS 'Product price in USD (8 decimal precision)';
 COMMENT ON COLUMN products.currency IS 'Legacy field - products are priced in USD only';
-COMMENT ON COLUMN products.stock_quantity IS 'Available stock quantity';
+COMMENT ON COLUMN products.stock_quantity IS 'Total stock quantity';
+COMMENT ON COLUMN products.reserved_quantity IS 'Reserved stock for pending orders (decreased after payment confirmation)';
 
 -- ============================================
 -- Shop follows table
@@ -300,6 +303,19 @@ COMMENT ON COLUMN invoices.tatum_subscription_id IS 'Tatum webhook subscription 
 COMMENT ON COLUMN invoices.expires_at IS 'Invoice expiration time (typically 1 hour)';
 
 -- ============================================
+-- Views
+-- ============================================
+
+-- Products with calculated available quantity
+CREATE OR REPLACE VIEW products_with_availability AS
+SELECT 
+  p.*,
+  (p.stock_quantity - p.reserved_quantity) AS available_quantity
+FROM products p;
+
+COMMENT ON VIEW products_with_availability IS 'Convenience view showing products with calculated available_quantity field (stock_quantity - reserved_quantity)';
+
+-- ============================================
 -- Functions for updated_at timestamps
 -- ============================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -339,10 +355,14 @@ CREATE INDEX IF NOT EXISTS idx_users_telegram_role ON users(telegram_id, selecte
 CREATE INDEX IF NOT EXISTS idx_users_selected_role ON users(selected_role);
 CREATE INDEX IF NOT EXISTS idx_shops_owner ON shops(owner_id);
 CREATE INDEX IF NOT EXISTS idx_shops_tier ON shops(tier);
+-- Shop name uniqueness: case-insensitive unique constraint via functional index
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_name_unique_lower ON shops(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
 CREATE INDEX IF NOT EXISTS idx_products_shop_active ON products(shop_id, is_active);
 -- Partial index for active products only (20-30% faster, smaller index)
 CREATE INDEX IF NOT EXISTS idx_products_shop_active_partial ON products(shop_id) WHERE is_active = true;
+-- Composite index for availability checks (stock reservation system)
+CREATE INDEX IF NOT EXISTS idx_products_availability ON products(id, stock_quantity, reserved_quantity) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_shop ON subscriptions(shop_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_telegram_id ON subscriptions(telegram_id);

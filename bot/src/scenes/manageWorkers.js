@@ -1,9 +1,13 @@
 import { Scenes } from 'telegraf';
-import { manageWorkersMenu, confirmWorkerRemoval } from '../keyboards/workspace.js';
+import { manageWorkersMenu } from '../keyboards/workspace.js';
 import { cancelButton } from '../keyboards/common.js';
 import { workerApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
+import { messages } from '../texts/messages.js';
+import { showSellerToolsMenu } from '../utils/sellerNavigation.js';
+
+const { seller: sellerMessages, general: generalMessages } = messages;
 
 /**
  * Manage Workers Scene - Add/Remove workers
@@ -15,8 +19,11 @@ const enterTelegramId = async (ctx) => {
   try {
     logger.info('manage_workers_step:telegram_id', { userId: ctx.from.id });
 
+    // Show context + prompt
+    const message = `${sellerMessages.workersContext}\n\n${sellerMessages.workerPrompt}`;
+    
     await smartMessage.send(ctx, {
-      text: 'Telegram ID работника:\n\n(число, например: 123456789)',
+      text: message,
       keyboard: cancelButton
     });
 
@@ -30,17 +37,53 @@ const enterTelegramId = async (ctx) => {
 // Step 2: Confirm and add worker
 const confirmAndAdd = async (ctx) => {
   try {
-    // Get Telegram ID from message
     if (!ctx.message || !ctx.message.text) {
-      await smartMessage.send(ctx, { text: 'Отправьте Telegram ID' });
+      await smartMessage.send(ctx, { text: sellerMessages.workerPrompt });
       return;
     }
 
     const input = ctx.message.text.trim();
-    const telegramId = parseInt(input, 10);
+    let telegramId = null;
+    let usernameInput = null;
 
-    if (isNaN(telegramId) || telegramId <= 0) {
-      await smartMessage.send(ctx, { text: '❌ Неверный формат\n\nTelegram ID - число больше 0\n\nПример: 123456789' });
+    if (input.startsWith('@')) {
+      usernameInput = input.slice(1).trim();
+      if (!usernameInput) {
+        await smartMessage.send(ctx, { text: sellerMessages.workerIdInvalid });
+        return;
+      }
+
+      try {
+        const chat = await ctx.telegram.getChat(input);
+        if (!chat || !chat.id) {
+          await smartMessage.send(ctx, { text: sellerMessages.workerAddNotFound });
+          return;
+        }
+        telegramId = chat.id;
+        if (!usernameInput && chat.username) {
+          usernameInput = chat.username;
+        }
+        logger.info('manage_workers_lookup_username', {
+          requester: ctx.from.id,
+          lookup: input,
+          resolvedId: telegramId
+        });
+      } catch (lookupError) {
+        logger.warn('Failed to resolve username for worker', {
+          lookup: input,
+          error: lookupError.message
+        });
+        await smartMessage.send(ctx, { text: sellerMessages.workerAddNotFound });
+        return;
+      }
+    } else if (/^\d+$/.test(input)) {
+      telegramId = Number.parseInt(input, 10);
+      if (!Number.isFinite(telegramId) || telegramId <= 0) {
+        await smartMessage.send(ctx, { text: sellerMessages.workerIdInvalid });
+        return;
+      }
+    } else {
+      await smartMessage.send(ctx, { text: sellerMessages.workerIdInvalid });
       return;
     }
 
@@ -48,18 +91,18 @@ const confirmAndAdd = async (ctx) => {
 
     logger.info('manage_workers_step:confirm', {
       userId: ctx.from.id,
-      telegramId
+      telegramId,
+      username: usernameInput || null
     });
 
-    // Validate shopId exists
     if (!ctx.session.shopId) {
       logger.error('No shopId in session when adding worker', {
         userId: ctx.from.id,
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка: магазин не найден\n\nСначала откройте магазин',
-        keyboard: manageWorkersMenu(ctx.session.shopName)
+        text: generalMessages.shopRequired,
+        keyboard: manageWorkersMenu()
       });
       return await ctx.scene.leave();
     }
@@ -70,19 +113,37 @@ const confirmAndAdd = async (ctx) => {
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка авторизации. Попробуйте снова через главное меню',
-        keyboard: manageWorkersMenu(ctx.session.shopName)
+        text: generalMessages.authorizationRequired,
+        keyboard: manageWorkersMenu()
       });
       return await ctx.scene.leave();
     }
 
-    // Add worker via backend
-    await smartMessage.send(ctx, { text: 'Добавляем...' });
+    const existingWorkers = Array.isArray(ctx.session.workerList)
+      ? ctx.session.workerList
+      : await workerApi.listWorkers(ctx.session.shopId, ctx.session.token).catch(() => []);
+
+    if (!Array.isArray(ctx.session.workerList) && Array.isArray(existingWorkers)) {
+      ctx.session.workerList = existingWorkers;
+    }
+
+    if (existingWorkers?.some((worker) => worker.telegram_id === telegramId || (usernameInput && worker.username && worker.username.toLowerCase() === usernameInput.toLowerCase()))) {
+      await smartMessage.send(ctx, {
+        text: sellerMessages.workerAddAlready,
+        keyboard: manageWorkersMenu()
+      });
+      return await ctx.scene.leave();
+    }
+
+    await smartMessage.send(ctx, { text: sellerMessages.workerAdding });
 
     try {
       const worker = await workerApi.addWorker(
         ctx.session.shopId,
-        { telegram_id: telegramId },
+        {
+          telegram_id: telegramId,
+          username: usernameInput ? `@${usernameInput}` : undefined
+        },
         ctx.session.token
       );
 
@@ -95,44 +156,45 @@ const confirmAndAdd = async (ctx) => {
 
       const workerName = worker.username ? `@${worker.username}` : worker.first_name || `ID:${telegramId}`;
 
+      if (Array.isArray(existingWorkers)) {
+        ctx.session.workerList = [...existingWorkers, worker];
+      }
+
       await smartMessage.send(ctx, {
-        text: `✅ Работник добавлен: ${workerName}\n\nТеперь они могут управлять продуктами в этом магазине.`,
-        keyboard: manageWorkersMenu(ctx.session.shopName)
+        text: sellerMessages.workerAdded(workerName),
+        keyboard: manageWorkersMenu()
       });
 
     } catch (error) {
       logger.error('Error adding worker:', error);
-      
-      let errorMessage = 'Ошибка добавления работника';
-      
+
+      let errorMessage = sellerMessages.workerAddError;
+
       if (error.response?.data?.error) {
         const apiError = error.response.data.error;
-        
+
         if (apiError.includes('not found') || apiError.includes('used the bot')) {
-          errorMessage = '❌ Пользователь не найден\n\nУбедитесь, что он использовал бота хотя бы раз';
+          errorMessage = sellerMessages.workerAddNotFound;
         } else if (apiError.includes('already a worker')) {
-          errorMessage = 'ℹ️ Этот пользователь уже работник магазина';
+          errorMessage = sellerMessages.workerAddAlready;
         } else if (apiError.includes('owner cannot be added')) {
-          errorMessage = '❌ Владелец не может быть добавлен как работник';
-        } else {
-          errorMessage = `❌ ${apiError}`;
+          errorMessage = sellerMessages.workerAddOwner;
         }
       }
 
       await smartMessage.send(ctx, {
         text: errorMessage,
-        keyboard: manageWorkersMenu(ctx.session.shopName)
+        keyboard: manageWorkersMenu()
       });
     }
 
-    // Leave scene
     return await ctx.scene.leave();
 
   } catch (error) {
     logger.error('Error in confirmAndAdd step:', error);
     await smartMessage.send(ctx, {
-      text: 'Ошибка. Попробуйте позже',
-      keyboard: manageWorkersMenu(ctx.session.shopName)
+      text: sellerMessages.workerLookupError,
+      keyboard: manageWorkersMenu()
     });
     return await ctx.scene.leave();
   }
@@ -157,16 +219,35 @@ manageWorkersScene.action('cancel_scene', async (ctx) => {
     await ctx.answerCbQuery();
     logger.info('manage_workers_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
-    await smartMessage.send(ctx, { text: 'Отменено', keyboard: manageWorkersMenu(ctx.session.shopName) });
+    await showSellerToolsMenu(ctx);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     try {
       await ctx.editMessageText(
-        'Произошла ошибка при отмене\n\nПопробуйте позже',
-        manageWorkersMenu(ctx.session.shopName)
+        generalMessages.actionFailed,
+        manageWorkersMenu()
       );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
+    }
+  }
+});
+
+manageWorkersScene.action('seller:tools', async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+    logger.info('manage_workers_back_to_tools', { userId: ctx.from.id });
+    await ctx.scene.leave();
+    await showSellerToolsMenu(ctx);
+  } catch (error) {
+    logger.error('Error handling seller:tools in manageWorkers scene:', error);
+    try {
+      await smartMessage.send(ctx, {
+        text: generalMessages.actionFailed,
+        keyboard: manageWorkersMenu()
+      });
+    } catch (replyError) {
+      logger.error('Failed to send fallback message:', replyError);
     }
   }
 });

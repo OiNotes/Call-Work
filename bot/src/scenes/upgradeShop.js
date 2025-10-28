@@ -16,6 +16,9 @@ import api from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
+import { messages, buttons as buttonText } from '../texts/messages.js';
+import { showSellerMainMenu } from '../utils/sellerNavigation.js';
+const { seller: sellerMessages, general: generalMessages } = messages;
 
 // Crypto payment addresses (should match backend)
 const PAYMENT_ADDRESSES = {
@@ -39,6 +42,10 @@ const upgradeShopScene = new Scenes.WizardScene(
       }
 
       const token = ctx.session.token;
+      if (!token) {
+        await smartMessage.send(ctx, { text: generalMessages.authorizationRequired });
+        return ctx.scene.leave();
+      }
 
       // Get current subscription status
       const statusResponse = await api.get(`/subscriptions/status/${shopId}`, {
@@ -50,9 +57,9 @@ const upgradeShopScene = new Scenes.WizardScene(
       // Check if already PRO
       if (subscription?.tier === 'pro') {
         await cleanReply(ctx,
-          '✅ Ваш магазин уже на тарифе PRO 💎',
+          sellerMessages.upgrade.alreadyPro,
           Markup.inlineKeyboard([
-            [Markup.button.callback('◀️ Назад', 'seller:main')]
+            [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
           ])
         );
         return ctx.scene.leave();
@@ -61,11 +68,10 @@ const upgradeShopScene = new Scenes.WizardScene(
       // Check if has active BASIC subscription
       if (!subscription || subscription.tier !== 'basic' || subscription.status !== 'active') {
         await cleanReply(ctx,
-          '❌ Апгрейд доступен только для активных BASIC подписок.\n\n' +
-          'Сначала оплатите базовую подписку.',
+          sellerMessages.upgrade.notEligible,
           Markup.inlineKeyboard([
-            [Markup.button.callback('💳 Оплатить подписку', 'subscription:pay')],
-            [Markup.button.callback('◀️ Назад', 'seller:main')]
+            [Markup.button.callback(buttonText.paySubscription, 'subscription:pay')],
+            [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
           ])
         );
         return ctx.scene.leave();
@@ -76,28 +82,24 @@ const upgradeShopScene = new Scenes.WizardScene(
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const { upgradeCost, remainingDays, periodEnd } = costResponse.data;
+      const { upgradeCost, remainingDays } = costResponse.data;
 
-      let message = `💎 <b>Апгрейд на PRO</b>\n\n`;
-      message += `🏪 Магазин: ${shop.name}\n\n`;
-      message += `📊 <b>Текущая подписка:</b>\n`;
-      message += `• Тариф: BASIC\n`;
-      message += `• Действует до: ${new Date(periodEnd).toLocaleDateString('ru-RU')}\n`;
-      message += `• Осталось дней: ${remainingDays}\n\n`;
-      message += `💰 <b>Стоимость апгрейда:</b>\n`;
-      message += `<b>$${upgradeCost.toFixed(2)}</b> (пропорционально)\n\n`;
-      message += `🎁 <b>Вы получите:</b>\n`;
-      message += `• Безлимитные подписчики\n`;
-      message += `• Рассылка при смене канала (2/мес)\n`;
-      message += `• Приоритетная поддержка\n\n`;
-      message += `Продолжить апгрейд?`;
+      const message = `Улучшить до PRO
+
+Сейчас: BASIC
+Доплата: $${upgradeCost.toFixed(2)}
+
+Получите:
+• Безлимит товаров (сейчас до 4)
+• Автозакуп из других магазинов
+• Уведомления подписчикам при смене канала`;
 
       await cleanReplyHTML(
         ctx,
         message,
         Markup.inlineKeyboard([
-          [Markup.button.callback('✅ Продолжить', 'upgrade:confirm')],
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
+          [Markup.button.callback(buttonText.confirm, 'upgrade:confirm')],
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
         ])
       );
 
@@ -110,12 +112,12 @@ const upgradeShopScene = new Scenes.WizardScene(
       return ctx.wizard.next();
     } catch (error) {
       logger.error('[UpgradeShop] Step 1 error:', error);
-      
+
       const errorMsg = error.response?.data?.error || error.message;
-      await cleanReply(ctx, `❌ Ошибка: ${errorMsg}`, Markup.inlineKeyboard([
-        [Markup.button.callback('◀️ Назад', 'seller:main')]
+      await cleanReply(ctx, sellerMessages.upgrade.error(errorMsg), Markup.inlineKeyboard([
+        [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
       ]));
-      
+
       return ctx.scene.leave();
     }
   },
@@ -129,13 +131,15 @@ const upgradeShopScene = new Scenes.WizardScene(
     const data = ctx.callbackQuery.data;
 
     // Handle cancel
-    if (data === 'seller:main') {
-      await ctx.answerCbQuery('Апгрейд отменён');
-      return ctx.scene.leave();
+    if (data === 'seller:menu') {
+      await ctx.answerCbQuery(sellerMessages.upgrade.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
     if (data !== 'upgrade:confirm') {
-      await ctx.answerCbQuery('❌ Неверный выбор');
+      await ctx.answerCbQuery(generalMessages.invalidChoice);
       return;
     }
 
@@ -143,21 +147,19 @@ const upgradeShopScene = new Scenes.WizardScene(
 
     const { upgradeCost } = ctx.wizard.state;
 
-    let message = `💎 <b>Апгрейд на PRO</b>\n\n`;
-    message += `💵 Сумма: $${upgradeCost.toFixed(2)}\n\n`;
-    message += `Выберите криптовалюту для оплаты:`;
+    const message = sellerMessages.upgrade.chooseCrypto(upgradeCost.toFixed(2));
 
     await ctx.editMessageText(
       message,
       {
         parse_mode: 'HTML',
         ...Markup.inlineKeyboard([
-          [Markup.button.callback('₿ Bitcoin (BTC)', 'upgrade:crypto:BTC')],
-          [Markup.button.callback('Ξ Ethereum (ETH)', 'upgrade:crypto:ETH')],
-          [Markup.button.callback('💵 USDT (TRC-20)', 'upgrade:crypto:USDT')],
-          [Markup.button.callback('Ł Litecoin (LTC)', 'upgrade:crypto:LTC')],
-          [Markup.button.callback('◀️ Назад', 'upgrade:back')],
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
+          [Markup.button.callback(buttonText.cryptoBTC, 'upgrade:crypto:BTC')],
+          [Markup.button.callback(buttonText.cryptoETH, 'upgrade:crypto:ETH')],
+          [Markup.button.callback(buttonText.cryptoUSDT, 'upgrade:crypto:USDT')],
+          [Markup.button.callback(buttonText.cryptoLTC, 'upgrade:crypto:LTC')],
+          [Markup.button.callback(buttonText.back, 'upgrade:back')],
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
         ])
       }
     );
@@ -180,20 +182,22 @@ const upgradeShopScene = new Scenes.WizardScene(
     }
 
     // Handle cancel
-    if (data === 'seller:main') {
-      await ctx.answerCbQuery('Апгрейд отменён');
-      return ctx.scene.leave();
+    if (data === 'seller:menu') {
+      await ctx.answerCbQuery(sellerMessages.upgrade.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
     // Parse crypto selection
     if (!data.startsWith('upgrade:crypto:')) {
-      await ctx.answerCbQuery('❌ Неверный выбор');
+      await ctx.answerCbQuery(sellerMessages.upgrade.unknownCommand, { show_alert: true });
       return;
     }
 
     const currency = data.replace('upgrade:crypto:', '');
     if (!['BTC', 'ETH', 'USDT', 'LTC'].includes(currency)) {
-      await ctx.answerCbQuery('❌ Неверная криптовалюта');
+      await ctx.answerCbQuery(sellerMessages.upgrade.unknownCommand, { show_alert: true });
       return;
     }
 
@@ -205,135 +209,97 @@ const upgradeShopScene = new Scenes.WizardScene(
     ctx.wizard.state.currency = currency;
     ctx.wizard.state.paymentAddress = paymentAddress;
 
-    let message = `💳 <b>Детали оплаты апгрейда</b>\n\n`;
-    message += `💎 Апгрейд: BASIC → PRO\n`;
-    message += `💵 Сумма: $${upgradeCost.toFixed(2)}\n`;
-    message += `🪙 Криптовалюта: ${currency}\n\n`;
-    message += `📬 <b>Адрес для оплаты:</b>\n`;
-    message += `<code>${paymentAddress}</code>\n\n`;
-    message += `⚠️ <b>Важно:</b>\n`;
-    message += `1. Отправьте точную сумму в ${currency}\n`;
-    message += `2. После оплаты скопируйте Transaction Hash (TX Hash)\n`;
-    message += `3. Отправьте его следующим сообщением\n\n`;
-    message += `📝 Отправьте TX Hash для верификации:`;
+    const message = sellerMessages.upgrade.paymentDetails(upgradeCost.toFixed(2), currency, paymentAddress);
 
     await ctx.editMessageText(
       message,
       {
         parse_mode: 'HTML',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
-        ])
+        ...Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]])
       }
     );
+
+    await smartMessage.send(ctx, { text: sellerMessages.upgrade.sendHashPrompt });
 
     return ctx.wizard.next();
   },
 
   // Step 4: Handle tx_hash and verify upgrade payment
   async (ctx) => {
-    // Handle cancel button
-    if (ctx.callbackQuery?.data === 'seller:main') {
-      await ctx.answerCbQuery('Апгрейд отменён');
-      return ctx.scene.leave();
+    if (ctx.callbackQuery?.data === 'seller:menu') {
+      await ctx.answerCbQuery(sellerMessages.upgrade.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
-    // Wait for text message with tx_hash
+    if (ctx.callbackQuery?.data === 'upgrade:retry') {
+      await ctx.answerCbQuery();
+      const { upgradeCost, currency, paymentAddress } = ctx.wizard.state;
+      const reminder = sellerMessages.upgrade.paymentDetails(upgradeCost.toFixed(2), currency, paymentAddress);
+      await cleanReplyHTML(ctx, reminder, Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]));
+      await smartMessage.send(ctx, { text: sellerMessages.upgrade.sendHashPrompt });
+      return;
+    }
+
     if (!ctx.message?.text) {
-      await smartMessage.send(ctx, { text: '❌ Пожалуйста, отправьте Transaction Hash текстом.' });
+      await smartMessage.send(ctx, { text: sellerMessages.upgrade.sendHashPrompt });
       return;
     }
 
     const txHash = ctx.message.text.trim();
-
-    // Basic validation
     if (txHash.length < 10) {
-      await smartMessage.send(ctx, { text: '❌ TX Hash слишком короткий. Проверьте и отправьте снова.' });
+      await smartMessage.send(ctx, { text: sellerMessages.upgrade.hashInvalid });
       return;
     }
 
     try {
-      const loadingMsg = await smartMessage.send(ctx, { text: '⏳ Проверяем транзакцию и выполняем апгрейд...\n\nЭто может занять до 30 секунд.' });
+      const loadingMsg = await smartMessage.send(ctx, { text: sellerMessages.upgrade.verifying });
 
       const { shopId, currency, paymentAddress } = ctx.wizard.state;
       const token = ctx.session.token;
 
-      // Verify and upgrade via backend
       const upgradeResponse = await api.post(
         '/subscriptions/upgrade',
-        {
-          shopId,
-          txHash,
-          currency,
-          paymentAddress
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { shopId, txHash, currency, paymentAddress },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const { subscription, upgradedAmount, message } = upgradeResponse.data;
-
-      // Delete loading message
+      const { subscription } = upgradeResponse.data;
       await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id).catch(() => {});
 
-      // Show success
-      let successMessage = `🎉 <b>Апгрейд выполнен успешно!</b>\n\n`;
-      successMessage += `💎 Новый тариф: PRO\n`;
-      successMessage += `💵 Оплачено: $${upgradedAmount.toFixed(2)}\n`;
-      successMessage += `📅 Действует до: ${new Date(subscription.periodEnd).toLocaleDateString('ru-RU')}\n\n`;
-      successMessage += `✨ <b>Активированные функции:</b>\n`;
-      successMessage += `• ♾ Безлимитные подписчики\n`;
-      successMessage += `• 📢 Рассылка при смене канала (2/мес)\n`;
-      successMessage += `• ⭐️ Приоритетная поддержка\n\n`;
-      successMessage += `Спасибо! Ваш магазин теперь PRO 💎`;
+      const endDate = new Date(subscription.periodEnd).toLocaleDateString('ru-RU');
+      let successMessage = sellerMessages.upgrade.success(endDate);
+      successMessage += `\n\n${sellerMessages.upgrade.benefits}`;
 
-      await cleanReplyHTML(
-        ctx,
-        successMessage,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('◀️ В главное меню', 'seller:main')]
-        ])
-      );
-
-      logger.info(`[UpgradeShop] Upgrade successful: shop ${shopId}, tx ${txHash}, amount $${upgradedAmount}`);
+      await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
 
       return ctx.scene.leave();
     } catch (error) {
-      logger.error('[UpgradeShop] Upgrade verification error:', error);
-      
-      let errorMessage = '❌ <b>Ошибка апгрейда</b>\n\n';
-      
+      logger.error('[UpgradeShop] Payment verification error:', error);
+
       const errorData = error.response?.data;
-      if (errorData?.error === 'NOT_FREE_TIER' || errorData?.error === 'NOT_BASIC_TIER') {
-        errorMessage += '⚠️ Апгрейд доступен только для BASIC тарифа.\n\n';
-        errorMessage += 'Ваша текущая подписка не подходит для апгрейда.';
-      } else if (errorData?.error === 'DUPLICATE_TX_HASH') {
-        errorMessage += '⚠️ Эта транзакция уже была использована.\n\n';
-        errorMessage += 'Попробуйте другой TX Hash или создайте новый платёж.';
+      let errorMessage;
+      if (errorData?.error === 'DUPLICATE_TX_HASH') {
+        errorMessage = sellerMessages.upgrade.duplicateTx;
       } else if (errorData?.error === 'PAYMENT_VERIFICATION_FAILED') {
-        errorMessage += '⚠️ Не удалось подтвердить платёж.\n\n';
-        errorMessage += 'Возможные причины:\n';
-        errorMessage += '• Транзакция ещё не подтверждена в блокчейне\n';
-        errorMessage += '• Неверная сумма или адрес\n';
-        errorMessage += '• Неверный TX Hash\n\n';
-        errorMessage += 'Подождите несколько минут и попробуйте снова.';
+        errorMessage = sellerMessages.upgrade.verificationFailed;
       } else {
-        errorMessage += errorData?.message || error.message;
+        errorMessage = sellerMessages.upgrade.verificationError;
       }
 
       await cleanReplyHTML(
         ctx,
         errorMessage,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('🔄 Попробовать снова', 'upgrade:retry')],
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
-        ])
+        Markup.inlineKeyboard([[
+          Markup.button.callback(buttonText.retry, 'upgrade:retry'),
+          Markup.button.callback(buttonText.cancel, 'seller:menu')
+        ]])
       );
 
-      return; // Stay in this step for retry
+      return;
     }
-  }
+  },
 );
 
 // Leave handler

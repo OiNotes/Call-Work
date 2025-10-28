@@ -62,7 +62,7 @@ async function rateLimitWait() {
  */
 function getFromCache(key) {
   const cached = cache.get(key);
-  if (!cached) return null;
+  if (!cached) {return null;}
 
   const { value, timestamp } = cached;
   const age = Date.now() - timestamp;

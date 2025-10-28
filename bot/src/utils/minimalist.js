@@ -1,3 +1,5 @@
+import { messages } from '../texts/messages.js';
+
 /**
  * Minimalist Design Utilities
  * 
@@ -15,11 +17,11 @@
  */
 export const formatProductsList = (products, shopName) => {
   if (!products || products.length === 0) {
-    return `📦 Товары\n\nДобавьте товар чтобы он отображался в магазине`;
+    return `Товары магазина ${shopName}. Пока товаров нет.`;
   }
 
-  let msg = `📦 Товары (${products.length}) • ${shopName}\n`;
-  
+  let msg = `Товары магазина ${shopName} (${products.length}).\n`;
+
   const toShow = products.slice(0, 5);
   toShow.forEach((p, i) => {
     const price = parseFloat(p.price).toFixed(0);
@@ -28,7 +30,9 @@ export const formatProductsList = (products, shopName) => {
   });
 
   if (products.length > 5) {
-    msg += `\n+${products.length - 5} ещё`;
+    const remaining = products.length - 5;
+    const unit = remaining === 1 ? 'товар' : remaining < 5 ? 'товара' : 'товаров';
+    msg += `\n+${remaining} ${unit}`;
   }
 
   return msg;
@@ -44,24 +48,33 @@ export const formatProductsList = (products, shopName) => {
  */
 export const formatSalesList = (orders, shopName) => {
   if (!orders || orders.length === 0) {
-    return `💰 Продажи\n\nЗдесь будут ваши продажи`;
+    return `Заказы магазина ${shopName}. Пока нет продаж.`;
   }
 
-  let msg = `💰 Продажи (${orders.length}) • ${shopName}\n`;
+  let msg = `Заказы магазина ${shopName} (${orders.length}).\n`;
 
   const toShow = orders.slice(0, 5);
   toShow.forEach((o, i) => {
     const username = o.buyer_username
       ? (o.buyer_username.length > 15 ? o.buyer_username.slice(0, 15) : o.buyer_username)
       : (o.buyer_first_name || 'Покупатель');
-    const status = getOrderStatusEmoji(o.status);
+    const statusMap = {
+      'pending': 'Ожидает',
+      'completed': '✅',
+      'cancelled': 'Отменён',
+      'processing': 'Обработка',
+      'failed': 'Отменён'
+    };
+    const status = statusMap[o.status] || 'Обработка';
     const price = parseFloat(o.total_price || o.totalPrice || 0).toFixed(0);
 
     msg += `${i + 1}. ${status} @${username} — $${price}\n`;
   });
 
   if (orders.length > 5) {
-    msg += `\n+${orders.length - 5} ещё`;
+    const remaining = orders.length - 5;
+    const unit = remaining === 1 ? 'заказ' : remaining < 5 ? 'заказа' : 'заказов';
+    msg += `\n+${remaining} ${unit}`;
   }
 
   return msg;
@@ -76,22 +89,31 @@ export const formatSalesList = (orders, shopName) => {
  */
 export const formatBuyerOrders = (orders) => {
   if (!orders || orders.length === 0) {
-    return `🛒 Заказы\n\nЗдесь будут ваши заказы из магазинов`;
+    return `Заказы\n\nНет заказов. Они появятся после первой покупки.`;
   }
 
-  let msg = `🛒 Заказы (${orders.length})\n`;
+  let msg = `Заказы (${orders.length})\n`;
 
   const toShow = orders.slice(0, 5);
   toShow.forEach((o, i) => {
     const shopName = o.shop_name || 'Магазин';
-    const status = getOrderStatusEmoji(o.status);
+    const statusMap = {
+      'pending': 'Ожидает',
+      'completed': '✅',
+      'cancelled': 'Отменён',
+      'processing': 'Обработка',
+      'failed': 'Отменён'
+    };
+    const status = statusMap[o.status] || 'Обработка';
     const price = parseFloat(o.total_price || o.totalPrice || 0).toFixed(0);
 
     msg += `${i + 1}. ${status} ${shopName} — $${price}\n`;
   });
 
   if (orders.length > 5) {
-    msg += `\n+${orders.length - 5} ещё`;
+    const remaining = orders.length - 5;
+    const unit = remaining === 1 ? 'заказ' : remaining < 5 ? 'заказа' : 'заказов';
+    msg += `\n+${remaining} ${unit}`;
   }
 
   return msg;
@@ -105,10 +127,10 @@ export const formatBuyerOrders = (orders) => {
  */
 export const formatSubscriptions = (subscriptions) => {
   if (!subscriptions || subscriptions.length === 0) {
-    return `📚 Подписки\n\nПодпишитесь на магазины чтобы следить за новинками`;
+    return `Подписки\n\nНет подписок. Найдите магазины в каталоге.`;
   }
 
-  let msg = `📚 Подписки (${subscriptions.length})\n`;
+  let msg = `Подписки (${subscriptions.length})\n`;
 
   subscriptions.slice(0, 10).forEach((sub, i) => {
     const shopName = sub.shop_name || sub.shopName || 'Магазин';
@@ -116,7 +138,9 @@ export const formatSubscriptions = (subscriptions) => {
   });
 
   if (subscriptions.length > 10) {
-    msg += `\n+${subscriptions.length - 10} ещё`;
+    const remaining = subscriptions.length - 10;
+    const unit = remaining === 1 ? 'магазин' : remaining < 5 ? 'магазина' : 'магазинов';
+    msg += `\n+${remaining} ${unit}`;
   }
 
   return msg;
@@ -137,7 +161,7 @@ export const formatShopInfo = (shop, products = []) => {
 
   const { stock: stockProducts, preorder: preorderProducts } = splitProductsByAvailability(products);
 
-  let msg = `ℹ️ ${shop.name} • ${sellerUsername}\n`;
+  let msg = `${shop.name} • ${sellerUsername}\n`;
 
   if (shop.description && shop.description !== `Магазин ${shop.name}`) {
     msg += `\n${shop.description}\n`;
@@ -157,7 +181,7 @@ export const formatShopInfo = (shop, products = []) => {
     }
   }
 
-  msg += `\n\n🕒 Предзаказ — ${preorderProducts.length}`;
+  msg += `\n\nПредзаказ — ${preorderProducts.length}`;
 
   if (preorderProducts.length === 0) {
     msg += `\n• ожидаем поставку`;
@@ -198,7 +222,7 @@ export const splitProductsByAvailability = (products = []) => {
 
 export const formatProductSectionList = (section, shopName, products = []) => {
   const isPreorder = section === 'preorder';
-  const title = isPreorder ? '🕒 Предзаказ' : '✅ Наличие';
+  const title = isPreorder ? 'Предзаказ' : 'Наличие';
   const header = `${title} • ${shopName}`;
 
   if (!products.length) {
@@ -207,9 +231,10 @@ export const formatProductSectionList = (section, shopName, products = []) => {
 
   const lines = products.slice(0, 8).map((product, index) => {
     const price = parseFloat(product.price).toFixed(0);
+    const stockQty = product.stock_quantity ?? product.stock ?? 0;
     const stockLabel = isPreorder
       ? 'предзаказ'
-      : `${product.stock_quantity ?? product.stock ?? 0} шт`;
+      : (stockQty > 0 ? 'В наличии' : 'Закончился');
     return `${index + 1}. ${product.name} — $${price} (${stockLabel})`;
   });
 
@@ -227,7 +252,8 @@ export const formatProductSectionList = (section, shopName, products = []) => {
 export const getStockStatus = (quantity) => {
   if (quantity === 0) return 'нет';
   if (quantity <= 3) return `${quantity} шт`;
-  return 'есть';
+  if (quantity <= 10) return `${quantity} шт`;
+  return '10+ шт';
 };
 
 /**
@@ -281,14 +307,22 @@ export const errorMessage = (action, reason = 'Попробуйте позже')
  * @returns {string} Formatted message
  */
 export const formatWallets = (shop) => {
-  const btc = shop.wallet_btc ? '✓' : '○';
-  const eth = shop.wallet_eth ? '✓' : '○';
-  const usdt = shop.wallet_usdt ? '✓' : '○';
-  const ton = shop.wallet_ton ? '✓' : '○';
+  const wallets = [];
 
-  let msg = `💼 Кошельки\n`;
-  msg += `₿ ${btc} | Ξ ${eth} | ₮ ${usdt} | 🔷 ${ton}\n\n`;
-  msg += `Выберите:`;
+  if (shop.wallet_btc) wallets.push('BTC');
+  if (shop.wallet_eth) wallets.push('ETH');
+  if (shop.wallet_usdt) wallets.push('USDT');
+  if (shop.wallet_ton) wallets.push('TON');
+
+  let msg = `Кошельки\n`;
+
+  if (wallets.length === 0) {
+    msg += `\nНет подключённых кошельков`;
+  } else {
+    msg += `\n${wallets.join(' • ')}`;
+  }
+
+  msg += `\n\nВыберите:`;
 
   return msg;
 };
@@ -300,20 +334,22 @@ export const formatWallets = (shop) => {
  * @param {string} shopName - Shop name for header
  * @returns {string} Formatted message
  */
-export function formatFollowsList(follows, shopName) {
-  if (!follows || follows.length === 0) {
-    return `📡 Подписки (0)\n\nПодписок пока нет`;
+export function formatFollowsList(follows) {
+  if (!Array.isArray(follows) || follows.length === 0) {
+    return messages.follows.listEmpty;
   }
-
-  const followsText = follows
-    .map((f) => {
-      const modeIcon = f.mode === 'resell' ? '💰' : '👀';
-      const markup = f.mode === 'resell' ? ` +${f.markup_percentage}%` : '';
-      return `${modeIcon} ${f.source_shop_name}${markup}`;
-    })
-    .join('\n');
-
-  return `📡 Подписки (${follows.length})\n\n${followsText}`;
+  const header = messages.follows.listHeader(follows.length);
+  const lines = follows.map((follow, index) => {
+    const markupRaw = follow.markup_percentage ?? follow.markup ?? null;
+    const markupValue = Number.isFinite(Number(markupRaw)) ? Number(markupRaw) : null;
+    return messages.follows.listItem({
+      index: index + 1,
+      name: follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин',
+      mode: follow.mode,
+      markup: markupValue
+    });
+  });
+  return `${header}\n\n${lines.join('\n')}\n\n${messages.follows.listManageHint}`;
 }
 
 /**
@@ -323,10 +359,16 @@ export function formatFollowsList(follows, shopName) {
  * @returns {string} Formatted message
  */
 export function formatFollowDetail(follow) {
-  const modeIcon = follow.mode === 'resell' ? '💰 Resell' : '👀 Monitor';
-  const markupLine = follow.mode === 'resell'
-    ? `\nНаценка: +${follow.markup_percentage}%`
-    : '';
+  const markupRaw = follow.markup_percentage ?? follow.markup ?? 0;
+  const markupValue = Number.isFinite(Number(markupRaw)) ? Number(markupRaw) : null;
+  const sourceProducts = follow.source_products_count ?? follow.products_count ?? follow.productsCount ?? 0;
+  const syncedProducts = follow.synced_products_count ?? follow.synced_count ?? follow.syncedProducts ?? sourceProducts;
 
-  return `${modeIcon}\n\n${follow.source_shop_name}${markupLine}`;
+  return messages.follows.detail({
+    name: follow.source_shop_name || follow.name || 'Магазин',
+    mode: follow.mode,
+    markup: markupValue,
+    sourceProducts,
+    syncedProducts
+  });
 }

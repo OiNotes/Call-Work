@@ -1,4 +1,4 @@
-import { paymentQueries, orderQueries } from '../models/db.js';
+import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
 import cryptoService from '../services/crypto.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
@@ -105,9 +105,36 @@ export const paymentController = {
         );
       }
 
-      // If payment is confirmed, update order status
+      // If payment is confirmed, update order status and stock
       if (verification.status === 'confirmed') {
         await orderQueries.updateStatus(orderId, 'confirmed');
+
+        // Get product info
+        const product = await productQueries.findById(order.product_id);
+
+        // Decrease actual stock and unreserve
+        await productQueries.updateStock(order.product_id, -order.quantity);
+        await productQueries.unreserveStock(order.product_id, order.quantity);
+
+        // Get seller info for notification
+        const shop = await shopQueries.findById(product.shop_id);
+        const seller = await userQueries.findById(shop.owner_id);
+        const buyer = await userQueries.findById(order.buyer_id);
+
+        // Notify seller about payment confirmation
+        try {
+          await telegramService.notifyPaymentConfirmedSeller(seller.telegram_id, {
+            orderId: order.id,
+            productName: product.name,
+            quantity: order.quantity,
+            totalPrice: order.total_price,
+            currency: order.currency,
+            buyerUsername: buyer.username || 'Anonymous',
+            buyerTelegramId: buyer.telegram_id
+          });
+        } catch (notifError) {
+          logger.error('Seller notification error', { error: notifError.message, stack: notifError.stack });
+        }
 
         // Notify buyer
         try {
@@ -118,7 +145,7 @@ export const paymentController = {
             currency: order.currency
           });
         } catch (notifError) {
-          logger.error('Notification error', { error: notifError.message, stack: notifError.stack });
+          logger.error('Buyer notification error', { error: notifError.message, stack: notifError.stack });
         }
       }
 

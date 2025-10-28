@@ -131,7 +131,7 @@ describe('Validation Utils Tests', () => {
       const error = getCryptoValidationError('USDT');
       expect(error).toContain('USDT');
       expect(error).toContain('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
-      expect(error).toContain('TRC-20');
+      expect(error).toContain('начинается с TR');
     });
 
     it('should return generic error for unknown crypto', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { sellerMenu } from '../../src/keyboards/seller.js';
 import { buyerMenu, buyerMenuNoShop } from '../../src/keyboards/buyer.js';
 import { workspaceMenu } from '../../src/keyboards/workspace.js';

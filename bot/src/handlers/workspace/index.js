@@ -1,6 +1,9 @@
 import { workspaceMenu, workspaceShopSelection } from '../../keyboards/workspace.js';
 import { shopApi } from '../../utils/api.js';
 import logger from '../../utils/logger.js';
+import { messages } from '../../texts/messages.js';
+
+const { workspace: workspaceMessages, general: generalMessages } = messages;
 
 /**
  * Handle workspace role selection
@@ -17,7 +20,7 @@ export const handleWorkspaceRole = async (ctx) => {
     if (!ctx.session.token) {
       logger.warn(`User ${ctx.from.id} has no token, cannot load workspace`);
       await ctx.editMessageText(
-        'Необходима авторизация. Перезапустите бота командой /start'
+        generalMessages.authorizationRequired
       );
       return;
     }
@@ -33,7 +36,7 @@ export const handleWorkspaceRole = async (ctx) => {
 
       if (workerShops.length === 0) {
         await ctx.editMessageText(
-          'У вас нет доступа к workspace магазинам.\n\nСпросите владельца магазина добавить вас как работника.'
+          workspaceMessages.noWorkerAccess
         );
         return;
       }
@@ -45,20 +48,20 @@ export const handleWorkspaceRole = async (ctx) => {
 
       // Show shop selection
       await ctx.editMessageText(
-        'Выберите магазин:',
+        workspaceMessages.selectShop,
         workspaceShopSelection(workerShops)
       );
 
     } catch (error) {
       logger.error('Error loading workspace shops:', error);
-      
+
       if (error.response?.status === 404) {
         await ctx.editMessageText(
-          'У вас нет доступа к workspace магазинам.\n\nСпросите владельца магазина добавить вас как работника.'
+          workspaceMessages.noWorkerAccess
         );
       } else {
         await ctx.editMessageText(
-          'Ошибка загрузки магазинов\n\nПопробуйте позже'
+          workspaceMessages.loadError
         );
       }
     }
@@ -67,7 +70,7 @@ export const handleWorkspaceRole = async (ctx) => {
     logger.error('Error in workspace role handler:', error);
     try {
       await ctx.editMessageText(
-        'Произошла ошибка\n\nПопробуйте позже'
+        workspaceMessages.actionFailed
       );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -89,7 +92,7 @@ export const handleWorkspaceShopSelect = async (ctx) => {
     const shop = ctx.session.accessibleShops?.find(s => s.id === shopId);
     if (!shop) {
       await ctx.editMessageText(
-        'Магазин не найден или доступ отозван'
+        workspaceMessages.shopNotFoundOrRevoked
       );
       return;
     }
@@ -103,7 +106,7 @@ export const handleWorkspaceShopSelect = async (ctx) => {
 
     // Show workspace menu (restricted)
     await ctx.editMessageText(
-      `Workspace: ${shop.name}\n\n`,
+      workspaceMessages.header(shop.name),
       workspaceMenu(shop.name)
     );
 
@@ -111,7 +114,7 @@ export const handleWorkspaceShopSelect = async (ctx) => {
     logger.error('Error in workspace shop select handler:', error);
     try {
       await ctx.editMessageText(
-        'Произошла ошибка\n\nПопробуйте позже'
+        workspaceMessages.actionFailed
       );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -135,7 +138,7 @@ export const handleWorkspaceBack = async (ctx) => {
     // Show shop selection again
     if (ctx.session.accessibleShops && ctx.session.accessibleShops.length > 0) {
       await ctx.editMessageText(
-        'Выберите магазин:',
+        workspaceMessages.selectShop,
         workspaceShopSelection(ctx.session.accessibleShops)
       );
     } else {
@@ -147,7 +150,7 @@ export const handleWorkspaceBack = async (ctx) => {
     logger.error('Error in workspace back handler:', error);
     try {
       await ctx.editMessageText(
-        'Произошла ошибка\n\nПопробуйте позже'
+        workspaceMessages.actionFailed
       );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

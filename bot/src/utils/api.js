@@ -253,14 +253,80 @@ export const orderApi = {
   },
 
   // Get shop orders (sales)
-  async getShopOrders(shopId, token) {
+  async getShopOrders(shopId, token, options = {}) {
+    const params = {
+      shop_id: shopId
+    };
+
+    if (options.status) {
+      params.status = options.status;
+    }
+
+    if (options.limit) {
+      params.limit = options.limit;
+    }
+
     const { data } = await api.get('/orders', {
-      params: { shopId },
+      params,
       headers: { Authorization: `Bearer ${token}` }
     });
     // Unwrap response: return data.data (array of orders) instead of wrapper
-    const orders = data.data || data;
+    const payload = data.data || data;
+    const orders = Array.isArray(payload?.orders) ? payload.orders : payload;
     return Array.isArray(orders) ? orders : [];
+  },
+
+  // Get active orders count
+  async getActiveOrdersCount(shopId, token) {
+    const { data } = await api.get('/orders/active/count', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { shop_id: shopId }
+    });
+
+    const count = data?.data?.count ?? data?.count ?? 0;
+    return Number.isFinite(Number(count)) ? Number(count) : 0;
+  },
+
+  // Update order status
+  async updateOrderStatus(orderId, status, token) {
+    const { data } = await api.put(
+      `/orders/${orderId}/status`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return data.data || data;
+  },
+
+  // Bulk update order status
+  async bulkUpdateOrderStatus(orderIds, status, token) {
+    const { data } = await api.post(
+      '/orders/bulk-status',
+      { order_ids: orderIds, status },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return data.data || data;
+  },
+
+  /**
+   * Get order analytics for period
+   */
+  async getAnalytics(shopId, startDate, endDate, token) {
+    try {
+      const response = await api.get('/orders/analytics', {
+        params: { 
+          shop_id: shopId,
+          from: startDate,
+          to: endDate
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      return response.data.data;
+    } catch (error) {
+      logger.error('Error fetching analytics:', error);
+      throw error;
+    }
   }
 };
 
@@ -335,6 +401,22 @@ export const subscriptionApi = {
       headers: { Authorization: `Bearer ${token}` }
     });
     // Unwrap response: return data.data (object with subscribers array and count) instead of wrapper
+    return data.data || data;
+  }
+};
+
+export const notificationApi = {
+  async migrateChannel(shopId, newChannel, token) {
+    const { data } = await api.post(
+      '/notifications/migrate-channel',
+      {
+        shop_id: Number(shopId),
+        new_channel: newChannel
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
     return data.data || data;
   }
 };

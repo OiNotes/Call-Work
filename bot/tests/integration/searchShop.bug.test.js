@@ -43,7 +43,7 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
       { id: 3, name: 'Shop Three', seller_username: 'seller3', is_subscribed: false }
     ];
 
-    mock.onGet('/shops/search').reply((config) => {
+    mock.onGet('/shops/search').reply((_config) => {
       // Query param: ?name=test
       return [200, { data: mockShops }];
     });
@@ -59,7 +59,7 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
     const lastText = testBot.getLastReplyText();
 
     // Проверяем что показали заголовок с количеством
-    expect(lastText).toContain('Найдено (3)');
+    expect(lastText).toContain('Нашли магазины');
 
     // Проверяем что показали ВСЕ 3 магазина в одном сообщении
     expect(lastText).toContain('Shop One');
@@ -84,7 +84,7 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
 
     // Проверяем что показали "Не найдено"
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Не найдено');
+    expect(text).toContain('Магазины не найдены');
   });
 
   it('поиск с коротким запросом (<2 символа) → ошибка валидации', async () => {
@@ -97,7 +97,7 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
 
     // Проверяем что показали ошибку
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Минимум 2 символа');
+    expect(text).toContain('минимум два символа');
   });
 });
 

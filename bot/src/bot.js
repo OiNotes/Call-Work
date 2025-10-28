@@ -4,6 +4,8 @@ import config from './config/index.js';
 import logger from './utils/logger.js';
 import { reply as cleanReply } from './utils/cleanReply.js';
 import { logWebAppConfig, getWebAppUrl } from './utils/webappUrl.js';
+import { messages, buttons as buttonText } from './texts/messages.js';
+const { general: generalMessages } = messages;
 
 // Middleware
 import authMiddleware from './middleware/auth.js';
@@ -12,6 +14,7 @@ import debounceMiddleware from './middleware/debounce.js';
 import sessionRecoveryMiddleware from './middleware/sessionRecovery.js';
 
 // Scenes
+import chooseTierScene from './scenes/chooseTier.js';
 import createShopScene from './scenes/createShop.js';
 import addProductScene from './scenes/addProduct.js';
 import searchShopScene from './scenes/searchShop.js';
@@ -21,6 +24,7 @@ import migrateChannelScene from './scenes/migrateChannel.js';
 import paySubscriptionScene from './scenes/paySubscription.js';
 import upgradeShopScene from './scenes/upgradeShop.js';
 import manageWorkersScene from './scenes/manageWorkers.js';
+import markOrdersShippedScene from './scenes/markOrdersShipped.js';
 
 // Handlers
 import { handleStart } from './handlers/start.js';
@@ -43,6 +47,7 @@ const bot = new Telegraf(config.botToken);
 
 // Setup session and scenes
 const stage = new Scenes.Stage([
+  chooseTierScene,
   createShopScene,
   addProductScene,
   searchShopScene,
@@ -51,7 +56,8 @@ const stage = new Scenes.Stage([
   migrateChannelScene,
   paySubscriptionScene,
   upgradeShopScene,
-  manageWorkersScene
+  manageWorkersScene,
+  markOrdersShippedScene
 ]);
 
 bot.use(session());
@@ -123,7 +129,7 @@ bot.catch((err, ctx) => {
     ctx.session = { token, user, shopId, shopName, role };
   }
 
-  cleanReply(ctx, 'Произошла ошибка. Нажмите /start для перезапуска').catch(() => {});
+  cleanReply(ctx, generalMessages.restartRequired).catch(() => {});
 });
 
 // Export bot instance for backend integration
@@ -141,7 +147,7 @@ export async function startBot() {
       await bot.telegram.setChatMenuButton({
         menu_button: {
           type: 'web_app',
-          text: '🛍 Мой магазин',
+          text: buttonText.myShop,
           web_app: { url: webappUrl }
         }
       });

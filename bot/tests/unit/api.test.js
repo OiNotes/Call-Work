@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import MockAdapter from 'axios-mock-adapter';
 import axios from 'axios';
 import { setupApiMocks } from '../helpers/api-mocks.js';
 

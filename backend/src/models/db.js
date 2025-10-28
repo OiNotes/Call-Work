@@ -83,6 +83,22 @@ export const userQueries = {
  * Shop database queries
  */
 export const shopQueries = {
+  // Check if shop name is already taken (case-insensitive)
+  isNameTaken: async (name, excludeShopId = null) => {
+    let queryText = 'SELECT EXISTS(SELECT 1 FROM shops WHERE LOWER(name) = LOWER($1)';
+    const params = [name];
+
+    if (excludeShopId) {
+      queryText += ' AND id != $2';
+      params.push(excludeShopId);
+    }
+
+    queryText += ')';
+
+    const result = await query(queryText, params);
+    return result.rows[0].exists;
+  },
+
   // Create new shop
   create: async (shopData) => {
     const { ownerId, name, description, logo } = shopData;
@@ -301,7 +317,35 @@ export const productQueries = {
        SET stock_quantity = stock_quantity + $2,
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, shop_id, name, stock_quantity, is_active, updated_at`,
+       RETURNING id, shop_id, name, stock_quantity, reserved_quantity, is_active, updated_at`,
+      [id, quantity]
+    );
+    return result.rows[0];
+  },
+
+  // Reserve stock (increase reserved_quantity)
+  reserveStock: async (id, quantity, client = null) => {
+    const queryFn = client ? client.query.bind(client) : query;
+    const result = await queryFn(
+      `UPDATE products
+       SET reserved_quantity = reserved_quantity + $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, stock_quantity, reserved_quantity`,
+      [id, quantity]
+    );
+    return result.rows[0];
+  },
+
+  // Unreserve stock (decrease reserved_quantity)
+  unreserveStock: async (id, quantity, client = null) => {
+    const queryFn = client ? client.query.bind(client) : query;
+    const result = await queryFn(
+      `UPDATE products
+       SET reserved_quantity = GREATEST(reserved_quantity - $2, 0),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, stock_quantity, reserved_quantity`,
       [id, quantity]
     );
     return result.rows[0];

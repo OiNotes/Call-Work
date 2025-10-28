@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { getWebAppUrl, logWebAppConfig } from '../../src/utils/webappUrl.js';
 import logger from '../../src/utils/logger.js';
 
 // Mock logger
-vi.mock('../../src/utils/logger.js', () => ({
+jest.mock('../../src/utils/logger.js', () => ({
   default: {
-    info: vi.fn(),
-    error: vi.fn()
+    info: jest.fn(),
+    error: jest.fn()
   }
 }));
 
@@ -17,7 +17,7 @@ describe('webappUrl utility', () => {
     // Save original env
     originalEnv = process.env.WEBAPP_URL;
     // Clear mocks
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {

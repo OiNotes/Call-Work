@@ -47,6 +47,14 @@ router.get('/sales', verifyToken, optionalTelegramAuth, (req, res, next) => {
 });
 
 /**
+ * @route   GET /api/orders/active/count
+ * @desc    Get count of active orders (confirmed status)
+ * @access  Private (WebApp)
+ * @query   shop_id (required)
+ */
+router.get('/active/count', verifyToken, optionalTelegramAuth, orderController.getActiveCount);
+
+/**
  * @route   GET /api/orders/analytics
  * @desc    Get sales analytics for seller
  * @access  Private (WebApp)
@@ -78,6 +86,19 @@ router.put(
   optionalTelegramAuth,
   orderValidation.updateStatus,
   orderController.updateStatus
+);
+
+/**
+ * @route   POST /api/orders/bulk-status
+ * @desc    Bulk update order statuses
+ * @access  Private (WebApp)
+ */
+router.post(
+  '/bulk-status',
+  verifyToken,
+  optionalTelegramAuth,
+  orderValidation.bulkUpdateStatus,
+  orderController.bulkUpdateStatus
 );
 
 export default router;

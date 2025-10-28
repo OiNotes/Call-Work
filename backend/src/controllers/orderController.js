@@ -44,12 +44,13 @@ export const orderController = {
         });
       }
 
-      // Check stock (ATOMIC: prevents overselling)
-      if (product.stock_quantity < quantity) {
+      // Check available stock (stock - reserved)
+      const available = product.stock_quantity - (product.reserved_quantity || 0);
+      if (available < quantity) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
-          error: `Insufficient stock. Available: ${product.stock_quantity}`
+          error: `Insufficient stock. Available: ${available}`
         });
       }
 
@@ -66,25 +67,11 @@ export const orderController = {
         deliveryAddress
       }, client);
 
-      // Decrease product stock (pass client for transaction)
-      await productQueries.updateStock(productId, -quantity, client);
+      // Reserve product stock (pass client for transaction)
+      await productQueries.reserveStock(productId, quantity, client);
 
       // Commit transaction
       await client.query('COMMIT');
-
-      // Notify seller about new order (outside transaction)
-      try {
-        await telegramService.notifyNewOrder(product.owner_id, {
-          id: order.id,
-          product_name: product.name,
-          total_price: totalPrice,
-          currency: product.currency,
-          buyer_username: req.user.username
-        });
-      } catch (notifError) {
-        logger.error('Notification error', { error: notifError.message, stack: notifError.stack });
-        // Don't fail the order creation if notification fails
-      }
 
       return res.status(201).json({
         success: true,
@@ -285,6 +272,196 @@ export const orderController = {
         success: false,
         error: 'Failed to update order status'
       });
+    }
+  },
+
+  /**
+   * Get count of active orders (confirmed status)
+   */
+  getActiveCount: async (req, res) => {
+    try {
+      const shopId = req.query.shop_id;
+
+      if (!shopId) {
+        return res.status(400).json({
+          success: false,
+          error: 'shop_id required'
+        });
+      }
+
+      // Verify shop ownership
+      const shop = await shopQueries.findById(shopId);
+      if (!shop || shop.owner_id !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied'
+        });
+      }
+
+      // Count confirmed orders only
+      const client = await getClient();
+      try {
+        const result = await client.query(
+          `SELECT COUNT(*) as count
+           FROM orders o
+           JOIN products p ON o.product_id = p.id
+           WHERE p.shop_id = $1 AND o.status = 'confirmed'`,
+          [shopId]
+        );
+
+        const count = parseInt(result.rows[0].count);
+        return res.status(200).json({
+          success: true,
+          data: { count }
+        });
+      } finally {
+        client.release();
+      }
+
+    } catch (error) {
+      if (error.code) {
+        const handledError = dbErrorHandler(error);
+        return res.status(handledError.statusCode).json({
+          success: false,
+          error: handledError.message,
+          ...(handledError.details ? { details: handledError.details } : {})
+        });
+      }
+
+      logger.error('Get active orders count error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to get active orders count'
+      });
+    }
+  },
+
+  /**
+   * Bulk update order status
+   */
+  bulkUpdateStatus: async (req, res) => {
+    const client = await getClient();
+
+    try {
+      const { order_ids, status } = req.body;
+      const userId = req.user.id;
+
+      // Start transaction
+      await client.query('BEGIN');
+
+      // Get all orders with ownership check
+      const ordersResult = await client.query(
+        `SELECT o.id, o.status as current_status, o.buyer_id,
+                p.shop_id, s.owner_id, p.name as product_name,
+                u.username as buyer_username, u.telegram_id as buyer_telegram_id
+         FROM orders o
+         JOIN products p ON o.product_id = p.id
+         JOIN shops s ON p.shop_id = s.id
+         JOIN users u ON o.buyer_id = u.id
+         WHERE o.id = ANY($1::int[])`,
+        [order_ids]
+      );
+
+      const foundOrders = ordersResult.rows;
+
+      // Check if all orders were found
+      if (foundOrders.length !== order_ids.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          error: 'One or more orders not found'
+        });
+      }
+
+      // Verify user owns all shops (authorization check)
+      const unauthorized = foundOrders.find(order => order.owner_id !== userId);
+      if (unauthorized) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({
+          success: false,
+          error: 'You do not have permission to update these orders'
+        });
+      }
+
+      // Bulk update status
+      const updateResult = await client.query(
+        `UPDATE orders
+         SET status = $1, updated_at = NOW()
+         WHERE id = ANY($2::int[])
+         RETURNING id, status, product_id, buyer_id, quantity, total_price, currency, created_at, updated_at`,
+        [status, order_ids]
+      );
+
+      const updatedOrders = updateResult.rows;
+
+      // Commit transaction
+      await client.query('COMMIT');
+
+      // Build response with additional details
+      const ordersWithDetails = updatedOrders.map(order => {
+        const original = foundOrders.find(o => o.id === order.id);
+        return {
+          id: order.id,
+          status: order.status,
+          product_name: original?.product_name || null,
+          buyer_username: original?.buyer_username || null,
+          quantity: order.quantity,
+          total_price: parseFloat(order.total_price),
+          currency: order.currency,
+          updated_at: order.updated_at
+        };
+      });
+
+      // Send Telegram notifications (non-blocking)
+      foundOrders.forEach(async (order) => {
+        try {
+          if (order.buyer_telegram_id) {
+            await telegramService.notifyOrderStatusUpdate(order.buyer_telegram_id, {
+              id: order.id,
+              status,
+              product_name: order.product_name
+            });
+          }
+        } catch (notifError) {
+          logger.error('Bulk notification error', {
+            orderId: order.id,
+            error: notifError.message
+          });
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          updated_count: updatedOrders.length,
+          orders: ordersWithDetails
+        }
+      });
+
+    } catch (error) {
+      // Rollback on error
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Rollback error', { error: rollbackError.message });
+      }
+
+      if (error.code) {
+        const handledError = dbErrorHandler(error);
+        return res.status(handledError.statusCode).json({
+          success: false,
+          error: handledError.message,
+          ...(handledError.details ? { details: handledError.details } : {})
+        });
+      }
+
+      logger.error('Bulk update status error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update order statuses'
+      });
+    } finally {
+      client.release();
     }
   },
 

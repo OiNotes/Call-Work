@@ -186,6 +186,32 @@ export default function WalletsModal({ isOpen, onClose }) {
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
           >
             <div className="px-4 py-6 space-y-4">
+              {/* Context Header */}
+              <motion.div
+                className="glass-card rounded-2xl p-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-primary/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-orange-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-semibold mb-1">
+                      💼 Кошельки для получения оплаты
+                    </h3>
+                    <p className="text-gray-400 text-sm mb-2">
+                      Укажите адреса для приёма криптовалюты от покупателей.
+                    </p>
+                    <p className="text-gray-500 text-xs">
+                      Поддерживаемые: BTC, LTC, ETH, USDT, TON
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
         {/* Кнопка добавления кошелька */}
         {!showForm && (
           <motion.button

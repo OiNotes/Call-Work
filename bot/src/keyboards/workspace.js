@@ -1,16 +1,17 @@
 import { Markup } from 'telegraf';
 import { getWebAppUrl } from '../utils/webappUrl.js';
+import { buttons as buttonText } from '../texts/messages.js';
 
 /**
  * Workspace menu (restricted seller menu for workers)
  * Workers can: manage products, use AI, view sales
  * Workers cannot: wallets, subscriptions, workers management, shop settings
  */
-export const workspaceMenu = (shopName) => Markup.inlineKeyboard([
-  [Markup.button.webApp('📱 Открыть Menu', getWebAppUrl())],
-  [Markup.button.callback('💰 Продажи', 'seller:sales')], // Read-only for workers
-  [Markup.button.callback('◀️ Назад', 'workspace:back')],
-  [Markup.button.callback('🔄 Покупатель', 'role:toggle')]
+export const workspaceMenu = () => Markup.inlineKeyboard([
+  [Markup.button.webApp(buttonText.openCatalog, getWebAppUrl())],
+  [Markup.button.callback(buttonText.viewSales, 'seller:sales')],
+  [Markup.button.callback(buttonText.back, 'workspace:back')],
+  [Markup.button.callback(buttonText.switchRole, 'role:toggle')]
 ]);
 
 /**
@@ -21,32 +22,32 @@ export const workspaceShopSelection = (shops) => {
   const buttons = shops.map(shop => 
     [Markup.button.callback(`${shop.name}`, `workspace:select:${shop.id}`)]
   );
-  buttons.push([Markup.button.callback('◀️ Главное меню', 'main_menu')]);
+  buttons.push([Markup.button.callback(buttonText.mainMenu, 'main_menu')]);
   return Markup.inlineKeyboard(buttons);
 };
 
 /**
  * Worker management menu (for shop owners)
  */
-export const manageWorkersMenu = (shopName) => Markup.inlineKeyboard([
-  [Markup.button.callback('➕ Добавить', 'workers:add')],
-  [Markup.button.callback('📋 Список', 'workers:list')],
-  [Markup.button.callback('◀️ Назад', 'seller:main')]
+export const manageWorkersMenu = () => Markup.inlineKeyboard([
+  [Markup.button.callback(buttonText.addWorker, 'workers:add')],
+  [Markup.button.callback(buttonText.listWorkers, 'workers:list')],
+  [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
 ]);
 
 /**
  * Worker list item keyboard
  */
 export const workerItemMenu = (workerId) => Markup.inlineKeyboard([
-  [Markup.button.callback('🗑 Удалить', `workers:remove:${workerId}`)]
+  [Markup.button.callback(buttonText.delete, `workers:remove:${workerId}`)]
 ]);
 
 /**
  * Confirm worker removal keyboard
  */
 export const confirmWorkerRemoval = (workerId) => Markup.inlineKeyboard([
-  [Markup.button.callback('✅ Да, удалить', `workers:remove:confirm:${workerId}`)],
-  [Markup.button.callback('❌ Отмена', 'workers:list')]
+  [Markup.button.callback(buttonText.delete, `workers:remove:confirm:${workerId}`)],
+  [Markup.button.callback(buttonText.cancel, 'workers:list')]
 ]);
 
 export default {

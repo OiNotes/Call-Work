@@ -41,7 +41,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
 
     // Проверяем что показали приглашение ввести название (minimalist)
     const text1 = testBot.getLastReplyText();
-    expect(text1).toContain('Название');
+    expect(text1).toContain('название товара');
 
     testBot.captor.reset();
 
@@ -51,7 +51,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
 
     // Проверяем что показали приглашение ввести цену
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('Цена ('); // minimalist: 'Цена ($, > 0):'
+    expect(text2).toContain('цену'); // minimalist: 'Цена ($, > 0):'
 
     testBot.captor.reset();
 
@@ -75,9 +75,9 @@ describe('Add Product Flow - Price Validation (P0)', () => {
     // Loading message "Сохраняем..." теперь через smartMessage (edit), не reply
     // Пропускаем эту проверку - loading message может быть edit или reply
 
-    // Проверяем что показали успех (minimalist: "✅" emoji)
+    // Проверяем что показали успех
     const text3 = testBot.getLastReplyText();
-    expect(text3).toContain('✅');
+    expect(text3).toContain('сохранён');
     expect(text3).toContain(productName);
 
     // Проверяем что API был вызван один раз с правильной ценой
@@ -98,7 +98,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
     await testBot.handleUpdate(textUpdate('ab'));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Минимум 3 символа');
+    expect(text).toContain('Введите название товара');
   });
 
   it('неверная цена (не число) → ошибка', async () => {
@@ -114,7 +114,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
     await testBot.handleUpdate(textUpdate('invalid'));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Цена — число > 0');
+    expect(text).toContain('сумма больше нуля');
   });
 
   it('отрицательная цена → ошибка', async () => {
@@ -130,7 +130,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
     await testBot.handleUpdate(textUpdate('-10'));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Цена — число > 0');
+    expect(text).toContain('сумма больше нуля');
   });
 
   it('цена = 0 → ошибка', async () => {
@@ -146,7 +146,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
     await testBot.handleUpdate(textUpdate('0'));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Цена — число > 0');
+    expect(text).toContain('сумма больше нуля');
   });
 
   it('добавление товара без shopId → ошибка', async () => {
@@ -169,7 +169,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
 
     // Проверяем что handler показал ошибку и НЕ пустил в scene
     const text = noShopBot.getLastReplyText();
-    expect(text).toContain('Сначала создайте магазин');
+    expect(text).toContain('Создайте магазин');
 
     // Проверяем что API НЕ был вызван
     expect(mock.history.post.length).toBe(0);

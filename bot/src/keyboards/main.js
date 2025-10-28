@@ -1,28 +1,29 @@
 import { Markup } from 'telegraf';
+import { buttons as buttonText } from '../texts/messages.js';
 
 /**
  * Main menu - role selection
  * @param {boolean} showWorkspace - Show workspace button if user is worker
  */
 export const mainMenu = (showWorkspace = false) => {
-  const buttons = [
+  const rows = [
     [
-      Markup.button.callback('🛍 Покупатель', 'role:buyer'),
-      Markup.button.callback('💼 Продавец', 'role:seller')
+      Markup.button.callback(buttonText.buyerRole, 'role:buyer'),
+      Markup.button.callback(buttonText.sellerRole, 'role:seller')
     ]
   ];
 
   if (showWorkspace) {
-    buttons.push([Markup.button.callback('🧑\u200d💼 Workspace', 'role:workspace')]);
+    rows.push([Markup.button.callback(buttonText.workspace, 'role:workspace')]);
   }
 
-  return Markup.inlineKeyboard(buttons);
+  return Markup.inlineKeyboard(rows);
 };
 
 // Default main menu (backward compatible)
 export const mainMenuDefault = Markup.inlineKeyboard([
   [
-    Markup.button.callback('🛍 Покупатель', 'role:buyer'),
-    Markup.button.callback('💼 Продавец', 'role:seller')
+    Markup.button.callback(buttonText.buyerRole, 'role:buyer'),
+    Markup.button.callback(buttonText.sellerRole, 'role:seller')
   ]
 ]);

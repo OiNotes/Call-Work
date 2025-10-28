@@ -16,6 +16,10 @@ import api from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
+import { messages, buttons as buttonText } from '../texts/messages.js';
+import { showSellerMainMenu } from '../utils/sellerNavigation.js';
+
+const { general: generalMessages, seller: sellerMessages, subscription: subMessages } = messages;
 
 // Crypto payment addresses (should match backend)
 const PAYMENT_ADDRESSES = {
@@ -34,55 +38,34 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const shopId = ctx.session.shopId;
 
       if (!shopId) {
-        await smartMessage.send(ctx, { text: '❌ Магазин не найден. Создайте магазин сначала.' });
+        await smartMessage.send(ctx, { text: generalMessages.shopRequired });
         return ctx.scene.leave();
       }
 
       // Get current subscription status
       const token = ctx.session.token;
-      const statusResponse = await api.get(`/subscriptions/status/${shopId}`, {
+      if (!token) {
+        await smartMessage.send(ctx, { text: generalMessages.authorizationRequired });
+        return ctx.scene.leave();
+      }
+      await api.get(`/subscriptions/status/${shopId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      const statusData = statusResponse.data || {};
-      const subscription = statusData.subscription || statusData.currentSubscription || null;
       const shopName = ctx.session.shopName || 'Магазин';
 
-      let message = `💳 <b>Оплата подписки магазина</b>\n\n`;
-      message += `🏪 Магазин: ${shopName}\n\n`;
-
-      // Show current status
-      if (subscription) {
-        message += `📊 <b>Текущая подписка:</b>\n`;
-        message += `• Тариф: ${subscription.tier === 'pro' ? 'PRO 💎' : 'BASIC'}\n`;
-        message += `• Статус: ${subscription.status}\n`;
-        message += `• Действует до: ${new Date(subscription.periodEnd).toLocaleDateString('ru-RU')}\n\n`;
-      } else {
-        message += `⚠️ Нет активной подписки\n\n`;
-      }
-
-      // Show pricing
-      message += `💰 <b>Тарифы (ежемесячно):</b>\n\n`;
-      message += `<b>BASIC</b> - $25/месяц\n`;
-      message += `• До 4 товаров\n`;
-      message += `• Базовая поддержка\n`;
-      message += `• Заказы и платежи\n\n`;
-      
-      message += `<b>PRO 💎</b> - $35/месяц\n`;
-      message += `• Всё из BASIC\n`;
-      message += `• Безлимитные подписчики\n`;
-      message += `• Рассылка при смене канала (2/мес)\n`;
-      message += `• Приоритетная поддержка\n\n`;
-      
-      message += `Выберите тариф для оплаты:`;
+      const message = [
+        sellerMessages.subscription.chooseTierIntro,
+        sellerMessages.subscription.tierDescriptionBasic,
+        sellerMessages.subscription.tierDescriptionPro
+      ].join('\n\n');
 
       await cleanReplyHTML(
         ctx,
         message,
         Markup.inlineKeyboard([
-          [Markup.button.callback('BASIC - $25', 'subscription:tier:basic')],
-          [Markup.button.callback('PRO 💎 - $35', 'subscription:tier:pro')],
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
+          [Markup.button.callback(buttonText.tierBasic, 'subscription:tier:basic')],
+          [Markup.button.callback(buttonText.tierPro, 'subscription:tier:pro')],
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
         ])
       );
 
@@ -99,7 +82,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
       
       const errorMsg = error.response?.data?.error || error.message;
       await cleanReply(ctx, `❌ Ошибка: ${errorMsg}`, Markup.inlineKeyboard([
-        [Markup.button.callback('◀️ Назад', 'seller:main')]
+        [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
       ]));
       
       return ctx.scene.leave();
@@ -115,20 +98,21 @@ const paySubscriptionScene = new Scenes.WizardScene(
     const data = ctx.callbackQuery.data;
 
     // Handle cancel
-    if (data === 'seller:main') {
-      await ctx.answerCbQuery('Оплата отменена');
-      return ctx.scene.leave();
+    if (data === 'seller:menu') {
+      await ctx.answerCbQuery(sellerMessages.subscription.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
-    // Parse tier selection
     if (!data.startsWith('subscription:tier:')) {
-      await ctx.answerCbQuery('❌ Неверный выбор');
+      await ctx.answerCbQuery(sellerMessages.subscription.unknownCommand, { show_alert: true });
       return;
     }
 
     const tier = data.replace('subscription:tier:', '');
     if (tier !== 'basic' && tier !== 'pro') {
-      await ctx.answerCbQuery('❌ Неверный тариф');
+      await ctx.answerCbQuery(subMessages.invalidTier);
       return;
     }
 
@@ -138,20 +122,18 @@ const paySubscriptionScene = new Scenes.WizardScene(
     ctx.wizard.state.tier = tier;
     ctx.wizard.state.amount = amount;
 
-    let message = `💎 <b>Выбран тариф: ${tier.toUpperCase()}</b>\n\n`;
-    message += `💵 Сумма: $${amount}\n\n`;
-    message += `Выберите криптовалюту для оплаты:`;
+    const message = subMessages.confirmPrompt(tier, amount);
 
     await ctx.editMessageText(
       message,
       {
         parse_mode: 'HTML',
         ...Markup.inlineKeyboard([
-          [Markup.button.callback('₿ Bitcoin (BTC)', 'subscription:crypto:BTC')],
-          [Markup.button.callback('Ξ Ethereum (ETH)', 'subscription:crypto:ETH')],
-          [Markup.button.callback('💵 USDT (TRC-20)', 'subscription:crypto:USDT')],
-          [Markup.button.callback('Ł Litecoin (LTC)', 'subscription:crypto:LTC')],
-          [Markup.button.callback('◀️ Назад', 'subscription:back')]
+          [Markup.button.callback(buttonText.cryptoBTC, 'subscription:crypto:BTC')],
+          [Markup.button.callback(buttonText.cryptoETH, 'subscription:crypto:ETH')],
+          [Markup.button.callback(buttonText.cryptoUSDT, 'subscription:crypto:USDT')],
+          [Markup.button.callback(buttonText.cryptoLTC, 'subscription:crypto:LTC')],
+          [Markup.button.callback(buttonText.back, 'subscription:back')]
         ])
       }
     );
@@ -174,20 +156,22 @@ const paySubscriptionScene = new Scenes.WizardScene(
     }
 
     // Handle cancel
-    if (data === 'seller:main') {
-      await ctx.answerCbQuery('Оплата отменена');
-      return ctx.scene.leave();
+    if (data === 'seller:menu') {
+      await ctx.answerCbQuery(subMessages.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
     // Parse crypto selection
     if (!data.startsWith('subscription:crypto:')) {
-      await ctx.answerCbQuery('❌ Неверный выбор');
+      await ctx.answerCbQuery(generalMessages.invalidChoice);
       return;
     }
 
     const currency = data.replace('subscription:crypto:', '');
     if (!['BTC', 'ETH', 'USDT', 'LTC'].includes(currency)) {
-      await ctx.answerCbQuery('❌ Неверная криптовалюта');
+      await ctx.answerCbQuery(subMessages.invalidCrypto);
       return;
     }
 
@@ -199,24 +183,14 @@ const paySubscriptionScene = new Scenes.WizardScene(
     ctx.wizard.state.currency = currency;
     ctx.wizard.state.paymentAddress = paymentAddress;
 
-    let message = `💳 <b>Детали оплаты</b>\n\n`;
-    message += `💎 Тариф: ${tier.toUpperCase()}\n`;
-    message += `💵 Сумма: $${amount}\n`;
-    message += `🪙 Криптовалюта: ${currency}\n\n`;
-    message += `📬 <b>Адрес для оплаты:</b>\n`;
-    message += `<code>${paymentAddress}</code>\n\n`;
-    message += `⚠️ <b>Важно:</b>\n`;
-    message += `1. Отправьте точную сумму в ${currency}\n`;
-    message += `2. После оплаты скопируйте Transaction Hash (TX Hash)\n`;
-    message += `3. Отправьте его следующим сообщением\n\n`;
-    message += `📝 Отправьте TX Hash для верификации:`;
+    const message = `Оплата\n\nТариф: ${tier.toUpperCase()} - ${amount}\nВалюта: ${currency}\n\nАдрес:\n<code>${paymentAddress}</code>\n\nПосле оплаты отправьте TX Hash\n\nПример TX Hash:\n0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b`;
 
     await ctx.editMessageText(
       message,
       {
         parse_mode: 'HTML',
         ...Markup.inlineKeyboard([
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
+          [Markup.button.callback('❌ Отмена', 'seller:menu')]
         ])
       }
     );
@@ -226,110 +200,82 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
   // Step 4: Handle tx_hash and verify payment
   async (ctx) => {
-    // Handle cancel button
-    if (ctx.callbackQuery?.data === 'seller:main') {
-      await ctx.answerCbQuery('Оплата отменена');
-      return ctx.scene.leave();
+    if (ctx.callbackQuery?.data === 'seller:menu') {
+      await ctx.answerCbQuery(sellerMessages.subscription.cancelled);
+      await ctx.scene.leave();
+      await showSellerMainMenu(ctx);
+      return;
     }
 
-    // Wait for text message with tx_hash
+    if (ctx.callbackQuery?.data === 'subscription:retry') {
+      await ctx.answerCbQuery();
+      const { tier, amount, currency, paymentAddress } = ctx.wizard.state;
+      const reminder = sellerMessages.subscription.paymentDetails(tier, amount, currency, paymentAddress);
+      await cleanReplyHTML(ctx, reminder, Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]));
+      await smartMessage.send(ctx, { text: sellerMessages.subscription.sendHashPrompt });
+      return;
+    }
+
     if (!ctx.message?.text) {
-      await smartMessage.send(ctx, { text: '❌ Пожалуйста, отправьте Transaction Hash текстом.' });
+      await smartMessage.send(ctx, { text: sellerMessages.subscription.sendHashPrompt });
       return;
     }
 
     const txHash = ctx.message.text.trim();
-
-    // Basic validation
     if (txHash.length < 10) {
-      await smartMessage.send(ctx, { text: '❌ TX Hash слишком короткий. Проверьте и отправьте снова.' });
+      await smartMessage.send(ctx, { text: sellerMessages.subscription.hashInvalid });
       return;
     }
 
     try {
-      const loadingMsg = await smartMessage.send(ctx, { text: '⏳ Проверяем транзакцию...\n\nЭто может занять до 30 секунд.' });
+      const loadingMsg = await smartMessage.send(ctx, { text: sellerMessages.subscription.verifying });
 
       const { shopId, tier, currency, paymentAddress } = ctx.wizard.state;
       const token = ctx.session.token;
 
-      // Verify payment via backend
       const paymentResponse = await api.post(
         '/subscriptions/pay',
-        {
-          shopId,
-          tier,
-          txHash,
-          currency,
-          paymentAddress
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { shopId, tier, txHash, currency, paymentAddress },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const { subscription, message } = paymentResponse.data;
-
-      // Delete loading message
+      const { subscription } = paymentResponse.data;
       await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id).catch(() => {});
 
-      // Show success
-      let successMessage = `✅ <b>Оплата подтверждена!</b>\n\n`;
-      successMessage += `💎 Тариф: ${tier.toUpperCase()}\n`;
-      successMessage += `📅 Действует до: ${new Date(subscription.periodEnd).toLocaleDateString('ru-RU')}\n`;
-      successMessage += `🆔 ID подписки: ${subscription.id}\n\n`;
-      
+      const endDate = new Date(subscription.periodEnd).toLocaleDateString('ru-RU');
+      let successMessage = sellerMessages.subscription.verificationSuccess(tier, endDate, subscription.id);
       if (tier === 'pro') {
-        successMessage += `🎉 <b>PRO функции активированы:</b>\n`;
-        successMessage += `• Безлимитные подписчики\n`;
-        successMessage += `• Рассылка при смене канала (2/мес)\n`;
-        successMessage += `• Приоритетная поддержка\n\n`;
+        successMessage += `\n\n${sellerMessages.subscription.proBenefits}`;
       }
-      
-      successMessage += `Спасибо за оплату! Ваш магазин активен.`;
 
-      await cleanReplyHTML(
-        ctx,
-        successMessage,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('◀️ В главное меню', 'seller:main')]
-        ])
-      );
-
-      logger.info(`[PaySubscription] Payment successful: shop ${shopId}, tier ${tier}, tx ${txHash}`);
-
+      await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
       return ctx.scene.leave();
     } catch (error) {
       logger.error('[PaySubscription] Payment verification error:', error);
-      
-      let errorMessage = '❌ <b>Ошибка верификации</b>\n\n';
-      
+
       const errorData = error.response?.data;
+      let errorMessage;
       if (errorData?.error === 'DUPLICATE_TX_HASH') {
-        errorMessage += '⚠️ Эта транзакция уже была использована.\n\n';
-        errorMessage += 'Попробуйте другой TX Hash или создайте новый платёж.';
+        errorMessage = sellerMessages.subscription.duplicateTx;
       } else if (errorData?.error === 'PAYMENT_VERIFICATION_FAILED') {
-        errorMessage += '⚠️ Не удалось подтвердить платёж.\n\n';
-        errorMessage += 'Возможные причины:\n';
-        errorMessage += '• Транзакция ещё не подтверждена в блокчейне\n';
-        errorMessage += '• Неверная сумма или адрес\n';
-        errorMessage += '• Неверный TX Hash\n\n';
-        errorMessage += 'Подождите несколько минут и попробуйте снова.';
+        errorMessage = sellerMessages.subscription.verificationFailed;
       } else {
-        errorMessage += errorData?.message || error.message;
+        errorMessage = sellerMessages.subscription.verificationError;
       }
 
       await cleanReplyHTML(
         ctx,
         errorMessage,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('🔄 Попробовать снова', 'subscription:retry')],
-          [Markup.button.callback('❌ Отмена', 'seller:main')]
-        ])
+        Markup.inlineKeyboard([[
+          Markup.button.callback(buttonText.retry, 'subscription:retry'),
+          Markup.button.callback(buttonText.cancel, 'seller:menu')
+        ]])
       );
 
-      return; // Stay in this step for retry
+      return;
     }
   }
+
 );
 
 // Leave handler

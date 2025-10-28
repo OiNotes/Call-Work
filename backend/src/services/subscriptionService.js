@@ -24,6 +24,10 @@ const GRACE_PERIOD_DAYS = 2;
 // Subscription period in days
 const SUBSCRIPTION_PERIOD_DAYS = 30;
 
+function addDays(date, days) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
 /**
  * Process subscription payment
  * Verifies crypto transaction and creates subscription record
@@ -385,6 +389,55 @@ async function deactivateShop(shopId, client = null) {
   }
 }
 
+async function activatePromoSubscription(shopId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const shopRes = await client.query('SELECT id, tier FROM shops WHERE id = $1 FOR UPDATE', [shopId]);
+    if (shopRes.rows.length === 0) {
+      throw new Error('Shop not found');
+    }
+
+    const now = new Date();
+    const periodEnd = addDays(now, SUBSCRIPTION_PERIOD_DAYS);
+    const promoTx = `promo-${shopId}-${Date.now()}`;
+
+    await client.query(
+      `INSERT INTO shop_subscriptions (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
+       VALUES ($1, 'pro', 0, $2, 'USDT', $3, $4, 'active', NOW())`,
+      [shopId, promoTx, now, periodEnd]
+    );
+
+    const updatedShop = await client.query(
+      `UPDATE shops
+       SET tier = 'pro',
+           subscription_status = 'active',
+           next_payment_due = $2,
+           grace_period_until = NULL,
+           registration_paid = true,
+           is_active = true,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [shopId, periodEnd]
+    );
+
+    await client.query('COMMIT');
+    return updatedShop.rows[0];
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      logger.error('[Subscription] Promo rollback error:', rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * Send expiration reminder notifications via Telegram
  * Run via cron job daily at 10:00
@@ -653,6 +706,7 @@ export {
   calculateUpgradeCost,
   calculateUpgradeAmount,
   getUserSubscriptions,
+  activatePromoSubscription,
   SUBSCRIPTION_PRICES,
   GRACE_PERIOD_DAYS
 };

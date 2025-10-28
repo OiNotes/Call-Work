@@ -1,7 +1,10 @@
-import { followsMenu, followDetailMenu, sellerMenu } from '../../keyboards/seller.js';
+import { followsMenu, followDetailMenu, sellerMenu, sellerMenuNoShop } from '../../keyboards/seller.js';
 import { followApi } from '../../utils/api.js';
 import { formatFollowsList, formatFollowDetail } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
+import { messages } from '../../texts/messages.js';
+
+const { general: generalMessages, follows: followMessages } = messages;
 
 /**
  * View all follows for current shop
@@ -11,34 +14,40 @@ export const handleViewFollows = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await ctx.editMessageText(
-        'Сначала создайте магазин',
-        sellerMenu('Магазин')
+      await ctx.reply(
+        generalMessages.shopRequired,
+        sellerMenuNoShop
       );
       return;
     }
 
     if (!ctx.session.token) {
-      await ctx.editMessageText(
-        'Необходима авторизация',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      await ctx.reply(
+        generalMessages.authorizationRequired,
+        sellerMenu()
       );
       return;
     }
 
     const follows = await followApi.getMyFollows(ctx.session.shopId, ctx.session.token);
-    const shopName = ctx.session.shopName || 'Магазин';
 
-    const message = formatFollowsList(follows, shopName);
+    const messageParts = [followMessages.contextDetailed];
 
-    await ctx.editMessageText(message, followsMenu(shopName));
+    if (follows.length === 0) {
+      messageParts.push('', followMessages.emptyState);
+      await ctx.reply(messageParts.join('\n'), followsMenu(false));
+      return;
+    }
+
+    messageParts.push('', formatFollowsList(follows));
+
+    await ctx.reply(messageParts.join('\n'), followsMenu(true));
     logger.info(`User ${ctx.from.id} viewed follows (${follows.length} total)`);
   } catch (error) {
     logger.error('Error fetching follows:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await ctx.editMessageText(
-      'Ошибка загрузки',
-      followsMenu(shopName)
+    await ctx.reply(
+      generalMessages.actionFailed,
+      followsMenu()
     );
   }
 };
@@ -51,9 +60,9 @@ export const handleCreateFollow = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await ctx.editMessageText(
-        'Сначала создайте магазин',
-        sellerMenu('Магазин')
+      await ctx.reply(
+        generalMessages.shopRequired,
+        sellerMenuNoShop
       );
       return;
     }
@@ -61,10 +70,9 @@ export const handleCreateFollow = async (ctx) => {
     await ctx.scene.enter('createFollow');
   } catch (error) {
     logger.error('Error entering createFollow scene:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await ctx.editMessageText(
-      'Произошла ошибка',
-      followsMenu(shopName)
+    await ctx.reply(
+      generalMessages.actionFailed,
+      followsMenu()
     );
   }
 };
@@ -79,7 +87,7 @@ export const handleFollowDetail = async (ctx) => {
     const followId = parseInt(ctx.match[1]);
 
     if (!ctx.session.token) {
-      await ctx.editMessageText('Необходима авторизация');
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
@@ -88,26 +96,23 @@ export const handleFollowDetail = async (ctx) => {
     const follow = follows.find(f => f.id === followId);
 
     if (!follow) {
-      await ctx.editMessageText('Подписка не найдена');
+      await ctx.editMessageText(followMessages.notFound, followsMenu());
       return;
     }
 
     const message = formatFollowDetail(follow);
 
-    await ctx.editMessageText(message, followDetailMenu(followId));
+    await ctx.editMessageText(message, followDetailMenu(followId, follow.mode));
     logger.info(`User ${ctx.from.id} viewed follow detail ${followId}`);
   } catch (error) {
     logger.error('Error viewing follow detail:', error);
     
-    // Parse backend error
-    const errorMsg = error.response?.data?.error;
-    
     if (error.response?.status === 404) {
-      await ctx.editMessageText('❌ Подписка не найдена');
+      await ctx.editMessageText(followMessages.notFound, followsMenu());
     } else if (error.response?.status === 403) {
-      await ctx.editMessageText('❌ Доступ запрещён');
+      await ctx.editMessageText(followMessages.accessDenied, followsMenu());
     } else {
-      await ctx.editMessageText('❌ Ошибка загрузки');
+      await ctx.editMessageText(followMessages.loadError, followsMenu());
     }
   }
 };
@@ -122,17 +127,17 @@ export const handleDeleteFollow = async (ctx) => {
     const followId = parseInt(ctx.match[1]);
 
     if (!ctx.session.token) {
-      await ctx.editMessageText('Необходима авторизация');
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
     await followApi.deleteFollow(followId, ctx.session.token);
 
-    await ctx.editMessageText('✅ Подписка удалена');
+    await ctx.editMessageText(followMessages.deleteSuccess, followsMenu());
     logger.info(`User ${ctx.from.id} deleted follow ${followId}`);
   } catch (error) {
     logger.error('Error deleting follow:', error);
-    await ctx.editMessageText('Ошибка удаления');
+    await ctx.editMessageText(followMessages.deleteError, followsMenu());
   }
 };
 
@@ -146,7 +151,7 @@ export const handleSwitchMode = async (ctx) => {
     const followId = parseInt(ctx.match[1]);
 
     if (!ctx.session.token) {
-      await ctx.editMessageText('Необходима авторизация');
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
@@ -155,7 +160,7 @@ export const handleSwitchMode = async (ctx) => {
     const follow = follows.find(f => f.id === followId);
 
     if (!follow) {
-      await ctx.editMessageText('Подписка не найдена');
+      await ctx.editMessageText(followMessages.notFound, followsMenu());
       return;
     }
 
@@ -167,7 +172,7 @@ export const handleSwitchMode = async (ctx) => {
       ctx.session.editingFollowId = followId;
       ctx.session.pendingModeSwitch = 'resell';  // Flag that this is a mode switch
 
-      const promptMsg = await ctx.editMessageText('Новая наценка (%):\n\n1-500');
+      const promptMsg = await ctx.editMessageText(followMessages.markupPrompt);
       ctx.session.editingMessageId = promptMsg.message_id;  // Save message ID for error handling
       return;
     }
@@ -175,7 +180,7 @@ export const handleSwitchMode = async (ctx) => {
     // Switch to monitor mode
     await followApi.switchMode(followId, newMode, ctx.session.token);
 
-    await ctx.editMessageText('✅ Режим изменён');
+    await ctx.editMessageText(followMessages.modeChanged, followsMenu());
     logger.info(`User ${ctx.from.id} switched follow ${followId} to ${newMode}`);
   } catch (error) {
     logger.error('Error switching mode:', error);
@@ -183,13 +188,13 @@ export const handleSwitchMode = async (ctx) => {
     const errorMsg = error.response?.data?.error;
     
     if (error.response?.status === 402) {
-      await ctx.editMessageText('❌ Лимит достигнут\n\nНужен PRO ($35/мес)');
+      await ctx.editMessageText(followMessages.limitReached, followsMenu());
     } else if (error.response?.status === 404) {
-      await ctx.editMessageText('❌ Подписка не найдена');
+      await ctx.editMessageText(followMessages.notFound, followsMenu());
     } else if (errorMsg?.toLowerCase().includes('circular')) {
-      await ctx.editMessageText('❌ Циклическая подписка невозможна');
+      await ctx.editMessageText(followMessages.modeLimit, followsMenu());
     } else {
-      await ctx.editMessageText('❌ Ошибка изменения режима');
+      await ctx.editMessageText(followMessages.switchError, followsMenu());
     }
   }
 };
@@ -204,21 +209,21 @@ export const handleEditMarkup = async (ctx) => {
     const followId = parseInt(ctx.match[1]);
 
     if (!ctx.session.token) {
-      await ctx.editMessageText('Необходима авторизация');
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
     // Set session flag to capture next text message
     ctx.session.editingFollowId = followId;
 
-    const promptMsg = await ctx.editMessageText('Новая наценка (%):\n\n1-500');
+    const promptMsg = await ctx.editMessageText(followMessages.markupPrompt);
     // Save message ID for later editMessageText
     ctx.session.editingMessageId = promptMsg.message_id;
 
     logger.info(`User ${ctx.from.id} initiated markup edit for follow ${followId}`);
   } catch (error) {
     logger.error('Error initiating markup edit:', error);
-    await ctx.editMessageText('❌ Ошибка');
+    await ctx.editMessageText(followMessages.switchError);
   }
 };
 
@@ -246,7 +251,7 @@ export const handleMarkupUpdate = async (ctx) => {
         ctx.chat.id,
         editingMessageId,
         undefined,
-        'Наценка должна быть 1-500%'
+        followMessages.markupInvalid
       );
       // Don't delete session - allow retry
       await ctx.deleteMessage(userMsgId).catch(() => {});
@@ -268,7 +273,7 @@ export const handleMarkupUpdate = async (ctx) => {
         ctx.chat.id,
         editingMessageId,
         undefined,
-        '✅ Режим изменён'
+        followMessages.modeChanged
       );
     } else {
       // Simple markup update: use updateMarkup API (endpoint: /follows/:id/markup)
@@ -278,7 +283,7 @@ export const handleMarkupUpdate = async (ctx) => {
         ctx.chat.id,
         editingMessageId,
         undefined,
-        `✅ Наценка обновлена: ${markup}%`
+        followMessages.markupUpdated(Number(markup.toFixed(0)))
       );
     }
 
@@ -292,13 +297,13 @@ export const handleMarkupUpdate = async (ctx) => {
     const errorMsg = error.response?.data?.error;
     const editingMessageId = ctx.session.editingMessageId;
 
-    let message = '❌ Ошибка изменения наценки';
+    let message = followMessages.switchError;
     if (error.response?.status === 402) {
-      message = '❌ Лимит достигнут\n\nНужен PRO ($35/мес)';
+      message = followMessages.limitReached;
     } else if (error.response?.status === 404) {
-      message = '❌ Подписка не найдена';
+      message = followMessages.notFound;
     } else if (errorMsg?.toLowerCase().includes('markup')) {
-      message = '❌ Некорректная наценка (1-500%)';
+      message = followMessages.markupInvalid;
     }
 
     // FIX: Use editMessageText instead of reply

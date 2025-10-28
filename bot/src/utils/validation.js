@@ -87,7 +87,7 @@ export function getCryptoValidationError(crypto) {
   const examples = {
     BTC: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa (начинается с 1, 3, или bc1)',
     ETH: '0x742d35Cc6634C0532925a3b844Bc7e7595f42bE1 (начинается с 0x)',
-    USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t (TRC-20, начинается с TR)',
+    USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t (начинается с TR)',
     LTC: 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R (начинается с L, M, или ltc1)'
   };
 

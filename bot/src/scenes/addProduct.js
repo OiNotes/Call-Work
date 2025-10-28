@@ -4,6 +4,9 @@ import { productApi } from '../utils/api.js';
 import { formatPrice } from '../utils/format.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
+import { messages } from '../texts/messages.js';
+
+const { seller: sellerMessages, general: generalMessages } = messages;
 
 /**
  * Add Product Scene - Multi-step wizard
@@ -19,7 +22,7 @@ const enterName = async (ctx) => {
     logger.info('product_add_step:name', { userId: ctx.from.id });
 
     await smartMessage.send(ctx, {
-      text: 'Название (мин 3 символа):',
+      text: sellerMessages.addProductNamePrompt,
       keyboard: cancelButton
     });
 
@@ -35,14 +38,14 @@ const enterPrice = async (ctx) => {
   try {
     // Get product name from message
     if (!ctx.message || !ctx.message.text) {
-      await smartMessage.send(ctx, { text: 'Отправьте название товара' });
+      await smartMessage.send(ctx, { text: sellerMessages.addProductNamePrompt });
       return;
     }
 
     const productName = ctx.message.text.trim();
 
     if (productName.length < 3) {
-      await smartMessage.send(ctx, { text: 'Минимум 3 символа' });
+      await smartMessage.send(ctx, { text: sellerMessages.addProductNamePrompt });
       return;
     }
 
@@ -59,7 +62,7 @@ const enterPrice = async (ctx) => {
       productName: productName
     });
 
-    await smartMessage.send(ctx, { text: 'Цена ($, > 0):' });
+    await smartMessage.send(ctx, { text: sellerMessages.addProductPricePrompt });
 
     return ctx.wizard.next();
   } catch (error) {
@@ -73,7 +76,7 @@ const complete = async (ctx) => {
   try {
     // Get price from message
     if (!ctx.message || !ctx.message.text) {
-      await smartMessage.send(ctx, { text: 'Отправьте цену товара' });
+      await smartMessage.send(ctx, { text: sellerMessages.addProductPricePrompt });
       return;
     }
 
@@ -81,7 +84,7 @@ const complete = async (ctx) => {
     const price = parseFloat(priceText);
 
     if (isNaN(price) || price <= 0) {
-      await smartMessage.send(ctx, { text: '❌ Цена — число > 0\n\nПример: 99.99 или 99,99' });
+      await smartMessage.send(ctx, { text: sellerMessages.addProductPriceInvalid });
       return;
     }
 
@@ -107,7 +110,7 @@ const complete = async (ctx) => {
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка: магазин не найден\n\nСначала создайте магазин',
+        text: generalMessages.shopRequired,
         keyboard: successButtons
       });
       return await ctx.scene.leave();
@@ -119,14 +122,14 @@ const complete = async (ctx) => {
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка авторизации. Попробуйте снова через главное меню',
+        text: generalMessages.authorizationRequired,
         keyboard: successButtons
       });
       return await ctx.scene.leave();
     }
 
     // Create product via backend
-    await smartMessage.send(ctx, { text: 'Сохраняем...' });
+    await smartMessage.send(ctx, { text: sellerMessages.addProductSaving });
 
     const product = await productApi.createProduct({
       name,
@@ -150,7 +153,7 @@ const complete = async (ctx) => {
     });
 
     await smartMessage.send(ctx, {
-      text: `✅ ${name} — ${formatPrice(price)}`,
+      text: sellerMessages.addProductSuccess(name, formatPrice(price)),
       keyboard: successButtons
     });
 
@@ -159,7 +162,7 @@ const complete = async (ctx) => {
   } catch (error) {
     logger.error('Error creating product:', error);
     await smartMessage.send(ctx, {
-      text: 'Ошибка. Попробуйте позже',
+      text: sellerMessages.addProductError,
       keyboard: successButtons
     });
     return await ctx.scene.leave();
@@ -194,16 +197,17 @@ addProductScene.leave(async (ctx) => {
 // Handle cancel action within scene
 addProductScene.action('cancel_scene', async (ctx) => {
   try {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery(); // Silent
     logger.info('product_add_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
-    await smartMessage.send(ctx, { text: 'Отменено', keyboard: successButtons });
+    // Silent transition - edit message without "Отменено" text
+    await ctx.editMessageText(sellerMessages.addProductNamePrompt, successButtons);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await ctx.editMessageText(
-        'Произошла ошибка при отмене\n\nПопробуйте позже',
+        generalMessages.actionFailed,
         successButtons
       );
     } catch (replyError) {

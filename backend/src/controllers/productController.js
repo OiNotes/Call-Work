@@ -8,10 +8,10 @@ import logger from '../utils/logger.js';
  */
 async function isAuthorizedToManageShop(shopId, userId) {
   const shop = await shopQueries.findById(shopId);
-  if (!shop) return false;
+  if (!shop) {return false;}
 
   // Check if owner
-  if (shop.owner_id === userId) return true;
+  if (shop.owner_id === userId) {return true;}
 
   // Check if worker
   const worker = await workerQueries.findByShopAndUser(shopId, userId);

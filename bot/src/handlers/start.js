@@ -1,9 +1,10 @@
-import { mainMenu, mainMenuDefault } from '../keyboards/main.js';
+import { mainMenu } from '../keyboards/main.js';
 import { shopApi } from '../utils/api.js';
 import { handleSellerRole } from './seller/index.js';
 import { handleBuyerRole } from './buyer/index.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
+import { messages } from '../texts/messages.js';
 
 /**
  * /start command handler
@@ -76,7 +77,7 @@ export const handleStart = async (ctx) => {
 
     // Send welcome message using smartMessage (edit if exists, else send new)
     await smartMessage.send(ctx, {
-      text: 'Status Stock\n\nРоль:',
+      text: messages.start.welcome,
       keyboard: mainMenu(showWorkspace)
     });
   } catch (error) {

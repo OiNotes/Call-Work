@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { createTextMessageContext, createCallbackContext, createAuthedContext } from '../fixtures/contexts.js';
+import { createTextMessageContext, createCallbackContext } from '../fixtures/contexts.js';
 import createShopScene from '../../src/scenes/createShop.js';
 
 describe('Create Shop E2E Flow', () => {

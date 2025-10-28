@@ -5,6 +5,8 @@ import { isNoiseCommand } from '../../utils/fuzzyMatch.js';
 import logger from '../../utils/logger.js';
 import { reply as cleanReply } from '../../utils/cleanReply.js';
 import * as smartMessage from '../../utils/smartMessage.js';
+import { messages } from '../../texts/messages.js';
+const { seller: { aiProducts: aiMessages } } = messages;
 
 /**
  * AI Product Management Handler
@@ -59,7 +61,7 @@ export async function handleAIProductCommand(ctx) {
         userId: ctx.from.id,
         message: userMessage.slice(0, 50)
       });
-      await smartMessage.send(ctx, { text: '⏳ Обрабатываю предыдущую команду. Подождите...' });
+      await smartMessage.send(ctx, { text: aiMessages.processing });
       return;
     }
 
@@ -78,7 +80,7 @@ export async function handleAIProductCommand(ctx) {
 
     // Check rate limit
     if (ctx.session.aiCommands.length >= 10) {
-      await smartMessage.send(ctx, { text: '⏳ Слишком много команд. Подождите минуту.' });
+      await smartMessage.send(ctx, { text: aiMessages.rateLimitReached });
       return;
     }
 
@@ -273,8 +275,11 @@ export async function handleAISelection(ctx) {
  */
 export async function handleAICancel(ctx) {
   try {
-    await ctx.answerCbQuery();
-    await ctx.editMessageText('◀️ Назад');
+    await ctx.answerCbQuery(); // Silent
+    // Silent transition - delete clarification message
+    await ctx.deleteMessage().catch((err) => {
+      logger.debug('Could not delete AI clarification message:', err.message);
+    });
     delete ctx.session.pendingAI;
   } catch (error) {
     logger.error('AI cancel handler error:', error);

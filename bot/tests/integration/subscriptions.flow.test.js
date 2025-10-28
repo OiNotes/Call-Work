@@ -64,7 +64,7 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Проверяем что есть кнопка "Подписаться"
     const markup1 = testBot.getLastMarkup();
-    const subscribeBtn = findButton('🔔 Подписаться', markup1);
+    const subscribeBtn = findButton('Подписаться', markup1);
     expect(subscribeBtn).toBeTruthy();
     expect(subscribeBtn.callback_data).toBe(`subscribe:${shopId}`);
 
@@ -82,19 +82,23 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
     // ✅ FIX: Дать время на async subscribe API call
     await new Promise(resolve => setImmediate(resolve));
 
-    // Проверяем answerCbQuery с успешным сообщением
+    // Проверяем answerCbQuery (toast shows "Готово")
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
     const answers = testBot.captor.getAnswers();
-    expect(answers.some(a => a.text === '✅ Подписались!')).toBe(true);
+    expect(answers.some(a => a.text && a.text.includes('Готово'))).toBe(true);
+
+    // Проверяем что сообщение содержит подтверждение подписки
+    const messageText = testBot.getLastReplyText();
+    expect(messageText).toContain('Подписка оформлена');
 
     // Проверяем что кнопка изменилась на "Подписан"
     const markup2 = testBot.getLastMarkup();
-    const subscribedBtn = findButton('✅ Подписан', markup2);
+    const subscribedBtn = findButton('Подписан', markup2);
     expect(subscribedBtn).toBeTruthy();
     expect(subscribedBtn.callback_data).toBe('noop:subscribed');
 
     // Проверяем что есть кнопка "Отписаться"
-    const unsubscribeBtn = findButton('🔕 Отписаться', markup2);
+    const unsubscribeBtn = findButton('Отписаться', markup2);
     expect(unsubscribeBtn).toBeTruthy();
     expect(unsubscribeBtn.callback_data).toBe(`unsubscribe:${shopId}`);
 
@@ -113,11 +117,11 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Проверяем что показали информационное сообщение
     const answers2 = testBot.captor.getAnswers();
-    expect(answers2.some(a => a.text === 'ℹ️ Вы уже подписаны на этот магазин')).toBe(true);
+    expect(answers2.some(a => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
 
     // Проверяем что markup остался с кнопкой "Подписан"
     const markup3 = testBot.getLastMarkup();
-    const stillSubscribedBtn = findButton('✅ Подписан', markup3);
+    const stillSubscribedBtn = findButton('Подписан', markup3);
     expect(stillSubscribedBtn).toBeTruthy();
 
     testBot.captor.reset();
@@ -136,12 +140,12 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Проверяем что кнопка вернулась к "Подписаться"
     const markup4 = testBot.getLastMarkup();
-    const resubscribeBtn = findButton('🔔 Подписаться', markup4);
+    const resubscribeBtn = findButton('Подписаться', markup4);
     expect(resubscribeBtn).toBeTruthy();
     expect(resubscribeBtn.callback_data).toBe(`subscribe:${shopId}`);
 
     // Проверяем что нет кнопки "Подписан"
-    const noSubscribedBtn = findButton('✅ Подписан', markup4);
+    const noSubscribedBtn = findButton('Подписан', markup4);
     expect(noSubscribedBtn).toBeNull();
   });
 
@@ -158,7 +162,7 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Проверяем что показали ошибку
     const answers = testBot.captor.getAnswers();
-    expect(answers.some(a => a.text === '❌ Нельзя подписаться на свой магазин')).toBe(true);
+    expect(answers.some(a => a.text && a.text.includes('Нельзя подписаться на собственный магазин'))).toBe(true);
   });
 
   it('отписка без токена → ошибка', async () => {
@@ -175,7 +179,7 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Проверяем что показали ошибку авторизации
     const answers = noTokenBot.captor.getAnswers();
-    expect(answers.some(a => a.text === 'Нет токена авторизации')).toBe(true);
+    expect(answers.some(a => a.text && a.text.includes('Требуется авторизация'))).toBe(true);
 
     noTokenBot.reset();
   });

@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
-import { commandUpdate, callbackUpdate } from '../helpers/updateFactories.js';
+import { commandUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
 
 describe('/start Flow - Role Memory (P0)', () => {
@@ -42,9 +42,9 @@ describe('/start Flow - Role Memory (P0)', () => {
     // Отправляем /start
     await testBot.handleUpdate(commandUpdate('start'));
 
-    // Проверяем что показали выбор роли (minimalist: "Роль:")
+    // Проверяем что показали выбор роли (новый welcome message)
     const lastText = testBot.getLastReplyText();
-    expect(lastText).toContain('Роль:');
+    expect(lastText).toContain('Status Stock');
   });
 
   it.skip('повторный /start с ролью buyer → сразу buyer ЛК (БЕЗ вопроса о роли)', async () => {

@@ -46,7 +46,7 @@ export const validateWalletAddress = (address, currency) => {
  * Sanitize user input
  */
 export const sanitizeInput = (str) => {
-  if (typeof str !== 'string') return str;
+  if (typeof str !== 'string') {return str;}
 
   return str
     .trim()
@@ -133,7 +133,7 @@ export const safeJSONParse = (str, defaultValue = null) => {
  * Calculate percentage
  */
 export const calculatePercentage = (value, total) => {
-  if (total === 0) return 0;
+  if (total === 0) {return 0;}
   return ((value / total) * 100).toFixed(2);
 };
 
@@ -149,7 +149,7 @@ export const isValidEmail = (email) => {
  * Mask sensitive data
  */
 export const maskString = (str, visibleChars = 4) => {
-  if (!str || str.length <= visibleChars * 2) return str;
+  if (!str || str.length <= visibleChars * 2) {return str;}
 
   const start = str.substring(0, visibleChars);
   const end = str.substring(str.length - visibleChars);
@@ -170,9 +170,9 @@ export const getRelativeTime = (timestamp) => {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  if (days > 0) {return `${days} day${days > 1 ? 's' : ''} ago`;}
+  if (hours > 0) {return `${hours} hour${hours > 1 ? 's' : ''} ago`;}
+  if (minutes > 0) {return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;}
   return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
 };
 

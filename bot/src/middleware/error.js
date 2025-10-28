@@ -1,6 +1,8 @@
 import logger from '../utils/logger.js';
 import { mainMenuButton } from '../keyboards/common.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
+import { messages } from '../texts/messages.js';
+const { general: generalMessages } = messages;
 
 /**
  * Global error handling middleware
@@ -16,7 +18,7 @@ const errorMiddleware = async (ctx, next) => {
     });
 
     // User-friendly error message
-    const errorMessage = 'Произошла ошибка\n\nПопробуйте позже';
+    const errorMessage = generalMessages.actionFailed;
 
     try {
       if (ctx.callbackQuery) {

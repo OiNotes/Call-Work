@@ -1,9 +1,11 @@
 import { buyerMenu, buyerMenuNoShop, shopActionsKeyboard } from '../../keyboards/buyer.js';
 import { subscriptionApi, shopApi, authApi, orderApi, productApi } from '../../utils/api.js';
-import { formatPrice, formatOrderStatus } from '../../utils/format.js';
-import { formatBuyerOrders, formatSubscriptions, formatShopInfo, splitProductsByAvailability, formatProductSectionList } from '../../utils/minimalist.js';
+import { splitProductsByAvailability } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
 import * as smartMessage from '../../utils/smartMessage.js';
+import { messages, formatters } from '../../texts/messages.js';
+
+const { buyer: buyerMessages, general: generalMessages } = messages;
 
 /**
  * Setup buyer-related handlers
@@ -66,6 +68,21 @@ const resolveSectionCounts = async (shopId, products = null) => {
   }
 };
 
+const buildSubscriptionsMessage = (subscriptions) => {
+  if (!subscriptions?.length) {
+    return buyerMessages.noSubscriptions;
+  }
+
+  const list = formatters.subscriptions(subscriptions);
+  return `${buyerMessages.listSubscriptionsTitle(subscriptions.length)}\n${list}`;
+};
+
+const buildShopInfoMessage = (shop, sections) => formatters.shopInfo(shop, sections);
+
+const buildProductSectionMessage = (section, shopName, products) => (
+  formatters.productSection(section, shopName, products)
+);
+
 /**
  * Handle buyer role selection
  */
@@ -98,7 +115,7 @@ export const handleBuyerRole = async (ctx) => {
         if (!shops || shops.length === 0) {
           // No shop - show CTA to create shop
           await smartMessage.send(ctx, {
-            text: 'Мои покупки\n\nПродавец — $25',
+            text: buyerMessages.panel,
             keyboard: buyerMenuNoShop
           });
           logger.info(`Buyer ${ctx.from.id} has no shop, showing CTA`);
@@ -111,7 +128,7 @@ export const handleBuyerRole = async (ctx) => {
     }
 
     await smartMessage.send(ctx, {
-      text: 'Мои покупки',
+      text: buyerMessages.panel,
       keyboard: buyerMenu
     });
   } catch (error) {
@@ -119,7 +136,7 @@ export const handleBuyerRole = async (ctx) => {
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await smartMessage.send(ctx, {
-        text: 'Произошла ошибка\n\nПопробуйте позже',
+        text: generalMessages.actionFailed,
         keyboard: buyerMenu
       });
     } catch (replyError) {
@@ -142,7 +159,7 @@ const handleSearchShops = async (ctx) => {
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await smartMessage.send(ctx, {
-        text: 'Произошла ошибка\n\nПопробуйте позже',
+        text: generalMessages.actionFailed,
         keyboard: buyerMenu
       });
     } catch (replyError) {
@@ -161,7 +178,7 @@ const handleSubscriptions = async (ctx) => {
     // Get user subscriptions
     if (!ctx.session.token) {
       await smartMessage.send(ctx, {
-        text: 'Необходима авторизация. Перезапустите бота командой /start',
+        text: generalMessages.authorizationRequired,
         keyboard: buyerMenu
       });
       return;
@@ -169,8 +186,7 @@ const handleSubscriptions = async (ctx) => {
 
     const subscriptions = await subscriptionApi.getMySubscriptions(ctx.session.token);
 
-    // Use minimalist formatter
-    const message = formatSubscriptions(subscriptions);
+    const message = buildSubscriptionsMessage(subscriptions);
 
     await smartMessage.send(ctx, {
       text: message,
@@ -179,7 +195,7 @@ const handleSubscriptions = async (ctx) => {
   } catch (error) {
     logger.error('Error fetching subscriptions:', error);
     await smartMessage.send(ctx, {
-      text: 'Не удалось загрузить подписки\n\nПопробуйте позже',
+      text: generalMessages.actionFailed,
       keyboard: buyerMenu
     });
   }
@@ -194,7 +210,7 @@ const handleSubscribe = async (ctx) => {
 
     // Check authentication
     if (!ctx.session.token) {
-      await ctx.answerCbQuery('Нет токена авторизации', { show_alert: true });
+      await ctx.answerCbQuery(generalMessages.authorizationRequired, { show_alert: true });
       return;
     }
 
@@ -202,19 +218,14 @@ const handleSubscribe = async (ctx) => {
     const checkResult = await subscriptionApi.checkSubscription(shopId, ctx.session.token);
 
     if (checkResult.subscribed) {
-      // Already subscribed - show info message
-      await ctx.answerCbQuery('ℹ️ Вы уже подписаны на этот магазин');
+      await ctx.answerCbQuery(buyerMessages.subscriptionAlreadyToast);
 
-      // Get shop details for message
-      const shop = await shopApi.getShop(shopId);
+      const counts = await resolveSectionCounts(shopId);
 
-      // Update message with subscribed state
-    const counts = await resolveSectionCounts(shopId);
-
-    await smartMessage.send(ctx, {
-      text: `✓ Подписка активна: ${shop.name}`,
-      keyboard: shopActionsKeyboard(shopId, true, counts)
-    });
+      await smartMessage.send(ctx, {
+        text: buyerMessages.subscriptionActive(),
+        keyboard: shopActionsKeyboard(shopId, true, counts)
+      });
 
       logger.info(`User ${ctx.from.id} already subscribed to shop ${shopId}`);
       return;
@@ -225,11 +236,10 @@ const handleSubscribe = async (ctx) => {
     const shop = await shopApi.getShop(shopId);
     const counts = await resolveSectionCounts(shopId);
 
-    // Success - answer callback query
-    await ctx.answerCbQuery('✅ Подписались!');
+    await ctx.answerCbQuery(generalMessages.done);
 
     await smartMessage.send(ctx, {
-      text: `✓ Подписались: ${shop.name}`,
+      text: buyerMessages.subscriptionAdded(shop.name),
       keyboard: shopActionsKeyboard(shopId, true, counts)
     });
 
@@ -241,11 +251,11 @@ const handleSubscribe = async (ctx) => {
     const errorMsg = error.response?.data?.error;
 
     if (errorMsg === 'Cannot subscribe to your own shop') {
-      await ctx.answerCbQuery('❌ Нельзя подписаться на свой магазин', { show_alert: true });
+      await ctx.answerCbQuery(buyerMessages.subscriptionOwnShop, { show_alert: true });
     } else if (errorMsg === 'Already subscribed to this shop') {
-      await ctx.answerCbQuery('ℹ️ Вы уже подписаны', { show_alert: true });
+      await ctx.answerCbQuery(buyerMessages.subscriptionAlreadyToast, { show_alert: true });
     } else {
-      await ctx.answerCbQuery('❌ Ошибка подписки', { show_alert: true });
+      await ctx.answerCbQuery(buyerMessages.subscriptionError, { show_alert: true });
     }
   }
 };
@@ -259,7 +269,7 @@ const handleUnsubscribe = async (ctx) => {
 
     // Check authentication
     if (!ctx.session.token) {
-      await ctx.answerCbQuery('Нет токена авторизации', { show_alert: true });
+      await ctx.answerCbQuery(generalMessages.authorizationRequired, { show_alert: true });
       return;
     }
 
@@ -269,18 +279,17 @@ const handleUnsubscribe = async (ctx) => {
     const shop = await shopApi.getShop(shopId);
     const counts = await resolveSectionCounts(shopId);
 
-    // Answer callback query AFTER successful API call
-    await ctx.answerCbQuery('✓ Отписались');
+    await ctx.answerCbQuery(generalMessages.done);
 
     await smartMessage.send(ctx, {
-      text: `✓ Отписались: ${shop.name}`,
+      text: buyerMessages.subscriptionRemoved(shop.name),
       keyboard: shopActionsKeyboard(shopId, false, counts)
     });
 
     logger.info(`User ${ctx.from.id} unsubscribed from shop ${shopId}`);
   } catch (error) {
     logger.error('Error unsubscribing from shop:', error);
-    await ctx.answerCbQuery('Ошибка отписки', { show_alert: true });
+    await ctx.answerCbQuery(buyerMessages.unsubscribeError, { show_alert: true });
   }
 };
 
@@ -294,7 +303,7 @@ const handleOrders = async (ctx) => {
     // Check authentication
     if (!ctx.session.token) {
       await smartMessage.send(ctx, {
-        text: 'Необходима авторизация. Перезапустите бота командой /start',
+        text: generalMessages.authorizationRequired,
         keyboard: buyerMenu
       });
       return;
@@ -303,8 +312,9 @@ const handleOrders = async (ctx) => {
     // Get buyer orders
     const orders = await orderApi.getMyOrders(ctx.session.token);
 
-    // Use minimalist formatter (9 lines → 4 lines)
-    const message = formatBuyerOrders(orders);
+    const message = orders.length
+      ? `${buyerMessages.ordersTitle(orders.length)}\n${formatters.orders(orders)}`
+      : buyerMessages.ordersEmpty;
 
     await smartMessage.send(ctx, {
       text: message,
@@ -314,7 +324,7 @@ const handleOrders = async (ctx) => {
   } catch (error) {
     logger.error('Error fetching orders:', error);
     await smartMessage.send(ctx, {
-      text: 'Ошибка загрузки',
+      text: generalMessages.actionFailed,
       keyboard: buyerMenu
     });
   }
@@ -325,7 +335,7 @@ const handleOrders = async (ctx) => {
  */
 const handleNoop = async (ctx) => {
   try {
-    await ctx.answerCbQuery('ℹ️ Вы уже подписаны на этот магазин');
+    await ctx.answerCbQuery(buyerMessages.subscriptionAlreadyToast);
   } catch (error) {
     logger.error('Error in noop handler:', error);
   }
@@ -344,7 +354,7 @@ const handleShopView = async (ctx) => {
 
     const products = await productApi.getShopProducts(shopId);
     const sectioned = splitProductsByAvailability(products);
-    const message = formatShopInfo(shop, products);
+    const message = buildShopInfoMessage(shop, sectioned);
     const isSubscribed = await resolveSubscription(ctx, shopId);
 
     await smartMessage.send(ctx, {
@@ -359,7 +369,7 @@ const handleShopView = async (ctx) => {
   } catch (error) {
     logger.error('Error viewing shop:', error);
     await smartMessage.send(ctx, {
-      text: 'Не удалось загрузить информацию о магазине\n\nПопробуйте позже',
+      text: generalMessages.actionFailed,
       keyboard: buyerMenu
     });
   }
@@ -380,7 +390,7 @@ const handleShopSection = async (ctx, section) => {
 
     const sectioned = splitProductsByAvailability(products);
     const list = section === 'preorder' ? sectioned.preorder : sectioned.stock;
-    const message = formatProductSectionList(section, shop.name, list);
+    const message = buildProductSectionMessage(section, shop.name, list);
     const isSubscribed = await resolveSubscription(ctx, shopId);
 
     await smartMessage.send(ctx, {
@@ -395,7 +405,7 @@ const handleShopSection = async (ctx, section) => {
   } catch (error) {
     logger.error('Error viewing shop section:', error);
     await smartMessage.send(ctx, {
-      text: 'Не удалось загрузить товары\n\nПопробуйте позже',
+      text: generalMessages.actionFailed,
       keyboard: buyerMenu
     });
   }

@@ -36,6 +36,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'products',
           label: 'Товары',
+          description: 'Управление каталогом товаров',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -45,6 +46,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'subscription',
           label: 'Подписка',
+          description: 'Тарифы и оплата',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -54,6 +56,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'workspace',
           label: 'Workspace',
+          description: 'Работники и доступы',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -63,6 +66,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'follows',
           label: 'Follows',
+          description: 'Отслеживайте другие магазины',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -77,6 +81,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'wallet',
           label: t('settings.myWallet'),
+          description: 'Мои крипто-кошельки',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -86,6 +91,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'orders',
           label: t('settings.myOrders'),
+          description: 'История покупок',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -100,6 +106,7 @@ const getSettingsSections = (t, lang) => {
         {
           id: 'language',
           label: t('settings.language'),
+          description: 'Выбор языка интерфейса',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
@@ -237,8 +244,8 @@ export default function Settings() {
                         !isLast ? 'border-b border-white/5' : ''
                       }`}
                       style={{
-                        height: '64px',
-                        padding: '0 18px',
+                        minHeight: '72px',
+                        padding: '16px 18px',
                         borderRadius: 0,
                         background: 'transparent',
                       }}
@@ -246,7 +253,12 @@ export default function Settings() {
                       <div className="flex items-center justify-center text-gray-300 rounded-xl bg-white/5 w-10 h-10">
                         {item.icon}
                       </div>
-                      <span className="flex-1 text-white font-medium text-base">{item.label}</span>
+                      <div className="flex-1">
+                        <span className="text-white font-medium text-base block">{item.label}</span>
+                        {item.description && (
+                          <span className="text-gray-400 text-xs block mt-0.5">{item.description}</span>
+                        )}
+                      </div>
                       {item.value && (
                         <span className="text-gray-300 text-sm">{item.value}</span>
                       )}

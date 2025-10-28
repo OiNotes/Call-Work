@@ -43,7 +43,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     const text = testBot.getLastReplyText();
     // FIX BUG #4: Updated error message
-    expect(text).toContain('Введите число (ID магазина)');
+    expect(text).toContain('Нужен числовой ID');
 
     // Verify API was NOT called
     expect(mock.history.get.length).toBe(0);
@@ -59,7 +59,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     const text = testBot.getLastReplyText();
     // FIX BUG #4: Updated error message
-    expect(text).toContain('Введите число (ID магазина)');
+    expect(text).toContain('Нужен числовой ID');
   });
 
   it('markup < 1% → ошибка валидации', async () => {
@@ -89,7 +89,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка должна быть 1-500%');
+    expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
     // Verify POST was NOT called
     expect(mock.history.post.length).toBe(0);
@@ -120,7 +120,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка должна быть 1-500%');
+    expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
     expect(mock.history.post.length).toBe(0);
   });
@@ -150,7 +150,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка должна быть 1-500%');
+    expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
   });
 
   it('валидный markup (краевой случай 1%) → успех', async () => {
@@ -238,7 +238,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('Отменено');
+    expect(text2).toContain('🔧 Инструменты'); // Cancel returns to seller tools menu
 
     // Verify no API calls
     expect(mock.history.get.length).toBe(0);
@@ -271,7 +271,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = noTokenBot.getLastReplyText();
-    expect(text).toContain('Ошибка авторизации');
+    expect(text).toContain('Требуется авторизация');
 
     expect(mock.history.post.length).toBe(0);
 
@@ -292,7 +292,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = noShopBot.getLastReplyText();
-    expect(text).toContain('Сначала создайте магазин');
+    expect(text).toContain('Создайте магазин');
 
     expect(mock.history.get.length).toBe(0);
 
@@ -324,7 +324,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Ошибка');
+    expect(text).toContain('Не удалось оформить подписку');
 
     // Verify POST was attempted
     expect(mock.history.post.length).toBe(1);

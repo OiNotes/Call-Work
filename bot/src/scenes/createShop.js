@@ -4,23 +4,38 @@ import { shopApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
+import { messages } from '../texts/messages.js';
+
+const { seller: sellerMessages, general: generalMessages, start: startMessages } = messages;
 
 /**
  * Create Shop Scene - Simplified (NO PAYMENT)
  * Steps:
  * 1. Enter shop name
- * 2. Complete (create shop)
+ * 2. Complete (create shop with tier/promo from chooseTier scene)
  */
 
 // Step 1: Enter shop name
 const enterShopName = async (ctx) => {
   try {
-    logger.info('shop_create_step:name', { userId: ctx.from.id });
+    // Get tier and promo from scene state (passed from chooseTier)
+    const sceneState = ctx.scene.state;
+    if (sceneState.tier) {
+      ctx.wizard.state.tier = sceneState.tier;
+    }
+    if (sceneState.promoCode) {
+      ctx.wizard.state.promoCode = sceneState.promoCode;
+    }
 
-    await cleanReply(ctx,
-      'Название (3-100 символов):',
-      cancelButton
-    );
+    logger.info('shop_create_step:name', {
+      userId: ctx.from.id,
+      tier: ctx.wizard.state.tier,
+      hasPromo: !!ctx.wizard.state.promoCode
+    });
+
+    const message = `${sellerMessages.createShopNamePrompt}\n${sellerMessages.createShopNameHint}`;
+
+    await cleanReply(ctx, message, cancelButton);
 
     return ctx.wizard.next();
   } catch (error) {
@@ -29,12 +44,12 @@ const enterShopName = async (ctx) => {
   }
 };
 
-// Step 2: Handle shop name and create
-const handleShopName = async (ctx) => {
+// Step 2: Handle shop name and create shop immediately
+const handleShopNameAndCreate = async (ctx) => {
   try {
     // Get shop name from message
     if (!ctx.message || !ctx.message.text) {
-      await cleanReply(ctx, 'Введите название магазина');
+      await cleanReply(ctx, sellerMessages.createShopNamePrompt);
       return;
     }
 
@@ -46,24 +61,46 @@ const handleShopName = async (ctx) => {
 
     const shopName = ctx.message.text.trim();
 
-    if (shopName.length < 3) {
-      await cleanReply(ctx, 'Минимум 3 символа');
+    // Validation: length 3-100 characters
+    if (shopName.length < 3 || shopName.length > 100) {
+      await cleanReply(ctx, `${sellerMessages.createShopNameInvalidLength}\n${sellerMessages.createShopNameHint}`);
       return;
     }
 
-    if (shopName.length > 100) {
-      await cleanReply(ctx, 'Макс 100 символов');
+    const validNamePattern = /^[a-zA-Z0-9_]+$/u;
+    if (!validNamePattern.test(shopName)) {
+      await cleanReply(ctx, `${sellerMessages.createShopNameInvalidChars}\n${sellerMessages.createShopNameHint}`);
       return;
     }
+
+    // Create shop immediately
+    await createShop(ctx, shopName);
+  } catch (error) {
+    logger.error('Error creating shop:', error);
+
+    await smartMessage.send(ctx, {
+      text: sellerMessages.createShopError,
+      keyboard: successButtons
+    });
+
+    return await ctx.scene.leave();
+  }
+};
+
+// Helper function to create shop
+const createShop = async (ctx, shopName) => {
+  let loadingMsg = null;
+  try {
+    // Get tier and promo from wizard state (set from chooseTier scene)
+    const tier = ctx.wizard.state.tier || 'basic';
+    const promoCode = ctx.wizard.state.promoCode || '';
 
     logger.info('shop_create_step:save', {
       userId: ctx.from.id,
-      shopName: shopName
+      shopName,
+      tier,
+      promoProvided: Boolean(promoCode)
     });
-
-    // Show loading message (will be deleted after)
-    let loadingMsg = null;
-    loadingMsg = await cleanReply(ctx, 'Сохраняем...');
 
     if (!ctx.session.token) {
       logger.error('Missing auth token when creating shop', {
@@ -71,69 +108,63 @@ const handleShopName = async (ctx) => {
         session: ctx.session
       });
 
-      // Delete loading message first
-      try {
-        await ctx.deleteMessage(loadingMsg.message_id);
-      } catch (deleteError) {
-        logger.debug(`Could not delete loading message:`, deleteError.message);
-      }
-
       await cleanReply(
         ctx,
-        'Ошибка авторизации. Попробуйте снова через главное меню',
+        generalMessages.authorizationRequired,
         successButtons
       );
       return await ctx.scene.leave();
     }
 
-    // Create shop via backend (NO PAYMENT)
-    const shop = await shopApi.createShop({
-      name: shopName,
-      description: `Магазин ${shopName}`
-    }, ctx.session.token);
+    loadingMsg = await cleanReply(ctx, sellerMessages.createShopSaving);
 
-    // Validate shop object
+    const payload = {
+      name: shopName,
+      description: `Магазин ${shopName}`,
+      tier: tier
+    };
+
+    if (promoCode) {
+      payload.promoCode = promoCode;
+    }
+
+    const shop = await shopApi.createShop(payload, ctx.session.token);
+
     if (!shop || !shop.id) {
       logger.error('Shop creation failed: invalid shop object received', { shop });
       throw new Error('Invalid shop object from API');
     }
 
-    // Update session
     ctx.session.shopId = shop.id;
     ctx.session.shopName = shop.name;
-
-    // Validate session save
-    if (!ctx.session.shopId) {
-      logger.error('Failed to save shopId to session!', { shop, session: ctx.session });
-      throw new Error('Session save failed');
-    }
 
     logger.info('shop_created', {
       shopId: shop.id,
       shopName: shop.name,
       userId: ctx.from.id,
-      savedToSession: ctx.session.shopId === shop.id
+      tier: shop.tier
     });
 
-    // Delete loading message
     try {
       await ctx.deleteMessage(loadingMsg.message_id);
     } catch (error) {
       logger.debug(`Could not delete loading message:`, error.message);
     }
 
-    // Send success message using smartMessage (will be editable)
+    const tierLabel = shop.tier?.toUpperCase?.() || shop.tier || 'BASIC';
+    const successText = promoCode
+      ? sellerMessages.createShopPromoSuccess(shop.name)
+      : sellerMessages.createShopSuccess(shop.name, tierLabel);
+
     await smartMessage.send(ctx, {
-      text: `✅ ${shopName}`,
+      text: successText,
       keyboard: successButtons
     });
 
-    // Leave scene (cleanup will happen in scene.leave())
     return await ctx.scene.leave();
   } catch (error) {
     logger.error('Error creating shop:', error);
 
-    // Delete loading message if exists
     if (loadingMsg) {
       try {
         await ctx.deleteMessage(loadingMsg.message_id);
@@ -142,8 +173,23 @@ const handleShopName = async (ctx) => {
       }
     }
 
+    // Parse backend error message
+    const errorMsg = error.response?.data?.error || error.message || '';
+
+    // Handle "Shop name already taken" error
+    if (errorMsg.toLowerCase().includes('already taken') ||
+        errorMsg.toLowerCase().includes('уже занято') ||
+        errorMsg.toLowerCase().includes('already exists')) {
+
+      await cleanReply(ctx, sellerMessages.createShopNameTaken);
+
+      // Don't leave scene - allow user to try again
+      return;
+    }
+
+    // Generic error - leave scene
     await smartMessage.send(ctx, {
-      text: 'Ошибка. Попробуйте позже',
+      text: sellerMessages.createShopError,
       keyboard: successButtons
     });
 
@@ -155,7 +201,7 @@ const handleShopName = async (ctx) => {
 const createShopScene = new Scenes.WizardScene(
   'createShop',
   enterShopName,
-  handleShopName
+  handleShopNameAndCreate
 );
 
 // Handle scene leave
@@ -178,21 +224,19 @@ createShopScene.leave(async (ctx) => {
 // Handle cancel action within scene
 createShopScene.action('cancel_scene', async (ctx) => {
   try {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery(); // Silent
     logger.info('shop_create_cancelled', { userId: ctx.from.id });
 
     await ctx.scene.leave();
 
-    await smartMessage.send(ctx, {
-      text: 'Отменено',
-      keyboard: successButtons
-    });
+    // Silent transition - edit message without "Отменено" text
+    await ctx.editMessageText(startMessages.welcome, successButtons);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await smartMessage.send(ctx, {
-        text: 'Произошла ошибка при отмене\n\nПопробуйте позже',
+        text: generalMessages.actionFailed,
         keyboard: successButtons
       });
     } catch (replyError) {

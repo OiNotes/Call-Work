@@ -12,7 +12,7 @@ import WAValidator from 'wallet-validator';
  */
 export const validateCryptoAddress = (address, crypto) => {
   try {
-    if (!address || typeof address !== 'string') return false;
+    if (!address || typeof address !== 'string') {return false;}
 
     const currency = crypto.toLowerCase();
 

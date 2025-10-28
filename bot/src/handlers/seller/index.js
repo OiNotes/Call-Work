@@ -1,38 +1,27 @@
 import { Markup } from 'telegraf';
-import { sellerMenu, sellerMenuNoShop, sellerToolsMenu, productsMenu, subscriptionStatusMenu } from '../../keyboards/seller.js';
+import { sellerMenu, sellerMenuNoShop, sellerToolsMenu } from '../../keyboards/seller.js';
 import { manageWorkersMenu, confirmWorkerRemoval } from '../../keyboards/workspace.js';
-import { shopApi, authApi, productApi, orderApi, workerApi } from '../../utils/api.js';
-import { formatProductsList, formatSalesList } from '../../utils/minimalist.js';
+import { shopApi, authApi, orderApi, workerApi } from '../../utils/api.js';
 import logger from '../../utils/logger.js';
-const editOrReply = async (ctx, text, markup, extra = {}) => {
-  const options = { ...extra };
+import { messages, buttons as buttonText } from '../../texts/messages.js';
+import { handleActiveOrders, handleOrderHistory, handleMarkShipped, handleMarkDelivered, handleCancelOrder } from './orders.js';
+import { showSellerToolsMenu } from '../../utils/sellerNavigation.js';
 
-  if (markup) {
-    if (markup.reply_markup) {
-      options.reply_markup = markup.reply_markup;
-    } else {
-      Object.assign(options, markup);
+const { seller: sellerMessages, general: generalMessages } = messages;
+
+/**
+ * Get seller menu with active orders count
+ */
+const getSellerMenu = async (ctx) => {
+  let activeCount = 0;
+  if (ctx.session.shopId && ctx.session.token) {
+    try {
+      activeCount = await orderApi.getActiveOrdersCount(ctx.session.shopId, ctx.session.token);
+    } catch (error) {
+      logger.error('Failed to get active orders count:', error);
     }
   }
-
-  try {
-    const edited = await ctx.editMessageText(text, options);
-    return edited;
-  } catch (error) {
-    const description = error?.response?.description || '';
-
-    if (description.includes('message is not modified')) {
-      return null;
-    }
-
-    logger.warn('edit_message_fallback', {
-      userId: ctx.from?.id,
-      description
-    });
-
-    const sent = await ctx.reply(text, options);
-    return sent;
-  }
+  return sellerMenu(activeCount);
 };
 
 const getWorkerDisplayName = (worker) => {
@@ -52,55 +41,89 @@ const getWorkerDisplayName = (worker) => {
 
 const buildWorkersListKeyboard = (workers) => {
   const buttons = workers.map((worker) => [
-    Markup.button.callback(`🗑 ${getWorkerDisplayName(worker)}`, `workers:remove:${worker.id}`)
+    Markup.button.callback(getWorkerDisplayName(worker), `workers:remove:${worker.id}`)
   ]);
 
-  buttons.push([Markup.button.callback('➕ Добавить', 'workers:add')]);
-  buttons.push([Markup.button.callback('◀️ Назад', 'seller:workers')]);
+  buttons.push([Markup.button.callback(buttonText.addWorker, 'workers:add')]);
+  buttons.push([Markup.button.callback(buttonText.back, 'seller:workers')]);
 
   return Markup.inlineKeyboard(buttons);
 };
 
 const showWorkersList = async (ctx, options = {}) => {
   const shopName = ctx.session.shopName || 'Магазин';
+  const successPrefix = options.successMessage ? `${options.successMessage}\n\n` : '';
 
   try {
     const workers = await workerApi.listWorkers(ctx.session.shopId, ctx.session.token);
     ctx.session.workerList = workers;
 
     if (!Array.isArray(workers) || workers.length === 0) {
-      const prefix = options.successMessage ? `${options.successMessage}\n\n` : '';
-      await editOrReply(
-        ctx,
-        `${prefix}Работники магазина: ${shopName}\n\nПока нет работников`,
-        manageWorkersMenu(shopName)
+      await ctx.reply(
+        `${successPrefix}${sellerMessages.noWorkers(shopName)}`,
+        manageWorkersMenu()
       );
       return;
     }
 
-    const lines = workers.map((worker, index) => {
-      const name = getWorkerDisplayName(worker);
-      return `${index + 1}. ${name}`;
-    }).join('\n');
-
-    const prefix = options.successMessage ? `${options.successMessage}\n\n` : '';
-    await editOrReply(
-      ctx,
-      `${prefix}Работники магазина: ${shopName}\n\n${lines}\n\nВыберите сотрудника для удаления:`,
+    const lines = workers.map((worker) => `• ${getWorkerDisplayName(worker)}`).join('\n');
+    const header = sellerMessages.workersListTitle(shopName);
+    const instruction = sellerMessages.workersListInstruction;
+    await ctx.reply(
+      `${successPrefix}${header}\n\n${instruction}\n${lines}`,
       buildWorkersListKeyboard(workers)
     );
   } catch (error) {
     logger.error('Error fetching workers:', error);
-    await editOrReply(
-      ctx,
-      'Ошибка загрузки',
-      manageWorkersMenu(shopName)
+    await ctx.reply(
+      generalMessages.actionFailed,
+      manageWorkersMenu()
     );
   }
 };
 
+const formatSubscriptionStatus = (data) => {
+  const tier = data.tier || 'basic';
+  const status = data.status || (data.currentSubscription ? 'active' : 'inactive');
+
+  // Prepare expiresAt date
+  const dateSource = data.nextPaymentDue || data.periodEnd || data.currentSubscription?.period_end || null;
+
+  // Use new detailed messages based on tier
+  if (tier === 'basic') {
+    return sellerMessages.subscriptionBasicInfo({ status });
+  }
+
+  if (tier === 'pro') {
+    return sellerMessages.subscriptionProInfo({ status, renewDate: dateSource });
+  }
+
+  // Fallback for unknown tier
+  const fallbackDate = dateSource ? new Date(dateSource).toLocaleDateString('ru-RU') : '—';
+  return `Тариф: ${tier}\nСтатус: ${status}\nДействителен до: ${fallbackDate}`;
+};
+
+const buildSubscriptionKeyboard = (data) => {
+  const buttons = [];
+  const status = data.status || (data.currentSubscription ? 'active' : 'inactive');
+
+  if (!data.currentSubscription || ['inactive', 'grace_period', 'past_due'].includes(status)) {
+    buttons.push([Markup.button.callback(buttonText.paySubscription, 'subscription:pay')]);
+  }
+
+  if (data.tier === 'basic') {
+    buttons.push([Markup.button.callback(buttonText.upgradeToPro, 'subscription:upgrade')]);
+  }
+
+  buttons.push([Markup.button.callback(buttonText.backToMenu, 'seller:menu')]);
+  return Markup.inlineKeyboard(buttons);
+};
+
 // Export follows handlers
 export * from './follows.js';
+
+// Export getSellerMenu helper for use in other seller modules
+export { getSellerMenu };
 
 /**
  * Handle seller role selection
@@ -125,29 +148,26 @@ export const handleSellerRole = async (ctx) => {
       logger.error('Failed to save role:', error);
     }
 
-    // Check if user has a shop
-    try {
-      // БАГ #9: Check if token exists
     if (!ctx.session.token) {
       logger.warn(`User ${ctx.from.id} has no token, cannot check shop`);
       ctx.session.shopId = null;
       ctx.session.shopName = null;
-      await editOrReply(ctx, 'Создать магазин - $25', sellerMenuNoShop);
+      ctx.session.shopTier = null;
+      await ctx.reply(sellerMessages.noShop, sellerMenuNoShop);
       return;
-      }
+    }
 
-      // Backend returns array, get first shop
+    try {
       const shops = await shopApi.getMyShop(ctx.session.token);
 
       logger.debug('Fetched user shops:', {
         userId: ctx.from.id,
         isArray: Array.isArray(shops),
-        shopsCount: Array.isArray(shops) ? shops.length : 'not array',
-        shops: shops
+        shopsCount: Array.isArray(shops) ? shops.length : 'not array'
       });
 
-      if (shops && Array.isArray(shops) && shops.length > 0) {
-        const shop = shops[0];  // Get first shop
+      if (Array.isArray(shops) && shops.length > 0) {
+        const shop = shops[0];
         ctx.session.shopId = shop.id;
         ctx.session.shopName = shop.name;
         ctx.session.shopTier = shop.tier;
@@ -155,40 +175,66 @@ export const handleSellerRole = async (ctx) => {
         logger.info('User shop loaded:', {
           userId: ctx.from.id,
           shopId: shop.id,
-          shopName: shop.name,
-          savedToSession: ctx.session.shopId === shop.id
+          shopName: shop.name
         });
 
-        await editOrReply(ctx, `Мой магазин: ${shop.name}\n\n`, sellerMenu(shop.name));
-      } else {
-        logger.info(`User ${ctx.from.id} has no shops, showing create shop menu`);
-        ctx.session.shopId = null;
-        ctx.session.shopName = null;
-        ctx.session.shopTier = null;
-        await editOrReply(ctx, 'Создать магазин — $25', sellerMenuNoShop);
+        // Получить аналитику за 7 дней
+        let weekRevenue = 0;
+        try {
+          const today = new Date();
+          const weekAgo = new Date(today);
+          weekAgo.setDate(today.getDate() - 7);
+          
+          const analytics = await orderApi.getAnalytics(
+            shop.id,
+            weekAgo.toISOString().split('T')[0],
+            today.toISOString().split('T')[0],
+            ctx.session.token
+          );
+          
+          weekRevenue = analytics.summary?.totalRevenue || 0;
+        } catch (error) {
+          logger.error('Failed to get week analytics:', error);
+          // Если ошибка - показываем 0
+        }
+
+        // Get active orders count for menu
+        let activeCount = 0;
+        try {
+          activeCount = await orderApi.getActiveOrdersCount(shop.id, ctx.session.token);
+        } catch (error) {
+          logger.error('Failed to get active orders count:', error);
+        }
+
+        // Форматировать заголовок с аналитикой
+        const header = sellerMessages.shopPanelWithStats(shop.name, weekRevenue, activeCount);
+
+        await ctx.reply(header, sellerMenu(activeCount));
+        return;
       }
+
+      logger.info(`User ${ctx.from.id} has no shops, showing create shop menu`);
+      ctx.session.shopId = null;
+      ctx.session.shopName = null;
+      ctx.session.shopTier = null;
+      await ctx.reply(sellerMessages.noShop, sellerMenuNoShop);
     } catch (error) {
       logger.error('Error checking shop:', error);
-      // БАГ #5: Better error handling
-      if (error.response?.status === 404 || error.response?.status === 401) {
-        // No shop found or auth failed
-        ctx.session.shopId = null;
-        ctx.session.shopName = null;
-        ctx.session.shopTier = null;
-        await editOrReply(ctx, 'Создать магазин - $25', sellerMenuNoShop);
-      } else {
-        // Real error (network, server)
-        ctx.session.shopId = null;
-        ctx.session.shopName = null;
-        ctx.session.shopTier = null;
-        await editOrReply(ctx, 'Ошибка загрузки', sellerMenuNoShop);
-      }
+      ctx.session.shopId = null;
+      ctx.session.shopName = null;
+      ctx.session.shopTier = null;
+
+      const message = (error.response?.status === 404 || error.response?.status === 401)
+        ? sellerMessages.noShop
+        : generalMessages.actionFailed;
+
+      await ctx.reply(message, sellerMenuNoShop);
     }
   } catch (error) {
     logger.error('Error in seller role handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      await editOrReply(ctx, 'Произошла ошибка\n\nПопробуйте позже', sellerMenuNoShop);
+      await ctx.reply(generalMessages.actionFailed, sellerMenuNoShop);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -202,13 +248,13 @@ const handleCreateShop = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Enter createShop scene
-    await ctx.scene.enter('createShop');
+    // Enter chooseTier scene first (user selects tier before creating shop)
+    await ctx.scene.enter('chooseTier');
   } catch (error) {
-    logger.error('Error entering createShop scene:', error);
+    logger.error('Error entering chooseTier scene:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      await editOrReply(ctx, 'Произошла ошибка\n\nПопробуйте позже', sellerMenuNoShop);
+      await ctx.reply(generalMessages.actionFailed, sellerMenuNoShop);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -224,7 +270,7 @@ const handleAddProduct = async (ctx) => {
 
     // Check if user has shop
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
@@ -234,47 +280,11 @@ const handleAddProduct = async (ctx) => {
     logger.error('Error entering addProduct scene:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      const shopName = ctx.session.shopName || 'Магазин';
-      await editOrReply(ctx, 'Произошла ошибка\n\nПопробуйте позже', sellerMenu(shopName));
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(generalMessages.actionFailed, menu);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
-  }
-};
-
-/**
- * Handle view sales
- */
-const handleSales = async (ctx) => {
-  try {
-    await ctx.answerCbQuery();
-
-    // Check if user has shop
-    if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
-      return;
-    }
-
-    // Check authentication
-    if (!ctx.session.token) {
-      const shopName = ctx.session.shopName || 'Магазин';
-      await editOrReply(ctx, 'Необходима авторизация. Перезапустите бота командой /start', sellerMenu(shopName));
-      return;
-    }
-
-    // Get shop orders (sales)
-    const orders = await orderApi.getShopOrders(ctx.session.shopId, ctx.session.token);
-    const shopName = ctx.session.shopName || 'Магазин';
-
-    // Use minimalist formatter (9 lines → 4 lines)
-    const message = formatSalesList(orders, shopName);
-
-    await editOrReply(ctx, message, sellerMenu(shopName));
-    logger.info(`User ${ctx.from.id} viewed sales (${orders.length} total)`);
-  } catch (error) {
-    logger.error('Error fetching sales:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await editOrReply(ctx, 'Ошибка загрузки', sellerMenu(shopName));
   }
 };
 
@@ -287,7 +297,7 @@ const handleWallets = async (ctx) => {
 
     // Check if user has shop
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
@@ -297,8 +307,8 @@ const handleWallets = async (ctx) => {
     logger.error('Error entering manageWallets scene:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      const shopName = ctx.session.shopName || 'Магазин';
-      await editOrReply(ctx, 'Произошла ошибка\n\nПопробуйте позже', sellerMenu(shopName));
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(generalMessages.actionFailed, menu);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -318,8 +328,23 @@ export const setupSellerHandlers = (bot) => {
   // Add product action
   bot.action('seller:add_product', handleAddProduct);
 
-  // View sales
-  bot.action('seller:sales', handleSales);
+  // Active orders management
+  bot.action('seller:active_orders', handleActiveOrders);
+  bot.action('seller:mark_shipped', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter('markOrdersShipped');
+    } catch (error) {
+      logger.error('Error entering markOrdersShipped scene:', error);
+      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
+    }
+  });
+  bot.action(/^order:ship:(\d+)$/, handleMarkShipped);
+  bot.action(/^order:deliver:(\d+)$/, handleMarkDelivered);
+  bot.action(/^order:cancel:(\d+)$/, handleCancelOrder);
+
+  // Order history (renamed from sales)
+  bot.action('seller:order_history', handleOrderHistory);
 
   // Manage wallets
   bot.action('seller:wallets', handleWallets);
@@ -331,17 +356,48 @@ export const setupSellerHandlers = (bot) => {
   bot.action(/^workers:remove:(\d+)$/, handleWorkerRemove);
   bot.action(/^workers:remove:confirm:(\d+)$/, handleWorkerRemoveConfirm);
 
-  // Channel migration (PRO feature)
   bot.action('seller:migrate_channel', async (ctx) => {
     try {
       await ctx.answerCbQuery();
+
+      if (!ctx.session.shopId) {
+        await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
+        return;
+      }
+
+      if (!ctx.session.token) {
+        await ctx.reply(generalMessages.authorizationRequired, sellerMenu());
+        return;
+      }
+
+      let isOwner = ctx.session.isShopOwner;
+      if (typeof isOwner !== 'boolean') {
+        try {
+          const shopResponse = await shopApi.getShop(ctx.session.shopId, ctx.session.token);
+          isOwner = shopResponse?.owner_id === ctx.session.user?.id;
+          if (shopResponse?.tier) {
+            ctx.session.shopTier = shopResponse.tier;
+          }
+          ctx.session.isShopOwner = isOwner;
+        } catch (error) {
+          logger.error('Failed to verify ownership for migrate_channel:', error);
+          isOwner = false;
+        }
+      }
+
+      if (!isOwner) {
+        await ctx.reply(sellerMessages.migration.accessDenied, sellerToolsMenu(false));
+        return;
+      }
+
       await ctx.scene.enter('migrate_channel');
     } catch (error) {
       logger.error('Error entering migrate_channel scene:', error);
-      await ctx.answerCbQuery('❌ Ошибка', { show_alert: true });
+      await ctx.reply(generalMessages.actionFailed, sellerToolsMenu(ctx.session.isShopOwner ?? false));
     }
   });
 
+  // Channel migration (PRO feature)
   // Subscription management
   bot.action('subscription:pay', async (ctx) => {
     try {
@@ -349,7 +405,7 @@ export const setupSellerHandlers = (bot) => {
       await ctx.scene.enter('pay_subscription');
     } catch (error) {
       logger.error('Error entering pay_subscription scene:', error);
-      await ctx.answerCbQuery('❌ Ошибка', { show_alert: true });
+      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
     }
   });
 
@@ -359,7 +415,7 @@ export const setupSellerHandlers = (bot) => {
       await ctx.scene.enter('upgrade_shop');
     } catch (error) {
       logger.error('Error entering upgrade_shop scene:', error);
-      await ctx.answerCbQuery('❌ Ошибка', { show_alert: true });
+      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
     }
   });
 
@@ -368,88 +424,38 @@ export const setupSellerHandlers = (bot) => {
       await ctx.answerCbQuery();
 
       if (!ctx.session.shopId) {
-        await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+        await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
         return;
       }
 
       if (!ctx.session.token) {
-        await editOrReply(
-          ctx,
-          'Необходима авторизация. Перезапустите бота командой /start',
-          sellerMenu(ctx.session.shopName || 'Магазин')
+        await ctx.reply(
+          generalMessages.authorizationRequired,
+          sellerMenu()
         );
         return;
       }
 
-      // Get subscription status from backend
       const api = await import('../../utils/api.js');
       const response = await api.default.get(
         `/subscriptions/status/${ctx.session.shopId}`,
         { headers: { Authorization: `Bearer ${ctx.session.token}` } }
       );
 
-      // FIX BUG #2: Backend returns flat object, NOT { subscription, shop }
       const status = response.data;
+      const message = formatSubscriptionStatus(status);
 
-      let message = `📊 <b>Статус подписки</b>\n\n`;
-      // Use shop name from session (already available)
-      const shopName = ctx.session.shopName || 'Магазин';
-      message += `🏪 Магазин: ${shopName}\n\n`;
-
-      // FIX BUG #2: Use status object from backend response
-      const tierLabel = status.tier === 'pro' ? 'PRO 💎' : 'BASIC';
-      const statusEmoji = status.status === 'active' ? '✅' :
-                          status.status === 'grace_period' ? '⚠️' : '❌';
-      const isActive = status.status === 'active' || status.status === 'grace_period';
-
-      if (status.currentSubscription || isActive) {
-        message += `📌 <b>Тариф:</b> ${tierLabel}\n`;
-        message += `${statusEmoji} <b>Статус:</b> ${status.status}\n`;
-
-        const effectiveUntil = status.currentSubscription?.period_end || status.nextPaymentDue;
-        if (effectiveUntil) {
-          message += `📅 <b>Действует до:</b> ${new Date(effectiveUntil).toLocaleDateString('ru-RU')}\n\n`;
-        }
-
-        if (status.status === 'grace_period') {
-          message += `⚠️ <b>Льготный период</b>\n`;
-          message += `Магазин будет деактивирован после окончания периода.\n\n`;
-        }
-
-        if (status.tier === 'basic') {
-          message += `💎 <b>Апгрейд на PRO:</b>\n`;
-          message += `• Безлимитные подписчики\n`;
-          message += `• Рассылка при смене канала (2/мес)\n`;
-          message += `• Приоритетная поддержка\n`;
-        } else {
-          message += `✨ <b>PRO функции активны:</b>\n`;
-          message += `• ♾ Безлимитные подписчики\n`;
-          message += `• 📢 Рассылка при смене канала\n`;
-          message += `• ⭐️ Приоритетная поддержка\n`;
-        }
-      } else {
-        message += `❌ <b>Нет активной подписки</b>\n\n`;
-        message += `Оплатите подписку для активации магазина.\n\n`;
-        message += `<b>Тарифы (ежемесячно):</b>\n`;
-        message += `• BASIC - $25/мес (до 4 товаров)\n`;
-        message += `• PRO 💎 - $35/мес\n`;
-      }
-
-      const canUpgrade = status.tier === 'basic' && status.status === 'active';
-      await editOrReply(
-        ctx,
+      await ctx.reply(
         message,
-        subscriptionStatusMenu(status.tier || 'basic', canUpgrade),
-        { parse_mode: 'HTML' }
+        buildSubscriptionKeyboard(status)
       );
 
       logger.info(`User ${ctx.from.id} viewed subscription status`);
     } catch (error) {
       logger.error('Error fetching subscription status:', error);
-      await editOrReply(
-        ctx,
-        '❌ Ошибка загрузки статуса подписки',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      await ctx.reply(
+        sellerMessages.subscriptionStatusError,
+        sellerMenu()
       );
     }
   });
@@ -460,10 +466,10 @@ export const setupSellerHandlers = (bot) => {
       await ctx.answerCbQuery();
 
       if (!ctx.session.shopId || !ctx.session.token) {
-        await editOrReply(
-          ctx,
-          'Необходима авторизация. Перезапустите бота командой /start',
-          sellerMenu(ctx.session.shopName || 'Магазин')
+        const menu = await getSellerMenu(ctx);
+        await ctx.reply(
+          generalMessages.authorizationRequired,
+          menu
         );
         return;
       }
@@ -474,21 +480,17 @@ export const setupSellerHandlers = (bot) => {
       if (shopResponse?.tier) {
         ctx.session.shopTier = shopResponse.tier;
       }
+      ctx.session.isShopOwner = isOwner;
 
-      await editOrReply(
-        ctx,
-        '🔧 <b>Инструменты магазина</b>\n\nДополнительные функции для управления вашим магазином:',
-        sellerToolsMenu(isOwner),
-        { parse_mode: 'HTML' }
-      );
+      await showSellerToolsMenu(ctx, isOwner);
 
       logger.info(`User ${ctx.from.id} opened tools submenu`);
     } catch (error) {
       logger.error('Error in tools submenu handler:', error);
-      await editOrReply(
-        ctx,
-        '❌ Ошибка загрузки инструментов',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(
+        sellerMessages.toolsError,
+        menu
       );
     }
   });
@@ -499,15 +501,15 @@ export const setupSellerHandlers = (bot) => {
       await ctx.answerCbQuery();
 
       if (!ctx.session.shopId) {
-        await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+        await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
         return;
       }
 
       if (!ctx.session.token) {
-        await editOrReply(
-          ctx,
-          'Необходима авторизация. Перезапустите бота командой /start',
-          sellerMenu(ctx.session.shopName || 'Магазин')
+        const menu = await getSellerMenu(ctx);
+        await ctx.reply(
+          generalMessages.authorizationRequired,
+          menu
         );
         return;
       }
@@ -519,98 +521,52 @@ export const setupSellerHandlers = (bot) => {
         { headers: { Authorization: `Bearer ${ctx.session.token}` } }
       );
 
-      // FIX BUG #1: Backend returns FLAT object without 'shop' field
+      // Backend returns FLAT object
       const subscriptionData = response.data;
-      const shopName = ctx.session.shopName || 'Магазин';
 
-      // Build message with subscription status
-      let message = `📊 <b>Подписка магазина</b>\n\n`;
-      message += `🏪 <b>${shopName}</b>\n\n`;
-
-      const buttons = [];
-
-      if (subscriptionData.currentSubscription) {
-        const tier = subscriptionData.tier === 'pro' ? 'PRO 💎' : 'BASIC';
-        const statusEmoji = subscriptionData.status === 'active' ? '✅' :
-                            subscriptionData.status === 'grace_period' ? '⚠️' : '❌';
-
-        message += `📌 <b>Тариф:</b> ${tier}\n`;
-        message += `${statusEmoji} <b>Статус:</b> ${subscriptionData.status}\n`;
-        message += `📅 <b>Действует до:</b> ${new Date(subscriptionData.nextPaymentDue || subscriptionData.periodEnd).toLocaleDateString('ru-RU')}\n\n`;
-
-        // Show appropriate action buttons based on status
-        if (subscriptionData.status === 'inactive' || subscriptionData.status === 'grace_period') {
-          message += `⚠️ <b>Требуется оплата</b>\n`;
-          message += `Оплатите подписку для продления активации магазина.\n\n`;
-          buttons.push([Markup.button.callback('💳 Оплатить подписку', 'subscription:pay')]);
-        }
-
-        if (subscriptionData.tier === 'basic' && subscriptionData.status === 'active') {
-          message += `💎 <b>Доступен апгрейд на PRO:</b>\n`;
-          message += `• Безлимитные подписчики\n`;
-          message += `• Рассылка при смене канала (2/мес)\n`;
-          message += `• Приоритетная поддержка\n\n`;
-          buttons.push([Markup.button.callback('💎 Апгрейд на PRO ($35)', 'subscription:upgrade')]);
-        }
-
-        if (subscriptionData.tier === 'pro') {
-          message += `✨ <b>PRO функции активны:</b>\n`;
-          message += `• ♾ Безлимитные подписчики\n`;
-          message += `• 📢 Рассылка при смене канала\n`;
-          message += `• ⭐️ Приоритетная поддержка\n\n`;
-          buttons.push([Markup.button.callback('🔄 Миграция канала', 'seller:migrate_channel')]);
-        }
-      } else {
-        message += `❌ <b>Нет активной подписки</b>\n\n`;
-        message += `Оплатите подписку для активации магазина.\n\n`;
-        message += `<b>Тарифы (ежемесячно):</b>\n`;
-        message += `• BASIC - $25/мес (до 4 товаров)\n`;
-        message += `• PRO 💎 - $35/мес\n`;
-        buttons.push([Markup.button.callback('💳 Оплатить подписку', 'subscription:pay')]);
+      // Update session tier if available
+      if (subscriptionData.tier) {
+        ctx.session.shopTier = subscriptionData.tier;
       }
 
-      // Add back button
-      buttons.push([Markup.button.callback('◀️ Назад', 'seller:main')]);
+      const message = formatSubscriptionStatus(subscriptionData);
+      const keyboard = buildSubscriptionKeyboard(subscriptionData);
 
-      await editOrReply(
-        ctx,
-        message,
-        Markup.inlineKeyboard(buttons),
-        { parse_mode: 'HTML' }
-      );
+      await ctx.reply(message, keyboard);
 
-      logger.info(`User ${ctx.from.id} opened subscription hub`);
+      logger.info(`User ${ctx.from.id} opened subscription hub (tier: ${subscriptionData.tier})`);
     } catch (error) {
       logger.error('Error in subscription hub handler:', error);
-      await editOrReply(
-        ctx,
-        '❌ Ошибка загрузки подписки',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(
+        sellerMessages.subscriptionStatusError,
+        menu
       );
     }
   });
 
   // Back to seller menu
   bot.action('seller:main', handleSellerRole);
+  bot.action('seller:menu', handleSellerRole);
 };
 
 /**
  * Handle workers management menu
  */
 const handleWorkers = async (ctx) => {
+  await ctx.answerCbQuery();
+  
   try {
-    await ctx.answerCbQuery();
-
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
     if (!ctx.session.token) {
-      await editOrReply(
-        ctx,
-        'Необходима авторизация. Перезапустите бота командой /start',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(
+        generalMessages.authorizationRequired,
+        menu
       );
       return;
     }
@@ -626,41 +582,38 @@ const handleWorkers = async (ctx) => {
         }
 
         if (shopDetails?.owner_id && shopDetails.owner_id !== ctx.session.user?.id) {
-          await editOrReply(
-            ctx,
-            'Только владелец магазина может управлять работниками.',
-            sellerMenu(ctx.session.shopName || 'Магазин')
+          const menu = await getSellerMenu(ctx);
+          await ctx.reply(
+            sellerMessages.workersOwnerOnly,
+            menu
           );
           return;
         }
       } catch (error) {
         logger.error('Failed to load shop details for workers menu:', error);
-        await editOrReply(
-          ctx,
-          '❌ Ошибка загрузки данных магазина',
-          sellerMenu(ctx.session.shopName || 'Магазин')
+        const menu = await getSellerMenu(ctx);
+        await ctx.reply(
+          generalMessages.actionFailed,
+          menu
         );
         return;
       }
     }
 
     if (shopTier !== 'pro') {
-      await editOrReply(
-        ctx,
-        '👥 Работники доступны только на тарифе PRO ($35/мес).\n\nОткройте раздел «Подписка», чтобы апгрейдить магазин.',
-        sellerMenu(ctx.session.shopName || 'Магазин')
-      );
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(sellerMessages.workersProOnly, menu);
       return;
     }
 
     const shopName = ctx.session.shopName || 'Магазин';
-    await editOrReply(ctx, `Работники магазина: ${shopName}`, manageWorkersMenu(shopName));
+    await ctx.reply(sellerMessages.workersMenuIntro(shopName), manageWorkersMenu());
 
     logger.info(`User ${ctx.from.id} opened workers management`);
   } catch (error) {
     logger.error('Error in workers menu handler:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await editOrReply(ctx, 'Ошибка загрузки', sellerMenu(shopName));
+    const menu = await getSellerMenu(ctx);
+    await ctx.reply(generalMessages.actionFailed, menu);
   }
 };
 
@@ -672,7 +625,7 @@ const handleWorkersAdd = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
@@ -680,8 +633,7 @@ const handleWorkersAdd = async (ctx) => {
     await ctx.scene.enter('manageWorkers');
   } catch (error) {
     logger.error('Error entering manageWorkers scene:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await editOrReply(ctx, 'Произошла ошибка\n\nПопробуйте позже', manageWorkersMenu(shopName));
+    await ctx.reply(generalMessages.actionFailed, manageWorkersMenu());
   }
 };
 
@@ -693,16 +645,14 @@ const handleWorkersList = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
     if (!ctx.session.token) {
-      const shopName = ctx.session.shopName || 'Магазин';
-      await editOrReply(
-        ctx,
-        'Необходима авторизация. Перезапустите бота командой /start',
-        manageWorkersMenu(shopName)
+      await ctx.reply(
+        generalMessages.authorizationRequired,
+        manageWorkersMenu()
       );
       return;
     }
@@ -712,8 +662,7 @@ const handleWorkersList = async (ctx) => {
     logger.info(`User ${ctx.from.id} viewed workers list (${workerCount} total)`);
   } catch (error) {
     logger.error('Error fetching workers:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
-    await editOrReply(ctx, 'Ошибка загрузки', manageWorkersMenu(shopName));
+    await ctx.reply(generalMessages.actionFailed, manageWorkersMenu());
   }
 };
 
@@ -725,22 +674,22 @@ const handleWorkerRemove = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
     if (!ctx.session.token) {
-      await editOrReply(
-        ctx,
-        'Необходима авторизация. Перезапустите бота командой /start',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(
+        generalMessages.authorizationRequired,
+        menu
       );
       return;
     }
 
     const workerId = Number.parseInt(ctx.match[1], 10);
     if (!Number.isInteger(workerId) || workerId <= 0) {
-      await ctx.answerCbQuery('Некорректный работник');
+      await ctx.answerCbQuery(sellerMessages.workerSelectionInvalid);
       return;
     }
 
@@ -754,20 +703,19 @@ const handleWorkerRemove = async (ctx) => {
     }
 
     if (!worker) {
-      await ctx.answerCbQuery('Работник не найден');
+      await ctx.answerCbQuery(sellerMessages.workerNotFound);
       await showWorkersList(ctx);
       return;
     }
 
     const name = getWorkerDisplayName(worker);
-    await editOrReply(
-      ctx,
-      `Удалить сотрудника ${name}?\n\nДоступ к магазину будет немедленно отозван.`,
+    await ctx.reply(
+      sellerMessages.workerRemoveConfirm(name),
       confirmWorkerRemoval(workerId)
     );
   } catch (error) {
     logger.error('Error in worker remove handler:', error);
-    await ctx.answerCbQuery('❌ Ошибка');
+    await ctx.answerCbQuery(generalMessages.actionFailed);
   }
 };
 
@@ -779,22 +727,22 @@ const handleWorkerRemoveConfirm = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await editOrReply(ctx, 'Сначала создайте магазин', sellerMenuNoShop);
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
     if (!ctx.session.token) {
-      await editOrReply(
-        ctx,
-        'Необходима авторизация. Перезапустите бота командой /start',
-        sellerMenu(ctx.session.shopName || 'Магазин')
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(
+        generalMessages.authorizationRequired,
+        menu
       );
       return;
     }
 
     const workerId = Number.parseInt(ctx.match[1], 10);
     if (!Number.isInteger(workerId) || workerId <= 0) {
-      await ctx.answerCbQuery('Некорректный работник');
+      await ctx.answerCbQuery(sellerMessages.workerSelectionInvalid);
       return;
     }
 
@@ -806,15 +754,12 @@ const handleWorkerRemoveConfirm = async (ctx) => {
 
     logger.info(`User ${ctx.from.id} removed worker ${workerId}`);
 
-    await showWorkersList(ctx, { successMessage: '✅ Работник удалён' });
+    await showWorkersList(ctx, { successMessage: sellerMessages.workerRemoved });
   } catch (error) {
     logger.error('Error in worker remove confirm handler:', error);
-    const shopName = ctx.session.shopName || 'Магазин';
+    const backendMessage = error.response?.data?.error;
+    const message = backendMessage || sellerMessages.workerRemoveError;
 
-    const message = error.response?.data?.error
-      ? `❌ ${error.response.data.error}`
-      : '❌ Ошибка удаления работника';
-
-    await editOrReply(ctx, message, manageWorkersMenu(shopName));
+    await ctx.reply(message, manageWorkersMenu());
   }
 };

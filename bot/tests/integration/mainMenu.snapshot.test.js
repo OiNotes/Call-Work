@@ -62,7 +62,7 @@ describe('Main Menu - WebApp Button Position (P0)', () => {
     expect(firstRow.length).toBeGreaterThan(0);
     const firstButton = firstRow[0];
     expect(firstButton.web_app).toBeDefined();
-    expect(firstButton.text).toContain('Открыть');
+    expect(firstButton.text).toContain('Открыть приложение');
 
     // Проверяем что нет других URL-кнопок (url, login_url)
     const urlButtons = buttons.filter(b => b.url !== undefined || b.login_url !== undefined);
@@ -95,7 +95,7 @@ describe('Main Menu - WebApp Button Position (P0)', () => {
     expect(firstRow.length).toBeGreaterThan(0);
     const firstButton = firstRow[0];
     expect(firstButton.web_app).toBeDefined();
-    expect(firstButton.text).toContain('Открыть');
+    expect(firstButton.text).toContain('Открыть приложение');
 
     // Проверяем что нет других URL-кнопок
     const urlButtons = buttons.filter(b => b.url !== undefined || b.login_url !== undefined);

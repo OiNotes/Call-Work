@@ -137,7 +137,7 @@ Status: Pending Payment
   }
 
   /**
-   * Send payment confirmation notification
+   * Send payment confirmation notification to buyer
    * @param {number} buyerTelegramId - Buyer's Telegram ID
    * @param {object} orderData - Order information
    */
@@ -153,6 +153,33 @@ Your order is being processed by the seller.
     `.trim();
 
     return this.sendMessage(buyerTelegramId, message);
+  }
+
+  /**
+   * Send payment confirmation notification to seller
+   * @param {number} sellerTelegramId - Seller's Telegram ID
+   * @param {object} orderData - Order information
+   */
+  async notifyPaymentConfirmedSeller(sellerTelegramId, orderData) {
+    const message = `
+✅ Заказ #${orderData.orderId} оплачен!
+
+📦 Товар: ${orderData.productName}${orderData.quantity > 1 ? ` (${orderData.quantity} шт)` : ''}
+💰 Сумма: $${orderData.totalPrice} (${orderData.currency})
+👤 Покупатель: @${orderData.buyerUsername}
+
+⏱ Статус: Ожидает отправки
+
+Отметьте заказ отправленным после передачи товара покупателю.
+    `.trim();
+
+    return this.sendMessage(sellerTelegramId, message, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '✓ Отметить отправленным', callback_data: `order:ship:${orderData.orderId}` }
+        ]]
+      }
+    });
   }
 
   /**

@@ -4,6 +4,9 @@ import { cancelButton } from '../keyboards/common.js';
 import { shopApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
+import { messages, formatters } from '../texts/messages.js';
+
+const { buyer: buyerMessages, search: searchMessages, general: generalMessages } = messages;
 
 /**
  * Search Shop Scene - Clean chat implementation
@@ -18,7 +21,7 @@ const enterShopName = async (ctx) => {
     logger.info('shop_search_step:name', { userId: ctx.from.id });
 
     await smartMessage.send(ctx, {
-      text: 'Название (мин 2 символа):',
+      text: searchMessages.prompt,
       keyboard: cancelButton
     });
 
@@ -35,7 +38,7 @@ const showResults = async (ctx) => {
     // Get shop name from message
     if (!ctx.message || !ctx.message.text) {
       await smartMessage.send(ctx, {
-        text: 'Введите название магазина'
+        text: searchMessages.inputRequired
       });
       return;
     }
@@ -51,7 +54,7 @@ const showResults = async (ctx) => {
 
     if (query.length < 2) {
       await smartMessage.send(ctx, {
-        text: 'Минимум 2 символа'
+        text: searchMessages.tooShort
       });
       return;
     }
@@ -62,7 +65,7 @@ const showResults = async (ctx) => {
     });
 
     await smartMessage.send(ctx, {
-      text: 'Поиск...'
+      text: searchMessages.searching
     });
 
     // Search shops via backend
@@ -70,20 +73,14 @@ const showResults = async (ctx) => {
 
     if (!shops || shops.length === 0) {
       await smartMessage.send(ctx, {
-        text: 'Не найдено',
+        text: searchMessages.noResults,
         keyboard: buyerMenu
       });
       return await ctx.scene.leave();
     }
 
     // Create shop list text (all shops in one message)
-    const shopList = shops.map((shop, index) => {
-      const sellerUsername = shop.seller_username
-        ? `@${shop.seller_username}`
-        : (shop.seller_first_name || 'Продавец');
-      const subscribed = shop.is_subscribed ? ' ✅' : '';
-      return `${index + 1}. ${shop.name} • ${sellerUsername}${subscribed}`;
-    }).join('\n');
+    const shopList = formatters.shopList(shops);
 
     logger.info('shop_search_found', {
       count: shops.length,
@@ -93,7 +90,7 @@ const showResults = async (ctx) => {
 
     // Show ALL results in ONE message
     await smartMessage.send(ctx, {
-      text: `Найдено (${shops.length}):\n\n${shopList}`,
+      text: `${buyerMessages.searchResultsTitle(shops.length)}\n${shopList}`,
       keyboard: shopResultsKeyboard(shops)
     });
 
@@ -102,7 +99,7 @@ const showResults = async (ctx) => {
   } catch (error) {
     logger.error('Error searching shops:', error);
     await smartMessage.send(ctx, {
-      text: 'Ошибка поиска',
+      text: searchMessages.error,
       keyboard: buyerMenu
     });
     return await ctx.scene.leave();
@@ -125,20 +122,18 @@ searchShopScene.leave(async (ctx) => {
 // Handle cancel action within scene
 searchShopScene.action('cancel_scene', async (ctx) => {
   try {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery(); // Silent
     logger.info('shop_search_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
 
-    await smartMessage.send(ctx, {
-      text: 'Отменено',
-      keyboard: buyerMenu
-    });
+    // Silent transition - edit message without "Отменено" text
+    await ctx.editMessageText(buyerMessages.panel, buyerMenu);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await smartMessage.send(ctx, {
-        text: 'Произошла ошибка при отмене\n\nПопробуйте позже',
+        text: generalMessages.actionFailed,
         keyboard: buyerMenu
       });
     } catch (replyError) {

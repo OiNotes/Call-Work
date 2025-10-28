@@ -6,9 +6,9 @@ exports[`Main Menu - WebApp Button Position (P0) buyer menu: exactly 1 WebApp bu
     [
       {
         "hide": false,
-        "text": "📱 Открыть Menu",
+        "text": "Открыть приложение",
         "web_app": {
-          "url": "https://8083543d9bde.ngrok-free.app",
+          "url": "https://ed35164cf1dc.ngrok-free.app",
         },
       },
     ],
@@ -16,35 +16,35 @@ exports[`Main Menu - WebApp Button Position (P0) buyer menu: exactly 1 WebApp bu
       {
         "callback_data": "seller:create_shop",
         "hide": false,
-        "text": "➕ Магазин ($25)",
+        "text": "Создать магазин",
       },
     ],
     [
       {
         "callback_data": "buyer:search",
         "hide": false,
-        "text": "🔍 Найти",
+        "text": "Найти магазин",
       },
     ],
     [
       {
         "callback_data": "buyer:subscriptions",
         "hide": false,
-        "text": "📚 Подписки",
+        "text": "Мои подписки",
       },
     ],
     [
       {
         "callback_data": "buyer:orders",
         "hide": false,
-        "text": "🛒 Заказы",
+        "text": "Мои заказы",
       },
     ],
     [
       {
         "callback_data": "role:toggle",
         "hide": false,
-        "text": "🔄 Продавец",
+        "text": "Сменить роль",
       },
     ],
   ],
@@ -58,12 +58,12 @@ exports[`Main Menu - WebApp Button Position (P0) main menu (role selection) has 
       {
         "callback_data": "role:buyer",
         "hide": false,
-        "text": "🛍 Покупатель",
+        "text": "Я покупаю",
       },
       {
         "callback_data": "role:seller",
         "hide": false,
-        "text": "💼 Продавец",
+        "text": "Я продаю",
       },
     ],
   ],
@@ -76,9 +76,9 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu without shop: exact
     [
       {
         "hide": false,
-        "text": "📱 Открыть Menu",
+        "text": "Открыть приложение",
         "web_app": {
-          "url": "https://8083543d9bde.ngrok-free.app",
+          "url": "https://ed35164cf1dc.ngrok-free.app",
         },
       },
     ],
@@ -86,35 +86,35 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu without shop: exact
       {
         "callback_data": "seller:create_shop",
         "hide": false,
-        "text": "➕ Магазин ($25)",
+        "text": "Создать магазин",
       },
     ],
     [
       {
         "callback_data": "buyer:search",
         "hide": false,
-        "text": "🔍 Найти",
+        "text": "Найти магазин",
       },
     ],
     [
       {
         "callback_data": "buyer:subscriptions",
         "hide": false,
-        "text": "📚 Подписки",
+        "text": "Мои подписки",
       },
     ],
     [
       {
         "callback_data": "buyer:orders",
         "hide": false,
-        "text": "🛒 Заказы",
+        "text": "Мои заказы",
       },
     ],
     [
       {
         "callback_data": "role:toggle",
         "hide": false,
-        "text": "🔄 Продавец",
+        "text": "Сменить роль",
       },
     ],
   ],
@@ -127,24 +127,24 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu: exactly 1 WebApp b
     [
       {
         "hide": false,
-        "text": "📱 Открыть Menu",
+        "text": "Открыть приложение",
         "web_app": {
-          "url": "https://8083543d9bde.ngrok-free.app",
+          "url": "https://ed35164cf1dc.ngrok-free.app",
         },
       },
     ],
     [
       {
-        "callback_data": "seller:sales",
+        "callback_data": "seller:active_orders",
         "hide": false,
-        "text": "💰 Продажи",
+        "text": "Активные заказы",
       },
     ],
     [
       {
-        "callback_data": "subscription:hub",
+        "callback_data": "seller:order_history",
         "hide": false,
-        "text": "📊 Подписка",
+        "text": "История заказов",
       },
     ],
     [
@@ -158,7 +158,7 @@ exports[`Main Menu - WebApp Button Position (P0) seller menu: exactly 1 WebApp b
       {
         "callback_data": "role:toggle",
         "hide": false,
-        "text": "🔄 Покупатель",
+        "text": "Сменить роль",
       },
     ],
   ],

@@ -94,7 +94,7 @@ const stats = {
 /**
  * Run a single test case
  */
-async function runTest(testCase, categoryName) {
+async function runTest(testCase, _categoryName) {
   const { cmd, expected, description } = testCase;
   stats.total++;
 

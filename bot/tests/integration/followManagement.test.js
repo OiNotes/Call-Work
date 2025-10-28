@@ -53,7 +53,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('💰 Resell');
+    expect(text).toContain('💰 Перепродажа');
     expect(text).toContain('SourceShop');
     expect(text).toContain('25%');
 
@@ -79,8 +79,8 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text1 = testBot.getLastReplyText();
-    expect(text1).toContain('Новая наценка (%)');
-    expect(text1).toContain('1-500');
+    expect(text1).toContain('наценку');
+    expect(text1).toContain('500');
 
     // Verify editingFollowId stored in session
     const session1 = testBot.getSession();
@@ -97,7 +97,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('✅ Режим изменён');
+    expect(text2).toContain('Режим обновлён');
 
     // Verify PUT was called
     expect(mock.history.put.length).toBe(1);
@@ -128,7 +128,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('✅ Режим изменён');
+    expect(text).toContain('Режим обновлён');
 
     // Verify PUT was called with monitor mode
     expect(mock.history.put.length).toBe(1);
@@ -150,7 +150,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
 
     // Should show success message
     const text = testBot.getLastReplyText();
-    expect(text).toContain('✅');
+    expect(text).toContain('Наценка обновлена');
 
     // Verify PUT was called
     expect(mock.history.put.length).toBe(1);
@@ -166,7 +166,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка должна быть 1-500%');
+    expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
     // Verify PUT was NOT called
     expect(mock.history.put.length).toBe(0);
@@ -179,7 +179,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка должна быть 1-500%');
+    expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
     expect(mock.history.put.length).toBe(0);
   });
@@ -192,7 +192,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('✅ Подписка удалена');
+    expect(text).toContain('Подписка удалена');
 
     // Verify DELETE was called
     expect(mock.history.delete.length).toBe(1);
@@ -235,7 +235,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Ошибка');
+    expect(text).toContain('Не удалось изменить режим');
 
     expect(mock.history.put.length).toBe(1);
   });
@@ -249,7 +249,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Ошибка удаления');
+    expect(text).toContain('Не удалось удалить подписку');
 
     expect(mock.history.delete.length).toBe(1);
   });
@@ -271,8 +271,8 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text1 = testBot.getLastReplyText();
-    expect(text1).toContain('📡 Подписки (1)');
-    expect(text1).toContain('💰 Shop444 +10%');
+    expect(text1).toContain('👀 Ваши подписки');
+    expect(text1).toContain('Shop444');
 
     testBot.captor.reset();
 
@@ -281,7 +281,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('💰 Resell');
+    expect(text2).toContain('💰 Перепродажа');
     expect(text2).toContain('Shop444');
     expect(text2).toContain('10%');
 
@@ -292,7 +292,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text3 = testBot.getLastReplyText();
-    expect(text3).toContain('📡 Подписки (1)');
+    expect(text3).toContain('👀 Ваши подписки');
   });
 
   it('без токена → ошибка авторизации при просмотре деталей', async () => {
@@ -310,7 +310,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = noTokenBot.getLastReplyText();
-    expect(text).toContain('Необходима авторизация');
+    expect(text).toContain('Требуется авторизация');
 
     expect(mock.history.get.length).toBe(0);
 
@@ -328,7 +328,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('✅');
+    expect(text).toContain('Наценка обновлена');
 
     const requestData = JSON.parse(mock.history.put[0].data);
     expect(requestData.markupPercentage).toBe(1);
@@ -345,7 +345,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('✅');
+    expect(text).toContain('Наценка обновлена');
 
     const requestData = JSON.parse(mock.history.put[0].data);
     expect(requestData.markupPercentage).toBe(500);

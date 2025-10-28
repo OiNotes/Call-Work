@@ -4,6 +4,10 @@ import { followApi, shopApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
+import { messages } from '../texts/messages.js';
+import { showSellerToolsMenu } from '../utils/sellerNavigation.js';
+
+const { general: generalMessages, follows: followMessages } = messages;
 
 /**
  * Create Follow Scene - Multi-step wizard
@@ -19,9 +23,8 @@ const enterShopId = async (ctx) => {
   try {
     logger.info('follow_create_step:shop_id', { userId: ctx.from.id });
 
-    // FIX BUG #4: Clear prompt - ID only (not name)
-    await smartMessage.send(ctx, {
-      text: 'ID магазина для подписки:\n\n(Получите ID через поиск магазина)',
+        await smartMessage.send(ctx, {
+      text: followMessages.createEnterId,
       keyboard: cancelButton
     });
 
@@ -37,13 +40,13 @@ const selectMode = async (ctx) => {
   try {
     // Get shop ID from message
     if (!ctx.message || !ctx.message.text) {
-      await smartMessage.send(ctx, { text: 'Отправьте ID магазина' });
+      await smartMessage.send(ctx, { text: followMessages.createEnterId });
       return;
     }
 
     // Check token first
     if (!ctx.session.token) {
-      await smartMessage.send(ctx, { text: 'Ошибка авторизации', keyboard: successButtons });
+      await smartMessage.send(ctx, { text: generalMessages.authorizationRequired, keyboard: successButtons });
       return ctx.scene.leave();
     }
 
@@ -53,56 +56,38 @@ const selectMode = async (ctx) => {
     }
     ctx.wizard.state.userMessageIds.push(ctx.message.message_id);
 
-    const sourceShopId = parseInt(ctx.message.text.trim());
+    const sourceShopId = parseInt(ctx.message.text.trim(), 10);
 
-    if (isNaN(sourceShopId) || sourceShopId <= 0) {
-      // FIX BUG #4: Show error with navigation + exit scene
-      await smartMessage.send(ctx, {
-        text: '❌ Введите число (ID магазина)\n\nПример: 123',
-        keyboard: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'cancel_scene' }]] }
-      });
-      return await ctx.scene.leave();
+    if (Number.isNaN(sourceShopId) || sourceShopId <= 0) {
+      await smartMessage.send(ctx, { text: followMessages.createIdInvalid, keyboard: cancelButton });
+      return;
     }
 
-    // Check if shop exists
     try {
       await shopApi.getShop(sourceShopId);
     } catch (error) {
-      // FIX BUG #4: Show error with navigation + exit scene
       if (error.response?.status === 404) {
-        await smartMessage.send(ctx, {
-          text: '❌ Магазин не найден',
-          keyboard: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'cancel_scene' }]] }
-        });
+        await smartMessage.send(ctx, { text: followMessages.createShopNotFound, keyboard: cancelButton });
       } else {
         logger.error('Error checking shop existence:', error);
-        await smartMessage.send(ctx, {
-          text: '❌ Ошибка проверки магазина',
-          keyboard: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'cancel_scene' }]] }
-        });
+        await smartMessage.send(ctx, { text: followMessages.createCheckError, keyboard: cancelButton });
       }
-      return await ctx.scene.leave();
+      return;
     }
 
-    // Check self-follow
     if (sourceShopId === ctx.session.shopId) {
-      await smartMessage.send(ctx, { text: 'Нельзя подписаться на свой магазин', keyboard: successButtons });
+      await smartMessage.send(ctx, { text: followMessages.createSelfFollow, keyboard: successButtons });
       return ctx.scene.leave();
     }
 
-    // Check FREE limit
     try {
       const limit = await followApi.checkFollowLimit(ctx.session.shopId, ctx.session.token);
       if (limit.reached) {
-        await smartMessage.send(ctx, {
-          text: `Лимит достигнут (${limit.count}/${limit.limit})\n\nНужен PRO ($35/мес)`,
-          keyboard: successButtons
-        });
+        await smartMessage.send(ctx, { text: followMessages.createLimitReached(limit.count, limit.limit), keyboard: successButtons });
         return ctx.scene.leave();
       }
     } catch (error) {
       logger.error('Error checking follow limit:', error);
-      // Continue anyway - backend will validate
     }
 
     ctx.wizard.state.sourceShopId = sourceShopId;
@@ -112,11 +97,21 @@ const selectMode = async (ctx) => {
       sourceShopId: sourceShopId
     });
 
-    await cleanReply(ctx, 'Режим:',
+    // Get source shop name
+    let sourceShopName = 'Магазин';
+    try {
+      const shopData = await shopApi.getShop(sourceShopId);
+      sourceShopName = shopData.name || 'Магазин';
+    } catch (error) {
+      logger.error('Error fetching shop name:', error);
+    }
+
+    const message = followMessages.createModePromptDetailed(sourceShopName);
+    await cleanReply(ctx, message,
       Markup.inlineKeyboard([
-        [Markup.button.callback('👀 Monitor', 'mode:monitor')],
-        [Markup.button.callback('💰 Resell', 'mode:resell')],
-        [Markup.button.callback('◀️ Назад', 'cancel_scene')]
+        [Markup.button.callback('🔍 Мониторинг', 'mode:monitor')],
+        [Markup.button.callback('💰 Перепродажа', 'mode:resell')],
+        [Markup.button.callback('❌ Отмена', 'cancel_scene')]
       ])
     );
 
@@ -131,7 +126,7 @@ const selectMode = async (ctx) => {
 const handleModeSelection = async (ctx) => {
   try {
     if (!ctx.callbackQuery) {
-      await smartMessage.send(ctx, { text: 'Выберите режим кнопками' });
+      await smartMessage.send(ctx, { text: followMessages.createModePrompt });
       return;
     }
 
@@ -148,7 +143,7 @@ const handleModeSelection = async (ctx) => {
     if (mode === 'monitor') {
       // Create follow immediately for monitor mode
       try {
-        await ctx.editMessageText('Сохраняем...');
+        await ctx.editMessageText(followMessages.createSaving);
 
         await followApi.createFollow({
           followerShopId: ctx.session.shopId,
@@ -162,35 +157,35 @@ const handleModeSelection = async (ctx) => {
           sourceShopId: ctx.wizard.state.sourceShopId
         });
 
-        await ctx.editMessageText('✅ Подписка создана (Monitor)', successButtons);
+        await ctx.editMessageText(followMessages.createMonitorSuccess, successButtons);
         return ctx.scene.leave();
       } catch (error) {
         logger.error('Error creating follow:', error);
 
         if (error.response?.status === 402) {
           await ctx.editMessageText(
-            'Лимит достигнут\n\nНужен PRO ($35/мес)',
+            followMessages.limitReachedBasicToPro,
             successButtons
           );
         } else if (error.response?.status === 400) {
           const errorMsg = error.response?.data?.error || '';
           const errorLower = errorMsg.toLowerCase();
           if (errorLower.includes('circular')) {
-            await ctx.editMessageText('Ошибка: циклическая подписка', successButtons);
+            await ctx.editMessageText(followMessages.createCircular, successButtons);
           } else if (errorLower.includes('already exists')) {
-            await ctx.editMessageText('Подписка уже существует', successButtons);
+            await ctx.editMessageText(followMessages.createExists, successButtons);
           } else {
-            await ctx.editMessageText('Ошибка создания', successButtons);
+            await ctx.editMessageText(followMessages.createError, successButtons);
           }
         } else {
-          await ctx.editMessageText('Ошибка создания', successButtons);
+          await ctx.editMessageText(followMessages.createError, successButtons);
         }
 
         return ctx.scene.leave();
       }
     } else {
       // Ask for markup for resell mode
-      await ctx.editMessageText('Новая наценка (%):\n\n1-500');
+      await ctx.editMessageText(followMessages.markupPrompt);
       return ctx.wizard.next();
     }
   } catch (error) {
@@ -203,7 +198,7 @@ const handleModeSelection = async (ctx) => {
 const handleMarkup = async (ctx) => {
   try {
     if (!ctx.message || !ctx.message.text) {
-      await smartMessage.send(ctx, { text: 'Отправьте процент наценки' });
+      await smartMessage.send(ctx, { text: followMessages.createResellPrompt });
       return;
     }
 
@@ -217,7 +212,7 @@ const handleMarkup = async (ctx) => {
     const markup = parseFloat(markupText);
 
     if (isNaN(markup) || markup < 1 || markup > 500) {
-      await smartMessage.send(ctx, { text: 'Наценка должна быть 1-500%' });
+      await smartMessage.send(ctx, { text: followMessages.createMarkupInvalid });
       return;
     }
 
@@ -233,7 +228,7 @@ const handleMarkup = async (ctx) => {
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка: магазин не найден\n\nСначала создайте магазин',
+        text: generalMessages.shopRequired,
         keyboard: successButtons
       });
       return await ctx.scene.leave();
@@ -245,7 +240,7 @@ const handleMarkup = async (ctx) => {
         session: ctx.session
       });
       await smartMessage.send(ctx, {
-        text: 'Ошибка авторизации. Попробуйте снова через главное меню',
+        text: generalMessages.authorizationRequired,
         keyboard: successButtons
       });
       return await ctx.scene.leave();
@@ -253,7 +248,7 @@ const handleMarkup = async (ctx) => {
 
     // Create follow with markup
     try {
-      await smartMessage.send(ctx, { text: 'Сохраняем...' });
+      await smartMessage.send(ctx, { text: followMessages.createSaving });
 
       await followApi.createFollow({
         followerShopId: ctx.session.shopId,
@@ -278,19 +273,19 @@ const handleMarkup = async (ctx) => {
       logger.error('Error creating follow:', error);
 
       if (error.response?.status === 402) {
-        await smartMessage.send(ctx, { text: 'Лимит достигнут\n\nНужен PRO ($35/мес)', keyboard: successButtons });
+        await smartMessage.send(ctx, { text: followMessages.limitReachedBasicToPro, keyboard: successButtons });
       } else if (error.response?.status === 400) {
         const errorMsg = error.response?.data?.error || '';
         const errorLower = errorMsg.toLowerCase();
         if (errorLower.includes('circular')) {
-          await smartMessage.send(ctx, { text: 'Ошибка: циклическая подписка', keyboard: successButtons });
+          await smartMessage.send(ctx, { text: followMessages.createCircularDetailed, keyboard: successButtons });
         } else if (errorLower.includes('already exists')) {
-          await smartMessage.send(ctx, { text: 'Подписка уже существует', keyboard: successButtons });
+          await smartMessage.send(ctx, { text: followMessages.createExists, keyboard: successButtons });
         } else {
-          await smartMessage.send(ctx, { text: 'Ошибка создания', keyboard: successButtons });
+          await smartMessage.send(ctx, { text: followMessages.createError, keyboard: successButtons });
         }
       } else {
-        await smartMessage.send(ctx, { text: 'Ошибка создания', keyboard: successButtons });
+        await smartMessage.send(ctx, { text: followMessages.createError, keyboard: successButtons });
       }
 
       return ctx.scene.leave();
@@ -298,7 +293,7 @@ const handleMarkup = async (ctx) => {
   } catch (error) {
     logger.error('Error in handleMarkup step:', error);
     await smartMessage.send(ctx, {
-      text: 'Ошибка. Попробуйте позже',
+      text: followMessages.createError,
       keyboard: successButtons
     });
     return ctx.scene.leave();
@@ -336,12 +331,13 @@ createFollowScene.command('cancel', async (ctx) => {
   try {
     logger.info('follow_create_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
-    await smartMessage.send(ctx, { text: 'Отменено', keyboard: successButtons });
+    // Silent transition - show menu without "Отменено" text
+    await smartMessage.send(ctx, { text: followMessages.createCancelled, keyboard: successButtons });
   } catch (error) {
     logger.error('Error in cancel command handler:', error);
     // Local error handling
     try {
-      await smartMessage.send(ctx, { text: 'Произошла ошибка при отмене\n\nПопробуйте позже', keyboard: successButtons });
+      await smartMessage.send(ctx, { text: followMessages.cancelOperationError, keyboard: successButtons });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -351,16 +347,16 @@ createFollowScene.command('cancel', async (ctx) => {
 // Handle cancel action within scene
 createFollowScene.action('cancel_scene', async (ctx) => {
   try {
-    await ctx.answerCbQuery();
+    await ctx.answerCbQuery(); // Silent
     logger.info('follow_create_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
-    await ctx.editMessageText('Отменено', successButtons);
+    await showSellerToolsMenu(ctx);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
       await ctx.editMessageText(
-        'Произошла ошибка при отмене\n\nПопробуйте позже',
+        followMessages.cancelOperationError,
         successButtons
       );
     } catch (replyError) {

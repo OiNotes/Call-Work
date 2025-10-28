@@ -6,6 +6,8 @@ import { fuzzySearchProducts } from '../utils/fuzzyMatch.js';
 import { autoTransliterateProductName, getTransliterationInfo } from '../utils/transliterate.js';
 import logger from '../utils/logger.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
+import { messages } from '../texts/messages.js';
+const { seller: { aiProducts: aiMessages } } = messages;
 
 /**
  * AI Product Management Service
@@ -537,7 +539,7 @@ async function handleAddProduct(args, shopId, token) {
   if (stock === undefined || stock === null) {
     return {
       success: false,
-      message: '❌ Укажите количество товара. Например: "добавь iPhone за 500 10 штук"'
+      message: aiMessages.stockRequired
     };
   }
 
@@ -570,7 +572,7 @@ async function handleAddProduct(args, shopId, token) {
 
     return {
       success: true,
-      message: `✅ Добавлен: ${displayName} — ${price}${stock > 0 ? ` (сток: ${stock})` : ''}`,
+      message: `✅ Добавлен: ${displayName} — ${price}${stock > 0 ? ` (количество: ${stock})` : ''}`,
       data: product,
       operation: 'add',
       transliterated: translitInfo.changed
@@ -601,7 +603,7 @@ async function handleBulkAddProducts(args, shopId, token) {
   if (products.length < 2) {
     return {
       success: false,
-      message: '❌ Для bulk операции нужно минимум 2 товара'
+      message: '❌ Для массового добавления нужно минимум 2 товара'
     };
   }
 
@@ -618,7 +620,7 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (!name || name.length < 3) {
       results.failed.push({
         name: name || 'unnamed',
-        reason: 'Название должно быть минимум 3 символа'
+        reason: aiMessages.nameMinLength
       });
       continue;
     }
@@ -626,7 +628,7 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (!price || price <= 0) {
       results.failed.push({
         name,
-        reason: 'Цена должна быть больше 0'
+        reason: aiMessages.pricePositive
       });
       continue;
     }
@@ -634,7 +636,7 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (stock === undefined || stock === null) {
       results.failed.push({
         name,
-        reason: 'Не указано количество товара'
+        reason: aiMessages.stockNotSpecified
       });
       continue;
     }
@@ -675,7 +677,7 @@ async function handleBulkAddProducts(args, shopId, token) {
       logger.error('Bulk add product failed:', { name, error: error.message });
       results.failed.push({
         name,
-        reason: 'Ошибка API'
+        reason: aiMessages.apiError
       });
     }
   }
@@ -698,7 +700,7 @@ async function handleBulkAddProducts(args, shopId, token) {
   results.successful.forEach(p => {
     message += `• ${p.name} — $${formatPrice(p.price)}`;
     if (p.stock > 0) {
-      message += ` (сток: ${p.stock})`;
+      message += ` (количество: ${p.stock})`;
     }
     message += '\n';
   });
@@ -795,7 +797,7 @@ async function handleListProducts(products) {
   }
 
   const list = products
-    .map((p, i) => `${i + 1}. ${p.name} — $${formatPrice(p.price)} (сток: ${p.stock_quantity || 0})`)
+    .map((p, i) => `${i + 1}. ${p.name} — $${formatPrice(p.price)} (количество: ${p.stock_quantity || 0})`)
     .join('\n');
 
   return {
@@ -832,7 +834,7 @@ async function handleSearchProduct(args, products) {
   }
 
   const list = matches
-    .map((p, i) => `${i + 1}. ${p.name} — ${p.price} (сток: ${p.stock_quantity || 0})`)
+    .map((p, i) => `${i + 1}. ${p.name} — ${p.price} (количество: ${p.stock_quantity || 0})`)
     .join('\n');
 
   return {
@@ -912,7 +914,7 @@ async function handleUpdateProduct(args, shopId, token, products) {
     const changes = [];
     if (newName) changes.push(`название: "${newName}"`);
     if (newPrice !== undefined) changes.push(`цена: ${formatPrice(newPrice)}`);
-    if (newStock !== undefined) changes.push(`сток: ${newStock}`);
+    if (newStock !== undefined) changes.push(`количество: ${newStock}`);
 
     return {
       success: true,
@@ -938,7 +940,7 @@ async function handleBulkDeleteAll(shopId, token) {
 
     return {
       success: true,
-      message: `✅ Удалено всех товаров: ${result.deletedCount}`,
+      message: `✅ Всего удалено: ${result.deletedCount} товаров`,
       data: result,
       operation: 'bulk_delete_all'
     };
@@ -1131,7 +1133,7 @@ async function handleGetProductInfo(args, products) {
 
   return {
     success: true,
-    message: `📊 ${product.name}\nЦена: $${formatPrice(product.price)}\nНа складе: ${product.stock_quantity || 0} шт.`,
+    message: `${product.name}\nЦена: $${formatPrice(product.price)}\nНа складе: ${product.stock_quantity || 0} шт.`,
     data: product,
     operation: 'info'
   };
@@ -1153,7 +1155,7 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
   if (!operation || !['increase', 'decrease'].includes(operation)) {
     return {
       success: false,
-      message: '❌ Операция должна быть "increase" или "decrease"'
+      message: aiMessages.invalidOperation
     };
   }
 
@@ -1169,7 +1171,7 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
     ? (1 - percentage / 100)
     : (1 + percentage / 100);
 
-  const operationText = operation === 'decrease' ? 'Скидка' : 'Повышение';
+  const operationText = operation === 'decrease' ? aiMessages.operationNames.decrease : aiMessages.operationNames.increase;
   const operationSymbol = operation === 'decrease' ? '-' : '+';
 
   // Build preview
@@ -1177,7 +1179,7 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
     const newPrice = Math.round(p.price * multiplier * 100) / 100;
     return `• ${p.name}: $${formatPrice(p.price)} → $${formatPrice(newPrice)}`;
   });
-  const previewText = previewUpdates.join('\n');
+  const previewText = previewUpdates.join('\n') + (products.length > 3 ? `\n... и ещё ${products.length - 3} товаров` : '');
 
   // Store pending operation in session for confirmation
   if (ctx && ctx.session) {
@@ -1198,7 +1200,7 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
   return {
     success: true,
     needsConfirmation: true,
-    message: `⚠️ Применить ${operationText.toLowerCase()} ${operationSymbol}${percentage}% ко всем ${products.length} товарам?\n\nПримеры изменений:\n${previewText}${products.length > 3 ? '\n... и ещё ' + (products.length - 3) + ' товаров' : ''}`,
+    message: aiMessages.bulkPricePrompt(operationText, percentage, previewText),
     keyboard: {
       inline_keyboard: [[
         { text: '✅ Применить', callback_data: 'bulk_prices_confirm' },
@@ -1264,8 +1266,10 @@ export async function executeBulkPriceUpdate(shopId, token, ctx) {
             null,
             `⏳ Обрабатываю цены...\nОбработано: ${batchIndex * BATCH_SIZE}/${products.length} товаров`
           );
-        } catch (error) {
-          // Ignore edit errors (message not modified)
+        } catch (editError) {
+          logger.debug('Failed to update AI price progress message', {
+            error: editError.message
+          });
         }
       }
 
@@ -1279,7 +1283,7 @@ export async function executeBulkPriceUpdate(shopId, token, ctx) {
             return null;
           }
 
-          const updated = await productApi.updateProduct(product.id, {
+          await productApi.updateProduct(product.id, {
             price: newPrice
           }, token);
 

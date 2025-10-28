@@ -1,6 +1,9 @@
 import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
+import { activatePromoSubscription } from '../services/subscriptionService.js';
+
+const PROMO_CODE = 'comi9999';
 
 /**
  * Shop Controller
@@ -12,14 +15,41 @@ export const shopController = {
    */
   create: async (req, res) => {
     try {
-      const { name, description, logo } = req.body;
+      const { name, description, logo, promoCode } = req.body;
 
-      const shop = await shopQueries.create({
+      // Check if shop name is already taken
+      const nameTaken = await shopQueries.isNameTaken(name);
+      if (nameTaken) {
+        return res.status(409).json({
+          success: false,
+          error: 'Shop name already taken. Try another one'
+        });
+      }
+
+      let shop = await shopQueries.create({
         ownerId: req.user.id,
         name,
         description,
         logo
       });
+
+      if (promoCode && promoCode.trim().toLowerCase() === PROMO_CODE) {
+        try {
+          shop = await activatePromoSubscription(shop.id);
+          logger.info(`Promo code applied for shop ${shop.id}`);
+        } catch (promoError) {
+          logger.error('Promo activation failed', { error: promoError.message, stack: promoError.stack });
+          try {
+            await shopQueries.delete(shop.id);
+          } catch (cleanupError) {
+            logger.error('Failed to rollback shop after promo failure', { error: cleanupError.message, stack: cleanupError.stack });
+          }
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to apply promo code. Shop was not created.'
+          });
+        }
+      }
 
       return res.status(201).json({
         success: true,
@@ -137,6 +167,17 @@ export const shopController = {
           success: false,
           error: 'You can only update your own shops'
         });
+      }
+
+      // Check if new name is already taken (if name is being updated)
+      if (name && name !== existingShop.name) {
+        const nameTaken = await shopQueries.isNameTaken(name, id);
+        if (nameTaken) {
+          return res.status(409).json({
+            success: false,
+            error: 'Shop name already taken. Try another one'
+          });
+        }
       }
 
       const shop = await shopQueries.update(id, {
@@ -371,10 +412,10 @@ export const shopController = {
 
       // Build update object (only include provided fields)
       const walletUpdates = {};
-      if (wallet_btc !== undefined) walletUpdates.wallet_btc = wallet_btc;
-      if (wallet_eth !== undefined) walletUpdates.wallet_eth = wallet_eth;
-      if (wallet_usdt !== undefined) walletUpdates.wallet_usdt = wallet_usdt;
-      if (wallet_ton !== undefined) walletUpdates.wallet_ton = wallet_ton;
+      if (wallet_btc !== undefined) {walletUpdates.wallet_btc = wallet_btc;}
+      if (wallet_eth !== undefined) {walletUpdates.wallet_eth = wallet_eth;}
+      if (wallet_usdt !== undefined) {walletUpdates.wallet_usdt = wallet_usdt;}
+      if (wallet_ton !== undefined) {walletUpdates.wallet_ton = wallet_ton;}
 
       // Update wallets
       const shop = await shopQueries.updateWallets(id, walletUpdates);

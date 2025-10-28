@@ -167,41 +167,6 @@ const tools = [
   }
 ];
 
-// Create system prompt
-function createSystemPrompt(products) {
-  const productsList = products.length > 0
-    ? products.map(p => `- ${p.name} | $${p.price} | ${p.stock_quantity} шт`).join('\n')
-    : '(пусто)';
-
-  return `Ты — AI помощник для управления товарами в Telegram-магазине.
-
-=== ТЕКУЩИЙ КАТАЛОГ (${products.length} товаров) ===
-${productsList}
-
-=== ТВОЯ ЗАДАЧА ===
-Анализируй команды пользователя и вызывай соответствующую функцию.
-
-=== ВАЖНЫЕ ПРАВИЛА ===
-1. Если товара нет в каталоге — НЕ вызывай функцию, вернись с текстом "Товар не найден"
-2. При частичном совпадении (например "айфон" вместо "iPhone 15 Pro") — используй ТОЧНОЕ название из каталога
-3. Если цена не указана явно — НЕ добавляй товар, попроси указать цену
-4. При удалении ВСЕ товары — используй bulkDeleteAll (не deleteProduct в цикле!)
-5. Валюта по умолчанию: USD
-
-=== ПРИМЕРЫ ===
-Input: "добавь iPhone 15 за 999"
-→ addProduct(name="iPhone 15", price=999, currency="USD")
-
-Input: "удали айфон" (в каталоге "iPhone 15 Pro")
-→ deleteProduct(productName="iPhone 15 Pro")
-
-Input: "купили 2 макбука" (в каталоге "MacBook Pro")
-→ recordSale(productName="MacBook Pro", quantity=2)
-
-Input: "какая цена у AirPods?"
-→ getProductInfo(productName="AirPods Pro")`;
-}
-
 // Test single command
 async function testCommand(userMessage, products = mockProducts) {
   console.log(`\n${'='.repeat(60)}`);
@@ -235,7 +200,7 @@ async function testCommand(userMessage, products = mockProducts) {
         try {
           const args = JSON.parse(call.function.arguments);
           console.log(`   Parsed:`, JSON.stringify(args, null, 2));
-        } catch (e) {
+        } catch {
           console.log(`   ⚠️ Failed to parse arguments`);
         }
       });
@@ -329,6 +294,7 @@ async function runAllTests() {
     } catch (error) {
       failCount++;
       console.error(`\n❌ Test failed: ${test.category}`);
+      console.error('   Reason:', error.message);
     }
   }
 

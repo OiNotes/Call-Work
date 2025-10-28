@@ -15,7 +15,7 @@ export function getWebAppUrl() {
   // Validate URL format
   try {
     new URL(url);
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid WEBAPP_URL format: ${url}`);
   }
 

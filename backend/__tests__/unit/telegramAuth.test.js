@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import crypto from 'crypto';
 
 /**
@@ -199,7 +199,7 @@ describe('Telegram initData Validation Security', () => {
     it('should REJECT initData without user parameter', () => {
       const initData = `auth_date=${Math.floor(Date.now() / 1000)}&hash=somehash123`;
 
-      const result = verifyInitData(initData, BOT_TOKEN);
+      const _result = verifyInitData(initData, BOT_TOKEN);
 
       // Verification will pass (hash check), but user parsing should fail separately
       // This test validates that signature verification works even without user param

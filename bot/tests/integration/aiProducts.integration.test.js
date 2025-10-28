@@ -12,6 +12,8 @@ import { createTestBot } from '../helpers/testBot.js';
 import { textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
 
+const mockProcessProductCommand = jest.fn();
+
 /**
  * SKIP: AI Integration Tests требуют рефакторинга мокирования
  * 

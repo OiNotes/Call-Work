@@ -46,6 +46,9 @@ import { startSubscriptionJobs, stopSubscriptionJobs } from './jobs/subscription
 // Import polling service for crypto payments
 import pollingService from './services/pollingService.js';
 
+// Import order cleanup service
+import orderCleanupService from './services/orderCleanupService.js';
+
 /**
  * Initialize Express app
  */
@@ -247,6 +250,10 @@ const startServer = async () => {
       // Start polling service for ETH/TRON payments
       pollingService.startPolling();
       logger.info('Payment polling service started');
+
+      // Start order cleanup service
+      orderCleanupService.startOrderCleanup();
+      logger.info('Order cleanup service started');
     });
 
     // Setup WebSocket server for real-time updates
@@ -314,7 +321,7 @@ const startServer = async () => {
       // Stop Telegram bot
       if (global.botInstance) {
         try {
-          await bot.stop();
+          await global.botInstance.stop();
           logger.info('Telegram bot stopped');
         } catch (error) {
           logger.error('Error stopping bot:', error);

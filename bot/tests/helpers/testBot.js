@@ -5,7 +5,7 @@
  * С моками Telegram API и перехватом вызовов
  */
 
-import { Telegraf, Scenes, session, Telegram } from 'telegraf';
+import { Telegraf, Scenes, Telegram } from 'telegraf';
 import { jest } from '@jest/globals';
 
 // Middleware
@@ -14,11 +14,11 @@ import errorMiddleware from '../../src/middleware/error.js';
 
 // Scenes
 import createShopScene from '../../src/scenes/createShop.js';
+import chooseTierScene from '../../src/scenes/chooseTier.js';
 import addProductScene from '../../src/scenes/addProduct.js';
 import searchShopScene from '../../src/scenes/searchShop.js';
 import manageWalletsScene from '../../src/scenes/manageWallets.js';
 import createFollowScene from '../../src/scenes/createFollow.js';
-import migrateChannelScene from '../../src/scenes/migrateChannel.js';
 
 // Handlers
 import { handleStart } from '../../src/handlers/start.js';
@@ -83,11 +83,11 @@ export function createTestBot(options = {}) {
   // Setup session and scenes
   const stage = new Scenes.Stage([
     createShopScene,
+    chooseTierScene,
     addProductScene,
     searchShopScene,
     manageWalletsScene,
-    createFollowScene,
-    migrateChannelScene
+    createFollowScene
   ]);
 
   // ✅ FIX: Controlled session storage (same as session() middleware but with direct access)
@@ -265,7 +265,7 @@ export function createTestBot(options = {}) {
  * @param {object} mockApi - MockAdapter instance
  * @returns {object} Test bot with mocked API
  */
-export function createTestBotWithMockedApi(mockApi) {
+export function createTestBotWithMockedApi(_mockApi) {
   const testBot = createTestBot();
   
   // mockApi будет управлять axios запросами через axios-mock-adapter

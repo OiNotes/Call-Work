@@ -283,7 +283,7 @@ export const syncedProductQueries = {
       [syncedProductId]
     );
     
-    if (result.rows.length === 0) return false;
+    if (result.rows.length === 0) {return false;}
     
     const { synced_price, expected_price } = result.rows[0];
     // Compare with small epsilon for floating point precision

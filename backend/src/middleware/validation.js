@@ -65,8 +65,10 @@ export const shopValidation = {
   create: [
     body('name')
       .trim()
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Shop name must be 3-100 characters'),
+      .isLength({ min: 3, max: 30 })
+      .withMessage('Shop name must be 3-30 characters')
+      .matches(/^[a-zA-Z0-9_]+$/)
+      .withMessage('Shop name must contain only letters, numbers, and underscore'),
     body('description')
       .trim()
       .isLength({ max: 500 })
@@ -75,6 +77,11 @@ export const shopValidation = {
       .optional()
       .isURL()
       .withMessage('Logo must be a valid URL'),
+    body('promoCode')
+      .optional()
+      .trim()
+      .isLength({ min: 0, max: 32 })
+      .withMessage('Promo code must not exceed 32 characters'),
     validate
   ],
 
@@ -85,8 +92,10 @@ export const shopValidation = {
     body('name')
       .optional()
       .trim()
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Shop name must be 3-100 characters'),
+      .isLength({ min: 3, max: 30 })
+      .withMessage('Shop name must be 3-30 characters')
+      .matches(/^[a-zA-Z0-9_]+$/)
+      .withMessage('Shop name must contain only letters, numbers, and underscore'),
     body('description')
       .optional()
       .trim()
@@ -271,6 +280,19 @@ export const orderValidation = {
     param('id')
       .isInt({ min: 1 })
       .withMessage('Valid order ID is required'),
+    body('status')
+      .isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
+      .withMessage('Invalid order status'),
+    validate
+  ],
+
+  bulkUpdateStatus: [
+    body('order_ids')
+      .isArray({ min: 1 })
+      .withMessage('order_ids must be a non-empty array'),
+    body('order_ids.*')
+      .isInt({ min: 1 })
+      .withMessage('Each order ID must be a positive integer'),
     body('status')
       .isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
       .withMessage('Invalid order status'),
