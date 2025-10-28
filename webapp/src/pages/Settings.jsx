@@ -8,7 +8,6 @@ import InteractiveListItem from '../components/common/InteractiveListItem';
 
 // Lazy load modals - only load when user opens them
 const WalletsModal = lazy(() => import('../components/Settings/WalletsModal'));
-const OrdersModal = lazy(() => import('../components/Settings/OrdersModal'));
 const LanguageModal = lazy(() => import('../components/Settings/LanguageModal'));
 const ProductsModal = lazy(() => import('../components/Settings/ProductsModal'));
 const SubscriptionModal = lazy(() => import('../components/Settings/SubscriptionModal'));
@@ -21,18 +20,8 @@ const getSettingsSections = (t, lang) => {
 
   return [
     {
-      title: 'ПРОДАВЕЦ',
+      title: 'УПРАВЛЕНИЕ',
       items: [
-        {
-          id: 'analytics',
-          label: 'Статистика',
-          description: 'Продажи и аналитика',
-          icon: (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          ),
-        },
         {
           id: 'products',
           label: 'Товары',
@@ -44,9 +33,19 @@ const getSettingsSections = (t, lang) => {
           ),
         },
         {
-          id: 'subscription',
-          label: 'Подписка',
-          description: 'Тарифы и оплата',
+          id: 'analytics',
+          label: 'Статистика',
+          description: 'Продажи и аналитика',
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          ),
+        },
+        {
+          id: 'wallet',
+          label: 'Платёжные кошельки',
+          description: 'Мои крипто-кошельки',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -76,33 +75,18 @@ const getSettingsSections = (t, lang) => {
       ],
     },
     {
-      title: 'ПОКУПАТЕЛЬ',
+      title: 'НАСТРОЙКИ',
       items: [
         {
-          id: 'wallet',
-          label: t('settings.myWallet'),
-          description: 'Мои крипто-кошельки',
+          id: 'subscription',
+          label: 'Подписка',
+          description: 'Тарифы и оплата',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
           ),
         },
-        {
-          id: 'orders',
-          label: t('settings.myOrders'),
-          description: 'История покупок',
-          icon: (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-          ),
-        },
-      ],
-    },
-    {
-      title: 'ОСНОВНОЕ',
-      items: [
         {
           id: 'language',
           label: t('settings.language'),
@@ -124,7 +108,6 @@ export default function Settings() {
   const { clearCart } = useStore();
   const { t, lang } = useTranslation();
   const [showWallets, setShowWallets] = useState(false);
-  const [showOrders, setShowOrders] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showProducts, setShowProducts] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -140,9 +123,6 @@ export default function Settings() {
     switch (itemId) {
       case 'wallet':
         setShowWallets(true);
-        break;
-      case 'orders':
-        setShowOrders(true);
         break;
       case 'language':
         setShowLanguage(true);
@@ -279,7 +259,6 @@ export default function Settings() {
         {showWorkspace && <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />}
         {showFollows && <FollowsModal isOpen={showFollows} onClose={() => setShowFollows(false)} />}
         {showWallets && <WalletsModal isOpen={showWallets} onClose={() => setShowWallets(false)} />}
-        {showOrders && <OrdersModal isOpen={showOrders} onClose={() => setShowOrders(false)} />}
         {showLanguage && <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />}
       </Suspense>
     </div>

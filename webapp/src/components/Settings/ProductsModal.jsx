@@ -199,11 +199,19 @@ export default function ProductsModal({ isOpen, onClose }) {
   const { triggerHaptic, alert } = useTelegram();
   const { fetchApi } = useApi();
 
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiHistory, setAiHistory] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
   const handleOpenAIChat = () => {
     triggerHaptic('medium');
-    const botUsername = import.meta.env.VITE_BOT_USERNAME || 'statusstock_bot';
-    window.open(`https://t.me/${botUsername}?start=ai_chat`, '_blank');
+    setShowAIChat(true);
   };
+
+  const handleCloseAIChat = useCallback(() => {
+    setShowAIChat(false);
+  }, []);
 
   const [myShop, setMyShop] = useState(null);
   const [products, setProducts] = useState([]);
@@ -232,17 +240,72 @@ export default function ProductsModal({ isOpen, onClose }) {
   const handleClose = useCallback(() => {
     setShowForm(false);
     setEditingProduct(null);
+    setShowAIChat(false);
     onClose();
   }, [onClose]);
 
-  useBackButton(isOpen ? handleClose : null);
+  useBackButton(isOpen ? (showAIChat ? handleCloseAIChat : handleClose) : null);
 
-  // Fetch shop and products
   useEffect(() => {
-    if (isOpen) {
-      loadData();
+    if (showAIChat && aiHistory.length === 0) {
+      setAiHistory([
+        {
+          role: 'assistant',
+          content: 'Привет! Я AI-ассистент магазина. Напишите, какие товары нужно добавить или изменить — всё сделаю за вас.'
+        }
+      ]);
     }
-  }, [isOpen]);
+  }, [showAIChat, aiHistory.length]);
+
+  const handleSendAIMessage = async (text) => {
+    const value = text.trim();
+    if (!value) return;
+
+    const optimisticHistory = [...aiHistory, { role: 'user', content: value }];
+    setAiHistory(optimisticHistory);
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const historyPayload = optimisticHistory.map(({ role, content }) => ({ role, content }));
+
+      const response = await fetchApi('/ai/products/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          shopId: myShop?.id,
+          message: value,
+          history: historyPayload
+        })
+      });
+
+      if (response?.data) {
+        const { reply, history: serverHistory, productsChanged } = response.data;
+        if (Array.isArray(serverHistory) && serverHistory.length) {
+          setAiHistory(serverHistory);
+        } else if (reply) {
+          setAiHistory((current) => [...current, { role: 'assistant', content: reply }]);
+        }
+
+        if (productsChanged) {
+          await loadData();
+        }
+      } else {
+        throw new Error('Пустой ответ AI-сервиса');
+      }
+    } catch (error) {
+      console.error('AI chat error', error);
+      setAiError(error.message || 'Не удалось обработать запрос. Попробуйте позже.');
+      setAiHistory((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: 'Не получилось обработать команду. Попробуйте еще раз или сформулируйте иначе.'
+        }
+      ]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -268,6 +331,12 @@ export default function ProductsModal({ isOpen, onClose }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]);
 
   const handleAddProduct = async (formData) => {
     try {
@@ -329,7 +398,7 @@ export default function ProductsModal({ isOpen, onClose }) {
   if (!loading && !myShop) {
     return (
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !showAIChat && (
           <motion.div
             className="fixed inset-0 z-50 bg-dark-bg"
             initial={{ x: '100%' }}
@@ -542,6 +611,109 @@ export default function ProductsModal({ isOpen, onClose }) {
           </div>
         </motion.div>
       )}
+      {isOpen && showAIChat && (
+        <motion.div
+          key="ai-chat-panel"
+          className="fixed inset-0 z-50 bg-dark-bg"
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 32, stiffness: 300 }}
+        >
+          <PageHeader title="AI ассистент" onBack={handleCloseAIChat} />
+          <div
+            className="flex flex-col min-h-screen"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+          >
+            <div className="flex-1 px-4 pt-6 pb-36 overflow-y-auto space-y-4">
+              {aiHistory.map((entry, index) => (
+                <motion.div
+                  key={`${entry.role}-${index}`}
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 whitespace-pre-line leading-relaxed ${
+                    entry.role === 'user'
+                      ? 'ml-auto bg-orange-primary/10 text-orange-primary'
+                      : 'mr-auto bg-white/5 text-gray-200 border border-white/10'
+                  }`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {entry.content}
+                </motion.div>
+              ))}
+
+              {aiLoading && (
+                <motion.div
+                  className="flex items-center gap-2 text-gray-400"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-primary"></span>
+                  </span>
+                  Думаю над ответом…
+                </motion.div>
+              )}
+
+              {aiError && (
+                <div className="text-xs text-red-400/80">
+                  {aiError}
+                </div>
+              )}
+            </div>
+
+            <div
+              className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-4 bg-[#0A0A0A] border-t border-white/5 z-50"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+            >
+              <AIChatInput
+                disabled={aiLoading}
+                onSend={handleSendAIMessage}
+              />
+            </div>
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
+  );
+}
+
+function AIChatInput({ disabled, onSend }) {
+  const { triggerHaptic } = useTelegram();
+  const [value, setValue] = useState('');
+
+  const handleSubmit = (evt) => {
+    evt.preventDefault();
+    if (!value.trim() || disabled) return;
+    triggerHaptic('light');
+    onSend(value);
+    setValue('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-2xl px-4 py-3 flex items-center gap-3 border border-white/10 bg-white/5 backdrop-blur-sm">
+      <textarea
+        rows={1}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Напишите, что нужно сделать…"
+        className="flex-1 resize-none bg-transparent text-base text-white focus:outline-none placeholder:text-gray-400"
+        disabled={disabled}
+        autoFocus
+      />
+      <motion.button
+        type="submit"
+        disabled={disabled || !value.trim()}
+        className="w-11 h-11 rounded-xl flex items-center justify-center text-white disabled:opacity-40"
+        style={{
+          background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+        }}
+        whileTap={!disabled && value.trim() ? { scale: 0.94 } : {}}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      </motion.button>
+    </form>
   );
 }

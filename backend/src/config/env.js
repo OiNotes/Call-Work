@@ -59,6 +59,11 @@ export const config = {
   // CORS
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
+  // AI
+  ai: {
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY_BACKEND
+  },
+
   // Rate Limiting
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutes

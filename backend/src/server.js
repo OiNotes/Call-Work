@@ -36,6 +36,7 @@ import followRoutes from './routes/follows.js';
 import workerRoutes from './routes/workers.js';
 import webhookRoutes from './routes/webhooks.js';
 import internalRoutes from './routes/internal.js';
+import aiRoutes from './routes/ai.js';
 
 // Routes registration (will be added after middleware setup)
 
@@ -176,6 +177,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/follows', followRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/webhooks', webhookRoutes); // Crypto payment webhooks
 app.use('/api/internal', internalRoutes); // Internal API for bot-backend communication
 
@@ -374,4 +376,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
-

@@ -39,6 +39,10 @@ describe('/start Flow - Role Memory (P0)', () => {
       }
     });
 
+    // Mock shop APIs - no shop, no workspace
+    mock.onGet('/shops/my').reply(404, { error: 'Shop not found' });
+    mock.onGet('/shops/workspace').reply(404, { error: 'No workspace access' });
+
     // Отправляем /start
     await testBot.handleUpdate(commandUpdate('start'));
 
@@ -47,18 +51,88 @@ describe('/start Flow - Role Memory (P0)', () => {
     expect(lastText).toContain('Status Stock');
   });
 
-  it.skip('повторный /start с ролью buyer → сразу buyer ЛК (БЕЗ вопроса о роли)', async () => {
-    // TODO: Этот тест требует:
-    // 1. Mock auth API с selectedRole: 'buyer'
-    // 2. Первый /start → автоматически вызвать handleBuyerRole
-    // 3. Проверить что НЕТ "Выберите роль", а ЕСТЬ buyer меню
-    
-    // Пример реализации:
-    // mock.onPost('/auth/register').reply(200, {
-    //   data: { token: 'test-jwt', user: { id: 1, selectedRole: 'buyer' } }
-    // });
-    // await testBot.handleUpdate(commandUpdate('start'));
-    // expect(lastText).not.toContain('Выберите роль');
-    // expect(lastText).toContain('Поиск магазинов'); // buyer меню
+  it('пользователь с магазином → автоматически seller ЛК (приоритет 1)', async () => {
+    // Mock auth API
+    mock.onPost('/auth/register').reply(200, {
+      data: {
+        token: 'test-jwt-token',
+        user: {
+          id: 1,
+          telegramId: '123456',
+          username: 'testuser',
+          selectedRole: null
+        }
+      }
+    });
+
+    // Mock: user has shop
+    mock.onGet('/shops/my').reply(200, {
+      data: [{ id: 1, name: 'MyShop', sellerId: 1 }]
+    });
+
+    // Mock: update role to seller
+    mock.onPut('/auth/role').reply(200, { data: { selectedRole: 'seller' } });
+
+    await testBot.handleUpdate(commandUpdate('start'));
+
+    // Проверяем что показали seller меню БЕЗ вопроса о роли
+    const lastText = testBot.getLastReplyText();
+    expect(lastText).not.toContain('Выберите роль');
+    expect(lastText).toContain('Магазин'); // seller menu
+  });
+
+  it('пользователь без магазина + buyer роль → buyer ЛК (приоритет 2)', async () => {
+    // Mock auth API с сохраненной buyer ролью
+    mock.onPost('/auth/register').reply(200, {
+      data: {
+        token: 'test-jwt-token',
+        user: {
+          id: 1,
+          telegramId: '123456',
+          username: 'testuser',
+          selectedRole: 'buyer' // Saved buyer role
+        }
+      }
+    });
+
+    // Mock: no shop
+    mock.onGet('/shops/my').reply(404, { error: 'Shop not found' });
+
+    await testBot.handleUpdate(commandUpdate('start'));
+
+    // Проверяем что показали buyer меню БЕЗ вопроса о роли
+    const lastText = testBot.getLastReplyText();
+    expect(lastText).not.toContain('Выберите роль');
+    expect(lastText).toContain('Панель покупателя'); // buyer menu
+  });
+
+  it('пользователь с магазином перекрывает buyer роль в БД → seller (приоритет 1)', async () => {
+    // Mock auth API с buyer ролью, но есть магазин
+    mock.onPost('/auth/register').reply(200, {
+      data: {
+        token: 'test-jwt-token',
+        user: {
+          id: 1,
+          telegramId: '123456',
+          username: 'testuser',
+          selectedRole: 'buyer' // User had buyer role
+        }
+      }
+    });
+
+    // Mock: user has shop (overrides buyer role)
+    mock.onGet('/shops/my').reply(200, {
+      data: [{ id: 1, name: 'MyShop', sellerId: 1 }]
+    });
+
+    // Mock: update role to seller
+    mock.onPut('/auth/role').reply(200, { data: { selectedRole: 'seller' } });
+
+    await testBot.handleUpdate(commandUpdate('start'));
+
+    // Проверяем что показали seller меню (shop has priority)
+    const lastText = testBot.getLastReplyText();
+    expect(lastText).not.toContain('Выберите роль');
+    expect(lastText).toContain('Магазин'); // seller menu
   });
 });

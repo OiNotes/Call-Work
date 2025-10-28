@@ -1,6 +1,6 @@
 import { Scenes } from 'telegraf';
 import { successButtons, cancelButton } from '../keyboards/common.js';
-import { shopApi } from '../utils/api.js';
+import { shopApi, authApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
@@ -137,6 +137,24 @@ const createShop = async (ctx, shopName) => {
 
     ctx.session.shopId = shop.id;
     ctx.session.shopName = shop.name;
+
+    // Auto-switch to seller role after shop creation
+    ctx.session.role = 'seller';
+    if (ctx.session.user) {
+      ctx.session.user.selectedRole = 'seller';
+    }
+
+    // Save seller role to database
+    try {
+      await authApi.updateRole('seller', ctx.session.token);
+      logger.info('Auto-switched to seller role after shop creation', {
+        userId: ctx.from.id,
+        shopId: shop.id
+      });
+    } catch (roleError) {
+      logger.error('Failed to save seller role to DB:', roleError);
+      // Continue anyway - role is set in session
+    }
 
     logger.info('shop_created', {
       shopId: shop.id,
