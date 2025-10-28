@@ -293,7 +293,6 @@ export default function ProductsModal({ isOpen, onClose }) {
         throw new Error('Пустой ответ AI-сервиса');
       }
     } catch (error) {
-      console.error('AI chat error', error);
       setAiError(error.message || 'Не удалось обработать запрос. Попробуйте позже.');
       setAiHistory((current) => [
         ...current,
@@ -326,7 +325,7 @@ export default function ProductsModal({ isOpen, onClose }) {
         setLimitStatus(limitRes);
       }
     } catch (error) {
-      console.error('Error loading products:', error);
+      // Error handled silently
     } finally {
       setLoading(false);
     }

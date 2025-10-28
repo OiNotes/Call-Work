@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 
-export default function BottomSheet({ isOpen, onClose, children, title }) {
+const BottomSheet = memo(function BottomSheet({ isOpen, onClose, children, title }) {
   const { triggerHaptic } = useTelegram();
   const platform = usePlatform();
   const android = isAndroid(platform);
@@ -29,10 +29,10 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
     [platform]
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     triggerHaptic('light');
     onClose();
-  };
+  }, [triggerHaptic, onClose]);
 
   return (
     <AnimatePresence>
@@ -106,4 +106,6 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
       )}
     </AnimatePresence>
   );
-}
+});
+
+export default BottomSheet;

@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo, useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useMemo, useState, lazy, Suspense } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -8,6 +7,11 @@ import { CRYPTO_OPTIONS, calculateCryptoAmount } from '../../utils/paymentUtils'
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
+
+// Lazy load QR code library (14KB gzipped)
+const QRCodeSVG = lazy(() =>
+  import('qrcode.react').then(module => ({ default: module.QRCodeSVG }))
+);
 
 export default function PaymentDetailsModal() {
   const {
@@ -181,12 +185,18 @@ export default function PaymentDetailsModal() {
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
                     }}
                   >
-                    <QRCodeSVG
-                      value={paymentWallet}
-                      size={qrSize}
-                      level="H"
-                      includeMargin={false}
-                    />
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center" style={{ width: qrSize, height: qrSize }}>
+                        <div className="w-8 h-8 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    }>
+                      <QRCodeSVG
+                        value={paymentWallet}
+                        size={qrSize}
+                        level="H"
+                        includeMargin={false}
+                      />
+                    </Suspense>
                   </motion.div>
                 </div>
 

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { memo, useMemo } from 'react';
 import ProductCard from './ProductCard';
 import { useTranslation } from '../../i18n/useTranslation';
 import { usePlatform } from '../../hooks/usePlatform';
@@ -16,7 +17,7 @@ const container = {
   }
 };
 
-function ProductGrid({
+const ProductGrid = memo(function ProductGrid({
   products,
   loading = false,
   emptyTitle,
@@ -26,16 +27,18 @@ function ProductGrid({
 }) {
   const { t } = useTranslation();
   const platform = usePlatform();
-  const springPreset = getSpringPreset('quick', platform);
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: springPreset || { type: 'spring', stiffness: 400, damping: 30 }
-    }
-  };
+  const item = useMemo(() => {
+    const springPreset = getSpringPreset('quick', platform);
+    return {
+      hidden: { opacity: 0, y: 20 },
+      show: {
+        opacity: 1,
+        y: 0,
+        transition: springPreset || { type: 'spring', stiffness: 400, damping: 30 }
+      }
+    };
+  }, [platform]);
 
   if (loading) {
     return (
@@ -79,6 +82,6 @@ function ProductGrid({
       ))}
     </motion.div>
   );
-}
+});
 
 export default ProductGrid;

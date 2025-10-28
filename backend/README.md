@@ -160,7 +160,7 @@ backend/
 
 ## Security
 
-- **HMAC-SHA256 Telegram initData validation** with timing-safe comparison ([docs/TELEGRAM_AUTH.md](docs/TELEGRAM_AUTH.md))
+- **HMAC-SHA256 Telegram initData validation** with timing-safe comparison
 - Helmet.js для security headers
 - Rate limiting (100 requests / 15 минут по умолчанию)
 - CORS настроен для frontend URL
@@ -169,7 +169,6 @@ backend/
 - 24-hour expiration check для предотвращения replay attacks
 
 **Security Documentation:**
-- [Telegram Authentication Guide](docs/TELEGRAM_AUTH.md) - HMAC-SHA256 validation details
 - [Project Security Policy](../SECURITY.md) - Vulnerability reporting & best practices
 
 ## Error Handling

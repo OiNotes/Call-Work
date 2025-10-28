@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -38,7 +38,7 @@ const getTabsConfig = (t) => [
   },
 ];
 
-export default function TabBar() {
+const TabBar = memo(function TabBar() {
   const { activeTab, setActiveTab, setCartOpen, setPaymentStep } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
@@ -68,16 +68,16 @@ export default function TabBar() {
 
   const android = isAndroid(platform);
 
-  const handleTabChange = (tabId) => {
+  const handleTabChange = useCallback((tabId) => {
     triggerHaptic('light');
-    
+
     // Close all modals BEFORE switching tabs
     setCartOpen(false);
     setPaymentStep('idle'); // Closes all payment modals
-    
+
     // Switch tab
     setActiveTab(tabId);
-  };
+  }, [triggerHaptic, setCartOpen, setPaymentStep, setActiveTab]);
 
   return (
     <div className="tabbar">
@@ -124,4 +124,6 @@ export default function TabBar() {
       </div>
     </div>
   );
-}
+});
+
+export default TabBar;

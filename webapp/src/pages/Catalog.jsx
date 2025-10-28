@@ -64,67 +64,55 @@ export default function Catalog() {
   useEffect(() => {
     if (myShop && !currentShop) {
       // Товары автоматически загрузятся через предыдущий useEffect
-      console.log('Auto-loading my shop products:', myShop.name);
     }
   }, [myShop, currentShop]);
 
-  const loadMyShop = async () => {
+  const loadMyShop = useCallback(async () => {
     try {
-      console.log('[Catalog] Loading my shops...');
       const { data, error: apiError } = await get('/shops/my');
-      console.log('[Catalog] My shops response:', { data, error: apiError });
 
       if (!apiError && data?.data && data.data.length > 0) {
         setMyShop(data.data[0]); // Берем первый магазин владельца
-        console.log('[Catalog] My shop set:', data.data[0]);
-      } else {
-        console.log('[Catalog] No shops found');
       }
     } catch (err) {
-      console.error('Failed to load my shop:', err);
+      // Error handled silently
     }
-  };
+  }, [get]);
 
-  const loadProducts = async (shopId) => {
+  const loadProducts = useCallback(async (shopId) => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('[Catalog] Loading products for shopId:', shopId);
       // GET /api/products?shopId=<shopId>
       const { data, error: apiError } = await get('/products', {
         params: { shopId }
       });
-      console.log('[Catalog] API response:', { data, error: apiError, shopId });
 
       if (apiError) {
         setError('Failed to load products');
-        console.error('Products error:', apiError);
       } else {
         const items = Array.isArray(data?.data) ? data.data : [];
-        console.log('[Catalog] Parsed items:', { count: items.length, items });
         setStoreProducts(items, shopId);
-        console.log('[Catalog] Products set to store:', { count: items.length, shopId });
       }
     } catch (err) {
       setError('Failed to load products');
-      console.error('Products error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [get, setStoreProducts]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     triggerHaptic('light');
     setCurrentShop(null);
     setStoreProducts([], null);
-  };
+  }, [triggerHaptic, setCurrentShop, setStoreProducts]);
 
-  const handleBackToMyShop = () => {
+  const handleBackToMyShop = useCallback(() => {
     triggerHaptic('light');
     setCurrentShop(null);
     // Товары автоматически загрузятся через useEffect
-  };
+  }, [triggerHaptic, setCurrentShop]);
 
   // Определяем, какой магазин показывать
   const displayShop = currentShop || myShop;
@@ -166,11 +154,11 @@ export default function Catalog() {
     }
   }, [loading, activeSection, productSections.stock.length, productSections.preorder.length]);
 
-  const handleSectionChange = (sectionId) => {
+  const handleSectionChange = useCallback((sectionId) => {
     if (sectionId === activeSection) return;
     triggerHaptic('light');
     setActiveSection(sectionId);
-  };
+  }, [activeSection, triggerHaptic]);
 
   const openPreorder = useCallback((product) => {
     setPreorderProduct(product);

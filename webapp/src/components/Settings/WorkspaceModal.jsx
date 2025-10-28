@@ -93,7 +93,6 @@ export default function WorkspaceModal({ isOpen, onClose }) {
     try {
       // Get shop - simplified parsing
       const shopsRes = await fetchApi('/shops/my');
-      console.log('[WorkspaceModal] Raw API response:', shopsRes);
 
       // Extract shop data - handle both {data: [...]} and [...] responses
       let shopsList = [];
@@ -104,12 +103,10 @@ export default function WorkspaceModal({ isOpen, onClose }) {
       }
 
       const shop = shopsList.length > 0 ? shopsList[0] : null;
-      console.log('[WorkspaceModal] Parsed shop:', shop);
 
       setMyShop(shop);
 
       if (!shop) {
-        console.log('[WorkspaceModal] No shop found - resetting state');
         setIsPro(false);
         setWorkers([]);
         setShowForm(false);
@@ -118,21 +115,18 @@ export default function WorkspaceModal({ isOpen, onClose }) {
 
       // Check PRO tier
       const proTier = shop.tier === 'pro';
-      console.log('[WorkspaceModal] Shop tier:', shop.tier, '| isPro:', proTier);
       setIsPro(proTier);
 
       if (proTier) {
         // Load workers for PRO shops
         const workersRes = await fetchApi(`/shops/${shop.id}/workers`);
         const workersList = Array.isArray(workersRes?.data) ? workersRes.data : [];
-        console.log('[WorkspaceModal] Workers loaded:', workersList.length);
         setWorkers(workersList);
       } else {
         setWorkers([]);
         setShowForm(false);
       }
     } catch (error) {
-      console.error('[WorkspaceModal] Error loading data:', error);
       setIsPro(false);
       setWorkers([]);
       setMyShop(null);

@@ -26,7 +26,6 @@ export default function Subscriptions() {
 
       if (apiError) {
         setError('Failed to load subscriptions');
-        console.error('Subscriptions error:', apiError);
       } else {
         const normalized = (data?.data || []).map((item) => ({
           shopId: item.shop_id,
@@ -41,7 +40,6 @@ export default function Subscriptions() {
       }
     } catch (err) {
       setError('Failed to load subscriptions');
-      console.error('Subscriptions error:', err);
     } finally {
       setLoading(false);
     }

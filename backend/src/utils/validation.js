@@ -3,6 +3,7 @@
  */
 
 import WAValidator from 'wallet-validator';
+import logger from './logger.js';
 
 /**
  * Validate crypto wallet address format
@@ -32,15 +33,15 @@ export const validateCryptoAddress = (address, crypto) => {
     const validatorCurrency = currencyMap[currency];
 
     if (!validatorCurrency) {
-      console.warn('Unknown cryptocurrency type:', crypto);
+      logger.warn('Unknown cryptocurrency type', { crypto });
       return false;
     }
 
     return WAValidator.validate(address, validatorCurrency);
   } catch (error) {
-    console.error('Error validating crypto address:', {
+    logger.error('Error validating crypto address', {
       error: error.message,
-      address: address.substring(0, 10) + '...',
+      addressPreview: address.substring(0, 10) + '...',
       crypto
     });
     return false;

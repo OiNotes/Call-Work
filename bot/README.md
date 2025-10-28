@@ -127,8 +127,6 @@ Telegram Shop
 и многое другое! Давайте начнём? 🚀
 ```
 
-Подробнее: [DESIGN_PRINCIPLES.md](./DESIGN_PRINCIPLES.md)
-
 ## User Flows
 
 ### Seller Flow:

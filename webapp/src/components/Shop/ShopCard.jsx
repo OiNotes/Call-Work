@@ -1,15 +1,16 @@
 import { motion } from 'framer-motion';
+import { memo, useCallback } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 
-export default function ShopCard({ shop, onClick }) {
+const ShopCard = memo(function ShopCard({ shop, onClick }) {
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     triggerHaptic('light');
     onClick?.(shop);
-  };
+  }, [triggerHaptic, onClick, shop]);
 
   return (
     <motion.div
@@ -79,4 +80,6 @@ export default function ShopCard({ shop, onClick }) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default ShopCard;

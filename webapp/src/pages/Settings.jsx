@@ -128,7 +128,6 @@ export default function Settings() {
         setShowLanguage(true);
         break;
       case 'analytics':
-        console.info('[Settings] Открываем статистику');
         setShowAnalytics(true);
         break;
       case 'products':
@@ -144,7 +143,7 @@ export default function Settings() {
         setShowFollows(true);
         break;
       default:
-        console.log('Setting clicked:', itemId);
+        break;
     }
   };
 

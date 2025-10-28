@@ -109,17 +109,19 @@ export const paymentController = {
       if (verification.status === 'confirmed') {
         await orderQueries.updateStatus(orderId, 'confirmed');
 
-        // Get product info
-        const product = await productQueries.findById(order.product_id);
+        // OPTIMIZED: Parallel execution of independent queries
+        const [product, buyer] = await Promise.all([
+          productQueries.findById(order.product_id),
+          userQueries.findById(order.buyer_id)
+        ]);
 
-        // Decrease actual stock and unreserve
+        // Update stock (sequential - need to be atomic)
         await productQueries.updateStock(order.product_id, -order.quantity);
         await productQueries.unreserveStock(order.product_id, order.quantity);
 
-        // Get seller info for notification
+        // Get seller info (can be done in parallel with previous operations)
         const shop = await shopQueries.findById(product.shop_id);
         const seller = await userQueries.findById(shop.owner_id);
-        const buyer = await userQueries.findById(order.buyer_id);
 
         // Notify seller about payment confirmation
         try {

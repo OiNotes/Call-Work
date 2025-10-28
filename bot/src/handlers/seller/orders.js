@@ -90,7 +90,6 @@ ${ordersList}
     logger.info(`User ${ctx.from.id} viewed ${activeOrders.length} active orders for shop ${shopId}`);
 
   } catch (error) {
-    console.error('Error in handleActiveOrders:', error);
     logger.error('Error in handleActiveOrders:', error);
 
     try {
@@ -174,7 +173,6 @@ ${ordersList}
     logger.info(`User ${ctx.from.id} viewed order history (${deliveredOrders.length} orders) for shop ${shopId}`);
 
   } catch (error) {
-    console.error('Error in handleOrderHistory:', error);
     logger.error('Error in handleOrderHistory:', error);
 
     try {

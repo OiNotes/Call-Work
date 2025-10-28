@@ -42,7 +42,7 @@ module.exports = {
     {
       name: 'bot',
       cwd: './bot',
-      script: 'bot.js',
+      script: 'src/bot.js',
       env: {
         NODE_ENV: 'production'
       },

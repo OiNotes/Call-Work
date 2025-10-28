@@ -17,6 +17,11 @@ export default defineConfig({
       compress: {
         drop_console: dropConsole,
         drop_debugger: dropConsole,
+        passes: 2, // More aggressive compression
+        pure_funcs: dropConsole ? ['console.log', 'console.info', 'console.debug'] : [],
+      },
+      mangle: {
+        safari10: true, // Better Safari compatibility
       },
     },
     rollupOptions: {
@@ -27,7 +32,7 @@ export default defineConfig({
           'animation': ['framer-motion'],
           'state': ['zustand'],
           'telegram': ['@telegram-apps/sdk'],
-          'qr': ['qrcode.react'],
+          // QR code now lazy-loaded, remove from vendor chunk
         },
       },
     },

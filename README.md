@@ -353,7 +353,7 @@ VITE_API_URL=http://localhost:3000
 **Payments:**
 - `POST /api/payments/verify` - Проверить платеж
 
-Полная документация: [backend/API_EXAMPLES.md](backend/API_EXAMPLES.md)
+Полная документация API: [backend/README.md](backend/README.md)
 
 ## 🎯 Дизайн-система
 
@@ -382,13 +382,17 @@ make prod-build
 # 2. Запустите в production режиме
 make prod-start
 
-# 3. Настройте Nginx reverse proxy
-# См. backend/DEPLOYMENT.md
+# 3. Настройте Nginx reverse proxy (опционально)
 ```
 
-### Manual deployment
+### PM2 deployment
 
-См. подробное руководство в [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md)
+Для production deployment используйте PM2:
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
+```
 
 ## 🔒 Безопасность
 

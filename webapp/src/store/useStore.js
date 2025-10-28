@@ -227,7 +227,7 @@ export const useStore = create((set, get) => ({
             set({ products: normalized, productsShopId: shopId });
           }
         } catch (error) {
-          console.error('Failed to refetch products:', error);
+          // Error handled silently
         }
       },
 
