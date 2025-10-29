@@ -1,28 +1,27 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
-import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useBackButton } from '../../hooks/useBackButton';
+import { useApi } from '../../hooks/useApi';
 
-// Регулярные выражения для определения типа кошелька
 const WALLET_PATTERNS = {
   BTC: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/,
-  LTC: /^(L|M)[a-zA-HJ-NP-Z0-9]{26,33}$/,
   ETH: /^0x[a-fA-F0-9]{40}$/,
   USDT: /^0x[a-fA-F0-9]{40}$/, // USDT (ERC-20) использует те же адреса что и ETH
+  TON: /^[A-Za-z0-9_-]{48,66}$/
 };
 
-// Определение типа кошелька
-const detectWalletType = (address) => {
-  if (WALLET_PATTERNS.BTC.test(address)) return 'BTC';
-  if (WALLET_PATTERNS.LTC.test(address)) return 'LTC';
-  if (WALLET_PATTERNS.ETH.test(address)) return 'ETH/USDT';
-  return null;
+const walletFieldMap = {
+  BTC: { key: 'btc', field: 'wallet_btc' },
+  ETH: { key: 'eth', field: 'wallet_eth' },
+  USDT: { key: 'usdt', field: 'wallet_usdt' },
+  TON: { key: 'ton', field: 'wallet_ton' }
 };
 
-// Компонент карточки кошелька
+const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'TON'];
+
 function WalletCard({ wallet, onRemove }) {
   const { triggerHaptic, confirm } = useTelegram();
   const { t } = useTranslation();
@@ -32,14 +31,15 @@ function WalletCard({ wallet, onRemove }) {
     const confirmed = await confirm(t('wallet.confirmRemove'));
     if (confirmed) {
       triggerHaptic('success');
-      onRemove(wallet.address);
+      onRemove(wallet);
     }
   };
 
   const typeColors = {
-    'BTC': 'text-orange-500',
-    'LTC': 'text-yellow-500',
-    'ETH/USDT': 'text-blue-500',
+    BTC: 'text-orange-500',
+    ETH: 'text-blue-400',
+    USDT: 'text-emerald-400',
+    TON: 'text-teal-400'
   };
 
   return (
@@ -62,7 +62,7 @@ function WalletCard({ wallet, onRemove }) {
             {wallet.address}
           </p>
           <p className="text-gray-500 text-xs mt-1">
-            {t('wallet.added', { date: new Date(wallet.addedAt).toLocaleDateString('ru-RU') })}
+            {t('wallet.added', { date: new Date(wallet.addedAt || Date.now()).toLocaleDateString('ru-RU') })}
           </p>
         </div>
         <motion.button
@@ -83,92 +83,202 @@ function WalletCard({ wallet, onRemove }) {
   );
 }
 
-// Основной компонент модалки
 export default function WalletsModal({ isOpen, onClose }) {
-  const { wallets, addWallet, removeWallet } = useStore();
   const { triggerHaptic, alert } = useTelegram();
   const { t } = useTranslation();
+  const { get, put } = useApi();
+
+  const [shop, setShop] = useState(null);
+  const [walletMap, setWalletMap] = useState({ btc: null, eth: null, usdt: null, ton: null });
+  const [walletMeta, setWalletMeta] = useState({ updatedAt: null });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const [btcAddress, setBtcAddress] = useState('');
   const [ethAddress, setEthAddress] = useState('');
   const [usdtAddress, setUsdtAddress] = useState('');
-  const [ltcAddress, setLtcAddress] = useState('');
+  const [tonAddress, setTonAddress] = useState('');
 
-  // Validation helpers
-  const isValidBTC = (addr) => WALLET_PATTERNS.BTC.test(addr);
-  const isValidLTC = (addr) => WALLET_PATTERNS.LTC.test(addr);
-  const isValidETH = (addr) => WALLET_PATTERNS.ETH.test(addr);
-  const hasValidAddress = (btcAddress && isValidBTC(btcAddress)) || 
-                          (ethAddress && isValidETH(ethAddress)) ||
-                          (usdtAddress && isValidETH(usdtAddress)) ||
-                          (ltcAddress && isValidLTC(ltcAddress));
+  const isValidBTC = btcAddress ? WALLET_PATTERNS.BTC.test(btcAddress.trim()) : false;
+  const isValidETH = ethAddress ? WALLET_PATTERNS.ETH.test(ethAddress.trim()) : false;
+  const isValidUSDT = usdtAddress ? WALLET_PATTERNS.USDT.test(usdtAddress.trim()) : false;
+  const isValidTON = tonAddress ? WALLET_PATTERNS.TON.test(tonAddress.trim()) : false;
 
-  const handleClose = useCallback(() => {
+  const hasValidAddress = isValidBTC || isValidETH || isValidUSDT || isValidTON;
+
+  const resetForm = useCallback(() => {
     setShowForm(false);
     setBtcAddress('');
     setEthAddress('');
     setUsdtAddress('');
-    setLtcAddress('');
-    onClose();
-  }, [onClose]);
+    setTonAddress('');
+  }, []);
 
-  useBackButton(isOpen ? handleClose : null);
-
-  const handleCancelForm = () => {
-    triggerHaptic('light');
-    setShowForm(false);
-    setBtcAddress('');
-    setEthAddress('');
-    setUsdtAddress('');
-    setLtcAddress('');
-  };
-
-  const handleSaveWallets = async () => {
-    if (!hasValidAddress) {
-      await alert('Введите хотя бы один валидный адрес');
+  const syncWalletState = useCallback((payload) => {
+    if (!payload) {
+      setWalletMap({ btc: null, eth: null, usdt: null, ton: null });
+      setWalletMeta({ updatedAt: null });
       return;
     }
 
-    const walletsToAdd = [];
+    const data = payload.data || payload;
+    setWalletMap({
+      btc: data.wallet_btc ?? data.wallets?.btc ?? null,
+      eth: data.wallet_eth ?? data.wallets?.eth ?? null,
+      usdt: data.wallet_usdt ?? data.wallets?.usdt ?? null,
+      ton: data.wallet_ton ?? data.wallets?.ton ?? null
+    });
+    setWalletMeta({
+      updatedAt: data.updated_at || data.updatedAt || null
+    });
+  }, []);
 
-    if (btcAddress && isValidBTC(btcAddress)) {
-      if (!wallets.some(w => w.address === btcAddress)) {
-        walletsToAdd.push({ address: btcAddress, type: 'BTC', addedAt: new Date().toISOString() });
-      }
+  const loadWallets = useCallback(async () => {
+    if (!isOpen) {
+      return;
     }
 
-    if (ethAddress && isValidETH(ethAddress)) {
-      if (!wallets.some(w => w.address === ethAddress)) {
-        walletsToAdd.push({ address: ethAddress, type: 'ETH', addedAt: new Date().toISOString() });
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const { data: shopsResponse, error: shopsError } = await get('/shops/my');
+      if (shopsError) {
+        setErrorMessage(t('wallet.shopsLoadError'));
+        syncWalletState(null);
+        setShop(null);
+        return;
       }
+
+      const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+      if (!shops.length) {
+        setShop(null);
+        syncWalletState(null);
+        return;
+      }
+
+      const primaryShop = shops[0];
+      setShop(primaryShop);
+
+      const { data: walletsResponse, error: walletsError } = await get(`/shops/${primaryShop.id}/wallets`);
+      if (walletsError) {
+        setErrorMessage(t('wallet.loadError'));
+        syncWalletState(null);
+        return;
+      }
+
+      syncWalletState(walletsResponse);
+    } catch (error) {
+      console.error('Failed to load wallets', error);
+      setErrorMessage(t('wallet.loadError'));
+      syncWalletState(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [get, isOpen, syncWalletState, t]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadWallets();
+    }
+  }, [isOpen, loadWallets]);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [onClose, resetForm]);
+
+  useBackButton(isOpen ? handleClose : null);
+
+  const walletList = useMemo(() => {
+    return orderedWalletTypes
+      .map((type) => {
+        const mapping = walletFieldMap[type];
+        const address = walletMap[mapping.key];
+        if (!address) {
+          return null;
+        }
+
+        return {
+          type,
+          address,
+          addedAt: walletMeta.updatedAt
+        };
+      })
+      .filter(Boolean);
+  }, [walletMap, walletMeta.updatedAt]);
+
+  const handleRemoveWallet = useCallback(async (wallet) => {
+    if (!shop) {
+      return;
     }
 
-    if (usdtAddress && isValidETH(usdtAddress)) {
-      if (!wallets.some(w => w.address === usdtAddress)) {
-        walletsToAdd.push({ address: usdtAddress, type: 'USDT', addedAt: new Date().toISOString() });
-      }
+    const mapping = walletFieldMap[wallet.type];
+    if (!mapping) {
+      return;
     }
 
-    if (ltcAddress && isValidLTC(ltcAddress)) {
-      if (!wallets.some(w => w.address === ltcAddress)) {
-        walletsToAdd.push({ address: ltcAddress, type: 'LTC', addedAt: new Date().toISOString() });
-      }
-    }
+    setSaving(true);
+    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
+      [mapping.field]: null
+    });
 
-    if (walletsToAdd.length === 0) {
-      await alert('Все адреса уже добавлены');
+    if (error) {
+      await alert(t('wallet.deleteError'));
+      setSaving(false);
       return;
     }
 
     triggerHaptic('success');
-    walletsToAdd.forEach(wallet => addWallet(wallet));
+    syncWalletState(response);
+    setSaving(false);
+  }, [alert, put, shop, syncWalletState, t, triggerHaptic]);
 
-    setBtcAddress('');
-    setEthAddress('');
-    setUsdtAddress('');
-    setLtcAddress('');
-    setShowForm(false);
-  };
+  const handleSaveWallets = useCallback(async () => {
+    if (!shop) {
+      await alert(t('wallet.shopRequired'));
+      return;
+    }
+
+    if (!hasValidAddress) {
+      await alert(t('wallet.invalidAll'));
+      return;
+    }
+
+    const payload = {};
+    if (isValidBTC) {
+      payload.wallet_btc = btcAddress.trim();
+    }
+    if (isValidETH) {
+      payload.wallet_eth = ethAddress.trim();
+    }
+    if (isValidUSDT) {
+      payload.wallet_usdt = usdtAddress.trim();
+    }
+    if (isValidTON) {
+      payload.wallet_ton = tonAddress.trim();
+    }
+
+    if (!Object.keys(payload).length) {
+      await alert(t('wallet.invalidAddresses'));
+      return;
+    }
+
+    setSaving(true);
+    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, payload);
+
+    if (error) {
+      await alert(t('wallet.saveError'));
+      setSaving(false);
+      return;
+    }
+
+    triggerHaptic('success');
+    syncWalletState(response);
+    resetForm();
+    setSaving(false);
+  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidTON, isValidUSDT, put, resetForm, shop, syncWalletState, t, tonAddress, triggerHaptic, usdtAddress]);
 
   return (
     <AnimatePresence>
@@ -186,7 +296,6 @@ export default function WalletsModal({ isOpen, onClose }) {
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
           >
             <div className="px-4 py-6 space-y-4">
-              {/* Context Header */}
               <motion.div
                 className="glass-card rounded-2xl p-4"
                 initial={{ opacity: 0, y: 10 }}
@@ -206,172 +315,164 @@ export default function WalletsModal({ isOpen, onClose }) {
                       Укажите адреса для приёма криптовалюты от покупателей.
                     </p>
                     <p className="text-gray-500 text-xs">
-                      Поддерживаемые: BTC, LTC, ETH, USDT, TON
+                      {t('wallet.supported')}
                     </p>
+                    {shop && (
+                      <p className="text-gray-500 text-xs mt-2">
+                        Магазин: <span className="text-white">{shop.name}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </motion.div>
 
-        {/* Кнопка добавления кошелька */}
-        {!showForm && (
-          <motion.button
-            onClick={() => {
-              triggerHaptic('light');
-              setShowForm(true);
-            }}
-            className="w-full h-14 rounded-2xl font-semibold text-white"
-            style={{
-              background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
-              boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
-            }}
-            whileTap={{ scale: 0.98 }}
-          >
-            + {t('wallet.add')}
-          </motion.button>
-        )}
-
-        {/* Форма добавления */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div
-              className="glass-card rounded-2xl p-4 space-y-4"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              {/* BTC Input */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
-                <input
-                  type="text"
-                  value={btcAddress}
-                  onChange={(e) => setBtcAddress(e.target.value)}
-                  placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                />
-                {btcAddress && (isValidBTC(btcAddress) ? 
-                  <span className="text-green-500 text-sm">✓ Valid BTC</span> :
-                  <span className="text-red-500 text-sm">⚠️ Invalid BTC</span>
-                )}
-              </div>
-
-              {/* ETH Input */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
-                <input
-                  type="text"
-                  value={ethAddress}
-                  onChange={(e) => setEthAddress(e.target.value)}
-                  placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                />
-                {ethAddress && (isValidETH(ethAddress) ? 
-                  <span className="text-green-500 text-sm">✓ Valid ETH</span> :
-                  <span className="text-red-500 text-sm">⚠️ Invalid ETH</span>
-                )}
-              </div>
-
-              {/* USDT Input */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
-                <input
-                  type="text"
-                  value={usdtAddress}
-                  onChange={(e) => setUsdtAddress(e.target.value)}
-                  placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                />
-                {usdtAddress && (isValidETH(usdtAddress) ? 
-                  <span className="text-green-500 text-sm">✓ Valid USDT</span> :
-                  <span className="text-red-500 text-sm">⚠️ Invalid USDT</span>
-                )}
-              </div>
-
-              {/* LTC Input */}
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
-                <input
-                  type="text"
-                  value={ltcAddress}
-                  onChange={(e) => setLtcAddress(e.target.value)}
-                  placeholder="LQTpS7vVUqFcCW8vJhEJhd8wNEZ3WCqkEu"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                />
-                {ltcAddress && (isValidLTC(ltcAddress) ? 
-                  <span className="text-green-500 text-sm">✓ Valid LTC</span> :
-                  <span className="text-red-500 text-sm">⚠️ Invalid LTC</span>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <motion.button
-                  onClick={handleCancelForm}
-                  className="flex-1 h-11 rounded-xl font-medium text-gray-300"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}
-                  whileTap={{ scale: 0.98 }}
+              {errorMessage && (
+                <motion.div
+                  className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                 >
-                  Отмена
-                </motion.button>
-                <motion.button
-                  onClick={handleSaveWallets}
-                  disabled={!hasValidAddress}
-                  className="flex-1 h-11 rounded-xl font-semibold text-white disabled:opacity-50"
-                  style={{
-                    background: hasValidAddress
-                      ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
-                      : 'rgba(255, 255, 255, 0.1)'
-                  }}
-                  whileTap={hasValidAddress ? { scale: 0.98 } : {}}
-                >
-                  Сохранить
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  {errorMessage}
+                </motion.div>
+              )}
 
-        {/* Список кошельков */}
-        {wallets.length > 0 ? (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-400 px-2">
-              {t('wallet.saved')}
-            </h3>
-            <AnimatePresence mode="popLayout">
-              {wallets.map((wallet) => (
-                <WalletCard
-                  key={wallet.address}
-                  wallet={wallet}
-                  onRemove={removeWallet}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        ) : (
-          !showForm && (
-            <div className="text-center py-12">
-              <svg
-                className="w-16 h-16 mx-auto mb-4 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                />
-              </svg>
-              <p className="text-gray-400 text-sm">
-                {t('wallet.empty')}
-              </p>
-            </div>
-          )
-        )}
+              {loading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-12 h-12 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <AnimatePresence>
+                    {walletList.length > 0 ? (
+                      walletList.map((wallet) => (
+                        <WalletCard
+                          key={wallet.type}
+                          wallet={wallet}
+                          onRemove={handleRemoveWallet}
+                        />
+                      ))
+                    ) : (
+                      <motion.div
+                        className="glass-card rounded-2xl p-4 text-gray-400 text-sm"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        {t('wallet.empty')}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {!showForm && (
+                    <motion.button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setShowForm(true);
+                      }}
+                      className="w-full h-14 rounded-2xl font-semibold text-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
+                        boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={saving}
+                    >
+                      + {t('wallet.add')}
+                    </motion.button>
+                  )}
+
+                  <AnimatePresence>
+                    {showForm && (
+                      <motion.div
+                        className="glass-card rounded-2xl p-4 space-y-4"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                      >
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
+                          <input
+                            type="text"
+                            value={btcAddress}
+                            onChange={(e) => setBtcAddress(e.target.value)}
+                            placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                          />
+                          {btcAddress && (
+                            <span className={`text-sm ${isValidBTC ? 'text-green-500' : 'text-red-500'}`}>
+                              {isValidBTC ? '✓ Valid BTC' : '⚠️ Invalid BTC'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
+                          <input
+                            type="text"
+                            value={ethAddress}
+                            onChange={(e) => setEthAddress(e.target.value)}
+                            placeholder="0x742d35Cc6634C0532925a3b844Bc7e759f42bE1"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                          />
+                          {ethAddress && (
+                            <span className={`text-sm ${isValidETH ? 'text-green-500' : 'text-red-500'}`}>
+                              {isValidETH ? '✓ Valid ETH' : '⚠️ Invalid ETH'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
+                          <input
+                            type="text"
+                            value={usdtAddress}
+                            onChange={(e) => setUsdtAddress(e.target.value)}
+                            placeholder="0x1234..."
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                          />
+                          {usdtAddress && (
+                            <span className={`text-sm ${isValidUSDT ? 'text-green-500' : 'text-red-500'}`}>
+                              {isValidUSDT ? '✓ Valid USDT' : '⚠️ Invalid USDT'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-gray-400 mb-2 block">TON</label>
+                          <input
+                            type="text"
+                            value={tonAddress}
+                            onChange={(e) => setTonAddress(e.target.value)}
+                            placeholder="UQ..."
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                          />
+                          {tonAddress && (
+                            <span className={`text-sm ${isValidTON ? 'text-green-500' : 'text-red-500'}`}>
+                              {isValidTON ? '✓ Valid TON' : '⚠️ Invalid TON'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-2">
+                          <button
+                            onClick={handleSaveWallets}
+                            className="flex-1 h-12 rounded-xl bg-orange-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                            disabled={saving || !hasValidAddress}
+                          >
+                            {saving ? t('common.loading') : t('common.save')}
+                          </button>
+                          <button
+                            onClick={resetForm}
+                            className="w-32 h-12 rounded-xl border border-white/10 text-white/70"
+                            disabled={saving}
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

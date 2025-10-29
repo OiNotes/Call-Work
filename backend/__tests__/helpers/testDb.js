@@ -201,18 +201,17 @@ export const createTestOrder = async (buyerId, productId, shopId, orderData = {}
   const order = {
     buyer_id: buyerId,
     product_id: productId,
-    shop_id: shopId,
     quantity: orderData.quantity || 1,
     total_price: orderData.total_price || '99.99',
-    status: orderData.status || 'pending',
-    buyer_telegram_id: orderData.buyer_telegram_id || '123456789'
+    currency: orderData.currency || 'USD',
+    status: orderData.status || 'pending'
   };
 
   const result = await pool.query(
-    `INSERT INTO orders (buyer_id, product_id, shop_id, quantity, total_price, status, buyer_telegram_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO orders (buyer_id, product_id, quantity, total_price, currency, status)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [order.buyer_id, order.product_id, order.shop_id, order.quantity, order.total_price, order.status, order.buyer_telegram_id]
+    [order.buyer_id, order.product_id, order.quantity, order.total_price, order.currency, order.status]
   );
 
   return result.rows[0];

@@ -1,5 +1,6 @@
 import { shopFollowQueries } from '../models/shopFollowQueries.js';
-import { shopQueries, workerQueries } from '../models/db.js';
+import { shopQueries, workerQueries, productQueries } from '../models/db.js';
+import { syncedProductQueries } from '../models/syncedProductQueries.js';
 import { getClient } from '../config/database.js';
 import { syncAllProductsForFollow, updateMarkupForFollow } from '../services/productSyncService.js';
 import logger from '../utils/logger.js';
@@ -39,12 +40,14 @@ const formatFollowResponse = (follow) => {
     follower_shop_name: follow.follower_shop_name || null,
     source_shop_id: follow.source_shop_id,
     source_shop_name: follow.source_shop_name || null,
+    source_shop_logo: follow.source_shop_logo || null,
     source_owner_id: follow.source_owner_id || null,
     source_username: follow.source_username || null,
     mode: follow.mode,
     markup_percentage: markup,
     status: follow.status,
     synced_products_count: toNumber(follow.synced_products_count, 0),
+    source_products_count: toNumber(follow.source_products_count, 0),
     created_at: follow.created_at,
     updated_at: follow.updated_at
   };
@@ -81,6 +84,173 @@ export const getMyFollows = async (req, res) => {
       shopId: req.query?.shopId
     });
     res.status(500).json({ error: 'Failed to get follows' });
+  }
+};
+
+/**
+ * Get detailed follow info
+ */
+export const getFollowDetail = async (req, res) => {
+  try {
+    const followId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(followId) || followId <= 0) {
+      return res.status(400).json({ error: 'Valid follow ID is required' });
+    }
+
+    const follow = await shopFollowQueries.findById(followId);
+
+    if (!follow) {
+      return res.status(404).json({ error: 'Follow not found' });
+    }
+
+    const access = await workerQueries.checkAccess(follow.follower_shop_id, req.user.id);
+    if (!access.hasAccess) {
+      return res.status(403).json({ error: 'You do not have access to this follow' });
+    }
+
+    const formatted = formatFollowResponse(follow);
+
+    formatted.stats = {
+      source_products: formatted.source_products_count,
+      synced_products: formatted.synced_products_count
+    };
+
+    formatted.source_shop = {
+      id: follow.source_shop_id,
+      name: follow.source_shop_name,
+      logo: follow.source_shop_logo || null,
+      username: follow.source_username || null,
+      owner_id: follow.source_owner_id
+    };
+
+    formatted.follower_shop = {
+      id: follow.follower_shop_id,
+      name: follow.follower_shop_name || null
+    };
+
+    return res.json({ data: formatted });
+  } catch (error) {
+    logger.error('Error getting follow detail', {
+      error: error.message,
+      stack: error.stack,
+      followId: req.params?.id
+    });
+    return res.status(500).json({ error: 'Failed to get follow detail' });
+  }
+};
+
+const formatMonitorProduct = (product) => ({
+  id: product.id,
+  name: product.name,
+  description: product.description,
+  price: Number(product.price),
+  currency: product.currency,
+  stock_quantity: Number(product.stock_quantity),
+  is_active: product.is_active,
+  image: product.image || product.images?.[0] || null,
+  updated_at: product.updated_at,
+  created_at: product.created_at
+});
+
+const formatResellProduct = (row, markupPercentage) => {
+  const markupMultiplier = 1 + (Number(markupPercentage) || 0) / 100;
+  const sourcePrice = Number(row.source_product_price) || 0;
+  const syncedPrice = Number(row.synced_product_price) || 0;
+
+  return {
+    id: row.id,
+    follow_id: row.follow_id,
+    source_product: {
+      id: row.source_product_id,
+      name: row.source_product_name,
+      price: sourcePrice,
+      stock_quantity: Number(row.source_product_stock),
+      is_active: row.source_product_active
+    },
+    synced_product: {
+      id: row.synced_product_id,
+      name: row.synced_product_name,
+      price: syncedPrice,
+      stock_quantity: Number(row.synced_product_stock),
+      is_active: row.synced_product_active
+    },
+    pricing: {
+      markup_percentage: Number(markupPercentage) || 0,
+      expected_price: Number((sourcePrice * markupMultiplier).toFixed(2)),
+      deviation: syncedPrice ? Number((syncedPrice - sourcePrice * markupMultiplier).toFixed(2)) : null
+    },
+    conflict_status: row.conflict_status,
+    last_synced_at: row.last_synced_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+};
+
+/**
+ * Get products for a follow relationship (monitor or resell)
+ */
+export const getFollowProducts = async (req, res) => {
+  try {
+    const followId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(followId) || followId <= 0) {
+      return res.status(400).json({ error: 'Valid follow ID is required' });
+    }
+
+    const follow = await shopFollowQueries.findById(followId);
+
+    if (!follow) {
+      return res.status(404).json({ error: 'Follow not found' });
+    }
+
+    const access = await workerQueries.checkAccess(follow.follower_shop_id, req.user.id);
+    if (!access.hasAccess) {
+      return res.status(403).json({ error: 'You do not have access to this follow' });
+    }
+
+    const limit = Math.min(Number.parseInt(req.query.limit, 10) || 25, 100);
+    const offset = Number.parseInt(req.query.offset, 10) || 0;
+
+    if (follow.mode === 'monitor') {
+      const products = await productQueries.list({ shopId: follow.source_shop_id, limit, offset });
+      const total = await productQueries.countByShopId(follow.source_shop_id);
+
+      return res.json({
+        data: {
+          mode: 'monitor',
+          products: products.map(formatMonitorProduct),
+          pagination: {
+            limit,
+            offset,
+            total
+          }
+        }
+      });
+    }
+
+    const rows = await syncedProductQueries.findByFollowIdPaginated(followId, limit, offset);
+    const total = rows.length > 0 && rows[0].total_count ? Number(rows[0].total_count) : follow.synced_products_count || 0;
+    const markupValue = toNumber(follow.markup_percentage, 0);
+
+    return res.json({
+      data: {
+        mode: 'resell',
+        products: rows.map((row) => formatResellProduct(row, markupValue)),
+        pagination: {
+          limit,
+          offset,
+          total
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Error getting follow products', {
+      error: error.message,
+      stack: error.stack,
+      followId: req.params?.id
+    });
+    return res.status(500).json({ error: 'Failed to get follow products' });
   }
 };
 

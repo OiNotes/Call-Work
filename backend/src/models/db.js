@@ -205,17 +205,38 @@ export const shopQueries = {
 
   // Update shop wallets
   updateWallets: async (id, walletData) => {
-    const { wallet_btc, wallet_eth, wallet_usdt, wallet_ton } = walletData;
+    const allowedFields = ['wallet_btc', 'wallet_eth', 'wallet_usdt', 'wallet_ton'];
+    const setClauses = [];
+    const params = [id];
+    let paramIndex = 2;
+
+    allowedFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(walletData, field)) {
+        setClauses.push(`${field} = $${paramIndex}`);
+        params.push(walletData[field]);
+        paramIndex += 1;
+      }
+    });
+
+    if (setClauses.length === 0) {
+      // Nothing to update, return current record for consistency
+      const existing = await query(
+        `SELECT id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at
+         FROM shops
+         WHERE id = $1`,
+        [id]
+      );
+      return existing.rows[0] || null;
+    }
+
+    setClauses.push('updated_at = NOW()');
+
     const result = await query(
       `UPDATE shops
-       SET wallet_btc = COALESCE($2, wallet_btc),
-           wallet_eth = COALESCE($3, wallet_eth),
-           wallet_usdt = COALESCE($4, wallet_usdt),
-           wallet_ton = COALESCE($5, wallet_ton),
-           updated_at = NOW()
+       SET ${setClauses.join(', ')}
        WHERE id = $1
        RETURNING id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
-      [id, wallet_btc, wallet_eth, wallet_usdt, wallet_ton]
+      params
     );
     return result.rows[0];
   }
@@ -307,6 +328,15 @@ export const productQueries = {
       [id]
     );
     return result.rows[0];
+  },
+
+  // Count products by shop ID
+  countByShopId: async (shopId) => {
+    const result = await query(
+      'SELECT COUNT(*) AS count FROM products WHERE shop_id = $1',
+      [shopId]
+    );
+    return parseInt(result.rows[0].count, 10) || 0;
   },
 
   // Update stock (with optional transaction client)
@@ -422,20 +452,79 @@ export const orderQueries = {
   },
 
   // Find orders by owner ID
-  findByOwnerId: async (ownerId, limit = 50, offset = 0) => {
+  findByOwnerId: async (ownerId, options = {}) => {
+    const {
+      limit = 50,
+      offset = 0,
+      statuses = []
+    } = options;
+
+    const params = [ownerId];
+    const conditions = ['s.owner_id = $1'];
+    let paramIndex = 2;
+
+    if (Array.isArray(statuses) && statuses.length > 0) {
+      conditions.push(`o.status = ANY($${paramIndex}::text[])`);
+      params.push(statuses);
+      paramIndex += 1;
+    }
+
+    params.push(limit, offset);
+
     const result = await query(
       `SELECT o.*,
               p.name as product_name,
               s.name as shop_name,
-              u.username as buyer_username
+              u.username as buyer_username,
+              u.first_name as buyer_first_name,
+              u.last_name as buyer_last_name
        FROM orders o
        JOIN products p ON o.product_id = p.id
        JOIN shops s ON p.shop_id = s.id
        JOIN users u ON o.buyer_id = u.id
-       WHERE s.owner_id = $1
+       WHERE ${conditions.join(' AND ')}
        ORDER BY o.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [ownerId, limit, offset]
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      params
+    );
+    return result.rows;
+  },
+
+  // Find orders by shop ID with optional status filter
+  findByShopId: async (shopId, options = {}) => {
+    const {
+      limit = 50,
+      offset = 0,
+      statuses = []
+    } = options;
+
+    const params = [shopId];
+    const conditions = ['p.shop_id = $1'];
+    let paramIndex = 2;
+
+    if (Array.isArray(statuses) && statuses.length > 0) {
+      conditions.push(`o.status = ANY($${paramIndex}::text[])`);
+      params.push(statuses);
+      paramIndex += 1;
+    }
+
+    params.push(limit, offset);
+
+    const result = await query(
+      `SELECT o.*,
+              p.name as product_name,
+              s.name as shop_name,
+              u.username as buyer_username,
+              u.first_name as buyer_first_name,
+              u.last_name as buyer_last_name
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN shops s ON p.shop_id = s.id
+       JOIN users u ON o.buyer_id = u.id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY o.created_at DESC
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      params
     );
     return result.rows;
   },

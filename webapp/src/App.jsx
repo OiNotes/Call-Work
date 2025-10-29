@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { AnimatePresence, motion, LazyMotion, domAnimation } from 'framer-motion';
 import { useStore } from './store/useStore';
 import { useTelegram } from './hooks/useTelegram';
@@ -12,11 +12,13 @@ import PaymentFlowManager from './components/Payment/PaymentFlowManager';
 import { ToastContainer } from './components/common/Toast';
 import { useToastStore } from './hooks/useToast';
 import './styles/globals.css';
+import { useApi } from './hooks/useApi';
 
 // Lazy load pages for code splitting
 const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const Catalog = lazy(() => import('./pages/Catalog'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Follows = lazy(() => import('./pages/Follows'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -30,10 +32,14 @@ const PageLoader = () => (
 
 function App() {
   const { activeTab } = useStore();
+  const hasFollows = useStore((state) => state.hasFollows);
+  const setHasFollows = useStore((state) => state.setHasFollows);
   const { user, isReady, isValidating, error } = useTelegram();
   const { isConnected } = useWebSocket();
   const platform = usePlatform();
   const { toasts, removeToast } = useToastStore();
+  const { get } = useApi();
+  const [followsChecked, setFollowsChecked] = useState(false);
 
   // Инициализация i18n
   useEffect(() => {
@@ -66,6 +72,38 @@ function App() {
     }
   }, [isReady, user]);
 
+  useEffect(() => {
+    if (!isReady || followsChecked || hasFollows) {
+      return;
+    }
+
+    const checkFollows = async () => {
+      try {
+        const { data: shopsResponse } = await get('/shops/my');
+        const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+
+        if (!shops.length) {
+          setHasFollows(false);
+          return;
+        }
+
+        const primaryShop = shops[0];
+        const { data: followsResponse } = await get('/shop-follows', {
+          params: { shop_id: primaryShop.id }
+        });
+
+        const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
+        setHasFollows(list.length > 0);
+      } catch (fetchError) {
+        // Silent failure – tab will appear once пользователь откроет раздел вручную
+      } finally {
+        setFollowsChecked(true);
+      }
+    };
+
+    checkFollows();
+  }, [get, hasFollows, isReady, followsChecked, setHasFollows]);
+
   // Page transition variants
   const pageVariants = {
     initial: { opacity: 0, x: -20 },
@@ -83,6 +121,8 @@ function App() {
     switch (activeTab) {
       case 'subscriptions':
         return <Subscriptions />;
+      case 'follows':
+        return <Follows />;
       case 'catalog':
         return <Catalog />;
       case 'settings':
@@ -123,7 +163,7 @@ function App() {
   return (
     <LazyMotion features={domAnimation}>
       <div
-        className="fixed inset-0 flex flex-col overflow-hidden"
+        className="fixed inset-0 flex flex-col overflow-hidden min-h-0"
         style={{ height: 'var(--vh-dynamic)' }}
       >
       <div
@@ -156,7 +196,7 @@ function App() {
       )}
 
       <div
-        className="scroll-container relative z-10 flex-1"
+        className="scroll-container relative z-10 flex-1 min-h-0 overflow-y-auto"
         data-platform={platform}
       >
         <Suspense fallback={<PageLoader />}>

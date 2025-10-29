@@ -44,6 +44,8 @@ export const buttons = {
   addWallet: 'Добавить кошелёк',
   backToWallets: '↩️ К кошелькам',
   backToFollows: '↩️ К подпискам',
+  backSimple: '« Назад',
+  followSettings: 'Настройки',
   backToTools: '↩️ К инструментам',
   changeChannel: '🚨 Канал заблокирован?',
   goToTools: '🔧 К инструментам',
@@ -58,6 +60,7 @@ export const buttons = {
   cryptoUSDT: 'USDT (TRC-20)',
   cryptoLTC: 'Litecoin (LTC)',
   retry: 'Попробовать снова',
+  refresh: '🔄 Обновить',
   viewQr: 'Показать QR',
   changeWallet: 'Изменить адрес',
   deleteWallet: 'Удалить кошелёк',
@@ -515,6 +518,32 @@ ${channel}
       }
 
       return lines.join('\n');
+    },
+    topMonitorTitle: (count, total) => {
+      const suffix = total && total > count
+        ? ` (${count} из ${total})`
+        : count ? ` (${count})` : '';
+      return `🔍 Каталог поставщика${suffix}`;
+    },
+    topResellTitle: (count, total) => {
+      const suffix = total && total > count
+        ? ` (${count} из ${total})`
+        : count ? ` (${count})` : '';
+      return `💰 Скопированные товары${suffix}`;
+    },
+    monitorProductsEmpty: 'У поставщика пока нет товаров.',
+    resellProductsEmpty: 'Нет скопированных товаров. Переключитесь в режим «Перепродажа», чтобы копировать каталог.',
+    monitorProductLine: ({ index, name, price, stock }) => {
+      const stockText = Number.isFinite(stock) ? `${stock} шт` : '—';
+      return `${index}. ${name} — $${price} (${stockText})`;
+    },
+    resellProductLine: ({ index, name, sourcePrice, syncedPrice, diff }) => {
+      const diffText = diff > 0
+        ? ` (+$${diff})`
+        : diff < 0
+          ? ` (-$${Math.abs(diff)})`
+          : '';
+      return `${index}. ${name}\n   Поставщик: $${sourcePrice}\n   Ваш магазин: $${syncedPrice}${diffText}`;
     },
     notFound: 'Подписка не найдена.',
     loadError: 'Не удалось загрузить подписку. Попробуйте ещё раз.',

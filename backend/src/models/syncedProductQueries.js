@@ -103,6 +103,31 @@ export const syncedProductQueries = {
     return result.rows;
   },
 
+  // Find synced products with pagination support
+  findByFollowIdPaginated: async (followId, limit = 50, offset = 0) => {
+    const result = await query(
+      `SELECT 
+        sp.*,
+        p_synced.name as synced_product_name,
+        p_synced.price as synced_product_price,
+        p_synced.stock_quantity as synced_product_stock,
+        p_synced.is_active as synced_product_active,
+        p_source.name as source_product_name,
+        p_source.price as source_product_price,
+        p_source.stock_quantity as source_product_stock,
+        p_source.is_active as source_product_active,
+        COUNT(*) OVER() as total_count
+       FROM synced_products sp
+       JOIN products p_synced ON sp.synced_product_id = p_synced.id
+       JOIN products p_source ON sp.source_product_id = p_source.id
+       WHERE sp.follow_id = $1
+       ORDER BY sp.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [followId, limit, offset]
+    );
+    return result.rows;
+  },
+
   /**
    * Find all synced products derived from a source product
    * Used when source product is updated to sync to all followers

@@ -3,16 +3,27 @@ import { getWebAppUrl } from '../utils/webappUrl.js';
 import { buttons as buttonText } from '../texts/messages.js';
 
 // Seller menu (with active shop) - redesigned hierarchical structure
-export const sellerMenu = (activeOrdersCount = 0) => Markup.inlineKeyboard([
-  [Markup.button.webApp(buttonText.openCatalog, getWebAppUrl())],
-  [Markup.button.callback(
-    `${buttonText.activeOrders}${activeOrdersCount > 0 ? ` (${activeOrdersCount})` : ''}`,
-    'seller:active_orders'
-  )],
-  [Markup.button.callback(buttonText.orderHistory, 'seller:order_history')],
-  [Markup.button.callback(buttonText.tools, 'seller:tools')],
-  [Markup.button.callback(buttonText.switchRole, 'role:toggle')]
-]);
+export const sellerMenu = (activeOrdersCount = 0, options = {}) => {
+  const { hasFollows = false } = options;
+
+  const buttons = [
+    [Markup.button.webApp(buttonText.openCatalog, getWebAppUrl())],
+    [Markup.button.callback(
+      `${buttonText.activeOrders}${activeOrdersCount > 0 ? ` (${activeOrdersCount})` : ''}`,
+      'seller:active_orders'
+    )]
+  ];
+
+  if (hasFollows) {
+    buttons.push([Markup.button.callback(buttonText.manageFollows, 'seller:follows')]);
+  }
+
+  buttons.push([Markup.button.callback(buttonText.orderHistory, 'seller:order_history')]);
+  buttons.push([Markup.button.callback(buttonText.tools, 'seller:tools')]);
+  buttons.push([Markup.button.callback(buttonText.switchRole, 'role:toggle')]);
+
+  return Markup.inlineKeyboard(buttons);
+};
 
 // Seller Tools Submenu - advanced features (Wallets, Follows, Workers)
 export const sellerToolsMenu = (isOwner = false) => {
@@ -40,10 +51,19 @@ export const productsMenu = () => Markup.inlineKeyboard([
 ]);
 
 // Follows menu - minimalist
-export const followsMenu = (hasFollows = false) => Markup.inlineKeyboard([
-  [Markup.button.callback(hasFollows ? buttonText.addFollowMore : buttonText.addFollow, 'follows:create')],
-  [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-]);
+export const followsMenu = (hasFollows = false, followButtons = []) => {
+  const keyboard = [...followButtons];
+
+  keyboard.push([
+    Markup.button.callback(
+      hasFollows ? buttonText.addFollowMore : buttonText.addFollow,
+      'follows:create'
+    )
+  ]);
+  keyboard.push([Markup.button.callback(buttonText.backSimple, 'seller:menu')]);
+
+  return Markup.inlineKeyboard(keyboard);
+};
 
 // Follow detail menu
 export const followDetailMenu = (followId, mode = 'monitor') => {
@@ -51,14 +71,26 @@ export const followDetailMenu = (followId, mode = 'monitor') => {
     ? 'Переключить на Мониторинг'
     : 'Переключить на Перепродажу';
 
-  return Markup.inlineKeyboard([
-    [Markup.button.callback(buttonText.editMarkup, `follow_edit:${followId}`)],
-    [Markup.button.callback(modeButtonText, `follow_mode:${followId}`)],
-    [Markup.button.callback(buttonText.delete, `follow_delete:${followId}`)],
-    [Markup.button.callback(buttonText.backToFollows, 'follows:list')],
-    [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-  ]);
+  const buttons = [
+    [Markup.button.callback('Каталог', `follow_detail:${followId}`)]
+  ];
+
+  if (mode === 'resell') {
+    buttons.push([Markup.button.callback(buttonText.editMarkup, `follow_edit:${followId}`)]);
+  }
+
+  buttons.push([Markup.button.callback(modeButtonText, `follow_mode:${followId}`)]);
+  buttons.push([Markup.button.callback(buttonText.delete, `follow_delete:${followId}`)]);
+  buttons.push([Markup.button.callback(buttonText.backToFollows, 'follows:list')]);
+
+  return Markup.inlineKeyboard(buttons);
 };
+
+export const followCatalogMenu = (followId) => Markup.inlineKeyboard([
+  [Markup.button.callback(buttonText.refresh, `follow_detail:${followId}`)],
+  [Markup.button.callback(buttonText.followSettings, `follow_settings:${followId}`)],
+  [Markup.button.callback(buttonText.backSimple, 'follows:list')]
+]);
 
 // Seller menu (no shop - need registration) - minimalist
 export const sellerMenuNoShop = Markup.inlineKeyboard([

@@ -54,9 +54,9 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const shopName = ctx.session.shopName || 'Магазин';
 
       const message = [
-        sellerMessages.subscription.chooseTierIntro,
-        sellerMessages.subscription.tierDescriptionBasic,
-        sellerMessages.subscription.tierDescriptionPro
+        subMessages.chooseTierIntro,
+        subMessages.tierDescriptionBasic,
+        subMessages.tierDescriptionPro
       ].join('\n\n');
 
       await cleanReplyHTML(
@@ -99,14 +99,14 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
     // Handle cancel
     if (data === 'seller:menu') {
-      await ctx.answerCbQuery(sellerMessages.subscription.cancelled);
+      await ctx.answerCbQuery(subMessages.cancelled);
       await ctx.scene.leave();
       await showSellerMainMenu(ctx);
       return;
     }
 
     if (!data.startsWith('subscription:tier:')) {
-      await ctx.answerCbQuery(sellerMessages.subscription.unknownCommand, { show_alert: true });
+      await ctx.answerCbQuery(subMessages.unknownCommand, { show_alert: true });
       return;
     }
 
@@ -201,7 +201,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
   // Step 4: Handle tx_hash and verify payment
   async (ctx) => {
     if (ctx.callbackQuery?.data === 'seller:menu') {
-      await ctx.answerCbQuery(sellerMessages.subscription.cancelled);
+      await ctx.answerCbQuery(subMessages.cancelled);
       await ctx.scene.leave();
       await showSellerMainMenu(ctx);
       return;
@@ -210,25 +210,25 @@ const paySubscriptionScene = new Scenes.WizardScene(
     if (ctx.callbackQuery?.data === 'subscription:retry') {
       await ctx.answerCbQuery();
       const { tier, amount, currency, paymentAddress } = ctx.wizard.state;
-      const reminder = sellerMessages.subscription.paymentDetails(tier, amount, currency, paymentAddress);
+      const reminder = subMessages.paymentDetails(tier, amount, currency, paymentAddress);
       await cleanReplyHTML(ctx, reminder, Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]));
-      await smartMessage.send(ctx, { text: sellerMessages.subscription.sendHashPrompt });
+      await smartMessage.send(ctx, { text: subMessages.sendHashPrompt });
       return;
     }
 
     if (!ctx.message?.text) {
-      await smartMessage.send(ctx, { text: sellerMessages.subscription.sendHashPrompt });
+      await smartMessage.send(ctx, { text: subMessages.sendHashPrompt });
       return;
     }
 
     const txHash = ctx.message.text.trim();
     if (txHash.length < 10) {
-      await smartMessage.send(ctx, { text: sellerMessages.subscription.hashInvalid });
+      await smartMessage.send(ctx, { text: subMessages.hashInvalid });
       return;
     }
 
     try {
-      const loadingMsg = await smartMessage.send(ctx, { text: sellerMessages.subscription.verifying });
+      const loadingMsg = await smartMessage.send(ctx, { text: subMessages.verifying });
 
       const { shopId, tier, currency, paymentAddress } = ctx.wizard.state;
       const token = ctx.session.token;
@@ -243,9 +243,9 @@ const paySubscriptionScene = new Scenes.WizardScene(
       await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id).catch(() => {});
 
       const endDate = new Date(subscription.periodEnd).toLocaleDateString('ru-RU');
-      let successMessage = sellerMessages.subscription.verificationSuccess(tier, endDate, subscription.id);
+      let successMessage = subMessages.verificationSuccess(tier, endDate, subscription.id);
       if (tier === 'pro') {
-        successMessage += `\n\n${sellerMessages.subscription.proBenefits}`;
+        successMessage += `\n\n${subMessages.proBenefits}`;
       }
 
       await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
@@ -256,11 +256,11 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const errorData = error.response?.data;
       let errorMessage;
       if (errorData?.error === 'DUPLICATE_TX_HASH') {
-        errorMessage = sellerMessages.subscription.duplicateTx;
+        errorMessage = subMessages.duplicateTx;
       } else if (errorData?.error === 'PAYMENT_VERIFICATION_FAILED') {
-        errorMessage = sellerMessages.subscription.verificationFailed;
+        errorMessage = subMessages.verificationFailed;
       } else {
-        errorMessage = sellerMessages.subscription.verificationError;
+        errorMessage = subMessages.verificationError;
       }
 
       await cleanReplyHTML(

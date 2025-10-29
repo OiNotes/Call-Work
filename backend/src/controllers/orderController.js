@@ -7,6 +7,34 @@ import logger from '../utils/logger.js';
 /**
  * Order Controller
  */
+const VALID_ORDER_STATUSES = new Set(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']);
+const STATUS_ALIASES = new Map([
+  ['completed', 'delivered'],
+  ['complete', 'delivered'],
+  ['active', 'confirmed']
+]);
+
+const parseStatusFilter = (statusParam) => {
+  if (!statusParam) {
+    return [];
+  }
+
+  const normalized = new Set();
+
+  statusParam
+    .split(',')
+    .map((status) => status.trim().toLowerCase())
+    .filter(Boolean)
+    .forEach((status) => {
+      const mapped = STATUS_ALIASES.get(status) || status;
+      if (VALID_ORDER_STATUSES.has(mapped)) {
+        normalized.add(mapped);
+      }
+    });
+
+  return Array.from(normalized);
+};
+
 export const orderController = {
   /**
    * Create new order
@@ -158,14 +186,47 @@ export const orderController = {
    */
   getMyOrders: async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 50;
       const offset = (page - 1) * limit;
       const type = req.query.type; // 'buyer' or 'seller'
+      const hasShopFilter = typeof req.query.shop_id !== 'undefined';
+      const shopId = hasShopFilter ? parseInt(req.query.shop_id, 10) : null;
+      const statusFilter = parseStatusFilter(req.query.status);
 
       let orders;
 
-      if (type === 'seller') {
+      if (hasShopFilter) {
+        if (!Number.isInteger(shopId) || shopId <= 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid shop_id'
+          });
+        }
+
+        const shop = await shopQueries.findById(shopId);
+
+        if (!shop) {
+          return res.status(404).json({
+            success: false,
+            error: 'Shop not found'
+          });
+        }
+
+        if (shop.owner_id !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            error: 'You can only view your own shop orders'
+          });
+        }
+
+        orders = await orderQueries.findByShopId(shopId, {
+          limit,
+          offset,
+          statuses: statusFilter
+        });
+
+      } else if (type === 'seller') {
         // Get orders as seller - only if user has shops
         const shops = await shopQueries.findByOwnerId(req.user.id);
 
@@ -176,7 +237,11 @@ export const orderController = {
           });
         }
 
-        orders = await orderQueries.findByOwnerId(req.user.id, limit, offset);
+        orders = await orderQueries.findByOwnerId(req.user.id, {
+          limit,
+          offset,
+          statuses: statusFilter
+        });
       } else {
         // Get orders as buyer (default)
         orders = await orderQueries.findByBuyerId(req.user.id, limit, offset);

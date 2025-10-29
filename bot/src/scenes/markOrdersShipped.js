@@ -31,8 +31,12 @@ const showPrompt = async (ctx) => {
     }
 
     // Get active orders to show count
-    const orders = await orderApi.getShopOrders(ctx.session.shopId, ctx.session.token);
-    const activeOrders = orders.filter(o => o.status === 'processing');
+    const orders = await orderApi.getShopOrders(
+      ctx.session.shopId,
+      ctx.session.token,
+      { status: 'confirmed' }
+    );
+    const activeOrders = orders.filter((order) => ['confirmed', 'processing'].includes(order.status));
 
     if (activeOrders.length === 0) {
       await ctx.editMessageText(

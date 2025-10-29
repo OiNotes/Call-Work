@@ -120,6 +120,9 @@ export const useStore = create((set, get) => ({
       activeTab: 'subscriptions',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
+      hasFollows: false,
+      setHasFollows: (value) => set({ hasFollows: Boolean(value) }),
+
       // Payment State
       currentOrder: null,
       selectedCrypto: null,

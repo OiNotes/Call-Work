@@ -19,6 +19,9 @@ import addProductScene from '../../src/scenes/addProduct.js';
 import searchShopScene from '../../src/scenes/searchShop.js';
 import manageWalletsScene from '../../src/scenes/manageWallets.js';
 import createFollowScene from '../../src/scenes/createFollow.js';
+import paySubscriptionScene from '../../src/scenes/paySubscription.js';
+import upgradeShopScene from '../../src/scenes/upgradeShop.js';
+import markOrdersShippedScene from '../../src/scenes/markOrdersShipped.js';
 
 // Handlers
 import { handleStart } from '../../src/handlers/start.js';
@@ -87,7 +90,10 @@ export function createTestBot(options = {}) {
     addProductScene,
     searchShopScene,
     manageWalletsScene,
-    createFollowScene
+    createFollowScene,
+    paySubscriptionScene,
+    upgradeShopScene,
+    markOrdersShippedScene
   ]);
 
   // ✅ FIX: Controlled session storage (same as session() middleware but with direct access)

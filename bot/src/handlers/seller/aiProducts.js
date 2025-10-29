@@ -120,10 +120,9 @@ export async function handleAIProductCommand(ctx) {
 
     if (result.fallbackToMenu) {
       // AI unavailable - show menu
-      const shopName = ctx.session.shopName || 'Магазин';
       await smartMessage.send(ctx, {
         text: result.message,
-        keyboard: sellerMenu(shopName)
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
       });
       return;
     }
@@ -166,10 +165,9 @@ export async function handleAIProductCommand(ctx) {
 
     // Graceful error handling
     try {
-      const shopName = ctx.session.shopName || 'Магазин';
       await smartMessage.send(ctx, {
         text: '❌ Произошла ошибка. Используйте меню.',
-        keyboard: sellerMenu(shopName)
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

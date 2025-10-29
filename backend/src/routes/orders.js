@@ -25,7 +25,10 @@ router.post(
  * @access  Private (WebApp)
  */
 router.get('/', verifyToken, optionalTelegramAuth, (req, res, next) => {
-  req.query.type = 'buyer';
+  // Default to buyer orders only when no explicit shop context provided
+  if (!req.query.type && !req.query.shop_id) {
+    req.query.type = 'buyer';
+  }
   return orderController.getMyOrders(req, res, next);
 });
 

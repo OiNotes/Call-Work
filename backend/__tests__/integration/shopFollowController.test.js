@@ -14,7 +14,8 @@ import {
   closeTestDb,
   cleanupTestData,
   createTestUser,
-  createTestShop
+  createTestShop,
+  createTestProduct
 } from '../helpers/testDb.js';
 
 // Create minimal test app
@@ -22,6 +23,7 @@ const createTestApp = () => {
   const app = express();
   app.use(express.json());
   app.use('/api/follows', followRoutes);
+  app.use('/api/shop-follows', followRoutes);
   app.use(errorHandler);
   return app;
 };
@@ -36,6 +38,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
   let sourceShop1;
   let sourceShop2;
   let sourceShop3;
+  let sourceProduct1;
   let freeToken;
   let proToken;
 
@@ -95,6 +98,12 @@ describe('Shop Follow Controller - Integration Tests', () => {
 
     sourceShop3 = await createTestShop(sourceUser.id, {
       name: 'Source Shop 3'
+    });
+
+    sourceProduct1 = await createTestProduct(sourceShop1.id, {
+      name: 'Source Gadget',
+      price: '50.00',
+      stock_quantity: 7
     });
 
     // Generate JWT tokens
@@ -520,6 +529,89 @@ describe('Shop Follow Controller - Integration Tests', () => {
         mode: 'monitor',
         status: 'active'
       });
+    });
+  });
+
+  describe('GET /api/shop-follows', () => {
+    it('returns follows using alias endpoint with shop_id query', async () => {
+      const insertResult = await pool.query(
+        `INSERT INTO shop_follows (follower_shop_id, source_shop_id, mode, status)
+         VALUES ($1, $2, 'monitor', 'active')
+         RETURNING id`,
+        [freeShop.id, sourceShop1.id]
+      );
+
+      const followId = insertResult.rows[0].id;
+
+      const response = await request(app)
+        .get('/api/shop-follows')
+        .query({ shop_id: freeShop.id })
+        .set('Authorization', `Bearer ${freeToken}`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0]).toMatchObject({
+        id: followId,
+        follower_shop_id: freeShop.id,
+        source_shop_id: sourceShop1.id
+      });
+    });
+  });
+
+  describe('GET /api/follows/:id/products', () => {
+    it('returns source products for monitor mode', async () => {
+      const followResult = await pool.query(
+        `INSERT INTO shop_follows (follower_shop_id, source_shop_id, mode, status)
+         VALUES ($1, $2, 'monitor', 'active')
+         RETURNING id`,
+        [freeShop.id, sourceShop1.id]
+      );
+
+      const followId = followResult.rows[0].id;
+
+      const response = await request(app)
+        .get(`/api/follows/${followId}/products`)
+        .set('Authorization', `Bearer ${freeToken}`)
+        .expect(200);
+
+      expect(response.body.data.mode).toBe('monitor');
+      expect(Array.isArray(response.body.data.products)).toBe(true);
+      const firstProduct = response.body.data.products[0];
+      expect(firstProduct.name).toBe(sourceProduct1.name);
+      expect(firstProduct.stock_quantity).toBe(Number(sourceProduct1.stock_quantity));
+    });
+
+    it('returns synced products and pricing for resell mode', async () => {
+      const resellFollow = await pool.query(
+        `INSERT INTO shop_follows (follower_shop_id, source_shop_id, mode, markup_percentage, status)
+         VALUES ($1, $2, 'resell', 25, 'active')
+         RETURNING id`,
+        [freeShop.id, sourceShop1.id]
+      );
+
+      const followerProduct = await createTestProduct(freeShop.id, {
+        name: 'Synced Gadget',
+        price: '65.00',
+        stock_quantity: 3
+      });
+
+      await pool.query(
+        `INSERT INTO synced_products (follow_id, synced_product_id, source_product_id, last_synced_at, conflict_status)
+         VALUES ($1, $2, $3, NOW(), 'synced')`,
+        [resellFollow.rows[0].id, followerProduct.id, sourceProduct1.id]
+      );
+
+      const response = await request(app)
+        .get(`/api/follows/${resellFollow.rows[0].id}/products`)
+        .set('Authorization', `Bearer ${freeToken}`)
+        .expect(200);
+
+      expect(response.body.data.mode).toBe('resell');
+      expect(response.body.data.products).toHaveLength(1);
+      const product = response.body.data.products[0];
+      expect(product.synced_product.id).toBe(followerProduct.id);
+      expect(product.pricing.markup_percentage).toBe(25);
     });
   });
 });

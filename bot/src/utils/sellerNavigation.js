@@ -1,5 +1,5 @@
 import { sellerMenu, sellerMenuNoShop, sellerToolsMenu } from '../keyboards/seller.js';
-import { shopApi, orderApi } from './api.js';
+import { shopApi, orderApi, followApi } from './api.js';
 import * as smartMessage from './smartMessage.js';
 import logger from './logger.js';
 import { messages } from '../texts/messages.js';
@@ -76,10 +76,21 @@ export const showSellerMainMenu = async (ctx) => {
       });
     }
 
+    let hasFollows = false;
+    try {
+      const follows = await followApi.getMyFollows(shopId, ctx.session.token);
+      hasFollows = Array.isArray(follows) && follows.length > 0;
+    } catch (followError) {
+      logger.warn('Failed to fetch follows for seller menu', {
+        error: followError.message
+      });
+    }
+    ctx.session.hasFollows = hasFollows;
+
     const header = sellerMessages.shopPanelWithStats(shopName || 'Магазин', weekRevenue, activeCount);
     await smartMessage.send(ctx, {
       text: header,
-      keyboard: sellerMenu(activeCount)
+      keyboard: sellerMenu(activeCount, { hasFollows })
     });
     return true;
   } catch (error) {

@@ -1,10 +1,75 @@
-import { followsMenu, followDetailMenu, sellerMenu, sellerMenuNoShop } from '../../keyboards/seller.js';
+import { Markup } from 'telegraf';
+import { followsMenu, followDetailMenu, followCatalogMenu, sellerMenu, sellerMenuNoShop } from '../../keyboards/seller.js';
 import { followApi } from '../../utils/api.js';
-import { formatFollowsList, formatFollowDetail } from '../../utils/minimalist.js';
+import { formatFollowDetail } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
 import { messages } from '../../texts/messages.js';
 
 const { general: generalMessages, follows: followMessages } = messages;
+
+const formatMoney = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '0';
+  }
+  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+};
+
+const buildFollowLabel = (follow) => {
+  const name = follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин';
+  const isResell = follow.mode === 'resell';
+  const markupRaw = isResell ? Number(follow.markup_percentage ?? follow.markup ?? 0) : null;
+  const markupSuffix = isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
+  const modeLabel = isResell ? 'Перепродажа' : 'Мониторинг';
+  return `🏪 ${name} (${modeLabel}${markupSuffix})`;
+};
+
+const sendOrEdit = async (ctx, text, keyboard) => {
+  const replyMarkup = keyboard instanceof Object ? keyboard : undefined;
+  if (ctx.updateType === 'callback_query' && ctx.callbackQuery?.message) {
+    return ctx.editMessageText(text, replyMarkup);
+  }
+  return ctx.reply(text, replyMarkup);
+};
+
+const formatProductLine = (index, name, price, stock) => (
+  `${index + 1}. ${name} • $${formatMoney(price)} • ${Number.isFinite(stock) ? stock : 0} шт`
+);
+
+const buildCatalogMessage = (followInfo, products, mode) => {
+  const lines = [];
+  const shopName = followInfo.source_shop_name || followInfo.sourceShopName || 'Магазин';
+  const isResell = mode === 'resell';
+  const markupRaw = isResell ? Number(followInfo.markup_percentage ?? followInfo.markup ?? 0) : null;
+  const markupSuffix = isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
+  const modeLabel = isResell ? `Перепродажа${markupSuffix}` : 'Мониторинг';
+
+  lines.push(`🏪 ${shopName}`);
+  lines.push(`Режим: ${modeLabel}`);
+  lines.push('');
+
+  if (!Array.isArray(products) || products.length === 0) {
+    lines.push(isResell ? followMessages.resellProductsEmpty : followMessages.monitorProductsEmpty);
+    return lines.join('\n');
+  }
+
+  products.slice(0, 10).forEach((product, index) => {
+    if (isResell) {
+      const synced = product.synced_product || product.syncedProduct || {};
+      const name = synced.name || product.source_product?.name || product.name || `Товар #${product.id}`;
+      const price = synced.price ?? product.pricing?.expected_price ?? product.source_product?.price ?? 0;
+      const stock = synced.stock_quantity ?? product.source_product?.stock_quantity ?? 0;
+      lines.push(formatProductLine(index, name, price, stock));
+    } else {
+      const name = product.name || `Товар #${product.id}`;
+      const price = product.price ?? 0;
+      const stock = product.stock_quantity ?? 0;
+      lines.push(formatProductLine(index, name, price, stock));
+    }
+  });
+
+  return lines.join('\n');
+};
 
 /**
  * View all follows for current shop
@@ -24,30 +89,40 @@ export const handleViewFollows = async (ctx) => {
     if (!ctx.session.token) {
       await ctx.reply(
         generalMessages.authorizationRequired,
-        sellerMenu()
+        sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
       );
       return;
     }
 
     const follows = await followApi.getMyFollows(ctx.session.shopId, ctx.session.token);
 
-    const messageParts = [followMessages.contextDetailed];
+    const hasFollows = Array.isArray(follows) && follows.length > 0;
+    ctx.session.hasFollows = hasFollows;
 
-    if (follows.length === 0) {
-      messageParts.push('', followMessages.emptyState);
-      await ctx.reply(messageParts.join('\n'), followsMenu(false));
+    if (!hasFollows) {
+      const text = `${followMessages.contextDetailed}\n\n${followMessages.emptyState}`;
+      await sendOrEdit(ctx, text, followsMenu(false));
       return;
     }
 
-    messageParts.push('', formatFollowsList(follows));
+    const followButtons = follows.map((follow) => [
+      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`)
+    ]);
 
-    await ctx.reply(messageParts.join('\n'), followsMenu(true));
+    const listText = follows
+      .map((follow, index) => `${index + 1}. ${buildFollowLabel(follow).slice(2)}`) // remove leading emoji for text list
+      .join('\n');
+
+    const message = `${followMessages.contextDetailed}\n\n${listText}`;
+
+    await sendOrEdit(ctx, message, followsMenu(true, followButtons));
     logger.info(`User ${ctx.from.id} viewed follows (${follows.length} total)`);
   } catch (error) {
     logger.error('Error fetching follows:', error);
-    await ctx.reply(
-      generalMessages.actionFailed,
-      followsMenu()
+    await sendOrEdit(
+      ctx,
+      followMessages.loadError,
+      followsMenu(Boolean(ctx.session?.hasFollows))
     );
   }
 };
@@ -72,7 +147,7 @@ export const handleCreateFollow = async (ctx) => {
     logger.error('Error entering createFollow scene:', error);
     await ctx.reply(
       generalMessages.actionFailed,
-      followsMenu()
+      followsMenu(Boolean(ctx.session?.hasFollows))
     );
   }
 };
@@ -91,28 +166,71 @@ export const handleFollowDetail = async (ctx) => {
       return;
     }
 
-    // Get follow details from list
-    const follows = await followApi.getMyFollows(ctx.session.shopId, ctx.session.token);
-    const follow = follows.find(f => f.id === followId);
+    const token = ctx.session.token;
 
-    if (!follow) {
-      await ctx.editMessageText(followMessages.notFound, followsMenu());
+    let followDetail;
+    try {
+      followDetail = await followApi.getFollowDetail(followId, token);
+    } catch (error) {
+      if (error.response?.status === 404) {
+        await ctx.editMessageText(followMessages.notFound, followsMenu(false));
+        return;
+      }
+      if (error.response?.status === 403) {
+        await ctx.editMessageText(followMessages.accessDenied, followsMenu(false));
+        return;
+      }
+      throw error;
+    }
+
+    const productsPayload = await followApi.getFollowProducts(followId, token, { limit: 10 });
+    const payload = productsPayload?.data || productsPayload || {};
+    const mode = payload.mode || followDetail.mode;
+    const products = Array.isArray(payload.products) ? payload.products : [];
+
+    const message = buildCatalogMessage(followDetail, products, mode);
+
+    await ctx.editMessageText(message, followCatalogMenu(followId));
+    logger.info(`User ${ctx.from.id} viewed follow catalog ${followId}`);
+  } catch (error) {
+    logger.error('Error viewing follow detail:', error);
+    const status = error.response?.status;
+    if (status === 404) {
+      await ctx.editMessageText(followMessages.notFound, followsMenu(false));
+    } else if (status === 403) {
+      await ctx.editMessageText(followMessages.accessDenied, followsMenu(false));
+    } else {
+      await ctx.editMessageText(followMessages.loadError, followsMenu(false));
+    }
+  }
+};
+
+export const handleFollowSettings = async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+
+    const followId = parseInt(ctx.match[1], 10);
+
+    if (!ctx.session.token) {
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
-    const message = formatFollowDetail(follow);
+    const follow = await followApi.getFollowDetail(followId, ctx.session.token);
 
+    const message = formatFollowDetail(follow);
     await ctx.editMessageText(message, followDetailMenu(followId, follow.mode));
-    logger.info(`User ${ctx.from.id} viewed follow detail ${followId}`);
+    logger.info(`User ${ctx.from.id} viewed follow settings ${followId}`);
   } catch (error) {
-    logger.error('Error viewing follow detail:', error);
-    
-    if (error.response?.status === 404) {
-      await ctx.editMessageText(followMessages.notFound, followsMenu());
-    } else if (error.response?.status === 403) {
-      await ctx.editMessageText(followMessages.accessDenied, followsMenu());
+    logger.error('Error viewing follow settings:', error);
+
+    const status = error.response?.status;
+    if (status === 404) {
+      await ctx.editMessageText(followMessages.notFound, followsMenu(false));
+    } else if (status === 403) {
+      await ctx.editMessageText(followMessages.accessDenied, followsMenu(false));
     } else {
-      await ctx.editMessageText(followMessages.loadError, followsMenu());
+      await ctx.editMessageText(followMessages.loadError, followsMenu(false));
     }
   }
 };
@@ -132,12 +250,32 @@ export const handleDeleteFollow = async (ctx) => {
     }
 
     await followApi.deleteFollow(followId, ctx.session.token);
-
-    await ctx.editMessageText(followMessages.deleteSuccess, followsMenu());
     logger.info(`User ${ctx.from.id} deleted follow ${followId}`);
+
+    const follows = await followApi.getMyFollows(ctx.session.shopId, ctx.session.token);
+    const hasFollows = Array.isArray(follows) && follows.length > 0;
+    ctx.session.hasFollows = hasFollows;
+
+    if (!hasFollows) {
+      const text = `${followMessages.contextDetailed}\n\n${followMessages.emptyState}`;
+      await ctx.editMessageText(text, followsMenu(false));
+      return;
+    }
+
+    const followButtons = follows.map((follow) => [
+      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`)
+    ]);
+
+    const listText = follows
+      .map((follow, index) => `${index + 1}. ${buildFollowLabel(follow).slice(2)}`)
+      .join('\n');
+
+    const message = `${followMessages.contextDetailed}\n\n${listText}`;
+
+    await ctx.editMessageText(message, followsMenu(true, followButtons));
   } catch (error) {
     logger.error('Error deleting follow:', error);
-    await ctx.editMessageText(followMessages.deleteError, followsMenu());
+    await ctx.editMessageText(followMessages.deleteError, followsMenu(false));
   }
 };
 
@@ -155,14 +293,7 @@ export const handleSwitchMode = async (ctx) => {
       return;
     }
 
-    // Get current follow to determine mode
-    const follows = await followApi.getMyFollows(ctx.session.shopId, ctx.session.token);
-    const follow = follows.find(f => f.id === followId);
-
-    if (!follow) {
-      await ctx.editMessageText(followMessages.notFound, followsMenu());
-      return;
-    }
+    const follow = await followApi.getFollowDetail(followId, ctx.session.token);
 
     const newMode = follow.mode === 'monitor' ? 'resell' : 'monitor';
 
@@ -180,7 +311,9 @@ export const handleSwitchMode = async (ctx) => {
     // Switch to monitor mode
     await followApi.switchMode(followId, newMode, ctx.session.token);
 
-    await ctx.editMessageText(followMessages.modeChanged, followsMenu());
+    const updated = await followApi.getFollowDetail(followId, ctx.session.token);
+    const message = formatFollowDetail(updated);
+    await ctx.editMessageText(message, followDetailMenu(followId, updated.mode));
     logger.info(`User ${ctx.from.id} switched follow ${followId} to ${newMode}`);
   } catch (error) {
     logger.error('Error switching mode:', error);
@@ -188,13 +321,13 @@ export const handleSwitchMode = async (ctx) => {
     const errorMsg = error.response?.data?.error;
     
     if (error.response?.status === 402) {
-      await ctx.editMessageText(followMessages.limitReached, followsMenu());
+      await ctx.editMessageText(followMessages.limitReached, followsMenu(false));
     } else if (error.response?.status === 404) {
-      await ctx.editMessageText(followMessages.notFound, followsMenu());
+      await ctx.editMessageText(followMessages.notFound, followsMenu(false));
     } else if (errorMsg?.toLowerCase().includes('circular')) {
-      await ctx.editMessageText(followMessages.modeLimit, followsMenu());
+      await ctx.editMessageText(followMessages.modeLimit, followsMenu(false));
     } else {
-      await ctx.editMessageText(followMessages.switchError, followsMenu());
+      await ctx.editMessageText(followMessages.switchError, followsMenu(false));
     }
   }
 };
@@ -336,6 +469,9 @@ export const setupFollowHandlers = (bot) => {
 
   // View follow detail (pattern: follow_detail:123)
   bot.action(/^follow_detail:(\d+)$/, handleFollowDetail);
+
+  // View follow settings
+  bot.action(/^follow_settings:(\d+)$/, handleFollowSettings);
 
   // Delete follow (pattern: follow_delete:123)
   bot.action(/^follow_delete:(\d+)$/, handleDeleteFollow);

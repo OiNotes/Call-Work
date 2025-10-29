@@ -372,7 +372,8 @@ export const shopController = {
           wallet_btc: shop.wallet_btc || null,
           wallet_eth: shop.wallet_eth || null,
           wallet_usdt: shop.wallet_usdt || null,
-          wallet_ton: shop.wallet_ton || null
+          wallet_ton: shop.wallet_ton || null,
+          updated_at: shop.updated_at
         }
       });
 

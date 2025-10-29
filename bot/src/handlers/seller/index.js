@@ -1,7 +1,7 @@
 import { Markup } from 'telegraf';
 import { sellerMenu, sellerMenuNoShop, sellerToolsMenu } from '../../keyboards/seller.js';
 import { manageWorkersMenu, confirmWorkerRemoval } from '../../keyboards/workspace.js';
-import { shopApi, authApi, orderApi, workerApi } from '../../utils/api.js';
+import { shopApi, authApi, orderApi, workerApi, followApi } from '../../utils/api.js';
 import logger from '../../utils/logger.js';
 import { messages, buttons as buttonText } from '../../texts/messages.js';
 import { handleActiveOrders, handleOrderHistory, handleMarkShipped, handleMarkDelivered, handleCancelOrder } from './orders.js';
@@ -14,14 +14,33 @@ const { seller: sellerMessages, general: generalMessages } = messages;
  */
 const getSellerMenu = async (ctx) => {
   let activeCount = 0;
-  if (ctx.session.shopId && ctx.session.token) {
+  let hasFollows = false;
+
+  const shopId = ctx.session.shopId;
+  const token = ctx.session.token;
+
+  if (shopId && token) {
     try {
-      activeCount = await orderApi.getActiveOrdersCount(ctx.session.shopId, ctx.session.token);
+      const [count, follows] = await Promise.all([
+        orderApi.getActiveOrdersCount(shopId, token).catch((error) => {
+          logger.error('Failed to get active orders count:', error);
+          return 0;
+        }),
+        followApi.getMyFollows(shopId, token).catch((error) => {
+          logger.error('Failed to get follows for menu:', error);
+          return [];
+        })
+      ]);
+
+      activeCount = count || 0;
+      hasFollows = Array.isArray(follows) && follows.length > 0;
     } catch (error) {
-      logger.error('Failed to get active orders count:', error);
+      logger.error('Failed to compose seller menu data:', error);
     }
   }
-  return sellerMenu(activeCount);
+
+  ctx.session.hasFollows = hasFollows;
+  return sellerMenu(activeCount, { hasFollows });
 };
 
 const getWorkerDisplayName = (worker) => {
@@ -206,10 +225,20 @@ export const handleSellerRole = async (ctx) => {
           logger.error('Failed to get active orders count:', error);
         }
 
+        // Determine follows to show dynamic menu button
+        let hasFollows = false;
+        try {
+          const follows = await followApi.getMyFollows(shop.id, ctx.session.token);
+          hasFollows = Array.isArray(follows) && follows.length > 0;
+        } catch (error) {
+          logger.error('Failed to get follows list for seller menu:', error);
+        }
+        ctx.session.hasFollows = hasFollows;
+
         // Форматировать заголовок с аналитикой
         const header = sellerMessages.shopPanelWithStats(shop.name, weekRevenue, activeCount);
 
-        await ctx.reply(header, sellerMenu(activeCount));
+        await ctx.reply(header, sellerMenu(activeCount, { hasFollows }));
         return;
       }
 
@@ -366,7 +395,7 @@ export const setupSellerHandlers = (bot) => {
       }
 
       if (!ctx.session.token) {
-        await ctx.reply(generalMessages.authorizationRequired, sellerMenu());
+        await ctx.reply(generalMessages.authorizationRequired, sellerMenu(0, { hasFollows: ctx.session?.hasFollows }));
         return;
       }
 
@@ -431,7 +460,7 @@ export const setupSellerHandlers = (bot) => {
       if (!ctx.session.token) {
         await ctx.reply(
           generalMessages.authorizationRequired,
-          sellerMenu()
+          sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
         );
         return;
       }
@@ -455,7 +484,7 @@ export const setupSellerHandlers = (bot) => {
       logger.error('Error fetching subscription status:', error);
       await ctx.reply(
         sellerMessages.subscriptionStatusError,
-        sellerMenu()
+        sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
       );
     }
   });

@@ -259,7 +259,9 @@ export const orderApi = {
     };
 
     if (options.status) {
-      params.status = options.status;
+      params.status = Array.isArray(options.status)
+        ? options.status.join(',')
+        : options.status;
     }
 
     if (options.limit) {
@@ -426,6 +428,23 @@ export const followApi = {
   async getMyFollows(shopId, token) {
     const { data } = await api.get('/follows/my', {
       params: { shopId },
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data.data || data;
+  },
+
+  // Get follow detail
+  async getFollowDetail(followId, token) {
+    const { data } = await api.get(`/follows/${followId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return data.data || data;
+  },
+
+  // Get follow products (monitor/resell)
+  async getFollowProducts(followId, token, params = {}) {
+    const { data } = await api.get(`/follows/${followId}/products`, {
+      params,
       headers: { Authorization: `Bearer ${token}` }
     });
     return data.data || data;

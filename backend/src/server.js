@@ -177,6 +177,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/follows', followRoutes);
+app.use('/api/shop-follows', followRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/webhooks', webhookRoutes); // Crypto payment webhooks
 app.use('/api/internal', internalRoutes); // Internal API for bot-backend communication

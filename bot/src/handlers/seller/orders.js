@@ -126,7 +126,7 @@ export const handleOrderHistory = async (ctx) => {
       return;
     }
 
-    const deliveredOrders = await orderApi.getShopOrders(shopId, token, { status: 'delivered' });
+    const deliveredOrders = await orderApi.getShopOrders(shopId, token, { status: 'delivered,completed' });
 
     if (!Array.isArray(deliveredOrders) || deliveredOrders.length === 0) {
       const emptyMessage = `📋 История заказов

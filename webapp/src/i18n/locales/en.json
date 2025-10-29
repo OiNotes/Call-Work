@@ -16,6 +16,7 @@
 
   "tabs": {
     "subscriptions": "Subscriptions",
+    "follows": "Follows",
     "catalog": "Catalog",
     "settings": "Settings"
   },
@@ -41,7 +42,15 @@
     "saved": "Saved wallets",
     "added": "Added {date}",
     "addressLabel": "Wallet address",
-    "confirmRemove": "Are you sure you want to remove this wallet?"
+    "confirmRemove": "Are you sure you want to remove this wallet?",
+    "loadError": "Failed to load wallets",
+    "shopsLoadError": "Failed to load shops",
+    "saveError": "Failed to save wallets",
+    "deleteError": "Failed to remove wallet",
+    "shopRequired": "Create a shop in the bot first",
+    "invalidAll": "Enter at least one valid address",
+    "invalidAddresses": "Invalid wallet addresses",
+    "supported": "Supported: BTC, ETH, USDT, TON"
   },
 
   "orders": {

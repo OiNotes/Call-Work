@@ -106,7 +106,7 @@ const handleBack = async (ctx) => {
     if (ctx.session.role === 'seller') {
       await smartMessage.send(ctx, {
         text: sellerMessages.panel,
-        keyboard: sellerMenu()
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
       });
     } else if (ctx.session.role === 'buyer') {
       await smartMessage.send(ctx, {
