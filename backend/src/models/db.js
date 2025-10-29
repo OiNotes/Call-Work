@@ -250,9 +250,9 @@ export const productQueries = {
   create: async (productData) => {
     const { shopId, name, description, price, currency, stockQuantity } = productData;
     const result = await query(
-      `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, shop_id, name, description, price, currency, stock_quantity, is_active, created_at, updated_at`,
+      `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity)
+       VALUES ($1, $2, $3, $4, $5, $6, 0)
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, reserved_quantity, is_active, created_at, updated_at`,
       [shopId, name, description, price, currency, stockQuantity || 0]
     );
     return result.rows[0];

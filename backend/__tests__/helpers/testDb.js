@@ -101,7 +101,8 @@ export const createTestUser = async (userData = {}) => {
   const result = await pool.query(
     `INSERT INTO users (telegram_id, username, first_name, last_name, selected_role)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING *`,
+     RETURNING id, telegram_id, username, first_name, last_name,
+               selected_role, created_at, updated_at`,
     [user.telegram_id, user.username, user.first_name, user.last_name, user.selected_role]
   );
 
@@ -124,7 +125,11 @@ export const createTestShop = async (ownerId, shopData = {}) => {
   const result = await pool.query(
     `INSERT INTO shops (name, description, owner_id, is_active)
      VALUES ($1, $2, $3, $4)
-     RETURNING *`,
+     RETURNING id, owner_id, registration_paid, name, description, logo,
+               wallet_btc, wallet_eth, wallet_usdt, wallet_ton,
+               tier, is_active, subscription_status,
+               next_payment_due, grace_period_until,
+               created_at, updated_at`,
     [shop.name, shop.description, shop.owner_id, shop.is_active]
   );
   
@@ -145,14 +150,16 @@ export const createTestProduct = async (shopId, productData = {}) => {
     stock_quantity: productData.stock_quantity !== undefined ? productData.stock_quantity : 10,
     shop_id: shopId,
   };
-  
+
   const result = await pool.query(
-    `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
+    `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity)
+     VALUES ($1, $2, $3, $4, $5, $6, 0)
+     RETURNING id, shop_id, name, description, price, currency,
+               stock_quantity, reserved_quantity, is_active,
+               created_at, updated_at`,
     [product.shop_id, product.name, product.description, product.price, product.currency, product.stock_quantity]
   );
-  
+
   return result.rows[0];
 };
 
@@ -186,7 +193,10 @@ export const getShopById = async (shopId) => {
 export const getProductById = async (productId) => {
   const pool = getTestPool();
   const result = await pool.query(
-    'SELECT * FROM products WHERE id = $1',
+    `SELECT id, shop_id, name, description, price, currency,
+            stock_quantity, reserved_quantity, is_active,
+            created_at, updated_at
+     FROM products WHERE id = $1`,
     [productId]
   );
   return result.rows[0];
@@ -210,7 +220,9 @@ export const createTestOrder = async (buyerId, productId, shopId, orderData = {}
   const result = await pool.query(
     `INSERT INTO orders (buyer_id, product_id, quantity, total_price, currency, status)
      VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
+     RETURNING id, buyer_id, product_id, quantity, total_price, currency,
+               delivery_address, payment_hash, payment_address, status,
+               created_at, updated_at, paid_at, completed_at`,
     [order.buyer_id, order.product_id, order.quantity, order.total_price, order.currency, order.status]
   );
 
@@ -233,9 +245,11 @@ export const createTestInvoice = async (orderId, invoiceData = {}) => {
   };
 
   const result = await pool.query(
-    `INSERT INTO invoices (order_id, currency, chain, expected_amount, address, status)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
+    `INSERT INTO invoices (order_id, currency, chain, expected_amount, address, status, address_index, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 0, NOW() + INTERVAL '30 minutes')
+     RETURNING id, order_id, chain, address, address_index, expected_amount,
+               currency, tatum_subscription_id, status, expires_at,
+               created_at, updated_at`,
     [invoice.order_id, invoice.currency, invoice.chain, invoice.expected_amount, invoice.address, invoice.status]
   );
 

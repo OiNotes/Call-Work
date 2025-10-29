@@ -8,7 +8,9 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key-for-jwt';
 process.env.JWT_EXPIRES_IN = '7d';
 process.env.PORT = '3001';
-process.env.DATABASE_URL = 'postgresql://admin:password@localhost:5433/telegram_shop';
+// Use same DB as production but with test-only data (telegram_id >= 9000000000)
+// This ensures migrations are applied to the test DB
+process.env.DATABASE_URL = 'postgresql://sile@localhost:5432/telegram_shop';
 process.env.TELEGRAM_BOT_TOKEN = 'test-bot-token';
 process.env.SHOP_REGISTRATION_COST = '25';
 process.env.CRYPTO_BTC_ADDRESS = 'bc1test123456789';

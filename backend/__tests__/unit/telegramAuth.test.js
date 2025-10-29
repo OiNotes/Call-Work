@@ -156,10 +156,18 @@ describe('Telegram initData Validation Security', () => {
       const initData = createValidInitData(user);
 
       // Tamper with user data (change telegram ID to impersonate another user)
-      const tamperedInitData = initData.replace(
+      // Need to decode URL-encoded user parameter first
+      const params = new URLSearchParams(initData);
+      const originalUserJson = params.get('user');
+      const tamperedUserJson = originalUserJson.replace(
         /"id":123456789/,
         '"id":999999999'
       );
+      params.set('user', tamperedUserJson);
+
+      // Keep original hash (which was valid for original data)
+      const originalHash = params.get('hash');
+      const tamperedInitData = params.toString();
 
       const result = verifyInitData(tamperedInitData, BOT_TOKEN);
 

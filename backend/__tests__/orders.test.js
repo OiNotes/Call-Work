@@ -71,9 +71,11 @@ describe('POST /api/orders', () => {
     expect(response.body.data.quantity).toBe(3);
     expect(response.body.data.status).toBe('pending');
 
-    // Verify stock was decreased
+    // Verify stock was reserved (not decreased)
+    // After migration 009: stock_quantity stays same, reserved_quantity increases
     const updatedProduct = await getProductById(product.id);
-    expect(updatedProduct.stock_quantity).toBe(7); // 10 - 3 = 7
+    expect(updatedProduct.stock_quantity).toBe(10); // Stock unchanged
+    expect(updatedProduct.reserved_quantity).toBe(3); // Reserved quantity = order quantity
   });
 
   it('should reject order with insufficient stock', async () => {
@@ -192,9 +194,10 @@ describe('POST /api/orders', () => {
     expect(successfulOrders.length).toBe(1);
     expect(failedOrders.length).toBe(1);
 
-    // Verify final stock
+    // Verify final stock (after migration 009: check reserved_quantity instead)
     const finalProduct = await getProductById(product.id);
-    expect(finalProduct.stock_quantity).toBe(2); // 5 - 3 = 2 (only one order succeeded)
+    expect(finalProduct.stock_quantity).toBe(5); // Stock unchanged
+    expect(finalProduct.reserved_quantity).toBe(3); // Only one order succeeded, reserved 3
   });
 
   it('should reject order for zero quantity', async () => {

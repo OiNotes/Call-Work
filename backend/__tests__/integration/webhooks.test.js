@@ -109,8 +109,8 @@ describe('Webhooks - Integration Tests', () => {
 
     // Create invoice
     const invoiceResult = await pool.query(
-      `INSERT INTO invoices (order_id, currency, chain, expected_amount, address, status)
-       VALUES ($1, 'BTC', 'btc', 0.001, 'bc1test123456789', 'pending')
+      `INSERT INTO invoices (order_id, currency, chain, expected_amount, address, status, address_index, expires_at)
+       VALUES ($1, 'BTC', 'BTC', 0.001, 'bc1test123456789', 'pending', 0, NOW() + INTERVAL '30 minutes')
        RETURNING *`,
       [order.id]
     );

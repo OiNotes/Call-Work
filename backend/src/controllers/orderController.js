@@ -50,7 +50,10 @@ export const orderController = {
 
       // Lock product row for update (prevents race condition)
       const productResult = await client.query(
-        'SELECT * FROM products WHERE id = $1 FOR UPDATE',
+        `SELECT id, shop_id, name, description, price, currency,
+                stock_quantity, reserved_quantity, is_active,
+                created_at, updated_at
+         FROM products WHERE id = $1 FOR UPDATE`,
         [productId]
       );
 

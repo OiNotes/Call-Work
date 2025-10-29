@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import request from 'supertest';
 import crypto from 'crypto';
 import app from '../../src/server.js';
-import { pool } from '../../src/models/db.js';
+import { getTestPool, closeTestDb } from '../helpers/testDb.js';
 
 /**
  * Integration tests for /api/auth/telegram-validate endpoint
@@ -42,12 +42,15 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
 
   beforeAll(async () => {
     // Clean up test users before tests
+    const pool = getTestPool();
     await pool.query("DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)");
   });
 
   afterAll(async () => {
     // Clean up test users after tests
+    const pool = getTestPool();
     await pool.query("DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)");
+    await closeTestDb();
   });
 
   describe('Valid requests', () => {
@@ -180,8 +183,16 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
       const user = { id: 555555555, username: 'victim', first_name: 'Victim' };
       const initData = createValidInitData(user);
 
-      // Try to impersonate another user
-      const tamperedInitData = initData.replace(/"id":555555555/, '"id":999999999');
+      // Try to impersonate another user (properly parse URLSearchParams first)
+      const params = new URLSearchParams(initData);
+      const originalUserJson = params.get('user');
+      const tamperedUserJson = originalUserJson.replace(
+        /"id":555555555/,
+        '"id":999999999'
+      );
+      params.set('user', tamperedUserJson);
+      // Keep original hash (invalid for tampered data)
+      const tamperedInitData = params.toString();
 
       const response = await request(app)
         .post('/api/auth/telegram-validate')
@@ -253,6 +264,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
       expect(response.body.user.first_name).toBe('NoUsername');
 
       // Cleanup
+      const pool = getTestPool();
       await pool.query("DELETE FROM users WHERE telegram_id = 888888888");
     });
 
@@ -275,6 +287,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
       expect(response.body.user.last_name).toBe('Петров');
 
       // Cleanup
+      const pool = getTestPool();
       await pool.query("DELETE FROM users WHERE telegram_id = 999999999");
     });
   });

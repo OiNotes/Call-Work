@@ -16,6 +16,15 @@ export const pool = new Pool({
   statement_timeout: 30000, // 30 second timeout for long-running queries (prevent deadlocks)
 });
 
+// Clear cached prepared statements on connect (fixes schema changes after migrations)
+pool.on('connect', async (client) => {
+  try {
+    await client.query('DEALLOCATE ALL');
+  } catch (err) {
+    // Ignore errors (DEALLOCATE ALL fails if no statements exist)
+  }
+});
+
 /**
  * Test database connection
  */

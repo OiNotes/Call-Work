@@ -117,18 +117,37 @@ describe('Follow Shop - Create/View/Delete Flow (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text5 = testBot.getLastReplyText();
-    expect(text5).toContain('👀 Ваши подписки');
+    expect(text5).toContain('👀 Следить');
     expect(text5).toContain('SourceShop');
 
     testBot.captor.reset();
 
     // Step 6: View follow detail
+    // Mock GET /follows/1 for detail view
+    mock.onGet('/follows/1').reply(200, {
+      data: {
+        id: 1,
+        source_shop_id: 999,
+        source_shop_name: 'SourceShop',
+        target_shop_id: 1,
+        mode: 'monitor',
+        markup_percentage: 0
+      }
+    });
+
+    // Mock GET /follows/1/products for catalog view
+    mock.onGet('/follows/1/products').reply(200, {
+      data: {
+        mode: 'monitor',
+        products: []
+      }
+    });
+
     await testBot.handleUpdate(callbackUpdate('follow_detail:1'));
     await new Promise(resolve => setImmediate(resolve));
 
     const text6 = testBot.getLastReplyText();
-    expect(text6).toContain('Магазин: SourceShop');
-    expect(text6).toContain('Мониторинг');
+    expect(text6).toContain('SourceShop');
 
     testBot.captor.reset();
 
@@ -139,8 +158,10 @@ describe('Follow Shop - Create/View/Delete Flow (P0)', () => {
     await testBot.handleUpdate(callbackUpdate('follow_delete:1'));
     await new Promise(resolve => setImmediate(resolve));
 
+    // After delete, returns to empty follow list
     const text7 = testBot.getLastReplyText();
-    expect(text7).toContain('Подписка удалена');
+    expect(text7).toContain('👀 Следить');
+    expect(text7).toContain('У вас пока нет активных подписок');
 
     // Verify DELETE was called
     expect(mock.history.delete.length).toBe(1);

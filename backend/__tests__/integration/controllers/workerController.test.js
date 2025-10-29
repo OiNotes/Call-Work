@@ -161,10 +161,10 @@ describe('WorkerController Integration Tests', () => {
       );
 
       const workerRes = await query(
-        `INSERT INTO shop_workers (shop_id, worker_user_id, added_by)
-         VALUES ($1, $2, $3)
+        `INSERT INTO shop_workers (shop_id, worker_user_id, telegram_id, added_by)
+         VALUES ($1, $2, $3, $4)
          RETURNING *`,
-        [proShop.id, testUser3.id, testUser1.id]
+        [proShop.id, testUser3.id, 333333, testUser1.id]
       );
       workerToDelete = workerRes.rows[0];
     });

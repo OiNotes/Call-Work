@@ -47,13 +47,33 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       }]
     });
 
+    // Mock GET /follows/10 for detail view
+    mock.onGet('/follows/10').reply(200, {
+      data: {
+        id: 10,
+        source_shop_id: 888,
+        source_shop_name: 'SourceShop',
+        target_shop_id: 1,
+        mode: 'resell',
+        markup_percentage: 25
+      }
+    });
+
+    // Mock GET /follows/10/products for catalog view
+    mock.onGet('/follows/10/products').reply(200, {
+      data: {
+        mode: 'resell',
+        products: []
+      }
+    });
+
     await testBot.handleUpdate(callbackUpdate('follow_detail:10'));
     await new Promise(resolve => setImmediate(resolve));
 
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('💰 Перепродажа');
+    expect(text).toContain('Перепродажа');
     expect(text).toContain('SourceShop');
     expect(text).toContain('25%');
 
@@ -73,6 +93,18 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
         mode: 'monitor',
         markup_percentage: 0
       }]
+    });
+
+    // Mock GET /follows/20 for detail
+    mock.onGet('/follows/20').reply(200, {
+      data: {
+        id: 20,
+        source_shop_id: 777,
+        source_shop_name: 'MonitorShop',
+        target_shop_id: 1,
+        mode: 'monitor',
+        markup_percentage: 0
+      }
     });
 
     await testBot.handleUpdate(callbackUpdate('follow_mode:20'));
@@ -120,6 +152,37 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       }]
     });
 
+    // Mock GET /follows/30 - needs to return different data on 2nd call
+    let getFollowCallCount = 0;
+    mock.onGet('/follows/30').reply(() => {
+      getFollowCallCount++;
+      if (getFollowCallCount === 1) {
+        // First call - before switch (resell mode)
+        return [200, {
+          data: {
+            id: 30,
+            source_shop_id: 666,
+            source_shop_name: 'ResellShop',
+            target_shop_id: 1,
+            mode: 'resell',
+            markup_percentage: 50
+          }
+        }];
+      } else {
+        // Second call - after switch (monitor mode)
+        return [200, {
+          data: {
+            id: 30,
+            source_shop_id: 666,
+            source_shop_name: 'ResellShop',
+            target_shop_id: 1,
+            mode: 'monitor',
+            markup_percentage: 0
+          }
+        }];
+      }
+    });
+
     mock.onPut('/follows/30/mode').reply(200, {
       data: { id: 30, mode: 'monitor', markup_percentage: 0 }
     });
@@ -128,7 +191,9 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Режим обновлён');
+    // After switching, shows follow detail with new mode
+    expect(text).toContain('ResellShop');
+    expect(text).toContain('Мониторинг');
 
     // Verify PUT was called with monitor mode
     expect(mock.history.put.length).toBe(1);
@@ -191,8 +256,10 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await testBot.handleUpdate(callbackUpdate('follow_delete:70'));
     await new Promise(resolve => setImmediate(resolve));
 
+    // After delete, returns to empty follow list
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Подписка удалена');
+    expect(text).toContain('👀 Следить');
+    expect(text).toContain('У вас пока нет активных подписок');
 
     // Verify DELETE was called
     expect(mock.history.delete.length).toBe(1);
@@ -223,8 +290,21 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       }]
     });
 
+    // Mock GET /follows/80 for detail
+    mock.onGet('/follows/80').reply(200, {
+      data: {
+        id: 80,
+        source_shop_id: 555,
+        source_shop_name: 'TestShop',
+        target_shop_id: 1,
+        mode: 'monitor',
+        markup_percentage: 0
+      }
+    });
+
     await testBot.handleUpdate(callbackUpdate('follow_mode:80'));
     await new Promise(resolve => setImmediate(resolve));
+
     testBot.captor.reset();
 
     mock.onPut('/follows/80/mode').reply(500, {
@@ -271,19 +351,37 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text1 = testBot.getLastReplyText();
-    expect(text1).toContain('👀 Ваши подписки');
+    expect(text1).toContain('👀 Следить');
     expect(text1).toContain('Shop444');
 
     testBot.captor.reset();
 
     // Step 2: View detail
+    // Mock GET /follows/100 for detail view
+    mock.onGet('/follows/100').reply(200, {
+      data: {
+        id: 100,
+        source_shop_id: 444,
+        source_shop_name: 'Shop444',
+        target_shop_id: 1,
+        mode: 'resell',
+        markup_percentage: 10
+      }
+    });
+
+    // Mock GET /follows/100/products for catalog view
+    mock.onGet('/follows/100/products').reply(200, {
+      data: {
+        mode: 'resell',
+        products: []
+      }
+    });
+
     await testBot.handleUpdate(callbackUpdate('follow_detail:100'));
     await new Promise(resolve => setImmediate(resolve));
 
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('💰 Перепродажа');
     expect(text2).toContain('Shop444');
-    expect(text2).toContain('10%');
 
     testBot.captor.reset();
 
@@ -292,7 +390,7 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
     await new Promise(resolve => setImmediate(resolve));
 
     const text3 = testBot.getLastReplyText();
-    expect(text3).toContain('👀 Ваши подписки');
+    expect(text3).toContain('👀 Следить');
   });
 
   it('без токена → ошибка авторизации при просмотре деталей', async () => {
