@@ -258,6 +258,15 @@ ${channel}
     walletsChoosePrompt: 'Выберите валюту ниже, чтобы добавить или обновить адрес.',
     walletsPromptReplace: (crypto, example) => `Отправьте новый адрес ${crypto}. Например\n${example}.`,
     walletsAddPrompt: 'Отправьте адрес кошелька (BTC, ETH, USDT или LTC). Мы автоматически определим валюту.',
+    walletsAddPromptSpecific: (crypto) => {
+      const examples = {
+        BTC: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+        ETH: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        USDT: 'TQamF8rf8CuCBcrS85trYW23MsKJc2FMJr',
+        LTC: 'ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxmhkny'
+      };
+      return `Отправьте адрес ${crypto}. Например:\n${examples[crypto] || 'адрес кошелька'}`;
+    },
     walletsUnknownAddress: 'Не удалось распознать валюту. Проверьте адрес и попробуйте ещё раз.',
     walletsInvalidAddress: (crypto) => `Адрес не похож на ${crypto}. Проверьте формат и повторите.`,
     walletsSaved: (crypto) => `${crypto} кошелёк добавлен.`,

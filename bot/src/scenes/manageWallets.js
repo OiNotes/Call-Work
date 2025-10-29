@@ -49,16 +49,6 @@ function formatWalletsList(wallets) {
   }).join('\n');
 }
 
-/**
- * Check if user has any wallets
- */
-function hasWallets(wallets) {
-  return SUPPORTED_CRYPTOS.some((crypto) => {
-    const address = wallets[crypto];
-    return address && address !== 'не указан';
-  });
-}
-
 // ==========================================
 // QR CODE HANDLER
 // ==========================================
@@ -149,9 +139,7 @@ const showWallets = async (ctx) => {
     };
 
     const walletListText = sellerMessages.walletsIntroList(formatWalletsList(wallets));
-    const message = hasWallets(wallets)
-      ? `${sellerMessages.walletsContext}\n\n${walletListText}`
-      : `${sellerMessages.walletsContext}\n\n${sellerMessages.walletsIntroEmpty}\n\n${walletListText}`;
+    const message = `${sellerMessages.walletsContext}\n\n${walletListText}`;
 
     const buttons = SUPPORTED_CRYPTOS.map((crypto) => {
       const address = wallets[crypto];
@@ -195,7 +183,7 @@ const handleInput = async (ctx) => {
         ctx.wizard.state.editingWallet = crypto;
 
         await ctx.editMessageText(
-          sellerMessages.walletsAddPrompt,
+          sellerMessages.walletsAddPromptSpecific(crypto),
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
             [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
