@@ -35,20 +35,6 @@ function formatAddress(address) {
   return address;
 }
 
-/**
- * Format wallets list as text
- */
-function formatWalletsList(wallets) {
-  return SUPPORTED_CRYPTOS.map((crypto) => {
-    const address = wallets[crypto];
-    if (!address) {
-      return `${crypto}: ${sellerMessages.walletsStatusEmpty}`;
-    }
-    const formatted = formatAddress(address);
-    return `${crypto}: ${formatted || address}`;
-  }).join('\n');
-}
-
 // ==========================================
 // QR CODE HANDLER
 // ==========================================
@@ -138,8 +124,7 @@ const showWallets = async (ctx) => {
       LTC: shop.wallet_ltc || null
     };
 
-    const walletListText = sellerMessages.walletsIntroList(formatWalletsList(wallets));
-    const message = `${sellerMessages.walletsContext}\n\n${walletListText}`;
+    const message = sellerMessages.walletsContext;
 
     const buttons = SUPPORTED_CRYPTOS.map((crypto) => {
       const address = wallets[crypto];
