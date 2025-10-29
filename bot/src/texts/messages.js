@@ -3,7 +3,7 @@ export const buttons = {
   findShop: 'Найти магазин',
   mySubscriptions: 'Мои подписки',
   myOrders: 'Мои заказы',
-  switchRole: 'Сменить роль',
+  switchRole: '🔄 Сменить роль',
   createShop: 'Создать магазин',
   buyerRole: 'Я покупаю',
   sellerRole: 'Я продаю',
