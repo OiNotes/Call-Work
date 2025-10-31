@@ -401,22 +401,30 @@ export const handleMarkupUpdate = async (ctx) => {
       // Mode switch: use switchMode API (endpoint: /follows/:id/mode)
       await followApi.switchMode(followId, ctx.session.pendingModeSwitch, ctx.session.token, markup);
       delete ctx.session.pendingModeSwitch;
-      // FIX: Use editMessageText instead of reply
+
+      // Fetch updated follow detail to get current mode
+      const follow = await followApi.getFollowDetail(followId, ctx.session.token);
+      const message = formatFollowDetail(follow);
       await ctx.telegram.editMessageText(
         ctx.chat.id,
         editingMessageId,
         undefined,
-        followMessages.modeChanged
+        message,
+        followDetailMenu(followId, follow.mode)
       );
     } else {
       // Simple markup update: use updateMarkup API (endpoint: /follows/:id/markup)
       await followApi.updateMarkup(followId, markup, ctx.session.token);
-      // FIX: Use editMessageText instead of reply
+
+      // Fetch updated follow detail to get current mode
+      const follow = await followApi.getFollowDetail(followId, ctx.session.token);
+      const message = formatFollowDetail(follow);
       await ctx.telegram.editMessageText(
         ctx.chat.id,
         editingMessageId,
         undefined,
-        followMessages.markupUpdated(Number(markup.toFixed(0)))
+        message,
+        followDetailMenu(followId, follow.mode)
       );
     }
 
@@ -439,13 +447,14 @@ export const handleMarkupUpdate = async (ctx) => {
       message = followMessages.markupInvalid;
     }
 
-    // FIX: Use editMessageText instead of reply
+    // Show error with back to follows menu
     if (editingMessageId) {
       await ctx.telegram.editMessageText(
         ctx.chat.id,
         editingMessageId,
         undefined,
-        message
+        message,
+        followsMenu(Boolean(ctx.session?.hasFollows))
       ).catch((err) => {
         logger.debug('Could not edit error message:', err.message);
       });

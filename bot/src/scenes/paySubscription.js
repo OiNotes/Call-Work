@@ -249,7 +249,13 @@ const paySubscriptionScene = new Scenes.WizardScene(
       }
 
       await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
-      return ctx.scene.leave();
+
+      await ctx.scene.leave();
+
+      // Явно вернуть в меню продавца
+      const { showSellerMainMenu } = await import('../handlers/seller/index.js');
+      await showSellerMainMenu(ctx);
+      return;
     } catch (error) {
       logger.error('[PaySubscription] Payment verification error:', error);
 

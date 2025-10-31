@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../config/env.js';
 import { userQueries } from '../models/db.js';
 import telegramService from '../services/telegram.js';
@@ -46,7 +47,8 @@ export const authController = {
         {
           id: user.id,
           telegramId: user.telegram_id,
-          username: user.username
+          username: user.username,
+          jti: crypto.randomBytes(16).toString('hex')
         },
         config.jwt.secret,
         { expiresIn: config.jwt.expiresIn }
@@ -108,7 +110,8 @@ export const authController = {
         {
           id: user.id,
           telegram_id: Number(user.telegram_id),
-          username: user.username
+          username: user.username,
+          jti: crypto.randomBytes(16).toString('hex')
         },
         config.jwt.secret,
         { expiresIn: config.jwt.expiresIn }
@@ -296,7 +299,8 @@ export const authController = {
         {
           id: user.id,
           telegram_id: Number(user.telegram_id),
-          username: user.username
+          username: user.username,
+          jti: crypto.randomBytes(16).toString('hex')
         },
         config.jwt.secret,
         { expiresIn: config.jwt.expiresIn }
@@ -383,7 +387,8 @@ export const authController = {
         {
           id: user.id,
           telegram_id: Number(user.telegram_id),
-          username: user.username
+          username: user.username,
+          jti: crypto.randomBytes(16).toString('hex')
         },
         config.jwt.secret,
         { expiresIn: config.jwt.expiresIn }

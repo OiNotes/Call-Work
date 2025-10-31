@@ -125,11 +125,24 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       data: { id: 20, mode: 'resell', markup_percentage: 30 }
     });
 
+    // Mock getFollowDetail after update
+    mock.onGet('/follows/20').reply(200, {
+      data: {
+        id: 20,
+        mode: 'resell',
+        markup_percentage: 30,
+        source_shop_id: 123,
+        source_shop_name: 'MonitorShop',
+        follower_shop_id: 1,
+        status: 'active'
+      }
+    });
+
     await testBot.handleUpdate(textUpdate('30'));
     await new Promise(resolve => setImmediate(resolve));
 
     const text2 = testBot.getLastReplyText();
-    expect(text2).toContain('Режим обновлён');
+    expect(text2).toContain('Режим: 💰 Перепродажа');
 
     // Verify PUT was called
     expect(mock.history.put.length).toBe(1);
@@ -210,12 +223,25 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       data: { id: 40, markup_percentage: 15 }
     });
 
+    // Mock getFollowDetail after update
+    mock.onGet('/follows/40').reply(200, {
+      data: {
+        id: 40,
+        mode: 'resell',
+        markup_percentage: 15,
+        source_shop_id: 777,
+        source_shop_name: 'ResellShop2',
+        follower_shop_id: 1,
+        status: 'active'
+      }
+    });
+
     await testBot.handleUpdate(textUpdate('15'));
     await new Promise(resolve => setImmediate(resolve));
 
-    // Should show success message
+    // Should show success message with detail
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка обновлена');
+    expect(text).toContain('Наценка: 15%');
 
     // Verify PUT was called
     expect(mock.history.put.length).toBe(1);
@@ -422,11 +448,24 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       data: { id: 120, markup_percentage: 1 }
     });
 
+    // Mock getFollowDetail after update
+    mock.onGet('/follows/120').reply(200, {
+      data: {
+        id: 120,
+        mode: 'resell',
+        markup_percentage: 1,
+        source_shop_id: 999,
+        source_shop_name: 'TestShop',
+        follower_shop_id: 1,
+        status: 'active'
+      }
+    });
+
     await testBot.handleUpdate(textUpdate('1'));
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка обновлена');
+    expect(text).toContain('Наценка: 1%');
 
     const requestData = JSON.parse(mock.history.put[0].data);
     expect(requestData.markupPercentage).toBe(1);
@@ -439,11 +478,24 @@ describe('Follow Management - Update/Switch/Delete (P0)', () => {
       data: { id: 130, markup_percentage: 500 }
     });
 
+    // Mock getFollowDetail after update
+    mock.onGet('/follows/130').reply(200, {
+      data: {
+        id: 130,
+        mode: 'resell',
+        markup_percentage: 500,
+        source_shop_id: 888,
+        source_shop_name: 'MaxMarkupShop',
+        follower_shop_id: 1,
+        status: 'active'
+      }
+    });
+
     await testBot.handleUpdate(textUpdate('500'));
     await new Promise(resolve => setImmediate(resolve));
 
     const text = testBot.getLastReplyText();
-    expect(text).toContain('Наценка обновлена');
+    expect(text).toContain('Наценка: 500%');
 
     const requestData = JSON.parse(mock.history.put[0].data);
     expect(requestData.markupPercentage).toBe(500);

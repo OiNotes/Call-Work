@@ -108,22 +108,48 @@ export const optionalAuth = async (req, res, next) => {
 };
 
 /**
- * Require user to own at least one shop
- * A user becomes a seller by creating a shop
+ * Require user to own the SPECIFIC shop from params
+ * Checks req.params.id or req.params.shopId
  */
 export const requireShopOwner = async (req, res, next) => {
   try {
-    const shops = await shopQueries.findByOwnerId(req.user.id);
+    // Get shopId from params
+    const shopId = req.params.id || req.params.shopId;
 
-    if (!shops || shops.length === 0) {
-      return res.status(403).json({
+    // If no shopId in params, check that user has at least one shop (generic check)
+    if (!shopId) {
+      const shops = await shopQueries.findByOwnerId(req.user.id);
+
+      if (!shops || shops.length === 0) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only shop owners can perform this action. Create a shop first.'
+        });
+      }
+
+      req.userShops = shops;
+      return next();
+    }
+
+    // Check if user owns THIS specific shop
+    const shop = await shopQueries.findById(shopId);
+
+    if (!shop) {
+      return res.status(404).json({
         success: false,
-        error: 'Only shop owners can perform this action. Create a shop first.'
+        error: 'Shop not found'
       });
     }
 
-    // Attach shops to request for later use
-    req.userShops = shops;
+    if (shop.owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only shop owner can perform this action'
+      });
+    }
+
+    // Attach shop to request
+    req.shop = shop;
     next();
   } catch (error) {
     logger.error('Shop ownership verification error', { error: error.message, stack: error.stack });

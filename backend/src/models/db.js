@@ -561,11 +561,19 @@ export const orderQueries = {
  */
 export const paymentQueries = {
   // Create payment record
-  create: async (paymentData) => {
+  create: async (paymentData, client = null) => {
     const { orderId, txHash, amount, currency, status } = paymentData;
-    const result = await query(
+    const queryFn = client ? client.query.bind(client) : query;
+    const result = await queryFn(
       `INSERT INTO payments (order_id, tx_hash, amount, currency, status)
        VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (tx_hash) DO UPDATE
+       SET status = CASE
+         WHEN payments.status = 'pending' AND EXCLUDED.status = 'confirmed' THEN 'confirmed'
+         WHEN payments.status = 'failed' AND EXCLUDED.status IN ('pending', 'confirmed') THEN EXCLUDED.status
+         ELSE payments.status
+       END,
+       updated_at = NOW()
        RETURNING *`,
       [orderId, txHash, amount, currency, status]
     );

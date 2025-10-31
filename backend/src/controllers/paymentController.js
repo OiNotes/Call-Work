@@ -1,4 +1,5 @@
-import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
+import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries, invoiceQueries } from '../models/db.js';
+import { getClient } from '../config/database.js';
 import cryptoService from '../services/crypto.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
@@ -55,18 +56,20 @@ export const paymentController = {
         });
       }
 
-      // Check if payment address is set (CRITICAL: prevents NULL address verification failures)
-      if (!order.payment_address) {
-        return res.status(400).json({
+      // Get invoice to retrieve payment address
+      const invoice = await invoiceQueries.findByOrderId(orderId);
+
+      if (!invoice) {
+        return res.status(404).json({
           success: false,
-          error: 'payment_address is required for payment verification'
+          error: 'Invoice not found for this order'
         });
       }
 
-      // Verify payment with blockchain
+      // Verify payment with blockchain using invoice address
       const verification = await cryptoService.verifyTransaction(
         txHash,
-        order.payment_address,
+        invoice.address,
         order.total_price,
         currency
       );
@@ -87,39 +90,58 @@ export const paymentController = {
         });
       }
 
-      // Create payment record
-      const payment = await paymentQueries.create({
-        orderId,
-        txHash,
-        amount: verification.amount,
-        currency,
-        status: verification.status
-      });
+      let payment;
 
-      // Update payment with confirmations
-      if (verification.confirmations) {
-        await paymentQueries.updateStatus(
-          payment.id,
-          verification.status,
-          verification.confirmations
-        );
-      }
-
-      // If payment is confirmed, update order status and stock
+      // If payment is confirmed, use transaction for atomicity
       if (verification.status === 'confirmed') {
-        await orderQueries.updateStatus(orderId, 'confirmed');
+        // CRITICAL: Use transaction for atomicity (payment + order status + stock updates)
+        const client = await getClient();
+        try {
+          await client.query('BEGIN');
 
-        // OPTIMIZED: Parallel execution of independent queries
+          // Create payment record inside transaction
+          payment = await paymentQueries.create({
+            orderId,
+            txHash,
+            amount: verification.amount,
+            currency,
+            status: verification.status
+          }, client);
+
+          // Update payment with confirmations if available
+          if (verification.confirmations) {
+            await client.query(
+              `UPDATE payments SET confirmations = $1, updated_at = NOW() WHERE id = $2`,
+              [verification.confirmations, payment.id]
+            );
+          }
+
+          // Update order status
+          await client.query(
+            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+            ['confirmed', orderId]
+          );
+
+          // Update stock atomically
+          await productQueries.updateStock(order.product_id, -order.quantity, client);
+          await productQueries.unreserveStock(order.product_id, order.quantity, client);
+
+          await client.query('COMMIT');
+        } catch (txError) {
+          await client.query('ROLLBACK');
+          logger.error('Transaction error in payment confirmation', { error: txError.message, stack: txError.stack });
+          throw txError;
+        } finally {
+          client.release();
+        }
+
+        // Read operations (outside transaction - read-only)
         const [product, buyer] = await Promise.all([
           productQueries.findById(order.product_id),
           userQueries.findById(order.buyer_id)
         ]);
 
-        // Update stock (sequential - need to be atomic)
-        await productQueries.updateStock(order.product_id, -order.quantity);
-        await productQueries.unreserveStock(order.product_id, order.quantity);
-
-        // Get seller info (can be done in parallel with previous operations)
+        // Get seller info
         const shop = await shopQueries.findById(product.shop_id);
         const seller = await userQueries.findById(shop.owner_id);
 
@@ -148,6 +170,24 @@ export const paymentController = {
           });
         } catch (notifError) {
           logger.error('Buyer notification error', { error: notifError.message, stack: notifError.stack });
+        }
+      } else {
+        // Payment not confirmed yet - create payment record without transaction
+        payment = await paymentQueries.create({
+          orderId,
+          txHash,
+          amount: verification.amount,
+          currency,
+          status: verification.status
+        });
+
+        // Update payment with confirmations
+        if (verification.confirmations) {
+          await paymentQueries.updateStatus(
+            payment.id,
+            verification.status,
+            verification.confirmations
+          );
         }
       }
 
@@ -189,8 +229,20 @@ export const paymentController = {
         });
       }
 
-      // Check if user has access
-      if (order.buyer_id !== req.user.id && order.seller_id !== req.user.id) {
+      // Check if user has access (buyer or seller)
+      const isBuyer = order.buyer_id === req.user.id;
+
+      // Get seller ID through product → shop → owner
+      let isSeller = false;
+      if (!isBuyer) {
+        const product = await productQueries.findById(order.product_id);
+        if (product) {
+          const shop = await shopQueries.findById(product.shop_id);
+          isSeller = shop && shop.owner_id === req.user.id;
+        }
+      }
+
+      if (!isBuyer && !isSeller) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -239,7 +291,20 @@ export const paymentController = {
       // Get order to check access
       const order = await orderQueries.findById(payment.order_id);
 
-      if (order.buyer_id !== req.user.id && order.seller_id !== req.user.id) {
+      // Check if user has access (buyer or seller)
+      const isBuyer = order.buyer_id === req.user.id;
+
+      // Get seller ID through product → shop → owner
+      let isSeller = false;
+      if (!isBuyer) {
+        const product = await productQueries.findById(order.product_id);
+        if (product) {
+          const shop = await shopQueries.findById(product.shop_id);
+          isSeller = shop && shop.owner_id === req.user.id;
+        }
+      }
+
+      if (!isBuyer && !isSeller) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -248,24 +313,57 @@ export const paymentController = {
 
       // If payment is still pending, check blockchain again
       if (payment.status === 'pending') {
+        // Get invoice to retrieve payment address
+        const invoice = await invoiceQueries.findByOrderId(order.id);
+
+        if (!invoice) {
+          return res.status(404).json({
+            success: false,
+            error: 'Invoice not found for this order'
+          });
+        }
+
         const verification = await cryptoService.verifyTransaction(
           payment.tx_hash,
-          order.payment_address,
+          invoice.address,
           order.total_price,
           payment.currency
         );
 
         if (verification.verified && verification.status === 'confirmed') {
-          await paymentQueries.updateStatus(
-            payment.id,
-            'confirmed',
-            verification.confirmations
-          );
+          // CRITICAL: Use transaction for atomicity (payment + order status updates)
+          const client = await getClient();
+          try {
+            await client.query('BEGIN');
 
-          await orderQueries.updateStatus(order.id, 'confirmed');
+            // Update payment status
+            await client.query(
+              `UPDATE payments SET status = $1, confirmations = $2, updated_at = NOW() WHERE id = $3`,
+              ['confirmed', verification.confirmations, payment.id]
+            );
 
-          payment.status = 'confirmed';
-          payment.confirmations = verification.confirmations;
+            // Update order status
+            await client.query(
+              'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+              ['confirmed', order.id]
+            );
+
+            // Update stock atomically
+            await productQueries.updateStock(order.product_id, -order.quantity, client);
+            await productQueries.unreserveStock(order.product_id, order.quantity, client);
+
+            await client.query('COMMIT');
+
+            // Update in-memory payment object
+            payment.status = 'confirmed';
+            payment.confirmations = verification.confirmations;
+          } catch (txError) {
+            await client.query('ROLLBACK');
+            logger.error('Transaction error in checkStatus', { error: txError.message, stack: txError.stack });
+            throw txError;
+          } finally {
+            client.release();
+          }
         }
       }
 

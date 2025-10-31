@@ -524,10 +524,26 @@ describe('Shop Follow Controller - Integration Tests', () => {
         .expect(200);
 
       expect(response.body.data).toHaveLength(2);
-      expect(response.body.data[0]).toMatchObject({
+
+      // Найти follows по mode (независимо от порядка сортировки)
+      const monitorFollow = response.body.data.find(f => f.mode === 'monitor');
+      const resellFollow = response.body.data.find(f => f.mode === 'resell');
+
+      expect(monitorFollow).toBeDefined();
+      expect(monitorFollow).toMatchObject({
         follower_shop_id: freeShop.id,
+        source_shop_id: sourceShop1.id,
         mode: 'monitor',
         status: 'active'
+      });
+
+      expect(resellFollow).toBeDefined();
+      expect(resellFollow).toMatchObject({
+        follower_shop_id: freeShop.id,
+        source_shop_id: sourceShop2.id,
+        mode: 'resell',
+        status: 'active',
+        markup_percentage: 50
       });
     });
   });

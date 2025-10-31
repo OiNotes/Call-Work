@@ -49,14 +49,34 @@ const showPrompt = async (ctx) => {
     // Store active orders in wizard state for validation
     ctx.wizard.state.activeOrders = activeOrders;
 
+    // Helper function to format price
+    const formatPrice = (value) => {
+      const amount = Number(value);
+      if (!Number.isFinite(amount)) {
+        return '0';
+      }
+      return Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+    };
+
+    // Format orders list (same logic as in orders.js)
+    const ordersList = activeOrders.map((order, index) => {
+      const buyer = order.buyer_username
+        ? `@${order.buyer_username}`
+        : (order.buyer_first_name || 'Покупатель');
+      const productName = order.product_name || order.productName || 'Товар';
+      const quantity = order.quantity ?? 1;
+      const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
+      return `${index + 1}. ${buyer} — ${productName} (${quantity} шт) — $${totalPrice}`;
+    }).join('\n');
+
     const message = `${sellerMessages.bulkShip.prompt}
 
 Активных заказов: ${activeOrders.length}
 
-Примеры:
-• 1 3 5 — заказы 1, 3, 5
-• 1-5 — заказы с 1 по 5
-• 1 3-5 7 — заказы 1, 3, 4, 5, 7`;
+${ordersList}
+
+Введите номера заказов через пробел.
+Пример: 1 3 5 или 1-5`;
 
     await ctx.editMessageText(
       message,
@@ -193,19 +213,14 @@ const handleConfirmation = async (ctx) => {
         // Send notifications to buyers
         await sendBuyerNotifications(ctx, selectedOrders);
 
-        // Show success message
-        await ctx.editMessageText(sellerMessages.bulkShip.success(selectedOrders.length));
-
-        // Return to active orders after 2 seconds
-        setTimeout(async () => {
-          try {
-            // Import handler dynamically to avoid circular dependency
-            const { handleActiveOrders } = await import('../handlers/seller/orders.js');
-            await handleActiveOrders(ctx);
-          } catch (error) {
-            logger.error('Error returning to active orders:', error);
-          }
-        }, 2000);
+        // Show success message with navigation buttons
+        await ctx.editMessageText(
+          sellerMessages.bulkShip.success(selectedOrders.length),
+          Markup.inlineKeyboard([
+            [Markup.button.callback('📦 Активные заказы', 'seller:active_orders')],
+            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+          ])
+        );
 
         return await ctx.scene.leave();
 

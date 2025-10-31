@@ -187,7 +187,13 @@ const handleInput = async (ctx) => {
         const address = shop[`wallet_${crypto.toLowerCase()}`];
 
         if (!address) {
-          await ctx.editMessageText(sellerMessages.walletsNotFound);
+          await ctx.editMessageText(
+            sellerMessages.walletsNotFound,
+            Markup.inlineKeyboard([
+              [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
+              [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            ])
+          );
           return;
         }
 
@@ -289,13 +295,15 @@ const handleInput = async (ctx) => {
           crypto
         });
 
-        await ctx.editMessageText(sellerMessages.walletsDeleted(crypto));
+        await ctx.editMessageText(
+          sellerMessages.walletsDeleted(crypto),
+          Markup.inlineKeyboard([
+            [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
+            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+          ])
+        );
 
-        // Return to wallets list after 1 second
-        setTimeout(async () => {
-          ctx.wizard.selectStep(0);
-          await showWallets(ctx);
-        }, 1000);
+        // No timeout - user can navigate manually via button
         return;
       }
 

@@ -71,6 +71,9 @@ const chooseTierScene = new Scenes.WizardScene(
             tier
           });
 
+          // Feedback пользователю
+          await ctx.answerCbQuery(`Выбран тариф: ${tier.toUpperCase()}`);
+
           // Transition to createShop scene with selected tier
           await ctx.scene.leave();
 

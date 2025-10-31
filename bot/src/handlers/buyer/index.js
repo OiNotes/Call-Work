@@ -206,7 +206,13 @@ const handleSubscriptions = async (ctx) => {
  */
 const handleSubscribe = async (ctx) => {
   try {
-    const shopId = ctx.match[1];
+    const shopId = parseInt(ctx.match[1], 10);
+
+    // Validate shopId
+    if (!Number.isInteger(shopId) || shopId <= 0) {
+      await ctx.answerCbQuery('Некорректный ID магазина', { show_alert: true });
+      return;
+    }
 
     // Check authentication
     if (!ctx.session.token) {
@@ -265,7 +271,13 @@ const handleSubscribe = async (ctx) => {
  */
 const handleUnsubscribe = async (ctx) => {
   try {
-    const shopId = ctx.match[1];
+    const shopId = parseInt(ctx.match[1], 10);
+
+    // Validate shopId
+    if (!Number.isInteger(shopId) || shopId <= 0) {
+      await ctx.answerCbQuery('Некорректный ID магазина', { show_alert: true });
+      return;
+    }
 
     // Check authentication
     if (!ctx.session.token) {
@@ -346,7 +358,14 @@ const handleNoop = async (ctx) => {
  */
 const handleShopView = async (ctx) => {
   try {
-    const shopId = ctx.match[1];
+    const shopId = parseInt(ctx.match[1], 10);
+
+    // Validate shopId
+    if (!Number.isInteger(shopId) || shopId <= 0) {
+      await ctx.answerCbQuery('Некорректный ID магазина', { show_alert: true });
+      return;
+    }
+
     await ctx.answerCbQuery();
 
     // Get shop details
@@ -380,7 +399,14 @@ const handleShopPreorder = async (ctx) => handleShopSection(ctx, 'preorder');
 
 const handleShopSection = async (ctx, section) => {
   try {
-    const shopId = ctx.match[1];
+    const shopId = parseInt(ctx.match[1], 10);
+
+    // Validate shopId
+    if (!Number.isInteger(shopId) || shopId <= 0) {
+      await ctx.answerCbQuery('Некорректный ID магазина', { show_alert: true });
+      return;
+    }
+
     await ctx.answerCbQuery();
 
     const [shop, products] = await Promise.all([

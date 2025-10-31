@@ -361,8 +361,8 @@ export const setupSellerHandlers = (bot) => {
   bot.action('seller:active_orders', handleActiveOrders);
   bot.action('seller:mark_shipped', async (ctx) => {
     try {
-      await ctx.answerCbQuery();
       await ctx.scene.enter('markOrdersShipped');
+      await ctx.answerCbQuery();
     } catch (error) {
       logger.error('Error entering markOrdersShipped scene:', error);
       await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
@@ -430,8 +430,8 @@ export const setupSellerHandlers = (bot) => {
   // Subscription management
   bot.action('subscription:pay', async (ctx) => {
     try {
-      await ctx.answerCbQuery();
       await ctx.scene.enter('pay_subscription');
+      await ctx.answerCbQuery();
     } catch (error) {
       logger.error('Error entering pay_subscription scene:', error);
       await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
@@ -440,8 +440,8 @@ export const setupSellerHandlers = (bot) => {
 
   bot.action('subscription:upgrade', async (ctx) => {
     try {
-      await ctx.answerCbQuery();
       await ctx.scene.enter('upgrade_shop');
+      await ctx.answerCbQuery();
     } catch (error) {
       logger.error('Error entering upgrade_shop scene:', error);
       await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });

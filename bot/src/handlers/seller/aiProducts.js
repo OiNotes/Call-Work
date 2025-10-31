@@ -1,3 +1,4 @@
+import { Markup } from 'telegraf';
 import { processProductCommand, executeBulkPriceUpdate } from '../../services/productAI.js';
 import { productApi } from '../../utils/api.js';
 import { sellerMenu } from '../../keyboards/seller.js';
@@ -223,7 +224,12 @@ export async function handleAISelection(ctx) {
 
     // Check if pending operation exists
     if (!ctx.session.pendingAI) {
-      await ctx.editMessageText('⏳ Операция устарела. Попробуйте снова.');
+      await ctx.editMessageText(
+        '⏳ Операция устарела. Попробуйте снова.',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('↩️ В меню', 'seller:menu')]
+        ])
+      );
       return;
     }
 
@@ -232,7 +238,12 @@ export async function handleAISelection(ctx) {
     // Find selected product
     const selectedProduct = options.find(p => p.id === productId);
     if (!selectedProduct) {
-      await ctx.editMessageText('❌ Товар не найден');
+      await ctx.editMessageText(
+        '❌ Товар не найден',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('↩️ В меню', 'seller:menu')]
+        ])
+      );
       delete ctx.session.pendingAI;
       return;
     }
@@ -241,8 +252,13 @@ export async function handleAISelection(ctx) {
     if (operation === 'delete') {
       try {
         await productApi.deleteProduct(productId, ctx.session.token);
-        await ctx.editMessageText(`✅ Удалён: ${selectedProduct.name} ($${selectedProduct.price})`);
-        
+        await ctx.editMessageText(
+          `✅ Удалён: ${selectedProduct.name} ($${selectedProduct.price})`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+          ])
+        );
+
         logger.info('ai_clarification_delete', {
           userId: ctx.from.id,
           shopId: ctx.session.shopId,
@@ -251,7 +267,12 @@ export async function handleAISelection(ctx) {
         });
       } catch (error) {
         logger.error('AI clarification delete failed:', error);
-        await ctx.editMessageText('❌ Не удалось удалить товар');
+        await ctx.editMessageText(
+          '❌ Не удалось удалить товар',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+          ])
+        );
       }
     }
 
@@ -261,7 +282,12 @@ export async function handleAISelection(ctx) {
   } catch (error) {
     logger.error('AI selection handler error:', error);
     try {
-      await ctx.editMessageText('❌ Ошибка обработки');
+      await ctx.editMessageText(
+        '❌ Ошибка обработки',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('↩️ В меню', 'seller:menu')]
+        ])
+      );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -311,7 +337,12 @@ export async function handleBulkPricesConfirm(ctx) {
   } catch (error) {
     logger.error('Bulk prices confirm handler error:', error);
     try {
-      await ctx.editMessageText('❌ Ошибка при выполнении');
+      await ctx.editMessageText(
+        '❌ Ошибка при выполнении',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('↩️ В меню', 'seller:menu')]
+        ])
+      );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

@@ -55,8 +55,7 @@ describe('Mark Orders Shipped Scene (P0)', () => {
       const text1 = testBot.getLastReplyText();
       expect(text1).toContain('Введите номера заказов');
       expect(text1).toContain('Активных заказов: 5');
-      expect(text1).toContain('1 3 5 — заказы 1, 3, 5');
-      expect(text1).toContain('1-5 — заказы с 1 по 5');
+      expect(text1).toContain('Пример: 1 3 5 или 1-5');
 
       testBot.captor.reset();
 

@@ -1,4 +1,5 @@
-import { paymentQueries, invoiceQueries, orderQueries } from '../models/db.js';
+import { paymentQueries, invoiceQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
+import { getClient } from '../config/database.js';
 import * as etherscanService from './etherscanService.js';
 import * as tronService from './tronService.js';
 import telegramService from './telegram.js';
@@ -401,20 +402,81 @@ async function handleConfirmedPayment(invoice, payment) {
       });
     }
 
-    // Update order status to confirmed
-    await orderQueries.updateStatus(invoice.order_id, 'confirmed');
+    // CRITICAL: Use transaction for atomicity (order status + stock updates)
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
 
-    // Get order details for notification
-    const order = await orderQueries.findById(invoice.order_id);
+      // Get order first (need product_id and quantity for stock update)
+      const orderResult = await client.query(
+        'SELECT * FROM orders WHERE id = $1',
+        [invoice.order_id]
+      );
+      const order = orderResult.rows[0];
 
-    if (!order) {
-      logger.error('[PollingService] Order not found:', {
-        orderId: invoice.order_id
+      if (!order) {
+        logger.error('[PollingService] Order not found:', {
+          orderId: invoice.order_id
+        });
+        await client.query('ROLLBACK');
+        client.release();
+        return;
+      }
+
+      // Update order status
+      await client.query(
+        'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+        ['confirmed', invoice.order_id]
+      );
+
+      // Update stock atomically
+      await productQueries.updateStock(order.product_id, -order.quantity, client);
+      await productQueries.unreserveStock(order.product_id, order.quantity, client);
+
+      await client.query('COMMIT');
+    } catch (txError) {
+      await client.query('ROLLBACK');
+      logger.error('[PollingService] Transaction error in payment confirmation', {
+        error: txError.message,
+        stack: txError.stack
       });
-      return;
+      throw txError;
+    } finally {
+      client.release();
     }
 
-    // Notify user via Telegram
+    // Get order details for notification (outside transaction - read-only)
+    const order = await orderQueries.findById(invoice.order_id);
+
+    // Read operations - get additional data for seller notification
+    const [product, buyer] = await Promise.all([
+      productQueries.findById(order.product_id),
+      userQueries.findById(order.buyer_id)
+    ]);
+
+    // Get seller info
+    const shop = await shopQueries.findById(product.shop_id);
+    const seller = await userQueries.findById(shop.owner_id);
+
+    // Notify seller about payment confirmation
+    try {
+      await telegramService.notifyPaymentConfirmedSeller(seller.telegram_id, {
+        orderId: order.id,
+        productName: product.name,
+        quantity: order.quantity,
+        totalPrice: order.total_price,
+        currency: order.currency,
+        buyerUsername: buyer.username || 'Anonymous',
+        buyerTelegramId: buyer.telegram_id
+      });
+    } catch (notifError) {
+      logger.error('[PollingService] Seller notification error', {
+        error: notifError.message,
+        stack: notifError.stack
+      });
+    }
+
+    // Notify buyer via Telegram
     try {
       await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
         id: order.id,
@@ -428,7 +490,7 @@ async function handleConfirmedPayment(invoice, payment) {
         telegramId: order.buyer_telegram_id
       });
     } catch (notifError) {
-      logger.error('[PollingService] Failed to notify user:', {
+      logger.error('[PollingService] Failed to notify buyer:', {
         error: notifError.message,
         orderId: order.id
       });
