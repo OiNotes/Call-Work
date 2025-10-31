@@ -57,7 +57,6 @@ function InteractiveListItem(
       initial="rest"
       whileHover="hover"
       whileTap="press"
-      animate="rest"
       variants={variants}
       {...props}
     >

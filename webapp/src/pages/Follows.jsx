@@ -66,9 +66,25 @@ export default function Follows() {
 
       <div className="px-4 py-6 space-y-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <div className="w-12 h-12 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
-          </div>
+          <motion.div
+            className="flex flex-col items-center justify-center py-16 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="w-12 h-12 border-4 border-orange-primary border-t-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="text-gray-400 text-sm"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              Загрузка подписок...
+            </motion.div>
+          </motion.div>
         ) : error ? (
           <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
             {error}

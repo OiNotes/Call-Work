@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@tanstack/react-virtual": "^3.13.12",
     "@telegram-apps/sdk": "^2.11.3",
     "axios": "^1.6.0",

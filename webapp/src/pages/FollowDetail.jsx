@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeftIcon, EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useStore } from '../store/useStore';
 import { useFollowsApi } from '../hooks/useApi';
 import ProductList from '../components/Follows/ProductList';
 import EditMarkupModal from '../components/Follows/EditMarkupModal';
+import MarkupSliderModal from '../components/Follows/MarkupSliderModal';
 import ConfirmDialog from '../components/Follows/ConfirmDialog';
+import Tabs from '../components/Follows/Tabs';
+import ActionsList from '../components/Follows/ActionsList';
 import { useTelegram } from '../hooks/useTelegram';
 
 const FollowDetail = () => {
@@ -13,10 +17,15 @@ const FollowDetail = () => {
   const { followDetailId, setFollowDetailId, currentFollow, setCurrentFollow, followProducts, setFollowProducts } = useStore();
 
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'manage'
   const [showEditMarkup, setShowEditMarkup] = useState(false);
+  const [showMarkupSlider, setShowMarkupSlider] = useState(false);
   const [showSwitchMode, setShowSwitchMode] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [newMode, setNewMode] = useState(null);
+
+  // Spring animation preset
+  const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
   useEffect(() => {
     loadData();
@@ -41,6 +50,7 @@ const FollowDetail = () => {
       setFollowProducts(productsPayload.products || []);
     } catch (error) {
       console.error('Error loading follow detail:', error);
+      triggerHaptic('error');
     } finally {
       setLoading(false);
     }
@@ -49,7 +59,7 @@ const FollowDetail = () => {
   const handleSaveMarkup = async (markup) => {
     try {
       await followsApi.updateMarkup(followDetailId, markup);
-      await loadData(); // Перезагрузить данные
+      await loadData();
       triggerHaptic('success');
     } catch (error) {
       console.error('Error updating markup:', error);
@@ -58,28 +68,32 @@ const FollowDetail = () => {
   };
 
   const handleSwitchMode = async () => {
+    triggerHaptic('light');
     const targetMode = currentFollow.mode === 'monitor' ? 'resell' : 'monitor';
     setNewMode(targetMode);
-    setShowSwitchMode(true);
+
+    if (targetMode === 'resell') {
+      setShowMarkupSlider(true);
+    } else {
+      setShowSwitchMode(true);
+    }
   };
 
-  const confirmSwitchMode = async () => {
+  const confirmSwitchToMonitor = async () => {
     try {
-      let markup = null;
+      await followsApi.switchMode(followDetailId, 'monitor', null);
+      await loadData();
+      triggerHaptic('success');
+    } catch (error) {
+      console.error('Error switching mode:', error);
+      triggerHaptic('error');
+    }
+  };
 
-      // Если переключаем на Resell - запросить наценку
-      if (newMode === 'resell') {
-        const value = prompt('Введите наценку (1-500%):');
-        markup = parseInt(value, 10);
-
-        if (isNaN(markup) || markup < 1 || markup > 500) {
-          alert('Некорректная наценка');
-          return;
-        }
-      }
-
-      await followsApi.switchMode(followDetailId, newMode, markup);
-      await loadData(); // Перезагрузить данные
+  const confirmSwitchToResell = async (markup) => {
+    try {
+      await followsApi.switchMode(followDetailId, 'resell', markup);
+      await loadData();
       triggerHaptic('success');
     } catch (error) {
       console.error('Error switching mode:', error);
@@ -91,134 +105,217 @@ const FollowDetail = () => {
     try {
       await followsApi.deleteFollow(followDetailId);
       triggerHaptic('success');
-      setFollowDetailId(null); // Вернуться назад
+      setFollowDetailId(null);
     } catch (error) {
       console.error('Error deleting follow:', error);
       triggerHaptic('error');
     }
   };
 
+  const handleBack = () => {
+    triggerHaptic('light');
+    setFollowDetailId(null);
+  };
+
+  const handleTabChange = (tabId) => {
+    triggerHaptic('light');
+    setActiveTab(tabId);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="text-white">Загрузка...</div>
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <motion.div
+          className="flex flex-col items-center gap-4"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={controlSpring}
+        >
+          <motion.div
+            className="w-16 h-16 border-4 border-orange-primary border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            className="text-white text-sm"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+          >
+            Загрузка подписки...
+          </motion.div>
+        </motion.div>
       </div>
     );
   }
 
   if (!currentFollow) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="text-white">Подписка не найдена</div>
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="text-6xl mb-4">😔</div>
+          <div className="text-white text-lg font-semibold mb-2">Подписка не найдена</div>
+          <div className="text-gray-400 text-sm mb-6">Эта подписка была удалена или не существует</div>
+          <motion.button
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 text-orange-primary font-semibold"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <ChevronLeftIcon className="w-5 h-5" />
+            Вернуться назад
+          </motion.button>
+        </div>
       </div>
     );
   }
 
   const modeLabel = currentFollow.mode === 'monitor' ? 'Мониторинг' : 'Перепродажа';
-  const modeEmoji = currentFollow.mode === 'monitor' ? '🔍' : '💰';
+  const ModeIcon = currentFollow.mode === 'monitor' ? EyeIcon : ArrowPathIcon;
+  const productsCount = currentFollow.source_products_count || 0;
+
+  const tabs = [
+    { id: 'products', label: 'Товары' },
+    { id: 'manage', label: 'Управление' }
+  ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white pb-20">
-      {/* Header */}
-      <div className="bg-[#1A1A1A] p-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setFollowDetailId(null);
-            }}
-            className="text-[#FF6B00]"
+    <div className="min-h-screen bg-dark-bg text-white pb-20">
+      {/* Header - Fixed */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-40 bg-dark-bg/95 backdrop-blur-lg border-b border-white/5"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...controlSpring, delay: 0.05 }}
+      >
+        {/* Back button + Shop name */}
+        <div className="px-4 py-4 flex items-center gap-3">
+          <motion.button
+            onClick={handleBack}
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-white hover:bg-white/5 -ml-2"
+            whileTap={{ scale: 0.95 }}
+            transition={controlSpring}
           >
-            ← Назад
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🏪</span>
-            <h1 className="text-lg font-bold">{currentFollow.source_shop_name}</h1>
-          </div>
-        </div>
-      </div>
+            <ChevronLeftIcon className="w-6 h-6" />
+          </motion.button>
 
-      {/* Info Block */}
-      <div className="p-4">
-        <div className="bg-[#1A1A1A] rounded-2xl p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span>{modeEmoji}</span>
-            <span className="text-white font-semibold">{modeLabel}</span>
-            {currentFollow.mode === 'resell' && currentFollow.markup_percentage && (
-              <span className="text-[#FF6B00]">+{currentFollow.markup_percentage}%</span>
-            )}
-          </div>
-
-          <div className="text-sm text-gray-400 space-y-1">
-            <div>Товаров в их каталоге: {currentFollow.source_products_count || 0}</div>
-            {currentFollow.mode === 'resell' && (
-              <div>Скопировано к вам: {currentFollow.synced_products_count || 0}</div>
-            )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white text-xl font-bold truncate" style={{ letterSpacing: '-0.02em' }}>
+              {currentFollow.source_shop_name}
+            </h1>
           </div>
         </div>
 
-        {/* Products List */}
-        <div className="mb-4">
-          <h2 className="text-lg font-bold mb-3">Каталог товаров</h2>
-          <ProductList products={followProducts} mode={currentFollow.mode} />
-        </div>
+        {/* Stats Row */}
+        <div className="px-4 pb-3 flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5">
+            <ModeIcon className="w-4 h-4 text-gray-400" />
+            <span className="text-white font-medium">{modeLabel}</span>
+          </div>
 
-        {/* Actions */}
-        <div className="space-y-3">
-          {currentFollow.mode === 'resell' && (
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setShowEditMarkup(true);
-              }}
-              className="w-full bg-[#FF6B00] text-white py-3 rounded-xl font-semibold"
-            >
-              Изменить наценку
-            </button>
+          {currentFollow.mode === 'resell' && currentFollow.markup_percentage && (
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-primary/10">
+              <span className="text-orange-primary font-semibold text-xs">
+                +{currentFollow.markup_percentage}%
+              </span>
+            </div>
           )}
 
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              handleSwitchMode();
-            }}
-            className="w-full bg-[#1A1A1A] text-white py-3 rounded-xl font-semibold border border-gray-700"
-          >
-            Сменить режим на {currentFollow.mode === 'monitor' ? 'Перепродажу' : 'Мониторинг'}
-          </button>
-
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setShowDelete(true);
-            }}
-            className="w-full bg-red-600/20 text-red-500 py-3 rounded-xl font-semibold border border-red-600/50"
-          >
-            Удалить подписку
-          </button>
+          <div className="text-gray-400">
+            <span className="font-medium text-white">{productsCount}</span> товаров
+          </div>
         </div>
+      </motion.div>
+
+      {/* Content with padding for fixed header */}
+      <div className="px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 120px)' }}>
+
+        {/* Tabs Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+        </motion.div>
+
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'products' ? (
+            <motion.div
+              key="products"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={controlSpring}
+            >
+              <ProductList products={followProducts} mode={currentFollow.mode} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="manage"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={controlSpring}
+            >
+              <ActionsList
+                mode={currentFollow.mode}
+                markup={currentFollow.markup_percentage}
+                onEditMarkup={() => {
+                  triggerHaptic('light');
+                  setShowEditMarkup(true);
+                }}
+                onSwitchMode={handleSwitchMode}
+                onDelete={() => {
+                  triggerHaptic('light');
+                  setShowDelete(true);
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Modals */}
       <EditMarkupModal
         isOpen={showEditMarkup}
-        onClose={() => setShowEditMarkup(false)}
+        onClose={() => {
+          triggerHaptic('light');
+          setShowEditMarkup(false);
+        }}
         currentMarkup={currentFollow.markup_percentage}
         onSave={handleSaveMarkup}
       />
 
+      <MarkupSliderModal
+        isOpen={showMarkupSlider}
+        onClose={() => {
+          triggerHaptic('light');
+          setShowMarkupSlider(false);
+        }}
+        currentMarkup={currentFollow.markup_percentage || 25}
+        onConfirm={confirmSwitchToResell}
+      />
+
       <ConfirmDialog
         isOpen={showSwitchMode}
-        onClose={() => setShowSwitchMode(false)}
-        onConfirm={confirmSwitchMode}
-        title="Сменить режим"
-        message={`Переключить на режим ${newMode === 'monitor' ? 'Мониторинг' : 'Перепродажа'}?`}
+        onClose={() => {
+          triggerHaptic('light');
+          setShowSwitchMode(false);
+        }}
+        onConfirm={confirmSwitchToMonitor}
+        title="Переключить на Мониторинг"
+        message="Вы уверены что хотите переключиться на режим Мониторинг? Скопированные товары останутся в вашем каталоге."
         confirmText="Переключить"
       />
 
       <ConfirmDialog
         isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
+        onClose={() => {
+          triggerHaptic('light');
+          setShowDelete(false);
+        }}
         onConfirm={handleDelete}
         title="Удалить подписку"
         message="Вы уверены что хотите удалить эту подписку? Это действие нельзя отменить."
