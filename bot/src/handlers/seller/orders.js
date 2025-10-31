@@ -90,7 +90,14 @@ ${ordersList}
     logger.info(`User ${ctx.from.id} viewed ${activeOrders.length} active orders for shop ${shopId}`);
 
   } catch (error) {
-    logger.error('Error in handleActiveOrders:', error);
+    logger.error('Error in handleActiveOrders:', {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      shopId: ctx.session?.currentShopId ?? ctx.session?.shopId,
+      hasToken: !!ctx.session?.token,
+      stack: error.stack
+    });
 
     try {
       await ctx.answerCbQuery('Не удалось загрузить заказы', { show_alert: true });
@@ -166,14 +173,21 @@ ${ordersList}
 
     const historyKeyboard = Markup.inlineKeyboard([
       [Markup.button.callback('Обновить', 'seller:order_history')],
-      [Markup.button.callback(messages.buttons.backToMenu, 'seller:menu')]
+      [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
     ]);
 
     await ctx.reply(historyMessage, historyKeyboard);
     logger.info(`User ${ctx.from.id} viewed order history (${deliveredOrders.length} orders) for shop ${shopId}`);
 
   } catch (error) {
-    logger.error('Error in handleOrderHistory:', error);
+    logger.error('Error in handleOrderHistory:', {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      shopId: ctx.session?.currentShopId ?? ctx.session?.shopId,
+      hasToken: !!ctx.session?.token,
+      stack: error.stack
+    });
 
     try {
       await ctx.answerCbQuery('Не удалось загрузить историю заказов', { show_alert: true });

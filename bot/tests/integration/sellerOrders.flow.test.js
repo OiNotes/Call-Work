@@ -259,7 +259,7 @@ describe('Seller Orders Management (P0)', () => {
   });
 
   describe('Order History', () => {
-    it.skip('должен показать список delivered заказов с датами', async () => {
+    it('должен показать список delivered заказов с датами', async () => {
       // Mock GET /orders with status=delivered,completed
       const historyOrders = [
         {

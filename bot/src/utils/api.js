@@ -254,28 +254,60 @@ export const orderApi = {
 
   // Get shop orders (sales)
   async getShopOrders(shopId, token, options = {}) {
-    const params = {
-      shop_id: shopId
-    };
+    try {
+      const params = {
+        shop_id: shopId
+      };
 
-    if (options.status) {
-      params.status = Array.isArray(options.status)
-        ? options.status.join(',')
-        : options.status;
+      if (options.status) {
+        params.status = Array.isArray(options.status)
+          ? options.status.join(',')
+          : options.status;
+      }
+
+      if (options.limit) {
+        params.limit = options.limit;
+      }
+
+      logger.info('getShopOrders request:', {
+        shopId,
+        filters: options,
+        params,
+        hasToken: !!token
+      });
+
+      const { data } = await api.get('/orders', {
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      logger.info('getShopOrders response:', {
+        status: 200,
+        dataStructure: {
+          hasData: !!data,
+          hasDataData: !!data?.data,
+          isArray: Array.isArray(data),
+          dataIsArray: Array.isArray(data?.data),
+          payloadHasOrders: !!(data?.data?.orders || data?.orders),
+          ordersCount: data?.data?.orders?.length || data?.data?.length || data?.orders?.length || data?.length || 0
+        }
+      });
+
+      // Unwrap response: return data.data (array of orders) instead of wrapper
+      const payload = data.data || data;
+      const orders = Array.isArray(payload?.orders) ? payload.orders : payload;
+      return Array.isArray(orders) ? orders : [];
+
+    } catch (error) {
+      logger.error('getShopOrders error:', {
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        shopId,
+        filters: options
+      });
+      throw error; // Re-throw to be caught by handler
     }
-
-    if (options.limit) {
-      params.limit = options.limit;
-    }
-
-    const { data } = await api.get('/orders', {
-      params,
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    // Unwrap response: return data.data (array of orders) instead of wrapper
-    const payload = data.data || data;
-    const orders = Array.isArray(payload?.orders) ? payload.orders : payload;
-    return Array.isArray(orders) ? orders : [];
   },
 
   // Get active orders count
