@@ -382,7 +382,7 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       await new Promise(resolve => setImmediate(resolve));
 
       // Проверяем toast "уже в подписках"
-      let answers = testBot.captor.getAnswers();
+      const answers = testBot.captor.getAnswers();
       expect(answers.some(a => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
 
       testBot.captor.reset();

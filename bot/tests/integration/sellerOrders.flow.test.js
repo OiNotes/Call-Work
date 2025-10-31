@@ -308,7 +308,7 @@ describe('Seller Orders Management (P0)', () => {
       expect(text).toContain('$600');
 
       // Проверяем общую выручку
-      expect(text).toContain('Всего выручка: $1000');
+      expect(text).toContain('Общая выручка: $1000');
     });
 
     it('пустая история → показать сообщение "Нет завершённых заказов"', async () => {

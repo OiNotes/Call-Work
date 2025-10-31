@@ -4,7 +4,18 @@ import { manageWorkersMenu, confirmWorkerRemoval } from '../../keyboards/workspa
 import { shopApi, authApi, orderApi, workerApi, followApi } from '../../utils/api.js';
 import logger from '../../utils/logger.js';
 import { messages, buttons as buttonText } from '../../texts/messages.js';
-import { handleActiveOrders, handleOrderHistory, handleMarkShipped, handleMarkDelivered, handleCancelOrder } from './orders.js';
+import {
+  handleActiveOrders,
+  handleOrderHistory,
+  handleMarkShipped,
+  handleMarkDelivered,
+  handleCancelOrder,
+  handleOrderHistoryPage,
+  handleOrderStats,
+  handleOrderSearch,
+  handleOrderExport,
+  handleOrderHistoryJump
+} from './orders.js';
 import { showSellerToolsMenu } from '../../utils/sellerNavigation.js';
 
 const { seller: sellerMessages, general: generalMessages } = messages;
@@ -373,7 +384,16 @@ export const setupSellerHandlers = (bot) => {
   bot.action(/^order:cancel:(\d+)$/, handleCancelOrder);
 
   // Order history (renamed from sales)
-  bot.action('seller:order_history', handleOrderHistory);
+  bot.action('seller:order_history', (ctx) => handleOrderHistory(ctx, 1));
+
+  // Order history pagination
+  bot.action(/seller:order_history:(\d+)/, handleOrderHistoryPage);
+
+  // Order history features (placeholders)
+  bot.action('seller:order_history:jump', handleOrderHistoryJump);
+  bot.action('seller:order_stats', handleOrderStats);
+  bot.action('seller:order_search', handleOrderSearch);
+  bot.action('seller:order_export', handleOrderExport);
 
   // Manage wallets
   bot.action('seller:wallets', handleWallets);

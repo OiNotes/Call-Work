@@ -269,6 +269,10 @@ export const orderApi = {
         params.limit = options.limit;
       }
 
+      if (options.page) {
+        params.page = options.page;
+      }
+
       logger.info('getShopOrders request:', {
         shopId,
         filters: options,
