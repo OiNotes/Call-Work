@@ -1,0 +1,439 @@
+[
+  {
+    "id": 1,
+    "follow_id": 1,
+    "synced_product_id": 101,
+    "source_product_id": 3,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T14:30:00.000Z",
+    "source_product": {
+      "id": 3,
+      "name": "Premium Digital Product",
+      "price": 999999.99,
+      "stock_quantity": 1,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 101,
+      "name": "Premium Digital Product",
+      "price": 1249999.99,
+      "stock_quantity": 1,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-10T10:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "follow_id": 1,
+    "synced_product_id": 102,
+    "source_product_id": 2,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-29T16:20:00.000Z",
+    "source_product": {
+      "id": 2,
+      "name": "Очень длинное название товара которое занимает несколько строк",
+      "price": 49.99,
+      "stock_quantity": 10,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 102,
+      "name": "Очень длинное название товара которое занимает несколько строк",
+      "price": 62.49,
+      "stock_quantity": 10,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-12T11:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "follow_id": 2,
+    "synced_product_id": 103,
+    "source_product_id": 3,
+    "conflict_status": "conflict",
+    "last_synced_at": "2024-10-28T10:00:00.000Z",
+    "source_product": {
+      "id": 3,
+      "name": "Premium Digital Product",
+      "price": 999999.99,
+      "stock_quantity": 1,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 103,
+      "name": "Premium Digital Product (OLD NAME)",
+      "price": 1499999.99,
+      "stock_quantity": 0,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-15T11:30:00.000Z"
+  },
+  {
+    "id": 4,
+    "follow_id": 2,
+    "synced_product_id": 104,
+    "source_product_id": 23,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-31T08:15:00.000Z",
+    "source_product": {
+      "id": 23,
+      "name": "Антивирус с очень длинным описанием для тестирования",
+      "price": 59.99,
+      "stock_quantity": 45,
+      "currency": "RUB"
+    },
+    "synced_product": {
+      "id": 104,
+      "name": "Антивирус с очень длинным описанием для тестирования",
+      "price": 89.99,
+      "stock_quantity": 45,
+      "currency": "RUB"
+    },
+    "created_at": "2024-09-18T12:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "follow_id": 4,
+    "synced_product_id": 105,
+    "source_product_id": 13,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-28T16:45:00.000Z",
+    "source_product": {
+      "id": 13,
+      "name": "NordVPN 2 Years Premium",
+      "price": 89.00,
+      "stock_quantity": 156,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 105,
+      "name": "NordVPN 2 Years Premium",
+      "price": 102.35,
+      "stock_quantity": 156,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-22T12:15:00.000Z"
+  },
+  {
+    "id": 6,
+    "follow_id": 6,
+    "synced_product_id": 106,
+    "source_product_id": 6,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-31T07:20:00.000Z",
+    "source_product": {
+      "id": 6,
+      "name": "Steam Gift Card $50",
+      "price": 50.00,
+      "stock_quantity": 245,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 106,
+      "name": "Steam Gift Card $50",
+      "price": 87.50,
+      "stock_quantity": 245,
+      "currency": "USD"
+    },
+    "created_at": "2024-08-15T10:45:00.000Z"
+  },
+  {
+    "id": 7,
+    "follow_id": 6,
+    "synced_product_id": 107,
+    "source_product_id": 7,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T15:30:00.000Z",
+    "source_product": {
+      "id": 7,
+      "name": "Cyberpunk 2077 Ultimate Edition",
+      "price": 79.99,
+      "stock_quantity": 87,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 107,
+      "name": "Cyberpunk 2077 Ultimate Edition",
+      "price": 139.98,
+      "stock_quantity": 87,
+      "currency": "USD"
+    },
+    "created_at": "2024-08-20T11:00:00.000Z"
+  },
+  {
+    "id": 8,
+    "follow_id": 8,
+    "synced_product_id": 108,
+    "source_product_id": 20,
+    "conflict_status": "conflict",
+    "last_synced_at": "2024-10-25T10:00:00.000Z",
+    "source_product": {
+      "id": 20,
+      "name": "Microsoft Office 2024 Professional Plus",
+      "price": 44.99,
+      "stock_quantity": 234,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 108,
+      "name": "Microsoft Office 2024 Pro",
+      "price": 89.98,
+      "stock_quantity": 150,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-05T11:00:00.000Z"
+  },
+  {
+    "id": 9,
+    "follow_id": 9,
+    "synced_product_id": 109,
+    "source_product_id": 11,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-29T15:00:00.000Z",
+    "source_product": {
+      "id": 11,
+      "name": "Netflix Premium 1 Year",
+      "price": 89.99,
+      "stock_quantity": 34,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 109,
+      "name": "Netflix Premium 1 Year",
+      "price": 224.98,
+      "stock_quantity": 34,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-12T09:30:00.000Z"
+  },
+  {
+    "id": 10,
+    "follow_id": 11,
+    "synced_product_id": 110,
+    "source_product_id": 18,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-31T08:45:00.000Z",
+    "source_product": {
+      "id": 18,
+      "name": "Programming Mega Bundle",
+      "price": 99.99,
+      "stock_quantity": 999999,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 110,
+      "name": "Programming Mega Bundle",
+      "price": 299.97,
+      "stock_quantity": 999999,
+      "currency": "USD"
+    },
+    "created_at": "2024-08-20T11:15:00.000Z"
+  },
+  {
+    "id": 11,
+    "follow_id": 11,
+    "synced_product_id": 111,
+    "source_product_id": 19,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T10:30:00.000Z",
+    "source_product": {
+      "id": 19,
+      "name": "Business Audiobook Collection",
+      "price": 79.00,
+      "stock_quantity": 999999,
+      "currency": "EUR"
+    },
+    "synced_product": {
+      "id": 111,
+      "name": "Business Audiobook Collection",
+      "price": 237.00,
+      "stock_quantity": 999999,
+      "currency": "EUR"
+    },
+    "created_at": "2024-08-25T12:00:00.000Z"
+  },
+  {
+    "id": 12,
+    "follow_id": 12,
+    "synced_product_id": 112,
+    "source_product_id": 20,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T14:10:00.000Z",
+    "source_product": {
+      "id": 20,
+      "name": "Microsoft Office 2024 Professional Plus",
+      "price": 44.99,
+      "stock_quantity": 234,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 112,
+      "name": "Microsoft Office 2024 Professional Plus",
+      "price": 56.24,
+      "stock_quantity": 234,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-18T10:00:00.000Z"
+  },
+  {
+    "id": 13,
+    "follow_id": 12,
+    "synced_product_id": 113,
+    "source_product_id": 21,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T13:50:00.000Z",
+    "source_product": {
+      "id": 21,
+      "name": "Windows 11 Pro",
+      "price": 29.99,
+      "stock_quantity": 567,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 113,
+      "name": "Windows 11 Pro",
+      "price": 37.49,
+      "stock_quantity": 567,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-20T11:15:00.000Z"
+  },
+  {
+    "id": 14,
+    "follow_id": 14,
+    "synced_product_id": 114,
+    "source_product_id": 16,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-26T12:00:00.000Z",
+    "source_product": {
+      "id": 16,
+      "name": "Serum Wavetable Synthesizer",
+      "price": 189.00,
+      "stock_quantity": 45,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 114,
+      "name": "Serum Wavetable Synthesizer",
+      "price": 283.50,
+      "stock_quantity": 45,
+      "currency": "USD"
+    },
+    "created_at": "2024-09-25T12:45:00.000Z"
+  },
+  {
+    "id": 15,
+    "follow_id": 15,
+    "synced_product_id": 115,
+    "source_product_id": 3,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-31T09:15:00.000Z",
+    "source_product": {
+      "id": 3,
+      "name": "Premium Digital Product",
+      "price": 999999.99,
+      "stock_quantity": 1,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 115,
+      "name": "Premium Digital Product",
+      "price": 1749999.98,
+      "stock_quantity": 1,
+      "currency": "USD"
+    },
+    "created_at": "2024-08-28T09:00:00.000Z"
+  },
+  {
+    "id": 100,
+    "follow_id": 100,
+    "synced_product_id": 201,
+    "source_product_id": 6,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-31T09:00:00.000Z",
+    "source_product": {
+      "id": 6,
+      "name": "Steam Gift Card $50",
+      "price": 50.00,
+      "stock_quantity": 245,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 201,
+      "name": "Steam Gift Card $50",
+      "price": 65.00,
+      "stock_quantity": 245,
+      "currency": "USD"
+    },
+    "created_at": "2024-10-01T10:00:00.000Z"
+  },
+  {
+    "id": 101,
+    "follow_id": 100,
+    "synced_product_id": 202,
+    "source_product_id": 7,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-30T15:30:00.000Z",
+    "source_product": {
+      "id": 7,
+      "name": "Cyberpunk 2077 Ultimate Edition",
+      "price": 79.99,
+      "stock_quantity": 87,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 202,
+      "name": "Cyberpunk 2077 Ultimate Edition",
+      "price": 103.99,
+      "stock_quantity": 87,
+      "currency": "USD"
+    },
+    "created_at": "2024-10-02T11:00:00.000Z"
+  },
+  {
+    "id": 102,
+    "follow_id": 102,
+    "synced_product_id": 203,
+    "source_product_id": 13,
+    "conflict_status": "synced",
+    "last_synced_at": "2024-10-29T16:00:00.000Z",
+    "source_product": {
+      "id": 13,
+      "name": "NordVPN 2 Years Premium",
+      "price": 89.00,
+      "stock_quantity": 156,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 203,
+      "name": "NordVPN 2 Years Premium",
+      "price": 133.50,
+      "stock_quantity": 156,
+      "currency": "USD"
+    },
+    "created_at": "2024-10-10T08:00:00.000Z"
+  },
+  {
+    "id": 103,
+    "follow_id": 102,
+    "synced_product_id": 204,
+    "source_product_id": 14,
+    "conflict_status": "conflict",
+    "last_synced_at": "2024-10-28T10:00:00.000Z",
+    "source_product": {
+      "id": 14,
+      "name": "Kaspersky Total Security 3 Devices",
+      "price": 79.99,
+      "stock_quantity": 203,
+      "currency": "USD"
+    },
+    "synced_product": {
+      "id": 204,
+      "name": "Kaspersky Total Security (OLD NAME)",
+      "price": 119.99,
+      "stock_quantity": 150,
+      "currency": "USD"
+    },
+    "created_at": "2024-10-12T09:30:00.000Z"
+  }
+]

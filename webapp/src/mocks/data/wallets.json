@@ -1,0 +1,227 @@
+[
+  {
+    "id": 1,
+    "shop_id": 1,
+    "currency": "BTC",
+    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "is_active": true,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 2,
+    "shop_id": 1,
+    "currency": "ETH",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb8",
+    "is_active": true,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 3,
+    "shop_id": 1,
+    "currency": "USDT_ERC20",
+    "address": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+    "is_active": true,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 4,
+    "shop_id": 1,
+    "currency": "USDT_TRC20",
+    "address": "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
+    "is_active": true,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 5,
+    "shop_id": 1,
+    "currency": "LTC",
+    "address": "LhK8kYSYnWCjYaXWvW9KqS3YxCzHbW5nPm",
+    "is_active": true,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 6,
+    "shop_id": 2,
+    "currency": "BTC",
+    "address": "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+    "is_active": true,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 7,
+    "shop_id": 2,
+    "currency": "ETH",
+    "address": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+    "is_active": true,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 8,
+    "shop_id": 2,
+    "currency": "USDT_ERC20",
+    "address": "0x4E15361FD6b4BB609Fa63C81A2be19d873717870",
+    "is_active": true,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 9,
+    "shop_id": 2,
+    "currency": "USDT_TRC20",
+    "address": "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9",
+    "is_active": true,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 10,
+    "shop_id": 2,
+    "currency": "LTC",
+    "address": "LUWPbpM43E2p7ZSh8cyTBEkvpHmr3cB8Ez",
+    "is_active": true,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 11,
+    "shop_id": 3,
+    "currency": "BTC",
+    "address": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+    "is_active": true,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 12,
+    "shop_id": 3,
+    "currency": "ETH",
+    "address": "0x06012c8cf97BEaD5deAe237070F9587f8E7A266d",
+    "is_active": true,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 13,
+    "shop_id": 3,
+    "currency": "USDT_ERC20",
+    "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    "is_active": true,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 14,
+    "shop_id": 3,
+    "currency": "USDT_TRC20",
+    "address": "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs",
+    "is_active": true,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 15,
+    "shop_id": 3,
+    "currency": "LTC",
+    "address": "LM2WMpR1Nf9bHaXkY7i9sA4Lp2xUE1E4eq",
+    "is_active": true,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 16,
+    "shop_id": 4,
+    "currency": "BTC",
+    "address": "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c",
+    "is_active": true,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 17,
+    "shop_id": 4,
+    "currency": "ETH",
+    "address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    "is_active": true,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 18,
+    "shop_id": 4,
+    "currency": "USDT_ERC20",
+    "address": "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+    "is_active": true,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 19,
+    "shop_id": 4,
+    "currency": "USDT_TRC20",
+    "address": "TPYmHEhy5n8TCEfYGqW2rPxsghSfzghPDn",
+    "is_active": true,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 20,
+    "shop_id": 4,
+    "currency": "LTC",
+    "address": "LTC1qw2c7ndkl34pq9337vm7zv4vw9m4xy3t3pxt8v",
+    "is_active": true,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 21,
+    "shop_id": 5,
+    "currency": "BTC",
+    "address": "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3",
+    "is_active": true,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  },
+  {
+    "id": 22,
+    "shop_id": 5,
+    "currency": "ETH",
+    "address": "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    "is_active": true,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  },
+  {
+    "id": 23,
+    "shop_id": 5,
+    "currency": "USDT_ERC20",
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "is_active": true,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  },
+  {
+    "id": 24,
+    "shop_id": 5,
+    "currency": "USDT_TRC20",
+    "address": "TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS",
+    "is_active": true,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  },
+  {
+    "id": 25,
+    "shop_id": 5,
+    "currency": "LTC",
+    "address": "LVg2kJoFNg2kSAHF9d3TxkweLUvJA8o7j3",
+    "is_active": true,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  }
+]

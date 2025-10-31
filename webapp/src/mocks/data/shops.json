@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "owner_id": 1,
+    "name": "Digital Goods Hub",
+    "description": "Premium digital products and software licenses",
+    "logo": "https://picsum.photos/seed/shop1/200/200",
+    "tier": "ENTERPRISE",
+    "is_active": true,
+    "product_count": 87,
+    "created_at": "2024-05-15T10:30:00.000Z",
+    "updated_at": "2024-10-28T15:20:00.000Z"
+  },
+  {
+    "id": 2,
+    "owner_id": 2,
+    "name": "Game Keys Store",
+    "description": "Instant delivery game keys for all platforms",
+    "logo": null,
+    "tier": "PRO",
+    "is_active": true,
+    "product_count": 124,
+    "created_at": "2024-06-20T08:15:00.000Z",
+    "updated_at": "2024-10-30T12:45:00.000Z"
+  },
+  {
+    "id": 3,
+    "owner_id": 3,
+    "name": "Crypto Tutorials",
+    "description": "Educational courses and trading strategies",
+    "logo": "https://picsum.photos/seed/shop3/200/200",
+    "tier": "FREE",
+    "is_active": true,
+    "product_count": 12,
+    "created_at": "2024-08-10T14:00:00.000Z",
+    "updated_at": "2024-10-25T09:30:00.000Z"
+  },
+  {
+    "id": 4,
+    "owner_id": 4,
+    "name": "Premium Accounts Marketplace",
+    "description": "Verified accounts for streaming, gaming and more",
+    "logo": "https://picsum.photos/seed/shop4/200/200",
+    "tier": "PRO",
+    "is_active": true,
+    "product_count": 56,
+    "created_at": "2024-07-05T11:20:00.000Z",
+    "updated_at": "2024-10-29T16:10:00.000Z"
+  },
+  {
+    "id": 5,
+    "owner_id": 5,
+    "name": "VPN & Security",
+    "description": "VPN subscriptions, antivirus and security tools",
+    "logo": null,
+    "tier": "ENTERPRISE",
+    "is_active": true,
+    "product_count": 34,
+    "created_at": "2024-05-01T09:00:00.000Z",
+    "updated_at": "2024-10-31T08:00:00.000Z"
+  },
+  {
+    "id": 6,
+    "owner_id": 6,
+    "name": "Design Assets Pro",
+    "description": "Fonts, templates, UI kits for designers",
+    "logo": "https://picsum.photos/seed/shop6/200/200",
+    "tier": "FREE",
+    "is_active": true,
+    "product_count": 8,
+    "created_at": "2024-09-12T13:45:00.000Z",
+    "updated_at": "2024-10-20T10:15:00.000Z"
+  },
+  {
+    "id": 7,
+    "owner_id": 7,
+    "name": "Music Production Tools",
+    "description": "VST plugins, sample packs, mixing presets",
+    "logo": "https://picsum.photos/seed/shop7/200/200",
+    "tier": "ENTERPRISE",
+    "is_active": true,
+    "product_count": 145,
+    "created_at": "2024-04-18T07:30:00.000Z",
+    "updated_at": "2024-10-30T14:20:00.000Z"
+  },
+  {
+    "id": 8,
+    "owner_id": 8,
+    "name": "E-Books Library",
+    "description": "Digital books, audiobooks and courses",
+    "logo": null,
+    "tier": "PRO",
+    "is_active": true,
+    "product_count": 203,
+    "created_at": "2024-06-08T12:00:00.000Z",
+    "updated_at": "2024-10-28T11:30:00.000Z"
+  },
+  {
+    "id": 9,
+    "owner_id": 9,
+    "name": "Starter Shop",
+    "description": null,
+    "logo": null,
+    "tier": "FREE",
+    "is_active": true,
+    "product_count": 0,
+    "created_at": "2024-10-28T16:00:00.000Z",
+    "updated_at": "2024-10-28T16:00:00.000Z"
+  },
+  {
+    "id": 10,
+    "owner_id": 10,
+    "name": "Software Licenses Depot",
+    "description": "Microsoft Office, Adobe, Autodesk and more",
+    "logo": "https://picsum.photos/seed/shop10/200/200",
+    "tier": "PRO",
+    "is_active": true,
+    "product_count": 78,
+    "created_at": "2024-07-22T10:10:00.000Z",
+    "updated_at": "2024-10-31T09:45:00.000Z"
+  }
+]

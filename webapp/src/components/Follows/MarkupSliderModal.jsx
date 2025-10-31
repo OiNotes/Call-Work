@@ -50,20 +50,14 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
           </div>
 
           {/* Markup Value Display */}
-          <motion.div
-            className="text-center mb-6"
-            key={markup}
-            initial={{ scale: 1.05 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.2 }}
-          >
+          <div className="text-center mb-6">
             <div className="text-6xl font-bold text-orange-primary mb-1">
               {markup}%
             </div>
             <div className="text-gray-400 text-sm">
               Наценка
             </div>
-          </motion.div>
+          </div>
 
           {/* Slider */}
           <div className="mb-6">
@@ -73,10 +67,10 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
                 {/* Active Track */}
                 <motion.div
                   className="h-full bg-gradient-to-r from-orange-primary to-orange-light"
-                  style={{ width: `${(markup - 1) / 4.99}%` }}
+                  style={{ width: `${(markup - 1) / 499 * 100}%` }}
                   initial={false}
-                  animate={{ width: `${(markup - 1) / 4.99}%` }}
-                  transition={{ duration: 0.2 }}
+                  animate={{ width: `${(markup - 1) / 499 * 100}%` }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                 />
               </div>
 
@@ -88,7 +82,7 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
                 step="1"
                 value={markup}
                 onChange={(e) => setMarkup(Number(e.target.value))}
-                className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
+                className="absolute inset-0 w-full h-12 opacity-0 cursor-pointer"
                 style={{
                   WebkitAppearance: 'none',
                   appearance: 'none',
@@ -98,18 +92,19 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
 
               {/* Custom Thumb */}
               <motion.div
-                className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-lg pointer-events-none"
+                className="absolute top-1/2 w-10 h-10 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing"
                 style={{
-                  left: `calc(${(markup - 1) / 4.99}% - 12px)`,
+                  left: `${(markup - 1) / 499 * 100}%`,
+                  transform: 'translateY(-50%) translateX(-50%)',
                   boxShadow: '0 0 0 4px rgba(255, 107, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3)'
                 }}
                 initial={false}
                 animate={{
-                  left: `calc(${(markup - 1) / 4.99}% - 12px)`,
+                  left: `${(markup - 1) / 499 * 100}%`,
                   scale: 1
                 }}
                 whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
               />
             </div>
 
