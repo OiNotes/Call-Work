@@ -13,7 +13,8 @@
     "lint": "eslint src/ __tests__/ --fix",
     "lint:check": "eslint src/ __tests__/",
     "test:all": "npm run lint:check && npm test",
-    "test:ci": "NODE_ENV=test node database/migrations.cjs --apply && npm test"
+    "test:ci": "NODE_ENV=test node database/migrations.cjs --apply && npm test",
+    "db:seed": "psql postgresql://sile@localhost:5432/telegram_shop -f database/seed.sql"
   },
   "keywords": [
     "telegram",

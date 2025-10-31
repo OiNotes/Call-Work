@@ -151,8 +151,8 @@ const chooseTierScene = new Scenes.WizardScene(
     // Transition to createShop scene with promo code
     await ctx.scene.leave();
 
-    // Enter createShop scene with promo code
-    await ctx.scene.enter('createShop', { promoCode });
+    // Enter createShop scene with promo code and PRO tier
+    await ctx.scene.enter('createShop', { promoCode, tier: 'pro' });
   }
 );
 

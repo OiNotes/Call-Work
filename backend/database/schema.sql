@@ -46,7 +46,7 @@ CREATE TABLE shops (
   wallet_btc VARCHAR(255),
   wallet_eth VARCHAR(255),
   wallet_usdt VARCHAR(255),
-  wallet_ton VARCHAR(255),
+  wallet_ltc VARCHAR(255),
   tier VARCHAR(20) DEFAULT 'basic' CHECK (tier IN ('basic', 'pro')),
   is_active BOOLEAN DEFAULT true,
   subscription_status VARCHAR(20) DEFAULT 'active' CHECK (subscription_status IN ('active', 'grace_period', 'inactive')),
@@ -282,7 +282,7 @@ COMMENT ON COLUMN shop_workers.added_by IS 'User ID of the person who added this
 CREATE TABLE invoices (
   id SERIAL PRIMARY KEY,
   order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  chain VARCHAR(20) NOT NULL CHECK (chain IN ('BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'LTC', 'TON')),
+  chain VARCHAR(20) NOT NULL CHECK (chain IN ('BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'LTC')),
   address VARCHAR(255) UNIQUE NOT NULL,
   address_index INT NOT NULL,
   expected_amount DECIMAL(18, 8) NOT NULL CHECK (expected_amount > 0),
@@ -295,7 +295,7 @@ CREATE TABLE invoices (
 );
 
 COMMENT ON TABLE invoices IS 'Payment invoices with unique addresses generated via Tatum';
-COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC, TON';
+COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC';
 COMMENT ON COLUMN invoices.address IS 'Unique payment address generated from HD wallet';
 COMMENT ON COLUMN invoices.address_index IS 'Derivation index for HD wallet (m/44''/0''/0''/0/{index})';
 COMMENT ON COLUMN invoices.expected_amount IS 'Expected payment amount in crypto units';

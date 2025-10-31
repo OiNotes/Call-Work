@@ -4,7 +4,7 @@
 
 ## Проект
 
-**Status Stock** - Telegram E-Commerce платформа для цифровых магазинов с криптовалютными платежами (BTC, ETH, USDT, TON).
+**Status Stock** - Telegram E-Commerce платформа для цифровых магазинов с криптовалютными платежами.
 
 **Структура:**
 - `backend/` - Express API + PostgreSQL + WebSocket
@@ -15,7 +15,7 @@
 - Backend: Express, PostgreSQL (без ORM), JWT, WebSocket
 - Bot: Telegraf.js, session-based state
 - Frontend: React 18, Vite, Zustand (in-memory only), Telegram WebApp SDK
-- Payments: Blockchain APIs (Etherscan, TONCenter)
+- Payments: Blockchain APIs (Etherscan, BlockCypher, TronGrid)
 
 ---
 
@@ -43,6 +43,8 @@
 Read(file_path: "/path/to/file")
 Grep(pattern: "search", path: "/path")
 Glob(pattern: "**/*.js")
+Edit(file_path, old_string, new_string)
+Write(file_path, content)
 
 // ❌ НЕПРАВИЛЬНО
 Bash("cat /path/to/file")
@@ -66,7 +68,8 @@ Bash("find . -name '*.js'")
 | `database-designer` | PostgreSQL: schema, миграции, индексы, SQL запросы |
 | `frontend-developer` | React компоненты, TailwindCSS, Telegram Mini App UI/UX |
 | `debug-master` | Debugging, ошибки, тесты, исправления багов |
-| `Explore` | Анализ кодовой базы, поиск файлов/паттернов, research |
+| `crypto-integration-specialist` | Blockchain API, payment verification, wallet validation |
+| `design-researcher` | UI/UX research, design trends, visual inspiration |
 
 **Примеры делегирования:**
 
@@ -168,92 +171,6 @@ npm run dev  # Смотреть вывод
 
 ---
 
-## Критичные технические детали
-
-### Zustand Store (Frontend)
-**КРИТИЧНО:** НЕ использует persist!
-- Только in-memory state
-- При перезагрузке страницы состояние сбрасывается
-- Все данные сохраняются через API вызовы
-
-### PostgreSQL без ORM
-- Прямые SQL запросы через `pg` библиотеку
-- Миграции: `backend/database/migrations.js`
-- Schema: `backend/database/schema.sql`
-- При изменении схемы обновлять ОБА файла
-
-### Telegraf.js особенности
-
-**Context геттеры:**
-```javascript
-// ❌ НЕПРАВИЛЬНО
-const fakeCtx = { ...ctx };  // геттеры не копируются!
-
-// ✅ ПРАВИЛЬНО
-const fakeCtx = {
-  ...ctx,
-  from: ctx.from,
-  message: ctx.message,
-  chat: ctx.chat,
-  session: ctx.session
-};
-```
-
-**answerCbQuery():**
-- Можно вызвать ОДИН РАЗ на callback query
-- Второй вызов игнорируется → infinite spinner
-
-**Error parsing:**
-```javascript
-// ✅ Парсить backend ошибки
-const errorMsg = error.response?.data?.error;
-if (errorMsg === 'Already subscribed') {
-  await ctx.answerCbQuery('ℹ️ Вы уже подписаны');
-}
-```
-
-### Дизайн-система (Frontend)
-- Цвета: `#0A0A0A` (фон), `#FF6B00` (orange primary), `#1A1A1A` (карточки)
-- Glassmorphism: `backdrop-blur-12px` + `rgba(23, 33, 43, 0.6)`
-- Touch-friendly: минимум 44px для кнопок
-- Mobile-first подход
-
----
-
-## Быстрый старт
-
-```bash
-# 1. Установить зависимости
-npm run install:all
-
-# 2. Создать .env файлы
-cp backend/.env.example backend/.env
-cp bot/.env.example bot/.env
-cp webapp/.env.example webapp/.env
-# Отредактировать: BOT_TOKEN, JWT_SECRET, DATABASE_URL
-
-# 3. БД
-npm run db:setup  # createdb + миграции
-
-# 4. Запуск
-npm start  # Backend + WebApp
-npm run bot  # В отдельном терминале
-
-# URLs:
-# Backend: http://localhost:3000
-# WebApp: http://localhost:5173
-# Health: http://localhost:3000/health
-```
-
-**Тестирование бота:**
-```bash
-cd bot
-npm run test:integration  # Все integration тесты
-npm test                  # Все тесты + coverage
-```
-
----
-
 ## Safety Rules
 
 - ❌ НЕ редактировать `.env` файлы
@@ -276,4 +193,4 @@ npm test                  # Все тесты + coverage
 - Database schema: `backend/database/schema.sql`
 - **Agent SKILLS:** `.claude/skills/README.md` (12 готовых сценариев)
 - Субагенты: `.claude/agents/*.md`
-- Команды: `.claude/commands/*.md`
+- Development cheatsheet: `DEV_CHEATSHEET.md`

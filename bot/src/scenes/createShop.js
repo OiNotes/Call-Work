@@ -92,8 +92,17 @@ const createShop = async (ctx, shopName) => {
   let loadingMsg = null;
   try {
     // Get tier and promo from wizard state (set from chooseTier scene)
-    const tier = ctx.wizard.state.tier || 'basic';
+    const tier = ctx.wizard.state.tier;
     const promoCode = ctx.wizard.state.promoCode || '';
+
+    // Validate tier is present (must be set by chooseTier scene)
+    if (!tier) {
+      logger.error('Missing tier when creating shop', {
+        userId: ctx.from.id,
+        wizardState: ctx.wizard.state
+      });
+      throw new Error('Tier is required to create a shop. Please select a plan first.');
+    }
 
     logger.info('shop_create_step:save', {
       userId: ctx.from.id,

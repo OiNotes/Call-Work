@@ -52,18 +52,18 @@ const ProductList = ({ products, mode }) => {
             return (
               <motion.div
                 key={product.id || index}
-                className="glass-card rounded-xl p-4 border border-white/5"
+                className="group relative overflow-hidden rounded-xl border border-white/5 p-4 transition-colors duration-200 glass-card hover:border-white/10 hover:bg-white/[0.04]"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05, ...controlSpring }}
-                whileHover={{
-                  scale: 1.01,
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)'
-                }}
-                whileTap={{ scale: 0.99 }}
               >
-                <div className="flex items-center justify-between gap-4">
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  style={{ boxShadow: '0 18px 38px rgba(255, 107, 0, 0.12)' }}
+                  aria-hidden="true"
+                />
+
+                <div className="relative flex items-center justify-between gap-4">
                   {/* Product Name */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span className="text-gray-500 text-xs font-semibold tabular-nums w-6">
@@ -97,19 +97,19 @@ const ProductList = ({ products, mode }) => {
             return (
               <motion.div
                 key={product.id || index}
-                className="glass-card rounded-xl p-4 border border-white/5"
+                className="group relative overflow-hidden rounded-xl border border-white/5 p-4 transition-colors duration-200 glass-card hover:border-orange-primary/20 hover:bg-white/[0.04]"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05, ...controlSpring }}
-                whileHover={{
-                  scale: 1.01,
-                  borderColor: 'rgba(255, 107, 0, 0.15)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)'
-                }}
-                whileTap={{ scale: 0.99 }}
               >
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  style={{ boxShadow: '0 18px 38px rgba(255, 107, 0, 0.12)' }}
+                  aria-hidden="true"
+                />
+
                 {/* Product Name */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="relative mb-3 flex items-center gap-3">
                   <span className="text-gray-500 text-xs font-semibold tabular-nums w-6">
                     #{index + 1}
                   </span>
@@ -119,7 +119,7 @@ const ProductList = ({ products, mode }) => {
                 </div>
 
                 {/* Price Comparison */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="relative flex items-center justify-between gap-4">
                   {/* Source Price */}
                   <div className="flex items-center gap-2">
                     <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">

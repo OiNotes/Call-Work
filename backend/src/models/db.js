@@ -101,12 +101,12 @@ export const shopQueries = {
 
   // Create new shop
   create: async (shopData) => {
-    const { ownerId, name, description, logo } = shopData;
+    const { ownerId, name, description, logo, tier = 'basic' } = shopData;
     const result = await query(
-      `INSERT INTO shops (owner_id, name, description, logo)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO shops (owner_id, name, description, logo, tier)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
-      [ownerId, name, description, logo]
+      [ownerId, name, description, logo, tier]
     );
     return result.rows[0];
   },

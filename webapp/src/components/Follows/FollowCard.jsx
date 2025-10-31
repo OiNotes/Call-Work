@@ -10,58 +10,62 @@ const FollowCard = ({ follow, onClick }) => {
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
   return (
-    <motion.div
-      className="glass-card rounded-2xl p-5 cursor-pointer border border-white/10 group"
+    <motion.button
+      type="button"
+      className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
       onClick={onClick}
-      whileHover={{
-        scale: 1.015,
-        borderColor: 'rgba(255, 107, 0, 0.25)',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)'
-      }}
       whileTap={{ scale: 0.985 }}
       transition={controlSpring}
     >
-      <div className="flex items-center gap-4">
-        {/* Shop Icon */}
-        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-          <BuildingStorefrontIcon className="w-6 h-6 text-gray-400" />
-        </div>
+      <div className="glass-card relative overflow-hidden rounded-2xl border border-white/10 p-5 transition-all duration-200 group-hover:border-orange-primary/35 group-hover:bg-white/[0.05]">
+        <span
+          className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          style={{ boxShadow: '0 20px 45px rgba(255, 107, 0, 0.14)' }}
+          aria-hidden="true"
+        />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-bold text-base mb-1 truncate" style={{ letterSpacing: '-0.01em' }}>
-            {follow.source_shop_name}
-          </h3>
+        <div className="relative flex items-center gap-4">
+          {/* Shop Icon */}
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/5">
+            <BuildingStorefrontIcon className="h-6 w-6 text-gray-400" />
+          </div>
 
-          <div className="flex items-center gap-3 text-sm">
-            <div className="flex items-center gap-1.5">
-              <ModeIcon className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400">{modeLabel}</span>
-            </div>
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            <h3 className="mb-1 truncate text-base font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
+              {follow.source_shop_name}
+            </h3>
 
-            {follow.mode === 'resell' && follow.markup_percentage && (
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-primary/10">
-                <span className="text-orange-primary font-semibold text-xs">+{follow.markup_percentage}%</span>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5 text-gray-400">
+                <ModeIcon className="h-4 w-4" />
+                <span>{modeLabel}</span>
               </div>
-            )}
 
-            <div className="text-gray-400">
-              <span className="font-medium text-white">{follow.source_products_count || 0}</span> товаров
+              {follow.mode === 'resell' && follow.markup_percentage && (
+                <div className="flex items-center gap-1 rounded-md bg-orange-primary/10 px-2 py-0.5">
+                  <span className="text-xs font-semibold text-orange-primary">+{follow.markup_percentage}%</span>
+                </div>
+              )}
+
+              <div className="text-gray-400">
+                <span className="font-medium text-white">{follow.source_products_count || 0}</span> товаров
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Arrow */}
-        <svg
-          className="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+          {/* Arrow */}
+          <svg
+            className="h-5 w-5 flex-shrink-0 text-gray-400 transition-transform duration-200 group-hover:translate-x-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 };
 

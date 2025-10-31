@@ -61,12 +61,22 @@ If a port is occupied by wrong process:
 
 ```bash
 # Kill process on port 3000
-echo "Freeing port 3000..."
-lsof -ti:3000 | xargs kill -9
+if lsof -ti:3000 >/dev/null 2>&1; then
+  echo "Freeing port 3000..."
+  lsof -ti:3000 | xargs kill -9
+  echo "✅ Port 3000 freed"
+else
+  echo "Port 3000 is already free"
+fi
 
 # Kill process on port 5173
-echo "Freeing port 5173..."
-lsof -ti:5173 | xargs kill -9
+if lsof -ti:5173 >/dev/null 2>&1; then
+  echo "Freeing port 5173..."
+  lsof -ti:5173 | xargs kill -9
+  echo "✅ Port 5173 freed"
+else
+  echo "Port 5173 is already free"
+fi
 ```
 
 ## When to use:

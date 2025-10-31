@@ -49,7 +49,12 @@ pg_isready -h localhost -p 5432 || {
 # Reinstall dependencies
 cd /Users/sile/Documents/Status\ Stock\ 4.0
 echo "🔧 Reinstalling dependencies..."
-npm run install:all
+if npm run install:all; then
+  echo "✅ Dependencies installed successfully"
+else
+  echo "❌ Failed to install dependencies"
+  exit 1
+fi
 ```
 
 ### 4. Database schema out of sync
@@ -58,7 +63,12 @@ npm run install:all
 # Run migrations
 cd /Users/sile/Documents/Status\ Stock\ 4.0
 echo "🔧 Running database migrations..."
-npm run db:migrate
+if npm run db:migrate; then
+  echo "✅ Migrations completed successfully"
+else
+  echo "❌ Migrations failed. Check logs for details."
+  exit 1
+fi
 ```
 
 ### 5. Import/Export errors

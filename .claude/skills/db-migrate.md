@@ -18,11 +18,14 @@ Say: **"migrate db"** or **"run migrations"** or **"update database"** or **"db 
 
 ```bash
 PROJECT_DIR="/Users/sile/Documents/Status Stock 4.0"
-BACKUP_DIR="/tmp"
+BACKUP_DIR="$PROJECT_DIR/backend/database/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 echo "=== Database Migration ==="
 echo ""
+
+# 0. Create backup directory if doesn't exist
+mkdir -p "$BACKUP_DIR"
 
 # 1. Check PostgreSQL
 echo "1. Checking PostgreSQL..."
@@ -79,7 +82,7 @@ echo "Backup saved to: $BACKUP_FILE"
 
 If migration fails, restore from backup:
 ```bash
-psql telegram_shop < /tmp/telegram_shop_backup_YYYYMMDD_HHMMSS.sql
+psql telegram_shop < backend/database/backups/telegram_shop_backup_YYYYMMDD_HHMMSS.sql
 ```
 
 ## Migration files:

@@ -389,20 +389,41 @@ async function deactivateShop(shopId, client = null) {
   }
 }
 
-async function activatePromoSubscription(shopId) {
+async function activatePromoSubscription(shopId, userId, promoCode) {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const shopRes = await client.query('SELECT id, tier FROM shops WHERE id = $1 FOR UPDATE', [shopId]);
+    // Check if user already used this promo code (idempotency)
+    const promoCheck = await client.query(
+      'SELECT id FROM promo_activations WHERE user_id = $1 AND promo_code = $2',
+      [userId, promoCode]
+    );
+
+    if (promoCheck.rows.length > 0) {
+      throw new Error('Promo code already used by this user');
+    }
+
+    const shopRes = await client.query('SELECT id, tier, owner_id FROM shops WHERE id = $1 FOR UPDATE', [shopId]);
     if (shopRes.rows.length === 0) {
       throw new Error('Shop not found');
+    }
+
+    // Verify that userId owns this shop
+    if (shopRes.rows[0].owner_id !== userId) {
+      throw new Error('User does not own this shop');
     }
 
     const now = new Date();
     const periodEnd = addDays(now, SUBSCRIPTION_PERIOD_DAYS);
     const promoTx = `promo-${shopId}-${Date.now()}`;
+
+    // Record promo activation for idempotency
+    await client.query(
+      'INSERT INTO promo_activations (user_id, shop_id, promo_code) VALUES ($1, $2, $3)',
+      [userId, shopId, promoCode]
+    );
 
     await client.query(
       `INSERT INTO shop_subscriptions (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
@@ -431,6 +452,54 @@ async function activatePromoSubscription(shopId) {
       await client.query('ROLLBACK');
     } catch (rollbackError) {
       logger.error('[Subscription] Promo rollback error:', rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function grantComplimentarySubscription(shopId, tier = 'pro') {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const now = new Date();
+    const periodEnd = addDays(now, SUBSCRIPTION_PERIOD_DAYS);
+    const complimentaryTx = `complimentary-${tier}-${shopId}-${Date.now()}`;
+
+    await client.query(
+      `INSERT INTO shop_subscriptions
+         (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
+       VALUES ($1, $2, 0, $3, 'USDT', $4, $5, 'active', NOW())`,
+      [shopId, tier, complimentaryTx, now, periodEnd]
+    );
+
+    const updatedShop = await client.query(
+      `UPDATE shops
+         SET tier = $2,
+             subscription_status = 'active',
+             next_payment_due = $3,
+             grace_period_until = NULL,
+             registration_paid = true,
+             is_active = true,
+             updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [shopId, tier, periodEnd]
+    );
+
+    await client.query('COMMIT');
+
+    logger.info(`[Subscription] Complimentary ${tier.toUpperCase()} subscription granted for shop ${shopId}`);
+
+    return updatedShop.rows[0];
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      logger.error('[Subscription] Complimentary rollback error:', rollbackError);
     }
     throw error;
   } finally {
@@ -707,6 +776,7 @@ export {
   calculateUpgradeAmount,
   getUserSubscriptions,
   activatePromoSubscription,
+  grantComplimentarySubscription,
   SUBSCRIPTION_PRICES,
   GRACE_PERIOD_DAYS
 };

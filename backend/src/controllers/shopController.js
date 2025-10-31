@@ -1,7 +1,7 @@
 import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
-import { activatePromoSubscription } from '../services/subscriptionService.js';
+import { activatePromoSubscription, grantComplimentarySubscription } from '../services/subscriptionService.js';
 
 const PROMO_CODE = 'comi9999';
 
@@ -15,7 +15,27 @@ export const shopController = {
    */
   create: async (req, res) => {
     try {
-      const { name, description, logo, promoCode } = req.body;
+      const { name, description, logo, promoCode, tier = 'basic' } = req.body;
+      const normalizedPromo = promoCode?.trim().toLowerCase();
+      const wantsPro = tier === 'pro';
+      const allowProWithoutPromo = (process.env.ALLOW_PRO_WITHOUT_PROMO || '').toLowerCase() === 'true'
+        || process.env.NODE_ENV !== 'production';
+
+      // Validate tier
+      if (!['basic', 'pro'].includes(tier)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid tier. Must be "basic" or "pro"'
+        });
+      }
+
+      // Ensure PRO tier has valid payment or bypass enabled
+      if (wantsPro && normalizedPromo !== PROMO_CODE && !allowProWithoutPromo) {
+        return res.status(402).json({
+          success: false,
+          error: 'PRO plan requires payment or valid promo code'
+        });
+      }
 
       // Check if shop name is already taken
       const nameTaken = await shopQueries.isNameTaken(name);
@@ -30,15 +50,26 @@ export const shopController = {
         ownerId: req.user.id,
         name,
         description,
-        logo
+        logo,
+        tier
       });
 
-      if (promoCode && promoCode.trim().toLowerCase() === PROMO_CODE) {
-        try {
-          shop = await activatePromoSubscription(shop.id);
-          logger.info(`Promo code applied for shop ${shop.id}`);
+      if (wantsPro) {
+        if (normalizedPromo === PROMO_CODE) {
+          try {
+            shop = await activatePromoSubscription(shop.id, req.user.id, normalizedPromo);
+          logger.info(`Promo code applied for shop ${shop.id} by user ${req.user.id}`);
         } catch (promoError) {
           logger.error('Promo activation failed', { error: promoError.message, stack: promoError.stack });
+
+          // Check if it's idempotency error (promo already used)
+          if (promoError.message === 'Promo code already used by this user') {
+            return res.status(409).json({
+              success: false,
+              error: 'This promo code has already been used by your account'
+            });
+          }
+
           try {
             await shopQueries.delete(shop.id);
           } catch (cleanupError) {
@@ -48,6 +79,31 @@ export const shopController = {
             success: false,
             error: 'Failed to apply promo code. Shop was not created.'
           });
+        }
+        } else if (allowProWithoutPromo) {
+          try {
+            shop = await grantComplimentarySubscription(shop.id, 'pro');
+            logger.info(`Complimentary PRO subscription granted for shop ${shop.id}`);
+          } catch (complimentaryError) {
+            logger.error('Complimentary subscription failed', {
+              error: complimentaryError.message,
+              stack: complimentaryError.stack
+            });
+
+            try {
+              await shopQueries.delete(shop.id);
+            } catch (cleanupError) {
+              logger.error('Failed to rollback shop after complimentary failure', {
+                error: cleanupError.message,
+                stack: cleanupError.stack
+              });
+            }
+
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to activate subscription for PRO plan. Shop was not created.'
+            });
+          }
         }
       }
 
