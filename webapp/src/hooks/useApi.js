@@ -175,3 +175,76 @@ export function useShopApi() {
     getMyOrders,
   };
 }
+
+/**
+ * Hook для API follows
+ */
+export function useFollowsApi() {
+  const api = useApi();
+
+  // Детали подписки
+  const getDetail = useCallback(async (followId) => {
+    try {
+      const response = await api.get(`/follows/${followId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting follow detail:', error);
+      throw error;
+    }
+  }, [api]);
+
+  // Товары подписки
+  const getProducts = useCallback(async (followId, params = {}) => {
+    try {
+      const response = await api.get(`/follows/${followId}/products`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting follow products:', error);
+      throw error;
+    }
+  }, [api]);
+
+  // Изменить наценку
+  const updateMarkup = useCallback(async (followId, markupPercentage) => {
+    try {
+      const response = await api.put(`/follows/${followId}/markup`, { markupPercentage });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating markup:', error);
+      throw error;
+    }
+  }, [api]);
+
+  // Сменить режим
+  const switchMode = useCallback(async (followId, mode, markupPercentage = null) => {
+    try {
+      const body = { mode };
+      if (markupPercentage !== null) body.markupPercentage = markupPercentage;
+      const response = await api.put(`/follows/${followId}/mode`, body);
+      return response.data;
+    } catch (error) {
+      console.error('Error switching mode:', error);
+      throw error;
+    }
+  }, [api]);
+
+  // Удалить подписку
+  const deleteFollow = useCallback(async (followId) => {
+    try {
+      await api.delete(`/follows/${followId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting follow:', error);
+      throw error;
+    }
+  }, [api]);
+
+  return {
+    ...api,
+    getDetail,
+    getProducts,
+    updateMarkup,
+    switchMode,
+    deleteFollow,
+  };
+}

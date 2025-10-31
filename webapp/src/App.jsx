@@ -19,6 +19,7 @@ const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const Catalog = lazy(() => import('./pages/Catalog'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Follows = lazy(() => import('./pages/Follows'));
+const FollowDetail = lazy(() => import('./pages/FollowDetail'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -31,7 +32,7 @@ const PageLoader = () => (
 );
 
 function App() {
-  const { activeTab } = useStore();
+  const { activeTab, followDetailId } = useStore();
   const hasFollows = useStore((state) => state.hasFollows);
   const setHasFollows = useStore((state) => state.setHasFollows);
   const { user, isReady, isValidating, error } = useTelegram();
@@ -118,6 +119,11 @@ function App() {
   };
 
   const renderPage = () => {
+    // Если открыт детальный просмотр подписки
+    if (followDetailId) {
+      return <FollowDetail />;
+    }
+
     switch (activeTab) {
       case 'subscriptions':
         return <Subscriptions />;
