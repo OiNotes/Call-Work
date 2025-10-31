@@ -124,7 +124,7 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                 className="absolute w-8 h-8 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing"
                 style={{
                   left: `${((markup || 1) - 1) / 499 * 100}%`,
-                  top: '4px',
+                  top: '50%',
                   transform: 'translateY(-50%) translateX(-50%)',
                   boxShadow: '0 0 0 4px rgba(255, 107, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2)'
                 }}
