@@ -71,15 +71,98 @@ const chooseTierScene = new Scenes.WizardScene(
             tier
           });
 
-          // Feedback пользователю
-          await ctx.answerCbQuery(`Выбран тариф: ${tier.toUpperCase()}`);
+          // Show payment button
+          const tierPrice = tier === 'pro' ? '$35' : '$25';
+          const tierName = tier.toUpperCase();
+          const message = `Вы выбрали ${tierName} (${tierPrice}/мес)\n\nДля создания магазина необходимо оплатить подписку.`;
 
-          // Transition to createShop scene with selected tier
-          await ctx.scene.leave();
+          await ctx.editMessageText(
+            message,
+            {
+              parse_mode: 'HTML',
+              ...Markup.inlineKeyboard([
+                [Markup.button.callback('💳 Оплатить подписку', `pay_tier:${tier}`)],
+                [Markup.button.callback(buttonText.back, 'choose_tier:back')]
+              ])
+            }
+          );
 
-          // Enter createShop scene
-          await ctx.scene.enter('createShop', { tier });
+          await ctx.answerCbQuery();
           return;
+        }
+
+        // Payment flow - create pending subscription first
+        if (action.startsWith('pay_tier:')) {
+          const tier = action.replace('pay_tier:', '');
+
+          logger.info('tier_payment_initiated', {
+            userId: ctx.from.id,
+            tier
+          });
+
+          await ctx.answerCbQuery();
+
+          try {
+            // Show loading
+            await ctx.editMessageText('⏳ Создаём подписку...', { parse_mode: 'HTML' });
+
+            // Import API
+            const { subscriptionApi } = await import('../utils/api.js');
+            const token = ctx.session.token;
+
+            if (!token) {
+              throw new Error('No auth token');
+            }
+
+            // Create pending subscription
+            const pendingData = await subscriptionApi.createPending(tier, token);
+
+            logger.info('pending_subscription_created', {
+              userId: ctx.from.id,
+              subscriptionId: pendingData.subscriptionId,
+              tier: pendingData.tier
+            });
+
+            // Leave chooseTier and enter pay_subscription with subscriptionId
+            await ctx.scene.leave();
+            await ctx.scene.enter('pay_subscription', {
+              tier,
+              subscriptionId: pendingData.subscriptionId,
+              createShopAfter: true
+            });
+            return;
+
+          } catch (error) {
+            logger.error('Failed to create pending subscription:', {
+              error: error.message,
+              response: error.response?.data,
+              status: error.response?.status,
+              stack: error.stack,
+              userId: ctx.from.id,
+              tier
+            });
+
+            // Show detailed error to user
+            const errorDetails = error.response?.data?.error || error.message || 'Unknown error';
+            const errorMessage = `❌ Ошибка при создании подписки:\n\n${errorDetails}\n\nПопробуйте снова.`;
+
+            await ctx.editMessageText(
+              errorMessage,
+              {
+                parse_mode: 'HTML',
+                ...Markup.inlineKeyboard([
+                  [Markup.button.callback(buttonText.back, 'choose_tier:back')]
+                ])
+              }
+            );
+            return;
+          }
+        }
+
+        // Back to tier selection
+        if (action === 'choose_tier:back') {
+          await ctx.answerCbQuery();
+          return ctx.wizard.selectStep(0);
         }
 
         // Promo code flow

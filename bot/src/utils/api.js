@@ -440,6 +440,44 @@ export const subscriptionApi = {
     });
     // Unwrap response: return data.data (object with subscribers array and count) instead of wrapper
     return data.data || data;
+  },
+
+  // Generate payment invoice for subscription
+  async generateSubscriptionInvoice(subscriptionId, chain, token) {
+    const { data } = await api.post(
+      `/subscriptions/${subscriptionId}/payment/generate`,
+      { chain },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    // Unwrap response: return data.invoice instead of wrapper
+    return data.invoice || data.data || data;
+  },
+
+  // Get payment status for subscription
+  async getSubscriptionPaymentStatus(subscriptionId, token) {
+    const { data } = await api.get(
+      `/subscriptions/${subscriptionId}/payment/status`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    // Unwrap response: return data.payment instead of wrapper
+    return data.payment || data.data || data;
+  },
+
+  // Create pending subscription (first-time shop creation)
+  async createPending(tier, token) {
+    const { data } = await api.post(
+      '/subscriptions/pending',
+      { tier },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    // Unwrap response: return data.data instead of wrapper
+    return data.data || data;
   }
 };
 

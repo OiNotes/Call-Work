@@ -106,7 +106,7 @@ export const syncedProductQueries = {
   // Find synced products with pagination support
   findByFollowIdPaginated: async (followId, limit = 50, offset = 0) => {
     const result = await query(
-      `SELECT 
+      `SELECT
         sp.*,
         p_synced.name as synced_product_name,
         p_synced.price as synced_product_price,
@@ -121,6 +121,8 @@ export const syncedProductQueries = {
        JOIN products p_synced ON sp.synced_product_id = p_synced.id
        JOIN products p_source ON sp.source_product_id = p_source.id
        WHERE sp.follow_id = $1
+         AND p_source.is_active = true
+         AND p_synced.is_active = true
        ORDER BY sp.created_at DESC
        LIMIT $2 OFFSET $3`,
       [followId, limit, offset]

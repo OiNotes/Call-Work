@@ -1,5 +1,6 @@
 import express from 'express';
 import * as blockCypherService from '../services/blockCypherService.js';
+import * as subscriptionService from '../services/subscriptionService.js';
 import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import telegramService from '../services/telegram.js';
@@ -7,7 +8,8 @@ import logger from '../utils/logger.js';
 
 const router = express.Router();
 
-// Legacy Tatum webhook удалён; используются BlockCypher и polling сервисы.
+// Webhook routes for payment verification (BlockCypher for BTC/LTC)
+// ETH/USDT/TRON use polling service instead
 
 /**
  * Helper: Update order status
@@ -15,6 +17,79 @@ const router = express.Router();
 async function updateOrderStatus(orderId, status) {
   await orderQueries.updateStatus(orderId, status);
   logger.info(`[Webhook] Order ${orderId} status updated to ${status}`);
+}
+
+/**
+ * Helper: Handle confirmed subscription payment
+ * @param {object} invoice - Invoice record with subscription_id
+ * @param {object} client - Database client (transaction)
+ */
+async function handleSubscriptionPayment(invoice, client) {
+  try {
+    logger.info(`[Webhook] Processing subscription payment for subscription ${invoice.subscription_id}`);
+
+    // Get subscription details
+    const subResult = await client.query(
+      'SELECT shop_id, tier FROM shop_subscriptions WHERE id = $1',
+      [invoice.subscription_id]
+    );
+
+    if (subResult.rows.length === 0) {
+      logger.error('[Webhook] Subscription not found:', {
+        subscriptionId: invoice.subscription_id
+      });
+      // Don't throw - just mark webhook as processed
+      return;
+    }
+
+    const subscription = subResult.rows[0];
+
+    // Update subscription status to 'active' and set verified_at
+    await client.query(
+      `UPDATE shop_subscriptions 
+       SET status = 'active', 
+           verified_at = NOW()
+       WHERE id = $1`,
+      [invoice.subscription_id]
+    );
+
+    // Update shop subscription status
+    const periodStart = new Date();
+    const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await client.query(
+      `UPDATE shops 
+       SET tier = $1,
+           subscription_status = 'active',
+           next_payment_due = $2,
+           grace_period_until = NULL,
+           registration_paid = true,
+           is_active = true,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [subscription.tier, periodEnd, subscription.shop_id]
+    );
+
+    // Update invoice status
+    await invoiceQueries.updateStatus(invoice.id, 'paid');
+
+    logger.info('[Webhook] Subscription activated successfully', {
+      subscriptionId: invoice.subscription_id,
+      shopId: subscription.shop_id,
+      tier: subscription.tier
+    });
+
+    // TODO: Notify shop owner via Telegram about successful subscription payment
+    // telegramService.notifySubscriptionActivated(owner.telegram_id, { ... });
+
+  } catch (error) {
+    logger.error('[Webhook] Failed to handle subscription payment:', {
+      error: error.message,
+      invoiceId: invoice.id,
+      subscriptionId: invoice.subscription_id
+    });
+    throw error;
+  }
 }
 
 /**
@@ -126,7 +201,12 @@ router.post('/blockcypher', async (req, res) => {
         return res.status(404).json({ error: 'Invoice not found' });
       }
 
-      logger.info(`[Webhook] Invoice found: ${invoice.id} for order ${invoice.order_id}`);
+      // Determine invoice type
+      const isOrderPayment = !!invoice.order_id;
+      const isSubscriptionPayment = !!invoice.subscription_id;
+      const invoiceType = isOrderPayment ? 'order' : 'subscription';
+
+      logger.info(`[Webhook] Invoice found: ${invoice.id} for ${invoiceType} ${invoice.order_id || invoice.subscription_id}`);
 
       // Check if payment already exists
       const existingPayment = await paymentQueries.findByTxHash(paymentData.txHash);
@@ -144,17 +224,23 @@ router.post('/blockcypher', async (req, res) => {
           paymentData.confirmations
         );
 
-        // If newly confirmed, update order
+        // If newly confirmed, update order or subscription
         if (status === 'confirmed' && existingPayment.status !== 'confirmed') {
-          await updateOrderStatus(invoice.order_id, 'confirmed');
-          await invoiceQueries.updateStatus(invoice.id, 'paid');
+          if (isSubscriptionPayment) {
+            await handleSubscriptionPayment(invoice, client);
+            await client.query('COMMIT');
+            logger.info(`[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`);
+          } else {
+            await updateOrderStatus(invoice.order_id, 'confirmed');
+            await invoiceQueries.updateStatus(invoice.id, 'paid');
 
-          // Commit transaction before sending Telegram notification
-          await client.query('COMMIT');
+            // Commit transaction before sending Telegram notification
+            await client.query('COMMIT');
 
-          await sendTelegramNotification(invoice.order_id, 'confirmed');
+            await sendTelegramNotification(invoice.order_id, 'confirmed');
 
-          logger.info(`[Webhook] Order ${invoice.order_id} confirmed via BlockCypher!`);
+            logger.info(`[Webhook] Order ${invoice.order_id} confirmed via BlockCypher!`);
+          }
         } else {
           await client.query('COMMIT');
         }
@@ -166,7 +252,25 @@ router.post('/blockcypher', async (req, res) => {
         });
       }
 
-      // Create new payment record
+      // Handle subscription payments (no payment record needed)
+      if (isSubscriptionPayment) {
+        if (status === 'confirmed') {
+          await handleSubscriptionPayment(invoice, client);
+          await client.query('COMMIT');
+          logger.info(`[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`);
+        } else {
+          await client.query('COMMIT');
+          logger.info(`[Webhook] Subscription payment pending (${paymentData.confirmations} confirmations)`);
+        }
+
+        return res.json({
+          status: 'success',
+          confirmations: paymentData.confirmations,
+          confirmed: status === 'confirmed'
+        });
+      }
+
+      // Create new payment record (for order payments only)
       const payment = await paymentQueries.create({
         orderId: invoice.order_id,
         txHash: paymentData.txHash,

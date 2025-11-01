@@ -38,9 +38,13 @@ export const shopFollowQueries = {
         ss.owner_id as source_owner_id,
         u.username as source_username,
         (
-          SELECT COUNT(*) 
-          FROM synced_products sp 
+          SELECT COUNT(*)
+          FROM synced_products sp
+          JOIN products p_synced ON sp.synced_product_id = p_synced.id
+          JOIN products p_source ON sp.source_product_id = p_source.id
           WHERE sp.follow_id = sf.id
+            AND p_source.is_active = true
+            AND p_synced.is_active = true
         ) as synced_products_count,
         (
           SELECT COUNT(*)
@@ -72,7 +76,15 @@ export const shopFollowQueries = {
         ss.logo as source_shop_logo,
         ss.owner_id as source_owner_id,
         u.username as source_username,
-        (SELECT COUNT(*) FROM synced_products sp WHERE sp.follow_id = sf.id) as synced_products_count,
+        (
+          SELECT COUNT(*)
+          FROM synced_products sp
+          JOIN products p_synced ON sp.synced_product_id = p_synced.id
+          JOIN products p_source ON sp.source_product_id = p_source.id
+          WHERE sp.follow_id = sf.id
+            AND p_source.is_active = true
+            AND p_synced.is_active = true
+        ) as synced_products_count,
         (SELECT COUNT(*) FROM products p WHERE p.shop_id = sf.source_shop_id AND p.is_active = true) as source_products_count
       FROM shop_follows sf
       JOIN shops ss ON sf.source_shop_id = ss.id

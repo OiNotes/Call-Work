@@ -61,7 +61,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       })
       .expect(201);
 
-    const orderId = orderResponse.body.order.id;
+    const orderId = orderResponse.body.data.id;
 
     // Try to verify payment WITHOUT payment_address (null/undefined)
     const response = await request(app)
@@ -109,7 +109,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       })
       .expect(201);
 
-    const orderId = orderResponse.body.order.id;
+    const orderId = orderResponse.body.data.id;
 
     // Try to verify payment with EMPTY payment_address
     const response = await request(app)

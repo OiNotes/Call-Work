@@ -49,7 +49,7 @@ CREATE TABLE shops (
   wallet_ltc VARCHAR(255),
   tier VARCHAR(20) DEFAULT 'basic' CHECK (tier IN ('basic', 'pro')),
   is_active BOOLEAN DEFAULT true,
-  subscription_status VARCHAR(20) DEFAULT 'active' CHECK (subscription_status IN ('active', 'grace_period', 'inactive')),
+  subscription_status VARCHAR(20) DEFAULT 'active' CHECK (subscription_status IN ('active', 'pending', 'grace_period', 'inactive')),
   next_payment_due TIMESTAMP,
   grace_period_until TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -239,25 +239,28 @@ COMMENT ON COLUMN channel_migrations.failed_count IS 'Number of failed message d
 -- ============================================
 CREATE TABLE shop_subscriptions (
   id SERIAL PRIMARY KEY,
-  shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shop_id INT REFERENCES shops(id) ON DELETE CASCADE,
   tier VARCHAR(20) NOT NULL CHECK (tier IN ('basic', 'pro')),
   amount DECIMAL(10, 2) NOT NULL,
   tx_hash VARCHAR(255) UNIQUE NOT NULL,
   currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT')),
   period_start TIMESTAMP NOT NULL,
   period_end TIMESTAMP NOT NULL,
-  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'cancelled')),
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'expired', 'cancelled')),
   created_at TIMESTAMP DEFAULT NOW(),
   verified_at TIMESTAMP
 );
 
 COMMENT ON TABLE shop_subscriptions IS 'Stores monthly subscription payments for shops (basic $25/mo, pro $35/mo)';
+COMMENT ON COLUMN shop_subscriptions.user_id IS 'User who created subscription (before shop is created)';
+COMMENT ON COLUMN shop_subscriptions.shop_id IS 'Shop associated with subscription (NULL until payment confirmed)';
 COMMENT ON COLUMN shop_subscriptions.tier IS 'Subscription tier: basic ($25, 4 products max) or pro ($35, unlimited)';
 COMMENT ON COLUMN shop_subscriptions.amount IS 'Payment amount in USD';
 COMMENT ON COLUMN shop_subscriptions.tx_hash IS 'Blockchain transaction hash for verification';
 COMMENT ON COLUMN shop_subscriptions.period_start IS 'Start date of subscription period';
 COMMENT ON COLUMN shop_subscriptions.period_end IS 'End date of subscription period (30 days from start)';
-COMMENT ON COLUMN shop_subscriptions.status IS 'active: valid, expired: period ended, cancelled: refunded';
+COMMENT ON COLUMN shop_subscriptions.status IS 'pending: awaiting confirmation, active: valid, expired: period ended, cancelled: refunded';
 
 -- ============================================
 -- Shop Workers table (Workspace - PRO feature)
@@ -277,30 +280,41 @@ COMMENT ON COLUMN shop_workers.worker_user_id IS 'User ID of the worker (must ex
 COMMENT ON COLUMN shop_workers.added_by IS 'User ID of the person who added this worker (usually shop owner)';
 
 -- ============================================
--- Invoices table (Tatum address-per-payment)
+-- Invoices table (HD wallet address-per-payment)
 -- ============================================
 CREATE TABLE invoices (
   id SERIAL PRIMARY KEY,
-  order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  order_id INT REFERENCES orders(id) ON DELETE CASCADE,
+  subscription_id INT REFERENCES shop_subscriptions(id) ON DELETE CASCADE,
   chain VARCHAR(20) NOT NULL CHECK (chain IN ('BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'LTC')),
   address VARCHAR(255) UNIQUE NOT NULL,
   address_index INT NOT NULL,
   expected_amount DECIMAL(18, 8) NOT NULL CHECK (expected_amount > 0),
+  crypto_amount DECIMAL(20, 8),
+  usd_rate DECIMAL(20, 2),
   currency VARCHAR(10) NOT NULL,
   tatum_subscription_id VARCHAR(255),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_invoice_reference CHECK (
+    (order_id IS NOT NULL AND subscription_id IS NULL) OR
+    (order_id IS NULL AND subscription_id IS NOT NULL)
+  )
 );
 
-COMMENT ON TABLE invoices IS 'Payment invoices with unique addresses generated via Tatum';
+COMMENT ON TABLE invoices IS 'Payment invoices with unique addresses generated via HD wallet (BIP44 derivation)';
+COMMENT ON COLUMN invoices.order_id IS 'Reference to order (mutually exclusive with subscription_id)';
+COMMENT ON COLUMN invoices.subscription_id IS 'Reference to subscription payment (mutually exclusive with order_id)';
 COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC';
 COMMENT ON COLUMN invoices.address IS 'Unique payment address generated from HD wallet';
 COMMENT ON COLUMN invoices.address_index IS 'Derivation index for HD wallet (m/44''/0''/0''/0/{index})';
-COMMENT ON COLUMN invoices.expected_amount IS 'Expected payment amount in crypto units';
-COMMENT ON COLUMN invoices.tatum_subscription_id IS 'Tatum webhook subscription ID for monitoring';
-COMMENT ON COLUMN invoices.expires_at IS 'Invoice expiration time (typically 1 hour)';
+COMMENT ON COLUMN invoices.expected_amount IS 'Expected payment amount (USD for subscriptions, crypto for orders)';
+COMMENT ON COLUMN invoices.crypto_amount IS 'Exact crypto amount to pay (USD converted at invoice creation)';
+COMMENT ON COLUMN invoices.usd_rate IS 'USD exchange rate at invoice creation time';
+COMMENT ON COLUMN invoices.tatum_subscription_id IS 'Webhook subscription ID for payment monitoring (BlockCypher for BTC/LTC)';
+COMMENT ON COLUMN invoices.expires_at IS 'Invoice expiration time (30 minutes for subscriptions, 1 hour for orders)';
 
 -- ============================================
 -- Views
@@ -374,6 +388,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_tx_hash ON payments(tx_hash);
 CREATE INDEX IF NOT EXISTS idx_channel_migrations_shop ON channel_migrations(shop_id);
 CREATE INDEX IF NOT EXISTS idx_channel_migrations_status ON channel_migrations(status);
 CREATE INDEX IF NOT EXISTS idx_channel_migrations_created ON channel_migrations(created_at);
+CREATE INDEX IF NOT EXISTS idx_shop_subscriptions_user_id ON shop_subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_shop_subscriptions_shop ON shop_subscriptions(shop_id);
 CREATE INDEX IF NOT EXISTS idx_shop_subscriptions_status ON shop_subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_shop_subscriptions_period_end ON shop_subscriptions(period_end);

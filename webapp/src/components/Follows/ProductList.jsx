@@ -66,7 +66,17 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                 <div className="relative flex items-center justify-between gap-4">
                   {/* Product Name */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white text-base font-semibold truncate" style={{ letterSpacing: '-0.01em' }}>
+                    <h3
+                      className="text-white text-base font-semibold"
+                      style={{
+                        letterSpacing: '-0.01em',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word'
+                      }}
+                    >
                       {product.name}
                     </h3>
                   </div>
@@ -107,7 +117,17 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
 
                 {/* Product Header - название */}
                 <div className="relative mb-3">
-                  <h3 className="text-white text-base font-semibold truncate" style={{ letterSpacing: '-0.01em' }}>
+                  <h3
+                    className="text-white text-base font-semibold"
+                    style={{
+                      letterSpacing: '-0.01em',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}
+                  >
                     {sourceProduct.name || syncedProduct.name}
                   </h3>
                 </div>

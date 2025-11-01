@@ -56,8 +56,12 @@ export default function LanguageModal({ isOpen, onClose }) {
         >
           <PageHeader title={t('language.title')} onBack={handleClose} />
           <div
-            className="min-h-screen pb-24"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            className="flex-1 overflow-y-auto"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              WebkitOverflowScrolling: 'touch'
+            }}
           >
             <div className="px-4 py-6 space-y-3">
         {LANGUAGES.map((language) => (

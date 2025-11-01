@@ -1,7 +1,7 @@
 import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
-import { activatePromoSubscription, grantComplimentarySubscription } from '../services/subscriptionService.js';
+import { activatePromoSubscription } from '../services/subscriptionService.js';
 
 const PROMO_CODE = 'comi9999';
 
@@ -15,11 +15,16 @@ export const shopController = {
    */
   create: async (req, res) => {
     try {
-      const { name, description, logo, promoCode, tier = 'basic' } = req.body;
+      const { name, description, logo, promoCode, tier = 'basic', subscriptionId } = req.body;
       const normalizedPromo = promoCode?.trim().toLowerCase();
       const wantsPro = tier === 'pro';
-      const allowProWithoutPromo = (process.env.ALLOW_PRO_WITHOUT_PROMO || '').toLowerCase() === 'true'
-        || process.env.NODE_ENV !== 'production';
+
+      logger.info('[ShopController] Creating shop:', {
+        userId: req.user.id,
+        name,
+        tier,
+        subscriptionId
+      });
 
       // Validate tier
       if (!['basic', 'pro'].includes(tier)) {
@@ -29,11 +34,20 @@ export const shopController = {
         });
       }
 
-      // Ensure PRO tier has valid payment or bypass enabled
-      if (wantsPro && normalizedPromo !== PROMO_CODE && !allowProWithoutPromo) {
-        return res.status(402).json({
+      // Check if user already has a shop
+      const existingShops = await shopQueries.findByOwnerId(req.user.id);
+      if (existingShops.length > 0) {
+        return res.status(400).json({
           success: false,
-          error: 'PRO plan requires payment or valid promo code'
+          error: 'User already has a shop'
+        });
+      }
+
+      // Validate shop name
+      if (!name || name.trim().length < 3) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shop name must be at least 3 characters'
         });
       }
 
@@ -43,6 +57,107 @@ export const shopController = {
         return res.status(409).json({
           success: false,
           error: 'Shop name already taken. Try another one'
+        });
+      }
+
+      // Handle subscription-based creation
+      if (subscriptionId) {
+        const pool = (await import('../config/database.js')).default;
+        const client = await pool.connect();
+
+        try {
+          await client.query('BEGIN');
+
+          // Verify subscription exists and belongs to user
+          const subscriptionCheck = await client.query(
+            `SELECT id, tier, status, user_id, shop_id
+             FROM shop_subscriptions
+             WHERE id = $1`,
+            [subscriptionId]
+          );
+
+          if (subscriptionCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+              success: false,
+              error: 'Subscription not found'
+            });
+          }
+
+          const subscription = subscriptionCheck.rows[0];
+
+          // Verify subscription belongs to user
+          if (subscription.user_id !== req.user.id) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({
+              success: false,
+              error: 'Subscription belongs to another user'
+            });
+          }
+
+          // Verify subscription is paid
+          if (subscription.status !== 'paid') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              error: `Subscription not paid yet (status: ${subscription.status})`
+            });
+          }
+
+          // Verify subscription not already linked
+          if (subscription.shop_id !== null) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              error: 'Subscription already linked to a shop'
+            });
+          }
+
+          // Create shop
+          const shopResult = await client.query(
+            `INSERT INTO shops
+             (owner_id, name, description, logo, tier, subscription_status, is_active, registration_paid)
+             VALUES ($1, $2, $3, $4, $5, 'active', true, true)
+             RETURNING *`,
+            [req.user.id, name.trim(), description, logo, subscription.tier]
+          );
+
+          const shop = shopResult.rows[0];
+
+          // Link subscription to shop
+          await client.query(
+            `UPDATE shop_subscriptions
+             SET shop_id = $1
+             WHERE id = $2`,
+            [shop.id, subscriptionId]
+          );
+
+          await client.query('COMMIT');
+
+          logger.info('[ShopController] Shop created and linked to subscription:', {
+            shopId: shop.id,
+            subscriptionId,
+            userId: req.user.id
+          });
+
+          return res.status(201).json({
+            success: true,
+            data: shop
+          });
+
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
+        }
+      }
+
+      // Handle promo code creation (existing flow)
+      if (wantsPro && normalizedPromo !== PROMO_CODE) {
+        return res.status(402).json({
+          success: false,
+          error: 'PRO plan requires payment or valid promo code'
         });
       }
 
@@ -80,30 +195,6 @@ export const shopController = {
             error: 'Failed to apply promo code. Shop was not created.'
           });
         }
-        } else if (allowProWithoutPromo) {
-          try {
-            shop = await grantComplimentarySubscription(shop.id, 'pro');
-            logger.info(`Complimentary PRO subscription granted for shop ${shop.id}`);
-          } catch (complimentaryError) {
-            logger.error('Complimentary subscription failed', {
-              error: complimentaryError.message,
-              stack: complimentaryError.stack
-            });
-
-            try {
-              await shopQueries.delete(shop.id);
-            } catch (cleanupError) {
-              logger.error('Failed to rollback shop after complimentary failure', {
-                error: cleanupError.message,
-                stack: cleanupError.stack
-              });
-            }
-
-            return res.status(500).json({
-              success: false,
-              error: 'Failed to activate subscription for PRO plan. Shop was not created.'
-            });
-          }
         }
       }
 

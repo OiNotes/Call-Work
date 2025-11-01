@@ -2,6 +2,7 @@ import { paymentQueries, invoiceQueries, orderQueries, productQueries, shopQueri
 import { getClient } from '../config/database.js';
 import * as etherscanService from './etherscanService.js';
 import * as tronService from './tronService.js';
+import * as subscriptionService from './subscriptionService.js';
 import telegramService from './telegram.js';
 import logger from '../utils/logger.js';
 
@@ -182,10 +183,13 @@ async function getPendingInvoices() {
  */
 async function processInvoice(invoice) {
   try {
-    logger.debug(`[PollingService] Processing invoice ${invoice.id}`, {
+    const invoiceType = invoice.order_id ? 'order' : 'subscription';
+    logger.debug(`[PollingService] Processing ${invoiceType} invoice ${invoice.id}`, {
       chain: invoice.chain,
       address: invoice.address,
-      expectedAmount: invoice.expected_amount
+      expectedAmount: invoice.expected_amount,
+      orderId: invoice.order_id || null,
+      subscriptionId: invoice.subscription_id || null
     });
 
     let payment;
@@ -201,17 +205,19 @@ async function processInvoice(invoice) {
     }
 
     if (!payment) {
-      logger.debug(`[PollingService] No payment found for invoice ${invoice.id}`);
+      logger.debug(`[PollingService] No payment found for ${invoiceType} invoice ${invoice.id}`);
       return;
     }
 
     // Payment found!
     stats.paymentsFound++;
 
-    logger.info(`[PollingService] Payment found for invoice ${invoice.id}`, {
+    logger.info(`[PollingService] Payment found for ${invoiceType} invoice ${invoice.id}`, {
       txHash: payment.txHash,
       amount: payment.amount,
-      confirmations: payment.confirmations
+      confirmations: payment.confirmations,
+      orderId: invoice.order_id || null,
+      subscriptionId: invoice.subscription_id || null
     });
 
     // Check if payment already exists in database
@@ -233,7 +239,7 @@ async function processInvoice(invoice) {
     } else {
       // Create new payment record
       const newPayment = await paymentQueries.create({
-        orderId: invoice.order_id,
+        orderId: invoice.order_id || null,
         txHash: payment.txHash,
         amount: payment.amount,
         currency: invoice.currency,
@@ -388,19 +394,32 @@ async function checkTronPayment(invoice) {
 }
 
 /**
- * Handle confirmed payment - update order and notify user
+ * Handle confirmed payment - update order/subscription and notify user
  * @param {object} invoice - Invoice record
  * @param {object} payment - Payment record
  */
 async function handleConfirmedPayment(invoice, payment) {
   try {
-    logger.info(`[PollingService] Handling confirmed payment for order ${invoice.order_id}`);
+    const isOrderPayment = !!invoice.order_id;
+    const isSubscriptionPayment = !!invoice.subscription_id;
+
+    logger.info(`[PollingService] Handling confirmed payment for ${isOrderPayment ? 'order' : 'subscription'} ${invoice.order_id || invoice.subscription_id}`);
     if (payment) {
       logger.info('[PollingService] Payment details', {
         paymentId: payment.id,
-        txHash: payment.tx_hash ?? payment.txHash
+        txHash: payment.tx_hash ?? payment.txHash,
+        orderId: invoice.order_id || null,
+        subscriptionId: invoice.subscription_id || null
       });
     }
+
+    // Handle subscription payment
+    if (isSubscriptionPayment) {
+      await handleSubscriptionPayment(invoice);
+      return;
+    }
+
+    // Handle order payment (existing logic below)
 
     // CRITICAL: Use transaction for atomicity (order status + stock updates)
     const client = await getClient();
@@ -500,7 +519,93 @@ async function handleConfirmedPayment(invoice, payment) {
     logger.error('[PollingService] Failed to handle confirmed payment:', {
       error: error.message,
       invoiceId: invoice.id,
-      orderId: invoice.order_id
+      orderId: invoice.order_id || null,
+      subscriptionId: invoice.subscription_id || null
+    });
+    throw error;
+  }
+}
+
+/**
+ * Handle confirmed subscription payment
+ * @param {object} invoice - Invoice record with subscription_id
+ */
+async function handleSubscriptionPayment(invoice) {
+  try {
+    logger.info(`[PollingService] Processing subscription payment for subscription ${invoice.subscription_id}`);
+
+    // Activate subscription via subscriptionService
+    // Note: activateSubscription expects (shopId, tier, txHash, currency, expectedAddress)
+    // But we need to get subscription details first
+    const client = await getClient();
+    try {
+      // Get subscription details
+      const subResult = await client.query(
+        'SELECT shop_id, tier FROM shop_subscriptions WHERE id = $1',
+        [invoice.subscription_id]
+      );
+
+      if (subResult.rows.length === 0) {
+        logger.error('[PollingService] Subscription not found:', {
+          subscriptionId: invoice.subscription_id
+        });
+        return;
+      }
+
+      const subscription = subResult.rows[0];
+
+      // Update subscription status to 'paid' (NOT 'active' yet - shop not created)
+      await client.query(
+        `UPDATE shop_subscriptions
+         SET status = 'paid',
+             verified_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1`,
+        [invoice.subscription_id]
+      );
+
+      // If shop already exists, activate it
+      if (subscription.shop_id) {
+        const periodStart = new Date();
+        const periodEnd = new Date(periodStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        await client.query(
+          `UPDATE shops
+           SET tier = $1,
+               subscription_status = 'active',
+               next_payment_due = $2,
+               grace_period_until = NULL,
+               registration_paid = true,
+               is_active = true,
+               updated_at = NOW()
+           WHERE id = $3`,
+          [subscription.tier, periodEnd, subscription.shop_id]
+        );
+
+        logger.info('[PollingService] Subscription activated and shop updated', {
+          subscriptionId: invoice.subscription_id,
+          shopId: subscription.shop_id,
+          tier: subscription.tier
+        });
+      } else {
+        logger.info('[PollingService] Subscription paid but shop not created yet', {
+          subscriptionId: invoice.subscription_id,
+          tier: subscription.tier,
+          message: 'User needs to create shop via bot'
+        });
+      }
+
+      // TODO: Notify shop owner via Telegram about successful subscription payment
+      // telegramService.notifySubscriptionActivated(owner.telegram_id, { ... });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    logger.error('[PollingService] Failed to handle subscription payment:', {
+      error: error.message,
+      invoiceId: invoice.id,
+      subscriptionId: invoice.subscription_id
     });
     throw error;
   }
@@ -522,12 +627,28 @@ async function handleExpiredInvoices() {
     for (const invoice of expiredInvoices) {
       await invoiceQueries.updateStatus(invoice.id, 'expired');
 
-      // Optionally: update order status to 'cancelled'
-      await orderQueries.updateStatus(invoice.order_id, 'cancelled');
+      // Update order status to 'cancelled' (only for order invoices)
+      if (invoice.order_id) {
+        await orderQueries.updateStatus(invoice.order_id, 'cancelled');
+      }
+
+      // For subscription invoices, mark subscription as failed
+      if (invoice.subscription_id) {
+        const client = await getClient();
+        try {
+          await client.query(
+            `UPDATE shop_subscriptions SET status = 'failed' WHERE id = $1`,
+            [invoice.subscription_id]
+          );
+        } finally {
+          client.release();
+        }
+      }
 
       logger.info('[PollingService] Invoice expired:', {
         invoiceId: invoice.id,
-        orderId: invoice.order_id
+        orderId: invoice.order_id || null,
+        subscriptionId: invoice.subscription_id || null
       });
     }
   } catch (error) {

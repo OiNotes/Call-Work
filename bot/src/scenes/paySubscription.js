@@ -4,15 +4,16 @@
  * Multi-step wizard for paying monthly shop subscription
  * 
  * Steps:
- * 1. Show pricing and select tier (free $25 or pro $35)
+ * 1. Show pricing and select tier (basic $25 or pro $35)
  * 2. Select cryptocurrency
- * 3. Show payment address and amount
- * 4. User sends tx_hash
- * 5. Verify payment and activate subscription
+ * 3. Auto-generate payment address via Backend API
+ * 4. User clicks "I paid" button
+ * 5. Auto-verify payment and activate subscription
  */
 
 import { Scenes, Markup } from 'telegraf';
-import api from '../utils/api.js';
+import QRCode from 'qrcode';
+import { subscriptionApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
@@ -21,12 +22,12 @@ import { showSellerMainMenu } from '../utils/sellerNavigation.js';
 
 const { general: generalMessages, seller: sellerMessages, subscription: subMessages } = messages;
 
-// Crypto payment addresses (should match backend)
-const PAYMENT_ADDRESSES = {
-  BTC: process.env.BTC_PAYMENT_ADDRESS || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-  ETH: process.env.ETH_PAYMENT_ADDRESS || '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-  USDT: process.env.USDT_PAYMENT_ADDRESS || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-  LTC: process.env.LTC_PAYMENT_ADDRESS || 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R'
+// Chain mappings (Bot → Backend API format)
+const CHAIN_MAPPINGS = {
+  BTC: 'BTC',
+  LTC: 'LTC',
+  ETH: 'ETH',
+  USDT: 'USDT_TRC20'
 };
 
 const paySubscriptionScene = new Scenes.WizardScene(
@@ -35,6 +36,52 @@ const paySubscriptionScene = new Scenes.WizardScene(
   // Step 1: Show pricing and tier selection
   async (ctx) => {
     try {
+      // Check if tier was passed on scene entry (from chooseTier scene)
+      const enteredWithTier = ctx.scene.state?.tier;
+      const createShopAfter = ctx.scene.state?.createShopAfter;
+
+      // FIRST SUBSCRIPTION MODE: User creating first shop (subscriptionId created by chooseTier)
+      if (enteredWithTier) {
+        const subscriptionId = ctx.scene.state?.subscriptionId;
+
+        if (!subscriptionId) {
+          logger.error('[PaySubscription] Missing subscriptionId!', {
+            userId: ctx.from.id,
+            sceneState: ctx.scene.state
+          });
+
+          await cleanReply(ctx, '❌ Ошибка: не удалось создать подписку. Попробуйте снова.');
+          return ctx.scene.leave();
+        }
+
+        logger.info(`[PaySubscription] Entered with tier: ${enteredWithTier}, subscriptionId: ${subscriptionId}`);
+
+        // Save to wizard state
+        ctx.wizard.state.tier = enteredWithTier;
+        ctx.wizard.state.subscriptionId = subscriptionId;
+        ctx.wizard.state.createShopAfter = createShopAfter;
+        const amount = enteredWithTier === 'pro' ? '$35' : '$25';
+        ctx.wizard.state.amount = amount;
+
+        // Skip to crypto selection (Step 3)
+        const message = subMessages.confirmPrompt(enteredWithTier, amount);
+
+        await cleanReplyHTML(
+          ctx,
+          message,
+          Markup.inlineKeyboard([
+            [Markup.button.callback('₿ Bitcoin (BTC)', 'subscription:crypto:BTC')],
+            [Markup.button.callback('Ł Litecoin (LTC)', 'subscription:crypto:LTC')],
+            [Markup.button.callback('Ξ Ethereum (ETH)', 'subscription:crypto:ETH')],
+            [Markup.button.callback('₮ Tether USDT (TRC20)', 'subscription:crypto:USDT')],
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+          ])
+        );
+
+        return ctx.wizard.selectStep(2);
+      }
+
+      // RENEWAL MODE: Existing shop renewing subscription
       const shopId = ctx.session.shopId;
 
       if (!shopId) {
@@ -48,9 +95,8 @@ const paySubscriptionScene = new Scenes.WizardScene(
         await smartMessage.send(ctx, { text: generalMessages.authorizationRequired });
         return ctx.scene.leave();
       }
-      await api.get(`/subscriptions/status/${shopId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+
+      const statusResponse = await subscriptionApi.getStatus(shopId, token);
       const shopName = ctx.session.shopName || 'Магазин';
 
       const message = [
@@ -69,9 +115,11 @@ const paySubscriptionScene = new Scenes.WizardScene(
         ])
       );
 
-      // Save shop info for next steps
+      // Save shop info and subscription ID for next steps
       ctx.wizard.state.shopId = shopId;
       ctx.wizard.state.shopName = shopName;
+      ctx.wizard.state.subscriptionId = statusResponse.subscriptionId;
+
       if (!ctx.session.shopName) {
         ctx.session.shopName = shopName;
       }
@@ -118,7 +166,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
     await ctx.answerCbQuery();
 
-    const amount = tier === 'pro' ? 35 : 25;
+    const amount = tier === 'pro' ? '$35' : '$25';
     ctx.wizard.state.tier = tier;
     ctx.wizard.state.amount = amount;
 
@@ -130,9 +178,9 @@ const paySubscriptionScene = new Scenes.WizardScene(
         parse_mode: 'HTML',
         ...Markup.inlineKeyboard([
           [Markup.button.callback(buttonText.cryptoBTC, 'subscription:crypto:BTC')],
+          [Markup.button.callback(buttonText.cryptoLTC, 'subscription:crypto:LTC')],
           [Markup.button.callback(buttonText.cryptoETH, 'subscription:crypto:ETH')],
           [Markup.button.callback(buttonText.cryptoUSDT, 'subscription:crypto:USDT')],
-          [Markup.button.callback(buttonText.cryptoLTC, 'subscription:crypto:LTC')],
           [Markup.button.callback(buttonText.back, 'subscription:back')]
         ])
       }
@@ -141,7 +189,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
     return ctx.wizard.next();
   },
 
-  // Step 3: Handle crypto selection and show payment address
+  // Step 3: Handle crypto selection and generate payment address
   async (ctx) => {
     if (!ctx.callbackQuery) {
       return;
@@ -170,118 +218,264 @@ const paySubscriptionScene = new Scenes.WizardScene(
     }
 
     const currency = data.replace('subscription:crypto:', '');
-    if (!['BTC', 'ETH', 'USDT', 'LTC'].includes(currency)) {
+    if (!['BTC', 'LTC', 'ETH', 'USDT'].includes(currency)) {
       await ctx.answerCbQuery(subMessages.invalidCrypto);
       return;
     }
 
     await ctx.answerCbQuery();
 
-    const { tier, amount } = ctx.wizard.state;
-    const paymentAddress = PAYMENT_ADDRESSES[currency];
+    try {
+      // Show loading message
+      const loadingMsg = await ctx.editMessageText(
+        subMessages.generatingInvoice,
+        { parse_mode: 'HTML' }
+      );
 
-    ctx.wizard.state.currency = currency;
-    ctx.wizard.state.paymentAddress = paymentAddress;
+      const { tier, amount, subscriptionId } = ctx.wizard.state;
+      const token = ctx.session.token;
 
-    const message = `Оплата\n\nТариф: ${tier.toUpperCase()} - ${amount}\nВалюта: ${currency}\n\nАдрес:\n<code>${paymentAddress}</code>\n\nПосле оплаты отправьте TX Hash\n\nПример TX Hash:\n0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b`;
+      // Map currency to chain format (USDT → USDT_ERC20)
+      const chain = CHAIN_MAPPINGS[currency];
 
-    await ctx.editMessageText(
-      message,
-      {
-        parse_mode: 'HTML',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback('❌ Отмена', 'seller:menu')]
-        ])
+      // Generate payment invoice via Backend API
+      const invoice = await subscriptionApi.generateSubscriptionInvoice(
+        subscriptionId,
+        chain,
+        token
+      );
+
+      // Save invoice details
+      ctx.wizard.state.currency = currency;
+      ctx.wizard.state.invoiceId = invoice.invoiceId;
+      ctx.wizard.state.address = invoice.address;
+      ctx.wizard.state.expectedAmount = invoice.expectedAmount;
+      ctx.wizard.state.expiresAt = invoice.expiresAt;
+
+      // Display currency name for user
+      const currencyDisplayName = subMessages.chainMappings[chain] || currency;
+
+      // Generate QR code for payment address
+      const qrCodeBuffer = await QRCode.toBuffer(invoice.address, {
+        width: 512,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      // Prepare message with crypto amount if available
+      const cryptoAmount = invoice.cryptoAmount || null;
+      const message = subMessages.invoiceGenerated(
+        tier,
+        amount,
+        currencyDisplayName,
+        invoice.address,
+        invoice.expiresAt,
+        cryptoAmount
+      );
+
+      // Delete loading message and send QR code with caption
+      try {
+        await ctx.deleteMessage();
+      } catch (e) {
+        // Ignore delete errors
       }
-    );
 
-    return ctx.wizard.next();
+      await ctx.replyWithPhoto(
+        { source: qrCodeBuffer },
+        {
+          caption: message,
+          parse_mode: 'HTML',
+          ...Markup.inlineKeyboard([
+            [Markup.button.callback('✅ Я оплатил', 'subscription:paid')],
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+          ])
+        }
+      );
+
+      return ctx.wizard.next();
+    } catch (error) {
+      logger.error('[PaySubscription] Invoice generation error:', error);
+
+      const errorData = error.response?.data;
+      let errorMessage = subMessages.invoiceError;
+
+      if (errorData?.error) {
+        errorMessage += `\n\n${errorData.error}`;
+      }
+
+      await ctx.editMessageText(
+        errorMessage,
+        {
+          parse_mode: 'HTML',
+          ...Markup.inlineKeyboard([
+            [Markup.button.callback(buttonText.back, 'subscription:back')],
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+          ])
+        }
+      );
+
+      return;
+    }
   },
 
-  // Step 4: Handle tx_hash and verify payment
+  // Step 4: Handle "I paid" button and verify payment
   async (ctx) => {
-    if (ctx.callbackQuery?.data === 'seller:menu') {
+    if (!ctx.callbackQuery) {
+      return;
+    }
+
+    const data = ctx.callbackQuery.data;
+
+    // Handle cancel
+    if (data === 'seller:menu') {
       await ctx.answerCbQuery(subMessages.cancelled);
       await ctx.scene.leave();
       await showSellerMainMenu(ctx);
       return;
     }
 
-    if (ctx.callbackQuery?.data === 'subscription:retry') {
+    // Handle "I paid" button
+    if (data === 'subscription:paid') {
       await ctx.answerCbQuery();
-      const { tier, amount, currency, paymentAddress } = ctx.wizard.state;
-      const reminder = subMessages.paymentDetails(tier, amount, currency, paymentAddress);
-      await cleanReplyHTML(ctx, reminder, Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]));
-      await smartMessage.send(ctx, { text: subMessages.sendHashPrompt });
-      return;
-    }
 
-    if (!ctx.message?.text) {
-      await smartMessage.send(ctx, { text: subMessages.sendHashPrompt });
-      return;
-    }
+      try {
+        // Show checking message
+        await ctx.editMessageText(
+          subMessages.checkingPayment,
+          { parse_mode: 'HTML' }
+        );
 
-    const txHash = ctx.message.text.trim();
-    if (txHash.length < 10) {
-      await smartMessage.send(ctx, { text: subMessages.hashInvalid });
-      return;
-    }
+        const { subscriptionId } = ctx.wizard.state;
+        const token = ctx.session.token;
 
-    try {
-      const loadingMsg = await smartMessage.send(ctx, { text: subMessages.verifying });
+        // Get payment status from Backend
+        const paymentStatus = await subscriptionApi.getSubscriptionPaymentStatus(
+          subscriptionId,
+          token
+        );
 
-      const { shopId, tier, currency, paymentAddress } = ctx.wizard.state;
-      const token = ctx.session.token;
+        if (paymentStatus.status === 'paid') {
+          // Payment confirmed!
+          const { tier, createShopAfter } = ctx.wizard.state;
+          const endDate = new Date(paymentStatus.paidAt);
+          endDate.setDate(endDate.getDate() + 30); // Add 30 days
+          const formattedDate = endDate.toLocaleDateString('ru-RU');
 
-      const paymentResponse = await api.post(
-        '/subscriptions/pay',
-        { shopId, tier, txHash, currency, paymentAddress },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+          let successMessage = subMessages.verificationSuccess(tier, formattedDate, subscriptionId);
+          if (tier === 'pro') {
+            successMessage += `\n\n${subMessages.proBenefits}`;
+          }
 
-      const { subscription } = paymentResponse.data;
-      await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id).catch(() => {});
+          // If creating first shop - redirect to createShop scene
+          if (createShopAfter && subscriptionId) {
+            logger.info(`[PaySubscription] Redirecting to createShop scene with subscriptionId: ${subscriptionId}`);
 
-      const endDate = new Date(subscription.periodEnd).toLocaleDateString('ru-RU');
-      let successMessage = subMessages.verificationSuccess(tier, endDate, subscription.id);
-      if (tier === 'pro') {
-        successMessage += `\n\n${subMessages.proBenefits}`;
+            await ctx.editMessageText(
+              `✅ ${successMessage}\n\n📝 Теперь создайте свой магазин:`,
+              { parse_mode: 'HTML' }
+            );
+
+            await ctx.scene.leave();
+            await ctx.scene.enter('createShop', {
+              tier: tier,
+              subscriptionId: subscriptionId,
+              paidSubscription: true
+            });
+            return;
+          }
+
+          // Default: show success and return to seller menu
+          await ctx.editMessageText(
+            successMessage,
+            {
+              parse_mode: 'HTML',
+              ...Markup.inlineKeyboard([
+                [Markup.button.callback(buttonText.mainMenu, 'seller:menu')]
+              ])
+            }
+          );
+
+          await ctx.scene.leave();
+
+          // Return to seller menu
+          const { showSellerMainMenu } = await import('../handlers/seller/index.js');
+          await showSellerMainMenu(ctx);
+          return;
+
+        } else if (paymentStatus.status === 'expired') {
+          // Invoice expired
+          await ctx.editMessageText(
+            subMessages.paymentExpired,
+            {
+              parse_mode: 'HTML',
+              ...Markup.inlineKeyboard([
+                [Markup.button.callback(buttonText.retry, 'subscription:retry')],
+                [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+              ])
+            }
+          );
+          return;
+
+        } else {
+          // Payment pending - still waiting
+          const { tier, amount, currency, address, expiresAt } = ctx.wizard.state;
+          const currencyDisplayName = subMessages.chainMappings[CHAIN_MAPPINGS[currency]] || currency;
+
+          const reminderMessage = subMessages.invoiceGenerated(
+            tier,
+            amount,
+            currencyDisplayName,
+            address,
+            expiresAt
+          ) + `\n\n${subMessages.paymentPending}`;
+
+          await ctx.editMessageText(
+            reminderMessage,
+            {
+              parse_mode: 'HTML',
+              ...Markup.inlineKeyboard([
+                [Markup.button.callback('🔄 Обновить', 'subscription:paid')],
+                [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+              ])
+            }
+          );
+          return;
+        }
+
+      } catch (error) {
+        logger.error('[PaySubscription] Payment verification error:', error);
+
+        const errorData = error.response?.data;
+        let errorMessage = subMessages.paymentStatusError;
+
+        if (errorData?.error) {
+          errorMessage += `\n\n${errorData.error}`;
+        }
+
+        await ctx.editMessageText(
+          errorMessage,
+          {
+            parse_mode: 'HTML',
+            ...Markup.inlineKeyboard([
+              [Markup.button.callback(buttonText.retry, 'subscription:paid')],
+              [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+            ])
+          }
+        );
+
+        return;
       }
+    }
 
-      await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
-
-      await ctx.scene.leave();
-
-      // Явно вернуть в меню продавца
-      const { showSellerMainMenu } = await import('../handlers/seller/index.js');
-      await showSellerMainMenu(ctx);
-      return;
-    } catch (error) {
-      logger.error('[PaySubscription] Payment verification error:', error);
-
-      const errorData = error.response?.data;
-      let errorMessage;
-      if (errorData?.error === 'DUPLICATE_TX_HASH') {
-        errorMessage = subMessages.duplicateTx;
-      } else if (errorData?.error === 'PAYMENT_VERIFICATION_FAILED') {
-        errorMessage = subMessages.verificationFailed;
-      } else {
-        errorMessage = subMessages.verificationError;
-      }
-
-      await cleanReplyHTML(
-        ctx,
-        errorMessage,
-        Markup.inlineKeyboard([[
-          Markup.button.callback(buttonText.retry, 'subscription:retry'),
-          Markup.button.callback(buttonText.cancel, 'seller:menu')
-        ]])
-      );
-
-      return;
+    // Handle retry (go back to crypto selection)
+    if (data === 'subscription:retry') {
+      await ctx.answerCbQuery();
+      return ctx.wizard.selectStep(1); // Go back to tier selection
     }
   }
-
 );
 
 // Leave handler

@@ -16,6 +16,16 @@ const router = express.Router();
 router.use(verifyToken);
 
 /**
+ * POST /api/subscriptions/pending
+ * Create pending subscription for first-time shop creation
+ *
+ * Body: {
+ *   tier: 'basic' | 'pro'
+ * }
+ */
+router.post('/pending', subscriptionController.createPendingSubscription);
+
+/**
  * GET /api/subscriptions
  * Get user subscriptions (buyer view)
  *
@@ -73,5 +83,21 @@ router.get('/history/:shopId', subscriptionController.getHistory);
  * Get subscription pricing information (free vs pro)
  */
 router.get('/pricing', subscriptionController.getPricing);
+
+/**
+ * POST /api/subscriptions/:id/payment/generate
+ * Generate payment invoice for subscription
+ *
+ * Body: {
+ *   chain: 'BTC' | 'LTC' | 'ETH' | 'USDT_ERC20' | 'USDT_TRC20'
+ * }
+ */
+router.post('/:id/payment/generate', subscriptionController.generatePaymentInvoice);
+
+/**
+ * GET /api/subscriptions/:id/payment/status
+ * Get payment status for subscription invoice
+ */
+router.get('/:id/payment/status', subscriptionController.getPaymentStatus);
 
 export default router;

@@ -1,6 +1,6 @@
--- Migration: Add Tatum support
+-- Migration: Add HD Wallet Payment System
 -- Date: 2025-01-25
--- Description: Add invoices table for address-per-payment tracking and update schema for Tatum
+-- Description: Add invoices table for address-per-payment tracking using HD wallet (BIP44 derivation)
 
 -- 1. Create invoices table (address-per-payment architecture)
 CREATE TABLE IF NOT EXISTS invoices (
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     expected_amount DECIMAL(18, 8) NOT NULL,
     currency VARCHAR(10) NOT NULL,
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
-    tatum_subscription_id VARCHAR(255),  -- Webhook subscription ID
+    webhook_subscription_id VARCHAR(255),  -- Webhook subscription ID (BlockCypher for BTC/LTC)
     expires_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -23,8 +23,8 @@ ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_currency_check;
 ALTER TABLE payments ADD CONSTRAINT payments_currency_check
     CHECK (currency IN ('BTC', 'ETH', 'LTC', 'USDT'));
 
--- 3. Add tatum_subscription_id to payments (for tracking)
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS tatum_subscription_id VARCHAR(255);
+-- 3. Add webhook_subscription_id to payments (for tracking BlockCypher webhooks)
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS webhook_subscription_id VARCHAR(255);
 
 -- 4. Add confirmations to payments (if not exists from previous version)
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS confirmations INTEGER DEFAULT 0;
@@ -56,14 +56,14 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 INSERT INTO schema_migrations (migration_name)
-VALUES ('add_tatum_support')
+VALUES ('add_hd_wallet_payment_system')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- Rollback SQL (save this separately if needed):
 /*
 DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS schema_migrations CASCADE;
-ALTER TABLE payments DROP COLUMN IF EXISTS tatum_subscription_id;
+ALTER TABLE payments DROP COLUMN IF EXISTS webhook_subscription_id;
 -- Restore old CHECK constraint:
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_currency_check;
 ALTER TABLE payments ADD CONSTRAINT payments_currency_check

@@ -148,20 +148,19 @@ export default function WorkspaceModal({ isOpen, onClose }) {
 
     const input = telegramId.trim();
     if (!input) {
-      await alert('Введите Telegram ID');
+      await alert('Введите Telegram ID или @username');
       return;
     }
 
-    const numericId = Number.parseInt(input, 10);
-    if (!Number.isInteger(numericId) || numericId <= 0) {
-      await alert('Telegram ID должен быть положительным числом');
-      return;
-    }
+    // Determine if input is username or numeric ID
+    const payload = input.startsWith('@') || isNaN(input)
+      ? { username: input }
+      : { telegram_id: Number.parseInt(input, 10) };
 
     try {
       await fetchApi(`/shops/${myShop.id}/workers`, {
         method: 'POST',
-        body: JSON.stringify({ telegram_id: numericId })
+        body: JSON.stringify(payload)
       });
 
       triggerHaptic('success');
@@ -200,8 +199,12 @@ export default function WorkspaceModal({ isOpen, onClose }) {
           >
             <PageHeader title="Workspace" onBack={handleClose} />
             <div
-              className="min-h-screen pb-24"
-              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+              className="flex-1 overflow-y-auto"
+              style={{
+                paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+                paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+                WebkitOverflowScrolling: 'touch'
+              }}
             >
               <div className="px-4 py-6">
                 <div className="text-center py-12">
@@ -245,8 +248,12 @@ export default function WorkspaceModal({ isOpen, onClose }) {
         >
           <PageHeader title="Workspace" onBack={handleClose} />
           <div
-            className="min-h-screen pb-24"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            className="flex-1 overflow-y-auto"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              WebkitOverflowScrolling: 'touch'
+            }}
           >
             <div className="px-4 py-6 space-y-4">
         {/* Info / Upgrade card */}
@@ -321,11 +328,11 @@ export default function WorkspaceModal({ isOpen, onClose }) {
                     type="text"
                     value={telegramId}
                     onChange={(e) => setTelegramId(e.target.value)}
-                    placeholder="123456789"
+                    placeholder="@username или 123456789"
                     className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary transition-colors"
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    Сотрудник может узнать свой ID через бота @userinfobot
+                    Укажите @username или ID сотрудника (через @userinfobot)
                   </p>
                 </div>
 

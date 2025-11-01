@@ -8,9 +8,11 @@ This directory contains database migration scripts for the Status Stock platform
 |---|------|-------------|------|--------|
 | 001 | (schema.sql) | Initial schema | 2025-01-01 | Applied |
 | 002 | 002_add_shop_workers.sql | Add shop_workers table for workspace | 2025-10-25 | Pending |
-| 003 | 003_add_invoices.sql | Add invoices table for Tatum payments | 2025-10-25 | Pending |
+| 003 | 003_add_invoices.sql | Add invoices table for HD wallet payments (BIP44) | 2025-10-25 | Pending |
 | 004 | 004_add_missing_indexes.sql | Performance indexes | 2025-10-25 | Pending |
 | 005 | 005_prevent_circular_follows.sql | Circular follow prevention trigger | 2025-10-25 | Pending |
+| 014 | 014_add_pending_status_to_shop_subscriptions.sql | Add 'pending' status for subscription payments | 2025-11-01 | Applied |
+| 015 | 015_add_pending_to_shops_status.sql | Add 'pending' to shops.subscription_status constraint | 2025-11-01 | Applied |
 
 ## How to Apply Migrations
 

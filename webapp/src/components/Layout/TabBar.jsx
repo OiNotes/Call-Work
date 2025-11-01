@@ -59,7 +59,7 @@ const getTabsConfig = (t, includeFollows = false) => {
 };
 
 const TabBar = memo(function TabBar() {
-  const { activeTab, setActiveTab, setCartOpen, setPaymentStep, hasFollows } = useStore();
+  const { activeTab, setActiveTab, setCartOpen, setPaymentStep, hasFollows, setFollowDetailId } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const platform = usePlatform();
@@ -100,10 +100,11 @@ const TabBar = memo(function TabBar() {
     // Close all modals BEFORE switching tabs
     setCartOpen(false);
     setPaymentStep('idle'); // Closes all payment modals
+    setFollowDetailId(null); // Close FollowDetail when switching tabs
 
     // Switch tab
     setActiveTab(tabId);
-  }, [triggerHaptic, setCartOpen, setPaymentStep, setActiveTab]);
+  }, [triggerHaptic, setCartOpen, setPaymentStep, setFollowDetailId, setActiveTab]);
 
   return (
     <div className="tabbar">

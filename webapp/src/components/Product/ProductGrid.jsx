@@ -73,13 +73,26 @@ const ProductGrid = memo(function ProductGrid({
       variants={container}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 gap-3 p-4 pb-32"
+      className="grid grid-cols-2 gap-4 p-4 pb-32"
     >
-      {products.map((product) => (
-        <motion.div key={product.id} variants={item}>
-          <ProductCard product={product} onPreorder={onPreorder} />
-        </motion.div>
-      ))}
+      {products.map((product, index) => {
+        // Упрощённая логика isWide - только для действительно длинных названий
+        const isWide = product.name.length > 45;
+
+        return (
+          <motion.div
+            key={product.id}
+            variants={item}
+            className={isWide ? 'col-span-2' : ''}
+          >
+            <ProductCard
+              product={product}
+              onPreorder={onPreorder}
+              isWide={isWide}
+            />
+          </motion.div>
+        );
+      })}
     </motion.div>
   );
 });

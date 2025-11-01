@@ -7,7 +7,7 @@ import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 import { gpuAccelStyle } from '../../utils/animationHelpers';
 
-const ProductCard = memo(function ProductCard({ product, onPreorder }) {
+const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = false }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
   const toast = useToast();
@@ -32,9 +32,11 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
   const priceString = typeof rawPrice === 'number' ? String(rawPrice) : `${rawPrice}`;
   const numericPriceLength = priceString.replace(/[^0-9]/g, '').length;
   let priceSizeClass = 'text-2xl';
-  if (numericPriceLength > 10) {
+  if (numericPriceLength >= 10) {
+    priceSizeClass = 'text-base';
+  } else if (numericPriceLength >= 7) {
     priceSizeClass = 'text-lg';
-  } else if (numericPriceLength > 7) {
+  } else if (numericPriceLength >= 4) {
     priceSizeClass = 'text-xl';
   }
 
@@ -69,7 +71,7 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
       whileHover={!android ? { y: -4 } : undefined}
       whileTap={{ scale: android ? 0.99 : 0.98 }}
       transition={quickSpring}
-      className="relative h-[180px] rounded-3xl overflow-hidden group"
+      className={`relative h-[200px] rounded-3xl overflow-hidden group`}
       style={{
         ...gpuAccelStyle,
         ...cardSurface,
@@ -90,7 +92,7 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
 
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {product.isPremium && (
-          <div className="px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-100 border border-white/20 bg-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.35)]">
+          <div className="px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-[0.12em] text-orange-100 border border-white/20 bg-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.35)]">
             Premium
           </div>
         )}
@@ -98,17 +100,17 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
 
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         {isPreorder ? (
-          <div className="px-3 py-1.5 rounded-full border border-orange-400/60 bg-orange-500/20 text-[11px] font-semibold text-orange-200 uppercase tracking-[0.16em] shadow-[0_10px_30px_rgba(255,120,40,0.3)]">
+          <div className="px-3 py-1 rounded-full border border-orange-400/60 bg-orange-500/20 text-[10px] font-semibold text-orange-200 uppercase tracking-[0.16em] shadow-[0_10px_30px_rgba(255,120,40,0.3)]">
             Предзаказ
           </div>
         ) : stock > 0 && (
           <div
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
               lowStock ? 'border-orange-400/70 bg-orange-500/12' : 'border-white/12 bg-black/35'
             } shadow-[0_8px_24px_rgba(12,12,12,0.35)] backdrop-blur`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${lowStock ? 'bg-orange-400 animate-pulse' : 'bg-emerald-400'}`} />
-            <span className="text-[11px] font-semibold text-white" style={{ letterSpacing: '0.08em' }}>
+            <span className={`w-1 h-1 rounded-full ${lowStock ? 'bg-orange-400 animate-pulse' : 'bg-emerald-400'}`} />
+            <span className="text-[10px] font-semibold text-white" style={{ letterSpacing: '0.08em' }}>
               {stockLabel} шт
             </span>
           </div>
@@ -139,34 +141,44 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
         )}
       </AnimatePresence>
 
-      <div className="relative p-5 h-full flex flex-col justify-between gap-4">
+      <div className={`relative ${isWide ? 'p-6' : 'p-5'} h-full flex ${
+  isWide
+    ? 'flex-row items-center gap-5'
+    : 'flex-col gap-3'
+}`}>
         <h3
-          className="text-white font-semibold text-lg leading-snug"
+          className={`text-white font-semibold leading-snug ${
+            isWide ? 'text-sm mt-1' : 'text-base mt-4'
+          }`}
           style={{
-            letterSpacing: '-0.01em',
+            letterSpacing: '-0.02em',
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             wordBreak: 'break-word',
-            minHeight: '2.8em'
+            minHeight: isWide ? 'auto' : '2.6em'
           }}
         >
           {product.name}
         </h3>
 
-        <div className="flex items-end justify-between mt-auto gap-4">
-          <div className="flex flex-col min-w-0">
+        <div className={`flex items-end mt-auto ${
+  isWide
+    ? 'gap-6 ml-auto'
+    : 'justify-between gap-5'
+}`}>
+          <div className="flex flex-col min-w-fit max-w-[calc(100%-60px)]">
             <span
               className={`text-orange-primary font-bold leading-tight ${priceSizeClass}`}
               style={{
                 letterSpacing: '-0.02em',
                 fontVariantNumeric: 'tabular-nums',
-                wordBreak: 'break-word'
+                whiteSpace: 'nowrap'
               }}
             >
-              ${product.price}
+              ${Math.round(product.price)}
             </span>
             <span
               className={`mt-1 text-xs uppercase font-medium ${

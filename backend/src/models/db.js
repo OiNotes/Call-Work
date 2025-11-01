@@ -150,7 +150,7 @@ export const shopQueries = {
       FROM shops s
       JOIN users u ON s.owner_id = u.id
       WHERE s.is_active = true
-        AND s.name ILIKE $1
+        AND (s.name ILIKE $1 OR u.username ILIKE $1)
       ORDER BY s.created_at DESC
       LIMIT $2
     `;
@@ -615,17 +615,17 @@ export const paymentQueries = {
 };
 
 /**
- * Invoice database queries (Tatum address-per-payment)
+ * Invoice database queries (HD wallet address-per-payment with BIP44 derivation)
  */
 export const invoiceQueries = {
   // Create invoice with generated address
   create: async (invoiceData) => {
-    const { orderId, chain, address, addressIndex, expectedAmount, currency, tatumSubscriptionId, expiresAt } = invoiceData;
+    const { orderId, chain, address, addressIndex, expectedAmount, currency, webhookSubscriptionId, expiresAt } = invoiceData;
     const result = await query(
       `INSERT INTO invoices (order_id, chain, address, address_index, expected_amount, currency, tatum_subscription_id, expires_at, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
-      [orderId, chain, address, addressIndex, expectedAmount, currency, tatumSubscriptionId, expiresAt]
+      [orderId, chain, address, addressIndex, expectedAmount, currency, webhookSubscriptionId, expiresAt]
     );
     return result.rows[0];
   },

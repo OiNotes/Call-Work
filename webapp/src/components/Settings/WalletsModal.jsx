@@ -155,6 +155,7 @@ export default function WalletsModal({ isOpen, onClose }) {
       if (!shops.length) {
         setShop(null);
         syncWalletState(null);
+        setLoading(false);
         return;
       }
 
@@ -165,6 +166,7 @@ export default function WalletsModal({ isOpen, onClose }) {
       if (walletsError) {
         setErrorMessage(t('wallet.loadError'));
         syncWalletState(null);
+        setLoading(false);
         return;
       }
 
@@ -182,7 +184,8 @@ export default function WalletsModal({ isOpen, onClose }) {
     if (isOpen) {
       loadWallets();
     }
-  }, [isOpen, loadWallets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleClose = useCallback(() => {
     resetForm();
@@ -292,8 +295,12 @@ export default function WalletsModal({ isOpen, onClose }) {
         >
           <PageHeader title={t('wallet.title')} onBack={handleClose} />
           <div
-            className="min-h-screen pb-24"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+            className="flex-1 overflow-y-auto"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              WebkitOverflowScrolling: 'touch'
+            }}
           >
             <div className="px-4 py-6 space-y-4">
               <motion.div
@@ -361,24 +368,6 @@ export default function WalletsModal({ isOpen, onClose }) {
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  {!showForm && (
-                    <motion.button
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setShowForm(true);
-                      }}
-                      className="w-full h-14 rounded-2xl font-semibold text-white"
-                      style={{
-                        background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
-                        boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      disabled={saving}
-                    >
-                      + {t('wallet.add')}
-                    </motion.button>
-                  )}
 
                   <AnimatePresence>
                     {showForm && (
@@ -475,6 +464,33 @@ export default function WalletsModal({ isOpen, onClose }) {
               )}
             </div>
           </div>
+
+          {/* Fixed Add Wallet Button */}
+          {!showForm && (
+            <div
+              className="fixed bottom-0 left-0 right-0 p-4 bg-dark-bg/95 backdrop-blur-sm border-t border-white/5"
+              style={{
+                paddingBottom: 'calc(var(--tabbar-total) + 16px)',
+                zIndex: 10
+              }}
+            >
+              <motion.button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowForm(true);
+                }}
+                className="w-full h-14 rounded-2xl font-semibold text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
+                  boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
+                }}
+                whileTap={{ scale: 0.98 }}
+                disabled={saving}
+              >
+                + {t('wallet.add')}
+              </motion.button>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

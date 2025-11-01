@@ -15,25 +15,102 @@ const { seller: sellerMessages, general: generalMessages, start: startMessages }
  * 2. Complete (create shop with tier/promo from chooseTier scene)
  */
 
-// Step 1: Enter shop name
+// Step 1: Enter shop name (with payment verification for paid subscriptions)
 const enterShopName = async (ctx) => {
   try {
-    // Get tier and promo from scene state (passed from chooseTier)
+    // Get state from scene entry (passed from paySubscription or chooseTier)
     const sceneState = ctx.scene.state;
-    if (sceneState.tier) {
-      ctx.wizard.state.tier = sceneState.tier;
-    }
-    if (sceneState.promoCode) {
-      ctx.wizard.state.promoCode = sceneState.promoCode;
+    const paidSubscription = sceneState?.paidSubscription || false;
+    const subscriptionId = sceneState?.subscriptionId;
+    const tier = sceneState?.tier;
+    const promoCode = sceneState?.promoCode;
+
+    // Save to wizard state
+    if (tier) ctx.wizard.state.tier = tier;
+    if (promoCode) ctx.wizard.state.promoCode = promoCode;
+    if (subscriptionId) ctx.wizard.state.subscriptionId = subscriptionId;
+    if (paidSubscription) ctx.wizard.state.paidSubscription = paidSubscription;
+
+    // IF PAID SUBSCRIPTION FLOW - verify payment
+    if (paidSubscription && subscriptionId) {
+      logger.info('[CreateShop] Entering with paid subscription - verifying payment', {
+        userId: ctx.from.id,
+        subscriptionId,
+        tier
+      });
+
+      const token = ctx.session.token;
+      if (!token) {
+        logger.error('[CreateShop] Missing auth token!', { userId: ctx.from.id });
+        await cleanReply(ctx, '❌ Ошибка авторизации. Попробуйте снова.', cancelButton);
+        return ctx.scene.leave();
+      }
+
+      try {
+        // Import subscription API
+        const { subscriptionApi } = await import('../utils/api.js');
+
+        // Verify subscription payment status
+        const paymentStatus = await subscriptionApi.getSubscriptionPaymentStatus(
+          subscriptionId,
+          token
+        );
+
+        if (paymentStatus.status !== 'paid') {
+          logger.error('[CreateShop] Subscription not paid yet!', {
+            userId: ctx.from.id,
+            subscriptionId,
+            status: paymentStatus.status
+          });
+
+          const { Markup } = await import('telegraf');
+          await cleanReply(
+            ctx,
+            '❌ Подписка ещё не оплачена. Пожалуйста, завершите оплату сначала.',
+            Markup.inlineKeyboard([
+              [Markup.button.callback('🔙 Назад', 'cancel_scene')]
+            ])
+          );
+          return ctx.scene.leave();
+        }
+
+        logger.info('[CreateShop] Payment verified successfully', {
+          userId: ctx.from.id,
+          subscriptionId,
+          tier
+        });
+
+      } catch (verifyError) {
+        logger.error('[CreateShop] Failed to verify payment status:', verifyError);
+
+        const { Markup } = await import('telegraf');
+        await cleanReply(
+          ctx,
+          '❌ Не удалось проверить статус оплаты. Попробуйте позже.',
+          Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Назад', 'cancel_scene')]
+          ])
+        );
+        return ctx.scene.leave();
+      }
+    } else if (promoCode) {
+      // PROMO CODE FLOW - no payment verification needed
+      logger.info('[CreateShop] Entering with promo code (no payment required)', {
+        userId: ctx.from.id,
+        tier
+      });
     }
 
     logger.info('shop_create_step:name', {
       userId: ctx.from.id,
       tier: ctx.wizard.state.tier,
-      hasPromo: !!ctx.wizard.state.promoCode
+      hasPromo: !!ctx.wizard.state.promoCode,
+      hasPaidSubscription: !!ctx.wizard.state.paidSubscription
     });
 
-    const message = `${sellerMessages.createShopNamePrompt}\n${sellerMessages.createShopNameHint}`;
+    const message = ctx.wizard.state.paidSubscription
+      ? `✅ Оплата подтверждена! Теперь создайте свой магазин.\n\n${sellerMessages.createShopNamePrompt}\n${sellerMessages.createShopNameHint}`
+      : `${sellerMessages.createShopNamePrompt}\n${sellerMessages.createShopNameHint}`;
 
     await cleanReply(ctx, message, cancelButton);
 
@@ -91,11 +168,12 @@ const handleShopNameAndCreate = async (ctx) => {
 const createShop = async (ctx, shopName) => {
   let loadingMsg = null;
   try {
-    // Get tier and promo from wizard state (set from chooseTier scene)
+    // Get tier, promo, and subscriptionId from wizard state
     const tier = ctx.wizard.state.tier;
     const promoCode = ctx.wizard.state.promoCode || '';
+    const subscriptionId = ctx.wizard.state.subscriptionId || null;
 
-    // Validate tier is present (must be set by chooseTier scene)
+    // Validate tier is present (must be set by chooseTier/paySubscription scene)
     if (!tier) {
       logger.error('Missing tier when creating shop', {
         userId: ctx.from.id,
@@ -108,7 +186,8 @@ const createShop = async (ctx, shopName) => {
       userId: ctx.from.id,
       shopName,
       tier,
-      promoProvided: Boolean(promoCode)
+      promoProvided: Boolean(promoCode),
+      subscriptionId: subscriptionId
     });
 
     if (!ctx.session.token) {
@@ -133,6 +212,12 @@ const createShop = async (ctx, shopName) => {
       tier: tier
     };
 
+    // Add subscriptionId if present (paid subscription flow)
+    if (subscriptionId) {
+      payload.subscriptionId = subscriptionId;
+    }
+
+    // Add promo code if present (promo code flow)
     if (promoCode) {
       payload.promoCode = promoCode;
     }
@@ -202,21 +287,44 @@ const createShop = async (ctx, shopName) => {
 
     // Parse backend error message
     const errorMsg = error.response?.data?.error || error.message || '';
+    const errorCode = error.response?.data?.code;
 
-    // Handle "Shop name already taken" error
-    if (errorMsg.toLowerCase().includes('already taken') ||
-        errorMsg.toLowerCase().includes('уже занято') ||
-        errorMsg.toLowerCase().includes('already exists')) {
+    // Handle specific backend error codes
+    let userMessage;
 
-      await cleanReply(ctx, sellerMessages.createShopNameTaken);
+    switch (errorCode) {
+      case 'SUBSCRIPTION_NOT_PAID':
+        userMessage = '❌ Подписка ещё не оплачена. Завершите оплату сначала.';
+        break;
+      case 'SUBSCRIPTION_ALREADY_USED':
+        userMessage = '❌ Эта подписка уже привязана к другому магазину.';
+        break;
+      case 'SUBSCRIPTION_NOT_FOUND':
+        userMessage = '❌ Подписка не найдена. Создайте новую подписку.';
+        break;
+      case 'SHOP_EXISTS':
+        userMessage = '❌ У вас уже есть магазин.';
+        break;
+      case 'SHOP_NAME_TAKEN':
+        userMessage = '❌ Это название уже занято. Выберите другое.';
+        // Don't leave scene - allow user to try again
+        await cleanReply(ctx, userMessage, cancelButton);
+        return;
+      default:
+        // Handle "Shop name already taken" by error message text (fallback)
+        if (errorMsg.toLowerCase().includes('already taken') ||
+            errorMsg.toLowerCase().includes('уже занято') ||
+            errorMsg.toLowerCase().includes('already exists')) {
+          await cleanReply(ctx, sellerMessages.createShopNameTaken, cancelButton);
+          return;
+        }
 
-      // Don't leave scene - allow user to try again
-      return;
+        userMessage = `❌ ${errorMsg || 'Не удалось создать магазин'}`;
     }
 
     // Generic error - leave scene
     await smartMessage.send(ctx, {
-      text: sellerMessages.createShopError,
+      text: userMessage,
       keyboard: successButtons
     });
 

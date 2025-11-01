@@ -219,7 +219,7 @@
 
 #### ❌ invoices table - **MISSING**
 - **Referenced in:** backend/src/models/db.js (invoiceQueries)
-- **Usage:** Tatum address-per-payment system
+- **Usage:** HD wallet address-per-payment system (BIP44 derivation)
 - **Queries:**
   - invoiceQueries.create()
   - invoiceQueries.findByAddress()
@@ -232,12 +232,12 @@
   CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    chain VARCHAR(20) NOT NULL, -- 'BTC', 'ETH', 'USDT', 'TON'
+    chain VARCHAR(20) NOT NULL, -- 'BTC', 'ETH', 'USDT', 'LTC'
     address VARCHAR(255) UNIQUE NOT NULL,
     address_index INT NOT NULL,
     expected_amount DECIMAL(18, 8) NOT NULL,
     currency VARCHAR(10) NOT NULL,
-    tatum_subscription_id VARCHAR(255),
+    webhook_subscription_id VARCHAR(255),
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -859,7 +859,7 @@ DROP TABLE IF EXISTS shop_workers CASCADE;
 ### ISSUE-DB-2: Missing invoices Table
 - **Severity:** CRITICAL
 - **Component:** backend/src/models/db.js (invoiceQueries)
-- **Description:** Payment system expects invoices table for Tatum address-per-payment
+- **Description:** Payment system expects invoices table for HD wallet address-per-payment (BIP44 derivation)
 - **Impact:** All order payment flows crash - ENTIRE PAYMENT SYSTEM BROKEN
 - **Affected Endpoints:**
   - POST /api/orders (create order → generate invoice)
@@ -1100,7 +1100,7 @@ COMMIT;
 ```sql
 -- ============================================
 -- Migration: 003_add_invoices
--- Description: Add invoices table for Tatum address-per-payment system
+-- Description: Add invoices table for HD wallet address-per-payment system (BIP44 derivation)
 -- Author: Database Designer
 -- Date: 2025-10-25
 -- Dependencies: 002_add_shop_workers
@@ -1112,24 +1112,24 @@ BEGIN;
 CREATE TABLE invoices (
   id SERIAL PRIMARY KEY,
   order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  chain VARCHAR(20) NOT NULL CHECK (chain IN ('BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'LTC', 'TON')),
+  chain VARCHAR(20) NOT NULL CHECK (chain IN ('BTC', 'ETH', 'USDT_ERC20', 'USDT_TRC20', 'LTC')),
   address VARCHAR(255) UNIQUE NOT NULL,
   address_index INT NOT NULL,
   expected_amount DECIMAL(18, 8) NOT NULL CHECK (expected_amount > 0),
   currency VARCHAR(10) NOT NULL,
-  tatum_subscription_id VARCHAR(255),
+  webhook_subscription_id VARCHAR(255),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-COMMENT ON TABLE invoices IS 'Payment invoices with unique addresses generated via Tatum';
-COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC, TON';
+COMMENT ON TABLE invoices IS 'Payment invoices with unique addresses generated via HD wallet (BIP44 derivation)';
+COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC';
 COMMENT ON COLUMN invoices.address IS 'Unique payment address generated from HD wallet';
 COMMENT ON COLUMN invoices.address_index IS 'Derivation index for HD wallet (m/44''/0''/0''/0/{index})';
 COMMENT ON COLUMN invoices.expected_amount IS 'Expected payment amount in crypto units';
-COMMENT ON COLUMN invoices.tatum_subscription_id IS 'Tatum webhook subscription ID for monitoring';
+COMMENT ON COLUMN invoices.webhook_subscription_id IS 'Webhook subscription ID for payment monitoring (BlockCypher for BTC/LTC)';
 COMMENT ON COLUMN invoices.expires_at IS 'Invoice expiration time (typically 1 hour)';
 
 -- Indexes

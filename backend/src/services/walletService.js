@@ -1,5 +1,5 @@
 import * as bitcoin from 'bitcoinjs-lib';
-import BIP32Factory from 'bip32';
+import { BIP32Factory } from 'bip32';
 import * as ecc from 'tiny-secp256k1';
 import { ethers } from 'ethers';
 import TronWeb from 'tronweb';
@@ -121,13 +121,22 @@ export async function generateLtcAddress(xpub, index) {
       wif: 0xb0
     };
 
-    // Parse xpub
-    const node = bip32.fromBase58(xpub, litecoinNetwork);
+    // Parse xpub - support both Bitcoin xpub and Litecoin Ltub
+    let node;
+    if (xpub.startsWith('xpub') || xpub.startsWith('tpub')) {
+      // Bitcoin xpub provided - parse with Bitcoin network first, then use pubkey for Litecoin
+      node = bip32.fromBase58(xpub, bitcoin.networks.bitcoin);
+    } else if (xpub.startsWith('Ltub')) {
+      // Native Litecoin xpub
+      node = bip32.fromBase58(xpub, litecoinNetwork);
+    } else {
+      throw new Error(`Unsupported xpub format: ${xpub.substring(0, 4)}`);
+    }
 
     // Derive child address: m/0/{index} (external chain)
     const child = node.derive(0).derive(index);
 
-    // Generate P2PKH address
+    // Generate P2PKH address with Litecoin network parameters
     const { address } = bitcoin.payments.p2pkh({
       pubkey: child.publicKey,
       network: litecoinNetwork
@@ -174,11 +183,18 @@ export async function generateEthAddress(xpub, index) {
     const child = node.derive(0).derive(index);
 
     // Create Ethereum address from public key
-    // Remove first byte (0x04) from uncompressed public key
+    // BIP32 returns compressed public key (33 bytes), need to pass as hex string with '0x' prefix for ethers
     const publicKey = child.publicKey;
 
-    // Compute Ethereum address using ethers
-    const address = ethers.computeAddress(publicKey);
+    if (!publicKey) {
+      throw new Error('Failed to derive public key from xpub');
+    }
+
+    // Convert Buffer to hex string with '0x' prefix for ethers
+    const publicKeyHex = '0x' + publicKey.toString('hex');
+
+    // Compute Ethereum address using ethers (accepts compressed or uncompressed)
+    const address = ethers.computeAddress(publicKeyHex);
 
     const derivationPath = `m/44'/60'/0'/0/${index}`;
 
@@ -220,28 +236,31 @@ export async function generateTronAddress(xpub, index) {
     // Derive child: m/0/{index} (external chain)
     const child = node.derive(0).derive(index);
 
-    // Get uncompressed public key (65 bytes: 0x04 + 64 bytes)
-    const publicKey = child.publicKey;
+    // Get compressed public key from BIP32
+    const compressedPublicKey = child.publicKey;
 
-    // Initialize TronWeb (no need for full provider for address derivation)
+    // Initialize TronWeb
     const tronWeb = new TronWeb({
       fullHost: 'https://api.trongrid.io'
     });
 
-    // Convert public key to Tron address
-    // TronWeb expects hex public key without 0x04 prefix
-    const publicKeyHex = publicKey.toString('hex').substring(2); // Remove 04 prefix
-    const address = tronWeb.address.fromHex(
-      tronWeb.address.toHex(
-        tronWeb.utils.address.fromPrivateKey(
-          '0x' + publicKeyHex.padStart(64, '0')
-        )
-      )
-    );
+    // Convert compressed public key to uncompressed format
+    // BIP32 returns compressed (33 bytes), but we need uncompressed (65 bytes) for Tron
+    // Use ethers to decompress the public key
+    const uncompressedPublicKey = ethers.SigningKey.computePublicKey(compressedPublicKey, false);
 
-    // Note: This is a simplified approach
-    // For production, use proper secp256k1 -> keccak256 -> base58check conversion
-    // TronWeb library handles this internally
+    // Remove '0x04' prefix to get raw 64 bytes
+    const publicKeyHex = uncompressedPublicKey.substring(4);
+
+    // Compute Keccak256 hash of public key (TronWeb uses ethers internally)
+    const hash = ethers.keccak256('0x' + publicKeyHex);
+
+    // Take last 20 bytes (40 hex chars) of the hash
+    const addressBytes = hash.substring(hash.length - 40);
+
+    // Add Tron mainnet prefix (0x41) and convert to Base58Check
+    const hexAddress = '41' + addressBytes;
+    const address = tronWeb.address.fromHex(hexAddress);
 
     const derivationPath = `m/44'/195'/0'/0/${index}`;
 

@@ -459,53 +459,7 @@ async function activatePromoSubscription(shopId, userId, promoCode) {
   }
 }
 
-async function grantComplimentarySubscription(shopId, tier = 'pro') {
-  const client = await pool.connect();
 
-  try {
-    await client.query('BEGIN');
-
-    const now = new Date();
-    const periodEnd = addDays(now, SUBSCRIPTION_PERIOD_DAYS);
-    const complimentaryTx = `complimentary-${tier}-${shopId}-${Date.now()}`;
-
-    await client.query(
-      `INSERT INTO shop_subscriptions
-         (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
-       VALUES ($1, $2, 0, $3, 'USDT', $4, $5, 'active', NOW())`,
-      [shopId, tier, complimentaryTx, now, periodEnd]
-    );
-
-    const updatedShop = await client.query(
-      `UPDATE shops
-         SET tier = $2,
-             subscription_status = 'active',
-             next_payment_due = $3,
-             grace_period_until = NULL,
-             registration_paid = true,
-             is_active = true,
-             updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [shopId, tier, periodEnd]
-    );
-
-    await client.query('COMMIT');
-
-    logger.info(`[Subscription] Complimentary ${tier.toUpperCase()} subscription granted for shop ${shopId}`);
-
-    return updatedShop.rows[0];
-  } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (rollbackError) {
-      logger.error('[Subscription] Complimentary rollback error:', rollbackError);
-    }
-    throw error;
-  } finally {
-    client.release();
-  }
-}
 
 /**
  * Send expiration reminder notifications via Telegram
@@ -746,9 +700,16 @@ async function getUserSubscriptions(userId) {
          s.id as shop_id,
          s.name as shop_name,
          s.tier,
+         s.logo as source_shop_logo,
          u.username as seller_username,
          u.first_name as seller_first_name,
-         sub.created_at as subscribed_at
+         sub.created_at as subscribed_at,
+         (
+           SELECT COUNT(*)
+           FROM products p
+           WHERE p.shop_id = s.id
+             AND p.is_active = true
+         ) as source_products_count
        FROM subscriptions sub
        JOIN shops s ON sub.shop_id = s.id
        JOIN users u ON s.owner_id = u.id
@@ -776,7 +737,6 @@ export {
   calculateUpgradeAmount,
   getUserSubscriptions,
   activatePromoSubscription,
-  grantComplimentarySubscription,
   SUBSCRIPTION_PRICES,
   GRACE_PERIOD_DAYS
 };

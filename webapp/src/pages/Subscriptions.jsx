@@ -29,10 +29,11 @@ export default function Subscriptions() {
       } else {
         const normalized = (data?.data || []).map((item) => ({
           id: item.id,
-          sourceShopId: item.source_shop_id,
-          sourceShopName: item.source_shop_name,
-          subscribedAt: item.created_at,
+          sourceShopId: item.shop_id,
+          sourceShopName: item.shop_name,
+          subscribedAt: item.subscribed_at,
           sourceShopLogo: item.source_shop_logo,
+          sourceProductsCount: item.source_products_count,
         }));
 
         setSubscriptions(normalized);
@@ -70,10 +71,10 @@ export default function Subscriptions() {
 
   return (
     <div
+      className="h-screen overflow-y-auto"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-        paddingBottom: 'var(--tabbar-total)',
-        overflowY: subscriptions?.length > 5 ? 'auto' : 'visible'
+        paddingBottom: 'calc(var(--tabbar-total) + 20px)'
       }}
     >
       <Header title={t('subscriptions.title')} />
@@ -121,9 +122,16 @@ export default function Subscriptions() {
                     <h3 className="text-lg font-bold text-white mb-1">
                       {subscription.sourceShopName}
                     </h3>
-                    <p className="text-sm text-gray-400">
-                      {new Date(subscription.subscribedAt).toLocaleDateString('ru-RU')}
-                    </p>
+                    <div className="flex items-center gap-3 text-sm">
+                      <p className="text-gray-400">
+                        {new Date(subscription.subscribedAt).toLocaleDateString('ru-RU')}
+                      </p>
+                      <div className="text-gray-400">
+                        <span className="font-medium text-white">
+                          {subscription.sourceProductsCount || 0}
+                        </span> товаров
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <motion.button

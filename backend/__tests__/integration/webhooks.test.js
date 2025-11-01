@@ -58,7 +58,7 @@ describe('Webhooks - Integration Tests', () => {
         expected_amount DECIMAL(18, 8) NOT NULL,
         currency VARCHAR(10) NOT NULL,
         status VARCHAR(20) DEFAULT 'pending',
-        tatum_subscription_id VARCHAR(255),
+        webhook_subscription_id VARCHAR(255),
         expires_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -301,7 +301,7 @@ describe('Webhooks - Integration Tests', () => {
 
         // Verify both webhooks recorded as processed
         const processed = await pool.query(
-          'SELECT * FROM processed_webhooks WHERE tx_hash = $1 ORDER BY created_at',
+          'SELECT * FROM processed_webhooks WHERE tx_hash = $1 ORDER BY processed_at',
           [txHash]
         );
         expect(processed.rows).toHaveLength(2);
