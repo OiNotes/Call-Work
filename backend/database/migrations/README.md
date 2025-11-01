@@ -13,6 +13,7 @@ This directory contains database migration scripts for the Status Stock platform
 | 005 | 005_prevent_circular_follows.sql | Circular follow prevention trigger | 2025-10-25 | Pending |
 | 014 | 014_add_pending_status_to_shop_subscriptions.sql | Add 'pending' status for subscription payments | 2025-11-01 | Applied |
 | 015 | 015_add_pending_to_shops_status.sql | Add 'pending' to shops.subscription_status constraint | 2025-11-01 | Applied |
+| 018 | 018_add_ltc_to_payments_currency.sql | Add LTC to payments + shop_subscriptions currency constraints | 2025-11-01 | Pending |
 
 ## How to Apply Migrations
 

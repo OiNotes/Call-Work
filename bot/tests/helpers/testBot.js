@@ -247,6 +247,50 @@ export function createTestBot(options = {}) {
     }
   };
 
+  /**
+   * Helper: войти в scene программно с параметрами
+   *
+   * @param {string} sceneName - Имя scene (например, 'createShop')
+   * @param {object} sceneState - State для передачи в scene (например, { tier: 'basic', promoCode: 'TEST' })
+   *
+   * @example
+   * await testBot.enterScene('createShop', { tier: 'basic', promoCode: 'TEST' });
+   */
+  const enterScene = async (sceneName, sceneState = {}) => {
+    // Create a fake callback update that will trigger scene entry
+    const fakeUpdate = {
+      update_id: Math.floor(Math.random() * 100000),
+      callback_query: {
+        id: String(Math.floor(Math.random() * 100000)),
+        from: {
+          id: DEFAULT_CHAT_ID,
+          first_name: 'Test',
+          username: 'testuser'
+        },
+        message: {
+          message_id: Math.floor(Math.random() * 10000),
+          chat: { id: DEFAULT_CHAT_ID, type: 'private' },
+          date: Math.floor(Date.now() / 1000),
+          text: 'Previous message'
+        },
+        chat_instance: String(Math.floor(Math.random() * 100000)),
+        data: '__enter_scene__' // Fake callback data
+      }
+    };
+
+    // Process the update through bot middleware to initialize context
+    await bot.handleUpdate(fakeUpdate);
+
+    // Now lastContext should be available with scene manager
+    if (lastContext && lastContext.scene) {
+      await lastContext.scene.enter(sceneName, sceneState);
+      // Give time for async operations
+      await new Promise(resolve => setImmediate(resolve));
+    } else {
+      throw new Error('Failed to enter scene: context.scene is not available');
+    }
+  };
+
   return {
     bot,
     captor,
@@ -260,6 +304,7 @@ export function createTestBot(options = {}) {
     getReplies,
     getSession,
     setSessionState,  // ← NEW METHOD
+    enterScene,  // ← NEW METHOD for entering scenes programmatically
     // Raw access
     telegram: bot.telegram,
     calls: captor.calls

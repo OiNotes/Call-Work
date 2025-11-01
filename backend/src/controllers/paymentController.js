@@ -1,4 +1,4 @@
-import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries, invoiceQueries } from '../models/db.js';
+import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import cryptoService from '../services/crypto.js';
 import telegramService from '../services/telegram.js';
@@ -56,20 +56,38 @@ export const paymentController = {
         });
       }
 
-      // Get invoice to retrieve payment address
-      const invoice = await invoiceQueries.findByOrderId(orderId);
-
-      if (!invoice) {
+      // Get product and shop to retrieve seller's wallet address
+      const product = await productQueries.findById(order.product_id);
+      if (!product) {
         return res.status(404).json({
           success: false,
-          error: 'Invoice not found for this order'
+          error: 'Product not found'
         });
       }
 
-      // Verify payment with blockchain using invoice address
+      const shop = await shopQueries.findById(product.shop_id);
+      if (!shop) {
+        return res.status(404).json({
+          success: false,
+          error: 'Shop not found'
+        });
+      }
+
+      // Get seller's wallet address for the currency
+      const walletField = `wallet_${currency.toLowerCase()}`;
+      const sellerAddress = shop[walletField];
+
+      if (!sellerAddress) {
+        return res.status(400).json({
+          success: false,
+          error: `Seller has not configured ${currency} wallet`
+        });
+      }
+
+      // Verify payment with blockchain using seller's address
       const verification = await cryptoService.verifyTransaction(
         txHash,
-        invoice.address,
+        sellerAddress,
         order.total_price,
         currency
       );
@@ -294,18 +312,26 @@ export const paymentController = {
       // Get order to check access
       const order = await orderQueries.findById(payment.order_id);
 
+      // Get product and shop (needed for both access check and wallet address)
+      const product = await productQueries.findById(order.product_id);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      const shop = await shopQueries.findById(product.shop_id);
+      if (!shop) {
+        return res.status(404).json({
+          success: false,
+          error: 'Shop not found'
+        });
+      }
+
       // Check if user has access (buyer or seller)
       const isBuyer = order.buyer_id === req.user.id;
-
-      // Get seller ID through product → shop → owner
-      let isSeller = false;
-      if (!isBuyer) {
-        const product = await productQueries.findById(order.product_id);
-        if (product) {
-          const shop = await shopQueries.findById(product.shop_id);
-          isSeller = shop && shop.owner_id === req.user.id;
-        }
-      }
+      const isSeller = shop.owner_id === req.user.id;
 
       if (!isBuyer && !isSeller) {
         return res.status(403).json({
@@ -316,19 +342,20 @@ export const paymentController = {
 
       // If payment is still pending, check blockchain again
       if (payment.status === 'pending') {
-        // Get invoice to retrieve payment address
-        const invoice = await invoiceQueries.findByOrderId(order.id);
+        // Get seller's wallet address for the currency
+        const walletField = `wallet_${payment.currency.toLowerCase()}`;
+        const sellerAddress = shop[walletField];
 
-        if (!invoice) {
-          return res.status(404).json({
+        if (!sellerAddress) {
+          return res.status(400).json({
             success: false,
-            error: 'Invoice not found for this order'
+            error: `Seller has not configured ${payment.currency} wallet`
           });
         }
 
         const verification = await cryptoService.verifyTransaction(
           payment.tx_hash,
-          invoice.address,
+          sellerAddress,
           order.total_price,
           payment.currency
         );

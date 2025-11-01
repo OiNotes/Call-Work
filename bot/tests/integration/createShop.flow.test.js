@@ -31,20 +31,12 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
   });
 
   it('создание магазина: короткое имя → ошибка, валидное имя → успех', async () => {
-    // Step 1: Enter chooseTier scene (via seller:create_shop callback)
-    await testBot.handleUpdate(callbackUpdate('seller:create_shop'));
-
-    // Проверяем что answerCbQuery был вызван
-    expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
-
-    // Проверяем что показали выбор тарифа
-    const text0 = testBot.getLastReplyText();
-    expect(text0).toContain('Выберите тариф');
-
-    testBot.captor.reset();
-
-    // Step 2: Select BASIC tier → transition to createShop
-    await testBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Step 1: Enter createShop scene directly with promo code (bypasses payment)
+    // This simulates the flow: chooseTier → promo code → createShop
+    await testBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
 
     // Проверяем что показали приглашение ввести имя магазина
     const text1 = testBot.getLastReplyText();
@@ -52,7 +44,7 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
 
     testBot.captor.reset();
 
-    // Step 3: Enter short name (less than 3 chars) → validation error
+    // Step 2: Enter short name (less than 3 chars) → validation error
     await testBot.handleUpdate(textUpdate('ab'));
 
     const text2 = testBot.getLastReplyText();
@@ -64,7 +56,7 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
 
     testBot.captor.reset();
 
-    // Step 4: Enter valid name → success
+    // Step 3: Enter valid name → success
     const shopName = 'MyTestShop';
     mock.onPost('/shops').reply(201, {
       data: {
@@ -99,12 +91,11 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
   });
 
   it('имя слишком длинное (>100 символов) → ошибка', async () => {
-    // Enter chooseTier scene
-    await testBot.handleUpdate(callbackUpdate('seller:create_shop'));
-    testBot.captor.reset();
-
-    // Select tier
-    await testBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Enter createShop scene directly with promo code
+    await testBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
     testBot.captor.reset();
 
     // Enter too long name (101 characters)
@@ -120,12 +111,11 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
   });
 
   it('имя с недопустимыми символами (пробелы, спецсимволы) → ошибка', async () => {
-    // Enter chooseTier scene
-    await testBot.handleUpdate(callbackUpdate('seller:create_shop'));
-    testBot.captor.reset();
-
-    // Select tier
-    await testBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Enter createShop scene directly with promo code
+    await testBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
     testBot.captor.reset();
 
     // Test with spaces
@@ -146,12 +136,11 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
   });
 
   it('имя уже занято (backend error) → показать ошибку и остаться в scene', async () => {
-    // Enter chooseTier scene
-    await testBot.handleUpdate(callbackUpdate('seller:create_shop'));
-    testBot.captor.reset();
-
-    // Select tier
-    await testBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Enter createShop scene directly with promo code
+    await testBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
     testBot.captor.reset();
 
     // Mock API to return "already taken" error
@@ -209,12 +198,11 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
       }
     });
 
-    // Enter chooseTier scene
-    await noTokenBot.handleUpdate(callbackUpdate('seller:create_shop'));
-    noTokenBot.captor.reset();
-
-    // Select tier
-    await noTokenBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Enter createShop scene directly with promo code
+    await noTokenBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
     noTokenBot.captor.reset();
 
     // Try to create shop
@@ -235,12 +223,11 @@ describe('Create Shop Flow - Wizard Validation (P0)', () => {
   });
 
   it('повторное подтверждение → НЕ дублирует POST запрос', async () => {
-    // Enter chooseTier scene
-    await testBot.handleUpdate(callbackUpdate('seller:create_shop'));
-    testBot.captor.reset();
-
-    // Select tier
-    await testBot.handleUpdate(callbackUpdate('tier_select:basic'));
+    // Enter createShop scene directly with promo code
+    await testBot.enterScene('createShop', {
+      tier: 'basic',
+      promoCode: 'TEST_PROMO'
+    });
     testBot.captor.reset();
 
     // Create shop

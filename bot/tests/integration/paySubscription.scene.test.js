@@ -19,17 +19,29 @@ describe('Pay Subscription Scene (P1)', () => {
   let testBot;
   let mock;
 
-  const shopId = 100;
   const userId = 1;
   const token = 'test_jwt_token';
+  const subscriptionId = 123; // Mock pending subscription ID
+
+  // Helper: Setup invoice generation mock
+  const mockInvoiceGeneration = (chain = 'BTC') => {
+    mock.onPost(`/subscriptions/${subscriptionId}/payment/generate`).reply(200, {
+      data: {
+        invoiceId: 456,
+        address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+        expectedAmount: 25.00,
+        cryptoAmount: 0.001,
+        expiresAt: '2025-11-02T00:00:00Z'
+      }
+    });
+  };
 
   beforeEach(() => {
     testBot = createTestBot({
       skipAuth: true,
       mockSession: {
         role: 'seller',
-        shopId,
-        shopName: 'Test Shop',
+        // NOTE: No shopId - this is FIRST SUBSCRIPTION MODE (creating first shop)
         userId,
         token
       }
@@ -173,36 +185,34 @@ describe('Pay Subscription Scene (P1)', () => {
 
   describe('All Cryptos', () => {
     it('должен показать USDT (TRC-20) адрес', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Enter scene in FIRST SUBSCRIPTION MODE with tier + subscriptionId
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
+      // Scene should skip tier selection and show crypto buttons directly
+      const text = testBot.getLastReplyText();
+      expect(text).toContain('BASIC');
 
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:USDT'));
 
-      const text = testBot.getLastReplyText();
-      expect(text).toContain('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'); // USDT TRC-20 address
-      expect(text).toContain('USDT');
+      const text2 = testBot.getLastReplyText();
+      expect(text2).toContain('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'); // USDT TRC-20 address
+      expect(text2).toContain('USDT');
     });
 
     it('должен показать LTC адрес', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Enter scene in FIRST SUBSCRIPTION MODE with tier + subscriptionId
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:LTC'));
@@ -215,21 +225,26 @@ describe('Pay Subscription Scene (P1)', () => {
 
   describe('Validation', () => {
     it('tx_hash < 10 символов → error', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
+      // Reset captor after scene entry (clear entry messages)
       testBot.captor.reset();
 
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
-      testBot.captor.reset();
-
+      // Select crypto
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
+
+      // Reset captor after crypto selection (clear address messages)
       testBot.captor.reset();
 
+      // Send short TX hash
       await testBot.handleUpdate(textUpdate('short'));
 
       const errorText = testBot.getLastReplyText();
@@ -237,16 +252,16 @@ describe('Pay Subscription Scene (P1)', () => {
     });
 
     it('empty tx_hash → prompt to send hash', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -258,33 +273,16 @@ describe('Pay Subscription Scene (P1)', () => {
       expect(promptText).toContain('TX hash');
     });
 
-    it('invalid tier → error', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
-      });
-
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:invalid'));
-
-      const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('Неверный тариф'))).toBe(true);
-    });
+    // NOTE: "invalid tier" test removed - tier is validated in chooseTier scene before entering pay_subscription
 
     it('invalid crypto → error', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:INVALID'));
@@ -296,16 +294,16 @@ describe('Pay Subscription Scene (P1)', () => {
 
   describe('Error Handling', () => {
     it('DUPLICATE_TX_HASH → "уже использована"', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -324,17 +322,16 @@ describe('Pay Subscription Scene (P1)', () => {
     });
 
     it('PAYMENT_VERIFICATION_FAILED → "не удалось подтвердить"', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -353,17 +350,16 @@ describe('Pay Subscription Scene (P1)', () => {
     });
 
     it('generic error → "не удалось проверить"', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -383,61 +379,21 @@ describe('Pay Subscription Scene (P1)', () => {
   });
 
   describe('Navigation', () => {
-    it('cancel на tier selection → exit scene', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
-      });
+    // NOTE: "cancel на tier selection" test removed - tier selection happens in chooseTier scene
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      // Cancel
-      await testBot.handleUpdate(callbackUpdate('seller:menu'));
-
-      const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('отменена'))).toBe(true);
-    });
-
-    it('back на crypto selection → return to tier selection', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
-      });
-
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
-      testBot.captor.reset();
-
-      // Back button - wizard.back() returns to previous step but doesn't send message
-      await testBot.handleUpdate(callbackUpdate('subscription:back'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      // Check answerCbQuery was called
-      expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
-
-      // Now send another tier selection to verify we're at step 1
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:pro'));
-      const text = testBot.getLastReplyText();
-      expect(text).toContain('PRO');
-    });
+    // NOTE: "back на crypto selection" test removed - no tier selection step in FIRST SUBSCRIPTION MODE
 
     it('cancel на payment address → exit scene', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -453,17 +409,16 @@ describe('Pay Subscription Scene (P1)', () => {
 
   describe('Retry Flow', () => {
     it('retry после ошибки → show payment details again', async () => {
-      mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
-        data: { subscription: null }
+      // Mock invoice generation API
+      mockInvoiceGeneration();
+
+      // Enter scene in FIRST SUBSCRIPTION MODE
+      await testBot.enterScene('pay_subscription', {
+        tier: 'basic',
+        subscriptionId: subscriptionId,
+        createShopAfter: true
       });
 
-      await testBot.handleUpdate(callbackUpdate('subscription:pay'));
-      await new Promise(resolve => setImmediate(resolve));
-      await new Promise(resolve => setImmediate(resolve));
-
-      testBot.captor.reset();
-
-      await testBot.handleUpdate(callbackUpdate('subscription:tier:basic'));
       testBot.captor.reset();
 
       await testBot.handleUpdate(callbackUpdate('subscription:crypto:BTC'));
@@ -496,18 +451,22 @@ describe('Pay Subscription Scene (P1)', () => {
     });
   });
 
-  describe('Auth & Shop Requirements', () => {
-    it('no shop → error', async () => {
+  describe('Auth & Shop Requirements (RENEWAL MODE)', () => {
+    // These tests check RENEWAL MODE - when existing shop owner renews subscription
+    // In this mode, shopId is required in session
+
+    it('RENEWAL MODE: no shop → error', async () => {
       const noShopBot = createTestBot({
         skipAuth: true,
         mockSession: {
           role: 'seller',
-          shopId: null, // No shop
+          shopId: null, // No shop - triggers RENEWAL MODE error
           userId,
           token
         }
       });
 
+      // Enter without tier (triggers RENEWAL MODE)
       await noShopBot.handleUpdate(callbackUpdate('subscription:pay'));
 
       const text = noShopBot.getLastReplyText();
@@ -516,17 +475,18 @@ describe('Pay Subscription Scene (P1)', () => {
       noShopBot.reset();
     });
 
-    it('no token → error', async () => {
+    it('RENEWAL MODE: no token → error', async () => {
       const noTokenBot = createTestBot({
         skipAuth: true,
         mockSession: {
           role: 'seller',
-          shopId,
+          shopId: 100, // Has shop
           userId,
           token: null // No token
         }
       });
 
+      // Enter without tier (triggers RENEWAL MODE)
       await noTokenBot.handleUpdate(callbackUpdate('subscription:pay'));
 
       const text = noTokenBot.getLastReplyText();

@@ -66,6 +66,18 @@ router.get('/active/count', verifyToken, optionalTelegramAuth, orderController.g
 router.get('/analytics', verifyToken, optionalTelegramAuth, orderController.getAnalytics);
 
 /**
+ * @route   POST /api/orders/:id/invoice
+ * @desc    Generate invoice for order payment
+ * @access  Private (WebApp)
+ */
+router.post(
+  '/:id/invoice',
+  verifyToken,
+  optionalTelegramAuth,
+  orderController.generateInvoice
+);
+
+/**
  * @route   GET /api/orders/:id
  * @desc    Get order by ID
  * @access  Private (WebApp)

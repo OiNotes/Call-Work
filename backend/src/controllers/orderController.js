@@ -534,6 +534,108 @@ export const orderController = {
   },
 
   /**
+   * Generate invoice for order (returns seller's wallet address)
+   */
+  generateInvoice: async (req, res) => {
+    try {
+      const { id: orderId } = req.params;
+      const { currency } = req.body;
+
+      // Validate currency
+      const supportedCurrencies = ['BTC', 'ETH', 'USDT', 'LTC'];
+      if (!currency || !supportedCurrencies.includes(currency.toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid currency. Supported: ${supportedCurrencies.join(', ')}`
+        });
+      }
+
+      // Get order
+      const order = await orderQueries.findById(orderId);
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          error: 'Order not found'
+        });
+      }
+
+      // Check if user owns this order
+      if (order.buyer_id !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied'
+        });
+      }
+
+      // Get product to access shop_id
+      const product = await productQueries.findById(order.product_id);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      // Get shop to access seller's wallets
+      const shop = await shopQueries.findById(product.shop_id);
+      if (!shop) {
+        return res.status(404).json({
+          success: false,
+          error: 'Shop not found'
+        });
+      }
+
+      // Get seller's wallet for selected currency
+      const walletField = `wallet_${currency.toLowerCase()}`;
+      const address = shop[walletField];
+
+      if (!address) {
+        return res.status(400).json({
+          success: false,
+          error: `Seller has not configured ${currency} wallet. Please choose another currency or contact seller.`
+        });
+      }
+
+      // Calculate crypto amount (mock conversion - should use real rates in production)
+      const conversionRates = {
+        BTC: 0.000024,  // ~$42,000 per BTC
+        USDT: 1.0,      // 1:1 with USD
+        LTC: 0.011,     // ~$90 per LTC
+        ETH: 0.00042    // ~$2,400 per ETH
+      };
+
+      const cryptoAmount = order.total_price * conversionRates[currency];
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          address,
+          cryptoAmount,
+          currency: currency.toUpperCase(),
+          shopName: shop.name
+        }
+      });
+
+    } catch (error) {
+      if (error.code) {
+        const handledError = dbErrorHandler(error);
+        return res.status(handledError.statusCode).json({
+          success: false,
+          error: handledError.message,
+          ...(handledError.details ? { details: handledError.details } : {})
+        });
+      }
+
+      logger.error('Generate invoice error', { error: error.message, stack: error.stack });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate invoice'
+      });
+    }
+  },
+
+  /**
    * Get sales analytics for seller
    */
   getAnalytics: async (req, res) => {

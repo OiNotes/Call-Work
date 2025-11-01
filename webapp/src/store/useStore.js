@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import axios from 'axios';
 import { mockShops, mockProducts, mockSubscriptions, mockUser } from '../utils/mockData';
-import { generateWalletAddress, generateOrderId } from '../utils/paymentUtils';
+import { generateOrderId } from '../utils/paymentUtils';
 
 export const normalizeProduct = (product) => {
   const rawStock = product?.stock_quantity ?? product?.stock ?? 0;
@@ -28,7 +29,9 @@ export const normalizeProduct = (product) => {
   };
 };
 
-export const useStore = create((set, get) => ({
+export const useStore = create(
+  persist(
+    (set, get) => ({
       // User data
       user: mockUser,
       setUser: (user) => set({ user }),
@@ -129,6 +132,12 @@ export const useStore = create((set, get) => ({
       paymentStep: 'idle',
       pendingOrders: [],
       paymentWallet: null,
+      cryptoAmount: 0,
+      invoiceExpiresAt: null,
+      isVerifying: false,
+      verifyError: null,
+      isCreatingOrder: false,
+      isGeneratingInvoice: false,
 
       // Payment Actions
       startCheckout: () => {
@@ -137,53 +146,148 @@ export const useStore = create((set, get) => ({
 
         if (cart.length === 0) return;
 
-        const order = {
-          id: generateOrderId(),
-          items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity
-          })),
-          total,
-          createdAt: new Date().toISOString(),
-          status: 'pending'
-        };
-
         set({
-          currentOrder: order,
           paymentStep: 'method'
         });
       },
 
-      selectCrypto: (crypto) => {
-        const wallet = generateWalletAddress(crypto);
+      createOrder: async () => {
+        const { cart, user } = get();
+
+        if (cart.length === 0) return null;
+
+        set({ isCreatingOrder: true });
+
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+          // For now, support single product checkout
+          const item = cart[0];
+
+          const response = await axios.post(`${API_URL}/orders`, {
+            productId: item.id,
+            quantity: item.quantity,
+            deliveryAddress: null
+          }, {
+            headers: {
+              'Authorization': `Bearer ${user?.token || ''}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const order = response.data.data;
+          set({
+            currentOrder: order,
+            isCreatingOrder: false
+          });
+
+          return order;
+        } catch (error) {
+          console.error('Create order error:', error);
+          set({ isCreatingOrder: false });
+          throw error;
+        }
+      },
+
+      selectCrypto: async (crypto) => {
+        const { currentOrder, user } = get();
 
         set({
           selectedCrypto: crypto,
-          paymentWallet: wallet,
-          paymentStep: 'details'
+          isGeneratingInvoice: true
         });
+
+        try {
+          // Create order if not exists
+          let order = currentOrder;
+          if (!order) {
+            order = await get().createOrder();
+            if (!order) {
+              throw new Error('Failed to create order');
+            }
+          }
+
+          // Generate invoice
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          const response = await axios.post(
+            `${API_URL}/orders/${order.id}/invoice`,
+            { currency: crypto },
+            {
+              headers: {
+                'Authorization': `Bearer ${user?.token || ''}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          const invoice = response.data.data;
+
+          set({
+            paymentWallet: invoice.address,
+            cryptoAmount: invoice.cryptoAmount,
+            invoiceExpiresAt: invoice.expiresAt,
+            paymentStep: 'details',
+            isGeneratingInvoice: false
+          });
+        } catch (error) {
+          console.error('Generate invoice error:', error);
+          set({
+            isGeneratingInvoice: false,
+            verifyError: error.response?.data?.error || 'Ошибка генерации invoice'
+          });
+          throw error;
+        }
       },
 
-      submitPaymentHash: (hash) => {
-        const { currentOrder, selectedCrypto, paymentWallet } = get();
+      submitPaymentHash: async (hash) => {
+        const { currentOrder, selectedCrypto, user } = get();
 
         if (!currentOrder) return;
 
-        const completedOrder = {
-          ...currentOrder,
-          crypto: selectedCrypto,
-          wallet: paymentWallet,
-          txHash: hash,
-          status: 'pending',
-          submittedAt: new Date().toISOString()
-        };
+        set({ isVerifying: true, verifyError: null });
 
-        set({
-          pendingOrders: [...get().pendingOrders, completedOrder],
-          paymentStep: 'success'
-        });
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          const response = await axios.post(
+            `${API_URL}/payments/verify`,
+            {
+              orderId: currentOrder.id,
+              txHash: hash,
+              currency: selectedCrypto
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${user?.token || ''}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (response.data.success) {
+            const completedOrder = {
+              ...currentOrder,
+              crypto: selectedCrypto,
+              txHash: hash,
+              status: 'confirmed',
+              submittedAt: new Date().toISOString()
+            };
+
+            set({
+              pendingOrders: [...get().pendingOrders, completedOrder],
+              paymentStep: 'success',
+              isVerifying: false
+            });
+
+            // Clear cart
+            get().clearCart();
+          }
+        } catch (error) {
+          console.error('Verify payment error:', error);
+          set({
+            isVerifying: false,
+            verifyError: error.response?.data?.error || 'Ошибка проверки платежа'
+          });
+        }
       },
 
       clearCheckout: () => {
@@ -271,4 +375,12 @@ export const useStore = create((set, get) => ({
       // Follow Products
       followProducts: [],
       setFollowProducts: (products) => set({ followProducts: products })
-}));
+    }),
+    {
+      name: 'status-stock-storage',
+      partialize: (state) => ({
+        pendingOrders: state.pendingOrders
+      })
+    }
+  )
+);

@@ -9,7 +9,7 @@ import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS }
 import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentHashModal() {
-  const { paymentStep, submitPaymentHash, setPaymentStep } = useStore();
+  const { paymentStep, submitPaymentHash, setPaymentStep, isVerifying, verifyError } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const [txHash, setTxHash] = useState('');
@@ -47,7 +47,7 @@ export default function PaymentHashModal() {
 
   useBackButton(isOpen ? handleClose : null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
 
     if (!validateTxHash(txHash)) {
@@ -57,13 +57,20 @@ export default function PaymentHashModal() {
     }
 
     triggerHaptic('success');
-    submitPaymentHash(txHash);
-    setTxHash('');
+    await submitPaymentHash(txHash);
+    if (!verifyError) {
+      setTxHash('');
+    }
   };
 
   const handleChange = (e) => {
     setTxHash(e.target.value);
     if (error) setError('');
+  };
+
+  const handleRetry = () => {
+    setTxHash('');
+    setError('');
   };
 
   return (
@@ -127,6 +134,58 @@ export default function PaymentHashModal() {
 
               {/* Content - Scrollable */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* Loading Overlay */}
+                {isVerifying && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 z-10 flex items-center justify-center"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.7)',
+                      backdropFilter: 'blur(4px)'
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                      <p className="text-white font-semibold">Проверяем транзакцию...</p>
+                      <p className="text-gray-400 text-sm">Это может занять несколько секунд</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Error Message */}
+                {verifyError && !isVerifying && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)'
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-red-400 font-semibold text-sm">Ошибка проверки</p>
+                        <p className="text-gray-300 text-sm mt-1">{verifyError}</p>
+                        <motion.button
+                          onClick={handleRetry}
+                          className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                          style={{
+                            background: 'rgba(255, 107, 0, 0.2)',
+                            border: '1px solid rgba(255, 107, 0, 0.3)'
+                          }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Попробовать снова
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
                 {/* Icon - Smaller */}
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}

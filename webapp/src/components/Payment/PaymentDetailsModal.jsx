@@ -19,6 +19,7 @@ export default function PaymentDetailsModal() {
     selectedCrypto,
     paymentWallet,
     currentOrder,
+    cryptoAmount,
     setPaymentStep
   } = useStore();
   const { triggerHaptic } = useTelegram();
@@ -99,8 +100,7 @@ export default function PaymentDetailsModal() {
 
   if (!cryptoInfo || !currentOrder) return null;
 
-  const cryptoAmount = calculateCryptoAmount(currentOrder.total, selectedCrypto);
-  const itemCount = currentOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = currentOrder.quantity || 1;
   const qrSize = ios ? 140 : 160;
 
   return (
@@ -263,7 +263,7 @@ export default function PaymentDetailsModal() {
                     )}
                   </div>
                   <p className="text-gray-500 text-sm mb-1">
-                    ${currentOrder.total.toFixed(2)} USD
+                    ${currentOrder.total_price?.toFixed(2) || '0.00'} USD
                   </p>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"
