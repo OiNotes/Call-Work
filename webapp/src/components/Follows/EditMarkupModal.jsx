@@ -84,12 +84,9 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
               {/* Track Background */}
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 {/* Active Track */}
-                <motion.div
-                  className="h-full bg-gradient-to-r from-orange-primary to-orange-light"
+                <div
+                  className="h-full bg-gradient-to-r from-orange-primary to-orange-light transition-none"
                   style={{ width: `${((markup || 1) - 1) / 499 * 100}%` }}
-                  initial={false}
-                  animate={{ width: `${((markup || 1) - 1) / 499 * 100}%` }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
                 />
               </div>
 
@@ -121,20 +118,16 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
 
               {/* Custom Thumb */}
               <motion.div
-                className="absolute w-8 h-8 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing"
+                className="absolute w-6 h-6 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing pointer-events-none"
                 style={{
-                  left: `${((markup || 1) - 1) / 499 * 100}%`,
-                  top: '50%',
-                  transform: 'translateY(-50%) translateX(-50%)',
-                  boxShadow: '0 0 0 4px rgba(255, 107, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2)'
+                  left: `calc(${((markup || 1) - 1) / 499 * 100}% - ${((markup || 1) - 1) / 499 * 24}px)`,
+                  top: '-8px',
+                  boxShadow: '0 0 0 3px rgba(255, 107, 0, 0.15), 0 3px 10px rgba(0, 0, 0, 0.2)'
                 }}
                 initial={false}
-                animate={{
-                  left: `${((markup || 1) - 1) / 499 * 100}%`,
-                  scale: 1
-                }}
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.15 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </div>
 

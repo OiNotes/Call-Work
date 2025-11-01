@@ -17,6 +17,8 @@ const FollowDetail = () => {
   const { followDetailId, setFollowDetailId, currentFollow, setCurrentFollow, followProducts, setFollowProducts } = useStore();
 
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'manage'
   const [showEditMarkup, setShowEditMarkup] = useState(false);
   const [showMarkupSlider, setShowMarkupSlider] = useState(false);
@@ -40,19 +42,49 @@ const FollowDetail = () => {
       // Загрузить детали + товары параллельно
       const [followData, productsData] = await Promise.all([
         followsApi.getDetail(followDetailId),
-        followsApi.getProducts(followDetailId, { limit: 25 })
+        followsApi.getProducts(followDetailId, { limit: 100 })
       ]);
 
       const follow = followData?.data || followData;
       const productsPayload = productsData?.data || productsData;
+      const productsList = productsPayload.products || [];
 
       setCurrentFollow(follow);
-      setFollowProducts(productsPayload.products || []);
+      setFollowProducts(productsList);
+
+      // Проверяем есть ли еще товары
+      const total = productsPayload.pagination?.total || productsList.length;
+      setHasMore(productsList.length < total);
     } catch (error) {
       console.error('Error loading follow detail:', error);
       triggerHaptic('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const currentLength = followProducts.length;
+      const moreData = await followsApi.getProducts(followDetailId, {
+        limit: 100,
+        offset: currentLength
+      });
+
+      const productsPayload = moreData?.data || moreData;
+      const newProducts = productsPayload.products || [];
+      setFollowProducts([...followProducts, ...newProducts]);
+
+      const total = productsPayload.pagination?.total || 0;
+      setHasMore((currentLength + newProducts.length) < total);
+    } catch (error) {
+      console.error('Error loading more products:', error);
+      triggerHaptic('error');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -171,7 +203,9 @@ const FollowDetail = () => {
 
   const modeLabel = currentFollow.mode === 'monitor' ? 'Мониторинг' : 'Перепродажа';
   const ModeIcon = currentFollow.mode === 'monitor' ? EyeIcon : ArrowPathIcon;
-  const productsCount = currentFollow.source_products_count || 0;
+  const productsCount = currentFollow.mode === 'resell'
+    ? (currentFollow.synced_products_count || 0)
+    : (currentFollow.source_products_count || 0);
 
   const tabs = [
     { id: 'products', label: 'Товары' },
@@ -214,9 +248,9 @@ const FollowDetail = () => {
           </div>
 
           {currentFollow.mode === 'resell' && currentFollow.markup_percentage && (
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-primary/10">
-              <span className="text-orange-primary font-semibold text-xs">
-                +{currentFollow.markup_percentage}%
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-primary/10 border border-orange-primary/20">
+              <span className="text-orange-primary font-bold text-sm">
+                Наценка: +{currentFollow.markup_percentage}%
               </span>
             </div>
           )}
@@ -249,7 +283,13 @@ const FollowDetail = () => {
               exit={{ opacity: 0, x: 20 }}
               transition={controlSpring}
             >
-              <ProductList products={followProducts} mode={currentFollow.mode} />
+              <ProductList
+                products={followProducts}
+                mode={currentFollow.mode}
+                onLoadMore={loadMore}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+              />
             </motion.div>
           ) : (
             <motion.div

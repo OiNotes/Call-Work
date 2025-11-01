@@ -1,7 +1,6 @@
 ---
 name: crypto-integration-specialist
 description: Cryptocurrency Integration Specialist. Use proactively for blockchain API integration, payment verification, wallet validation, Etherscan/BlockCypher/TronGrid APIs, and crypto payment processing.
-tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
 

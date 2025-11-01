@@ -28,6 +28,15 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
   const isDisabled = !isAvailable || (!isPreorder && stock <= 0);
   const stockLabel = stock > 999 ? '999+' : stock;
   const lowStock = stock > 0 && stock <= 3;
+  const rawPrice = product.price ?? '';
+  const priceString = typeof rawPrice === 'number' ? String(rawPrice) : `${rawPrice}`;
+  const numericPriceLength = priceString.replace(/[^0-9]/g, '').length;
+  let priceSizeClass = 'text-2xl';
+  if (numericPriceLength > 10) {
+    priceSizeClass = 'text-lg';
+  } else if (numericPriceLength > 7) {
+    priceSizeClass = 'text-xl';
+  }
 
   const handleAddToCart = useCallback((event) => {
     event.stopPropagation();
@@ -130,27 +139,37 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
         )}
       </AnimatePresence>
 
-      <div className="relative p-5 h-full flex flex-col justify-between">
+      <div className="relative p-5 h-full flex flex-col justify-between gap-4">
         <h3
-          className="text-white font-semibold text-lg leading-tight line-clamp-2"
-          style={{ letterSpacing: '-0.01em' }}
+          className="text-white font-semibold text-lg leading-snug"
+          style={{
+            letterSpacing: '-0.01em',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            wordBreak: 'break-word',
+            minHeight: '2.8em'
+          }}
         >
           {product.name}
         </h3>
 
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex flex-col">
+        <div className="flex items-end justify-between mt-auto gap-4">
+          <div className="flex flex-col min-w-0">
             <span
-              className="text-orange-primary font-bold text-2xl"
+              className={`text-orange-primary font-bold leading-tight ${priceSizeClass}`}
               style={{
                 letterSpacing: '-0.02em',
-                fontVariantNumeric: 'tabular-nums'
+                fontVariantNumeric: 'tabular-nums',
+                wordBreak: 'break-word'
               }}
             >
               ${product.price}
             </span>
             <span
-              className={`text-xs uppercase font-medium ${
+              className={`mt-1 text-xs uppercase font-medium ${
                 isPreorder ? 'text-orange-200' : 'text-gray-500'
               }`}
               style={{ letterSpacing: '0.05em' }}
@@ -181,7 +200,7 @@ const ProductCard = memo(function ProductCard({ product, onPreorder }) {
               ...pressSpring,
               boxShadow: { duration: 0.18 }
             }}
-            className="relative w-[2.75rem] h-[2.75rem] rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+            className="relative w-[2.75rem] h-[2.75rem] min-w-[2.75rem] min-h-[2.75rem] flex-shrink-0 rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
               background: isPreorder
                 ? 'linear-gradient(135deg, rgba(255, 163, 63, 0.38) 0%, rgba(255, 107, 0, 0.58) 100%)'

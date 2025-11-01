@@ -28,12 +28,11 @@ export default function Subscriptions() {
         setError('Failed to load subscriptions');
       } else {
         const normalized = (data?.data || []).map((item) => ({
-          shopId: item.shop_id,
-          shopName: item.shop_name,
-          tier: item.tier,
-          subscribedAt: item.subscribed_at,
-          sellerUsername: item.seller_username,
-          sellerFirstName: item.seller_first_name,
+          id: item.id,
+          sourceShopId: item.source_shop_id,
+          sourceShopName: item.source_shop_name,
+          subscribedAt: item.created_at,
+          sourceShopLogo: item.source_shop_logo,
         }));
 
         setSubscriptions(normalized);
@@ -48,11 +47,13 @@ export default function Subscriptions() {
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');
     const { setCurrentShop, setActiveTab } = useStore.getState();
+
     setCurrentShop({
-      id: subscription.shopId,
-      name: subscription.shopName,
-      tier: subscription.tier,
+      id: subscription.sourceShopId,
+      name: subscription.sourceShopName,
+      logo: subscription.sourceShopLogo,
     });
+
     setActiveTab('catalog');
   };
 
@@ -108,7 +109,7 @@ export default function Subscriptions() {
           <div className="space-y-4">
             {subscriptions.map((subscription) => (
               <motion.div
-                key={subscription.shopId}
+                key={subscription.id}
                 onClick={() => handleShopClick(subscription)}
                 className="glass-card rounded-2xl p-4 cursor-pointer"
                 initial={{ opacity: 0, y: 20 }}
@@ -118,7 +119,7 @@ export default function Subscriptions() {
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-white mb-1">
-                      {subscription.shopName}
+                      {subscription.sourceShopName}
                     </h3>
                     <p className="text-sm text-gray-400">
                       {new Date(subscription.subscribedAt).toLocaleDateString('ru-RU')}
@@ -126,7 +127,7 @@ export default function Subscriptions() {
                   </div>
                   <div className="flex items-center gap-2">
                     <motion.button
-                      onClick={(e) => handleUnsubscribe(e, subscription.shopId)}
+                      onClick={(e) => handleUnsubscribe(e, subscription.id)}
                       className="touch-target bg-dark-elevated hover:bg-dark-card text-gray-400 font-semibold px-3 py-2 rounded-xl transition-colors text-sm"
                       whileTap={{ scale: 0.95 }}
                     >

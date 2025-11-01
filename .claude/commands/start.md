@@ -1,6 +1,6 @@
 ---
 description: Complete onboarding guide for new AI models to Status Stock project
-model: claude-3-5-sonnet-20241022
+model: claude-sonnet-4-5-20250929
 allowed-tools: Read, Grep, Glob, Bash
 disable-model-invocation: true
 ---

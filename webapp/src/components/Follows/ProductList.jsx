@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CubeIcon } from '@heroicons/react/24/outline';
 
-const ProductList = ({ products, mode }) => {
+const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
@@ -45,7 +45,7 @@ const ProductList = ({ products, mode }) => {
       </h3>
 
       {/* Products List */}
-      <div className="space-y-2">
+      <div className="space-y-3 pb-24">
         {products.map((product, index) => {
           if (mode === 'monitor') {
             // Monitor mode: показываем оригинальные товары
@@ -65,18 +65,15 @@ const ProductList = ({ products, mode }) => {
 
                 <div className="relative flex items-center justify-between gap-4">
                   {/* Product Name */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-gray-500 text-xs font-semibold tabular-nums w-6">
-                      #{index + 1}
-                    </span>
-                    <span className="text-white text-sm font-medium truncate" style={{ letterSpacing: '-0.01em' }}>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white text-base font-semibold truncate" style={{ letterSpacing: '-0.01em' }}>
                       {product.name}
-                    </span>
+                    </h3>
                   </div>
 
                   {/* Price & Stock */}
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-white text-base font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+                    <div className="text-white text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
                       ${product.price}
                     </div>
                     <div className="bg-white/5 px-2.5 py-1 rounded-lg">
@@ -97,7 +94,7 @@ const ProductList = ({ products, mode }) => {
             return (
               <motion.div
                 key={product.id || index}
-                className="group relative overflow-hidden rounded-xl border border-white/5 p-4 transition-colors duration-200 glass-card hover:border-orange-primary/20 hover:bg-white/[0.04]"
+                className="group relative overflow-hidden rounded-xl border border-white/5 p-5 transition-colors duration-200 glass-card hover:border-orange-primary/20 hover:bg-white/[0.04]"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05, ...controlSpring }}
@@ -108,45 +105,23 @@ const ProductList = ({ products, mode }) => {
                   aria-hidden="true"
                 />
 
-                {/* Product Name */}
-                <div className="relative mb-3 flex items-center gap-3">
-                  <span className="text-gray-500 text-xs font-semibold tabular-nums w-6">
-                    #{index + 1}
-                  </span>
-                  <span className="text-white text-sm font-medium truncate" style={{ letterSpacing: '-0.01em' }}>
+                {/* Product Header - название */}
+                <div className="relative mb-3">
+                  <h3 className="text-white text-base font-semibold truncate" style={{ letterSpacing: '-0.01em' }}>
                     {sourceProduct.name || syncedProduct.name}
-                  </span>
+                  </h3>
                 </div>
 
-                {/* Price Comparison */}
-                <div className="relative flex items-center justify-between gap-4">
-                  {/* Source Price */}
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                      Их цена
-                    </div>
-                    <span className="text-gray-400 line-through text-sm tabular-nums">
-                      ${sourceProduct.price}
-                    </span>
+                {/* Price + Stock - одна чистая строка */}
+                <div className="relative flex items-center justify-between">
+                  {/* Ваша цена - крупно, акцент */}
+                  <div className="text-orange-primary text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+                    ${syncedProduct.price}
                   </div>
 
-                  {/* Markup Badge */}
-                  {markupPercent > 0 && (
-                    <div className="bg-orange-primary/10 border border-orange-primary/20 px-2.5 py-1 rounded-lg">
-                      <span className="text-orange-primary text-xs font-bold tabular-nums">
-                        +{markupPercent}%
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Your Price + Stock */}
-                  <div className="flex items-center gap-3">
-                    <div className="text-orange-primary text-base font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
-                      ${syncedProduct.price}
-                    </div>
-                    <div className="bg-white/5 px-2.5 py-1 rounded-lg">
-                      <span className="text-gray-400 text-xs font-medium">{syncedProduct.stock_quantity} шт</span>
-                    </div>
+                  {/* Количество - компактно справа */}
+                  <div className="bg-white/5 px-2.5 py-1 rounded-lg">
+                    <span className="text-gray-400 text-xs font-medium">{syncedProduct.stock_quantity} шт</span>
                   </div>
                 </div>
               </motion.div>
@@ -155,18 +130,26 @@ const ProductList = ({ products, mode }) => {
         })}
       </div>
 
-      {/* Load More indicator (placeholder) */}
-      {products.length >= 25 && (
-        <motion.div
-          className="mt-4 text-center"
+      {/* Load More button */}
+      {hasMore && (
+        <motion.button
+          onClick={onLoadMore}
+          disabled={loadingMore}
+          className="glass-card w-full py-3.5 rounded-xl text-orange-primary font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
+          whileTap={{ scale: loadingMore ? 1 : 0.98 }}
         >
-          <div className="text-gray-400 text-xs">
-            Показано {products.length} товаров
-          </div>
-        </motion.div>
+          {loadingMore ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-orange-primary border-t-transparent rounded-full animate-spin" />
+              <span>Загрузка...</span>
+            </div>
+          ) : (
+            'Загрузить еще'
+          )}
+        </motion.button>
       )}
     </div>
   );

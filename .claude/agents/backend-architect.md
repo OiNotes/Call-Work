@@ -1,7 +1,6 @@
 ---
 name: backend-architect
 description: Senior Backend Architect. Use proactively for REST/GraphQL API design, Express/Fastify endpoints, authentication, WebSocket, database integration, and backend architecture patterns.
-tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
 

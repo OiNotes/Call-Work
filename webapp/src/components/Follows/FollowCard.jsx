@@ -49,7 +49,9 @@ const FollowCard = ({ follow, onClick }) => {
               )}
 
               <div className="text-gray-400">
-                <span className="font-medium text-white">{follow.source_products_count || 0}</span> товаров
+                <span className="font-medium text-white">
+                  {follow.mode === 'resell' ? (follow.synced_products_count || 0) : (follow.source_products_count || 0)}
+                </span> товаров
               </div>
             </div>
           </div>

@@ -1,7 +1,6 @@
 ---
 name: frontend-developer
 description: Senior Frontend Developer. Use proactively for React/Vue/Angular components, TailwindCSS styling, Telegram Mini App integration, state management, animations, and UI/UX implementation.
-tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---
 

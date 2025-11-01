@@ -117,6 +117,8 @@ const TabBar = memo(function TabBar() {
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className="relative px-2"
+                title={tab.label}
+                aria-label={tab.label}
               >
                 <motion.div
                   className={`flex flex-col items-center gap-1 relative px-4 py-2 ${
@@ -137,7 +139,7 @@ const TabBar = memo(function TabBar() {
 
                   {tab.icon}
                   <span
-                    className="text-xs font-semibold"
+                    className="text-xs font-semibold hidden sm:inline"
                     style={{ letterSpacing: '0.02em' }}
                   >
                     {tab.label}
