@@ -499,9 +499,12 @@ async function handleConfirmedPayment(invoice, payment) {
     try {
       await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
         id: order.id,
-        product_name: order.product_name,
+        product_name: product.name,
+        quantity: order.quantity,
         total_price: order.total_price,
-        currency: order.currency
+        currency: order.currency,
+        seller_username: seller.username,
+        shop_name: shop.name
       });
 
       logger.info('[PollingService] User notified successfully', {

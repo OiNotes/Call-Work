@@ -1,7 +1,7 @@
 import express from 'express';
 import * as blockCypherService from '../services/blockCypherService.js';
 import * as subscriptionService from '../services/subscriptionService.js';
-import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries } from '../models/db.js';
+import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
@@ -93,7 +93,7 @@ async function handleSubscriptionPayment(invoice, client) {
 }
 
 /**
- * Helper: Send Telegram notification to buyer
+ * Helper: Send Telegram notifications to buyer and seller
  */
 async function sendTelegramNotification(orderId, status) {
   try {
@@ -104,12 +104,50 @@ async function sendTelegramNotification(orderId, status) {
     }
 
     if (status === 'confirmed') {
-      await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
-        id: order.id,
-        product_name: order.product_name,
-        total_price: order.total_price,
-        currency: order.currency
-      });
+      // Get product, shop, buyer, and seller info
+      const [product, buyer] = await Promise.all([
+        productQueries.findById(order.product_id),
+        userQueries.findById(order.buyer_id)
+      ]);
+
+      const shop = await shopQueries.findById(product.shop_id);
+      const seller = await userQueries.findById(shop.owner_id);
+
+      // Notify buyer
+      try {
+        await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
+          id: order.id,
+          product_name: order.product_name,
+          quantity: order.quantity,
+          total_price: order.total_price,
+          currency: order.currency,
+          seller_username: seller.username,
+          shop_name: shop.name
+        });
+      } catch (notifError) {
+        logger.error('[Webhook] Buyer notification error', {
+          error: notifError.message,
+          orderId
+        });
+      }
+
+      // Notify seller
+      try {
+        await telegramService.notifyPaymentConfirmedSeller(seller.telegram_id, {
+          orderId: order.id,
+          productName: product.name,
+          quantity: order.quantity,
+          totalPrice: order.total_price,
+          currency: order.currency,
+          buyerUsername: buyer.username || 'Anonymous',
+          buyerTelegramId: buyer.telegram_id
+        });
+      } catch (notifError) {
+        logger.error('[Webhook] Seller notification error', {
+          error: notifError.message,
+          orderId
+        });
+      }
     }
   } catch (error) {
     logger.error('[Webhook] Failed to send Telegram notification:', {

@@ -142,14 +142,18 @@ Status: Pending Payment
    * @param {object} orderData - Order information
    */
   async notifyPaymentConfirmed(buyerTelegramId, orderData) {
+    const quantityStr = orderData.quantity > 1 ? `\nКоличество: ${orderData.quantity} шт` : '';
+
     const message = `
-✅ Payment Confirmed
+✅ Заказ оформлен!
 
-Order #${orderData.id}
-📦 ${orderData.product_name}
-💰 ${orderData.total_price} ${orderData.currency}
+Товар: ${orderData.product_name}${quantityStr}
+Сумма: $${orderData.total_price}
 
-Your order is being processed by the seller.
+Продавец: @${orderData.seller_username}
+Магазин: ${orderData.shop_name}
+
+Свяжитесь с продавцом для получения товара.
     `.trim();
 
     return this.sendMessage(buyerTelegramId, message);
@@ -161,22 +165,22 @@ Your order is being processed by the seller.
    * @param {object} orderData - Order information
    */
   async notifyPaymentConfirmedSeller(sellerTelegramId, orderData) {
+    const quantityStr = orderData.quantity > 1 ? `\nКоличество: ${orderData.quantity} шт` : '';
+
     const message = `
-✅ Заказ #${orderData.orderId} оплачен!
+🛍 Новый заказ!
 
-📦 Товар: ${orderData.productName}${orderData.quantity > 1 ? ` (${orderData.quantity} шт)` : ''}
-💰 Сумма: $${orderData.totalPrice} (${orderData.currency})
-👤 Покупатель: @${orderData.buyerUsername}
+Товар: ${orderData.productName}${quantityStr}
+Сумма: $${orderData.totalPrice}
+Оплата: ${orderData.currency}
 
-⏱ Статус: Ожидает отправки
-
-Отметьте заказ отправленным после передачи товара покупателю.
+Покупатель: @${orderData.buyerUsername}
     `.trim();
 
     return this.sendMessage(sellerTelegramId, message, {
       reply_markup: {
         inline_keyboard: [[
-          { text: '✓ Отметить отправленным', callback_data: `order:ship:${orderData.orderId}` }
+          { text: 'Отметить выдачу', callback_data: `order:deliver:${orderData.orderId}` }
         ]]
       }
     });

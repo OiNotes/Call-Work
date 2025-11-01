@@ -164,9 +164,12 @@ export const paymentController = {
         try {
           await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
             id: order.id,
-            product_name: order.product_name,
+            product_name: product.name,
+            quantity: order.quantity,
             total_price: order.total_price,
-            currency: order.currency
+            currency: order.currency,
+            seller_username: seller.username,
+            shop_name: shop.name
           });
         } catch (notifError) {
           logger.error('Buyer notification error', { error: notifError.message, stack: notifError.stack });
@@ -363,6 +366,46 @@ export const paymentController = {
             throw txError;
           } finally {
             client.release();
+          }
+
+          // Read operations (outside transaction - read-only)
+          const [product, buyer] = await Promise.all([
+            productQueries.findById(order.product_id),
+            userQueries.findById(order.buyer_id)
+          ]);
+
+          // Get seller info
+          const shop = await shopQueries.findById(product.shop_id);
+          const seller = await userQueries.findById(shop.owner_id);
+
+          // Notify seller about payment confirmation
+          try {
+            await telegramService.notifyPaymentConfirmedSeller(seller.telegram_id, {
+              orderId: order.id,
+              productName: product.name,
+              quantity: order.quantity,
+              totalPrice: order.total_price,
+              currency: order.currency,
+              buyerUsername: buyer.username || 'Anonymous',
+              buyerTelegramId: buyer.telegram_id
+            });
+          } catch (notifError) {
+            logger.error('Seller notification error in checkStatus', { error: notifError.message, stack: notifError.stack });
+          }
+
+          // Notify buyer
+          try {
+            await telegramService.notifyPaymentConfirmed(order.buyer_telegram_id, {
+              id: order.id,
+              product_name: product.name,
+              quantity: order.quantity,
+              total_price: order.total_price,
+              currency: order.currency,
+              seller_username: seller.username,
+              shop_name: shop.name
+            });
+          } catch (notifError) {
+            logger.error('Buyer notification error in checkStatus', { error: notifError.message, stack: notifError.stack });
           }
         }
       }
