@@ -6,7 +6,7 @@ export const formatCurrency = (amount, currency) => {
     'BTC': 8,
     'ETH': 6,
     'USDT': 2,
-    'TON': 6
+    'LTC': 8
   };
 
   return parseFloat(amount).toFixed(decimals[currency] || 2);
@@ -36,7 +36,7 @@ export const validateWalletAddress = (address, currency) => {
     'BTC': /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/,
     'ETH': /^0x[a-fA-F0-9]{40}$/,
     'USDT': /^0x[a-fA-F0-9]{40}$/,
-    'TON': /^[UE][Qf][a-zA-Z0-9_-]{46}$/
+    'LTC': /^[LM][a-km-zA-HJ-NP-Z1-9]{25,34}$|^ltc1[a-z0-9]{39,59}$/
   };
 
   return patterns[currency]?.test(address) || false;
@@ -95,7 +95,7 @@ export const generateTxHash = (currency = 'ETH') => {
     'BTC': 64,
     'ETH': 66, // 0x + 64
     'USDT': 66,
-    'TON': 44
+    'LTC': 64
   };
 
   const length = hashLength[currency] || 64;

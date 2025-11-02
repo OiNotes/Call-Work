@@ -50,7 +50,7 @@
     "shopRequired": "Сначала создайте магазин в боте",
     "invalidAll": "Введите хотя бы один валидный адрес",
     "invalidAddresses": "Неверные адреса кошельков",
-    "supported": "Поддерживаемые: BTC, ETH, USDT, TON"
+    "supported": "Поддерживаемые: BTC, ETH, USDT, LTC"
   },
 
   "orders": {

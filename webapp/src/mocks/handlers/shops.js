@@ -178,7 +178,7 @@ export const shopsHandlers = [
         wallet_btc: null,
         wallet_eth: null,
         wallet_usdt: null,
-        wallet_ton: null
+        wallet_ltc: null
       }
     });
   }),

@@ -4,6 +4,8 @@ import { manageWorkersMenu, confirmWorkerRemoval } from '../../keyboards/workspa
 import { shopApi, authApi, orderApi, workerApi, followApi } from '../../utils/api.js';
 import logger from '../../utils/logger.js';
 import { messages, buttons as buttonText } from '../../texts/messages.js';
+import { checkShopHealth } from '../../utils/shopHealthCheck.js';
+import { getTipForShop } from '../../utils/sellerTips.js';
 import {
   handleActiveOrders,
   handleOrderHistory,
@@ -246,8 +248,14 @@ export const handleSellerRole = async (ctx) => {
         }
         ctx.session.hasFollows = hasFollows;
 
-        // Форматировать заголовок с аналитикой
-        const header = sellerMessages.shopPanelWithStats(shop.name, weekRevenue, activeCount);
+        // Проверить состояние магазина для статус-бара
+        const shopHealth = await checkShopHealth(shop.id, ctx.session.token);
+
+        // Получить совет или предупреждение
+        const statusBar = getTipForShop(ctx, shopHealth);
+
+        // Форматировать заголовок с аналитикой и статус-баром
+        const header = sellerMessages.shopPanelWithStats(shop.name, weekRevenue, activeCount, statusBar);
 
         await ctx.reply(header, sellerMenu(activeCount, { hasFollows }));
         return;

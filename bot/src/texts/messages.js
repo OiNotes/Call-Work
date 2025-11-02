@@ -144,9 +144,16 @@ Telegram-маркетплейс для продажи и покупки това
   seller: {
     panel: 'Панель продавца. Доступные разделы ниже.',
     shopPanel: (shop) => `Магазин «${shop}». Доступные разделы ниже.`,
-    shopPanelWithStats: (shop, revenue, activeOrders) => {
+    shopPanelWithStats: (shop, revenue, activeOrders, statusBar = null) => {
+      let message = '';
+
+      // Если есть статус-бар - показываем его в начале
+      if (statusBar) {
+        message += `${statusBar}\n\n`;
+      }
+
       const formattedRevenue = revenue > 0
-        ? `$${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+        ? `${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
         : '$0';
 
       const ordersText = (() => {
@@ -165,9 +172,11 @@ Telegram-маркетплейс для продажи и покупки това
         return `${activeOrders} активных заказов`;
       })();
 
-      return `🏪 Магазин «${shop}»
+      // Основная информация о магазине
+      message += `🏪 Магазин «${shop}»\n\n`;
+      message += `💵 ${formattedRevenue} за 7 дней  •  ${ordersText}`;
 
-💵 ${formattedRevenue} за 7 дней  •  ${ordersText}`;
+      return message;
     },
     noShop: 'Создайте магазин, чтобы перейти в панель продавца.',
     noWorkers: (shop) => `Работники магазина ${shop}. Пока никто не подключён.`,

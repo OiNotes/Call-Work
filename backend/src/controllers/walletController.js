@@ -42,7 +42,7 @@ export const walletController = {
             btc: shop.wallet_btc || null,
             eth: shop.wallet_eth || null,
             usdt: shop.wallet_usdt || null,
-            ton: shop.wallet_ton || null
+            ltc: shop.wallet_ltc || null
           }
         }
       });
@@ -75,7 +75,7 @@ export const walletController = {
         walletBtc,
         walletEth,
         walletUsdt,
-        walletTon
+        walletLtc
       } = req.body;
 
       // Check if shop exists
@@ -119,9 +119,9 @@ export const walletController = {
         paramCount++;
       }
 
-      if (walletTon !== undefined) {
-        updates.push(`wallet_ton = $${paramCount}`);
-        values.push(walletTon || null);
+      if (walletLtc !== undefined) {
+        updates.push(`wallet_ltc = ${paramCount}`);
+        values.push(walletLtc || null);
         paramCount++;
       }
 
@@ -145,7 +145,7 @@ export const walletController = {
         `UPDATE shops
          SET ${updates.join(', ')}
          WHERE id = $${paramCount}
-         RETURNING id, name, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, updated_at`,
+         RETURNING id, name, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, updated_at`,
         values
       );
 
@@ -160,7 +160,7 @@ export const walletController = {
             btc: updatedShop.wallet_btc || null,
             eth: updatedShop.wallet_eth || null,
             usdt: updatedShop.wallet_usdt || null,
-            ton: updatedShop.wallet_ton || null
+            ltc: updatedShop.wallet_ltc || null
           },
           updatedAt: updatedShop.updated_at
         },

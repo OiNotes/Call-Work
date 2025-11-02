@@ -312,7 +312,7 @@ export const formatWallets = (shop) => {
   if (shop.wallet_btc) wallets.push('BTC');
   if (shop.wallet_eth) wallets.push('ETH');
   if (shop.wallet_usdt) wallets.push('USDT');
-  if (shop.wallet_ton) wallets.push('TON');
+  if (shop.wallet_ltc) wallets.push('LTC');
 
   let msg = `Кошельки\n`;
 

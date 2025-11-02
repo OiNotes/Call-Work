@@ -105,7 +105,7 @@ export const shopQueries = {
     const result = await query(
       `INSERT INTO shops (owner_id, name, description, logo, tier)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at`,
       [ownerId, name, description, logo, tier]
     );
     return result.rows[0];
@@ -126,7 +126,7 @@ export const shopQueries = {
   // Find shops by owner ID
   findByOwnerId: async (ownerId) => {
     const result = await query(
-      'SELECT id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at FROM shops WHERE owner_id = $1 ORDER BY created_at DESC',
+      'SELECT id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at FROM shops WHERE owner_id = $1 ORDER BY created_at DESC',
       [ownerId]
     );
     return result.rows;
@@ -174,7 +174,7 @@ export const shopQueries = {
            is_active = COALESCE($5, is_active),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at`,
       [id, name, description, logo, isActive]
     );
     return result.rows[0];
@@ -205,7 +205,7 @@ export const shopQueries = {
 
   // Update shop wallets
   updateWallets: async (id, walletData) => {
-    const allowedFields = ['wallet_btc', 'wallet_eth', 'wallet_usdt', 'wallet_ton'];
+    const allowedFields = ['wallet_btc', 'wallet_eth', 'wallet_usdt', 'wallet_ltc'];
     const setClauses = [];
     const params = [id];
     let paramIndex = 2;
@@ -221,7 +221,7 @@ export const shopQueries = {
     if (setClauses.length === 0) {
       // Nothing to update, return current record for consistency
       const existing = await query(
-        `SELECT id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at
+        `SELECT id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at
          FROM shops
          WHERE id = $1`,
         [id]
@@ -235,7 +235,7 @@ export const shopQueries = {
       `UPDATE shops
        SET ${setClauses.join(', ')}
        WHERE id = $1
-       RETURNING id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ton, created_at, updated_at`,
+       RETURNING id, owner_id, name, description, logo, tier, is_active, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at`,
       params
     );
     return result.rows[0];

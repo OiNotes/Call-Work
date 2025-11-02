@@ -519,7 +519,7 @@ export const shopController = {
           wallet_btc: shop.wallet_btc || null,
           wallet_eth: shop.wallet_eth || null,
           wallet_usdt: shop.wallet_usdt || null,
-          wallet_ton: shop.wallet_ton || null,
+          wallet_ltc: shop.wallet_ltc || null,
           updated_at: shop.updated_at
         }
       });
@@ -539,7 +539,7 @@ export const shopController = {
   updateWallets: async (req, res) => {
     try {
       const { id } = req.params;
-      const { wallet_btc, wallet_eth, wallet_usdt, wallet_ton } = req.body;
+      const { wallet_btc, wallet_eth, wallet_usdt, wallet_ltc } = req.body;
 
       // Check if shop exists and belongs to user
       const existingShop = await shopQueries.findById(id);
@@ -563,7 +563,7 @@ export const shopController = {
       if (wallet_btc !== undefined) {walletUpdates.wallet_btc = wallet_btc;}
       if (wallet_eth !== undefined) {walletUpdates.wallet_eth = wallet_eth;}
       if (wallet_usdt !== undefined) {walletUpdates.wallet_usdt = wallet_usdt;}
-      if (wallet_ton !== undefined) {walletUpdates.wallet_ton = wallet_ton;}
+      if (wallet_ltc !== undefined) {walletUpdates.wallet_ltc = wallet_ltc;}
 
       // Update wallets
       const shop = await shopQueries.updateWallets(id, walletUpdates);
@@ -574,7 +574,7 @@ export const shopController = {
           wallet_btc: shop.wallet_btc || null,
           wallet_eth: shop.wallet_eth || null,
           wallet_usdt: shop.wallet_usdt || null,
-          wallet_ton: shop.wallet_ton || null
+          wallet_ltc: shop.wallet_ltc || null
         }
       });
 

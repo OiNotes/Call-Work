@@ -35,7 +35,7 @@ function addDays(date, days) {
  * @param {number} shopId - Shop ID
  * @param {string} tier - Subscription tier ('basic' or 'pro')
  * @param {string} txHash - Blockchain transaction hash
- * @param {string} currency - Cryptocurrency (BTC, ETH, USDT, TON)
+ * @param {string} currency - Cryptocurrency (BTC, ETH, USDT, LTC)
  * @param {string} expectedAddress - Expected payment address
  * @returns {Promise<object>} Subscription record
  */

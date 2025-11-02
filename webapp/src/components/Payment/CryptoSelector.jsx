@@ -32,11 +32,11 @@ const cryptoOptions = [
     color: '#627EEA',
   },
   {
-    id: 'ton',
-    name: 'TON',
-    network: 'TON',
-    icon: '💎',
-    color: '#0088CC',
+    id: 'ltc',
+    name: 'Litecoin',
+    network: 'LTC',
+    icon: 'Ł',
+    color: '#345D9D',
   },
 ];
 

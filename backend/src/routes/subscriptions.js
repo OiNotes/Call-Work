@@ -41,7 +41,7 @@ router.get('/', subscriptionController.getUserSubscriptions);
  *   shopId: number,
  *   tier: 'basic' | 'pro',
  *   txHash: string,
- *   currency: 'BTC' | 'ETH' | 'USDT' | 'TON',
+ *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
  */
@@ -54,7 +54,7 @@ router.post('/pay', subscriptionController.paySubscription);
  * Body: {
  *   shopId: number,
  *   txHash: string,
- *   currency: 'BTC' | 'ETH' | 'USDT' | 'TON',
+ *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
  */

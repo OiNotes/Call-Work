@@ -467,7 +467,7 @@ export const paymentController = {
       }
 
       // Validate currency
-      const supportedCurrencies = ['BTC', 'ETH', 'USDT', 'TON'];
+      const supportedCurrencies = ['BTC', 'ETH', 'USDT', 'LTC'];
       if (!supportedCurrencies.includes(currency.toUpperCase())) {
         return res.status(400).json({
           success: false,
@@ -491,9 +491,9 @@ export const paymentController = {
           // TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t is USDT contract on Tron
           paymentURI = `tronlink://send?token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&to=${address}&amount=${amount}`;
           break;
-        case 'TON':
-          // TON transfer format
-          paymentURI = `ton://transfer/${address}?amount=${amount}`;
+        case 'LTC':
+          // BIP-21: litecoin:address?amount=X
+          paymentURI = `litecoin:${address}?amount=${amount}`;
           break;
       }
 

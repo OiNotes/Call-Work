@@ -10,17 +10,17 @@ const WALLET_PATTERNS = {
   BTC: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/,
   ETH: /^0x[a-fA-F0-9]{40}$/,
   USDT: /^0x[a-fA-F0-9]{40}$/, // USDT (ERC-20) использует те же адреса что и ETH
-  TON: /^[A-Za-z0-9_-]{48,66}$/
+  LTC: /^(L|M|ltc1)[a-zA-HJ-NP-Z0-9]{26,42}$/
 };
 
 const walletFieldMap = {
   BTC: { key: 'btc', field: 'wallet_btc' },
   ETH: { key: 'eth', field: 'wallet_eth' },
   USDT: { key: 'usdt', field: 'wallet_usdt' },
-  TON: { key: 'ton', field: 'wallet_ton' }
+  LTC: { key: 'ltc', field: 'wallet_ltc' }
 };
 
-const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'TON'];
+const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'LTC'];
 
 function WalletCard({ wallet, onRemove }) {
   const { triggerHaptic, confirm } = useTelegram();
@@ -39,7 +39,7 @@ function WalletCard({ wallet, onRemove }) {
     BTC: 'text-orange-500',
     ETH: 'text-blue-400',
     USDT: 'text-emerald-400',
-    TON: 'text-teal-400'
+    LTC: 'text-purple-400'
   };
 
   return (
@@ -89,7 +89,7 @@ export default function WalletsModal({ isOpen, onClose }) {
   const { get, put } = useApi();
 
   const [shop, setShop] = useState(null);
-  const [walletMap, setWalletMap] = useState({ btc: null, eth: null, usdt: null, ton: null });
+  const [walletMap, setWalletMap] = useState({ btc: null, eth: null, usdt: null, ltc: null });
   const [walletMeta, setWalletMeta] = useState({ updatedAt: null });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -98,26 +98,26 @@ export default function WalletsModal({ isOpen, onClose }) {
   const [btcAddress, setBtcAddress] = useState('');
   const [ethAddress, setEthAddress] = useState('');
   const [usdtAddress, setUsdtAddress] = useState('');
-  const [tonAddress, setTonAddress] = useState('');
+  const [ltcAddress, setLtcAddress] = useState('');
 
   const isValidBTC = btcAddress ? WALLET_PATTERNS.BTC.test(btcAddress.trim()) : false;
   const isValidETH = ethAddress ? WALLET_PATTERNS.ETH.test(ethAddress.trim()) : false;
   const isValidUSDT = usdtAddress ? WALLET_PATTERNS.USDT.test(usdtAddress.trim()) : false;
-  const isValidTON = tonAddress ? WALLET_PATTERNS.TON.test(tonAddress.trim()) : false;
+  const isValidLTC = ltcAddress ? WALLET_PATTERNS.LTC.test(ltcAddress.trim()) : false;
 
-  const hasValidAddress = isValidBTC || isValidETH || isValidUSDT || isValidTON;
+  const hasValidAddress = isValidBTC || isValidETH || isValidUSDT || isValidLTC;
 
   const resetForm = useCallback(() => {
     setShowForm(false);
     setBtcAddress('');
     setEthAddress('');
     setUsdtAddress('');
-    setTonAddress('');
+    setLtcAddress('');
   }, []);
 
   const syncWalletState = useCallback((payload) => {
     if (!payload) {
-      setWalletMap({ btc: null, eth: null, usdt: null, ton: null });
+      setWalletMap({ btc: null, eth: null, usdt: null, ltc: null });
       setWalletMeta({ updatedAt: null });
       return;
     }
@@ -127,7 +127,7 @@ export default function WalletsModal({ isOpen, onClose }) {
       btc: data.wallet_btc ?? data.wallets?.btc ?? null,
       eth: data.wallet_eth ?? data.wallets?.eth ?? null,
       usdt: data.wallet_usdt ?? data.wallets?.usdt ?? null,
-      ton: data.wallet_ton ?? data.wallets?.ton ?? null
+      ltc: data.wallet_ltc ?? data.wallets?.ltc ?? null
     });
     setWalletMeta({
       updatedAt: data.updated_at || data.updatedAt || null
@@ -259,8 +259,8 @@ export default function WalletsModal({ isOpen, onClose }) {
     if (isValidUSDT) {
       payload.wallet_usdt = usdtAddress.trim();
     }
-    if (isValidTON) {
-      payload.wallet_ton = tonAddress.trim();
+    if (isValidLTC) {
+      payload.wallet_ltc = ltcAddress.trim();
     }
 
     if (!Object.keys(payload).length) {
@@ -281,7 +281,7 @@ export default function WalletsModal({ isOpen, onClose }) {
     syncWalletState(response);
     resetForm();
     setSaving(false);
-  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidTON, isValidUSDT, put, resetForm, shop, syncWalletState, t, tonAddress, triggerHaptic, usdtAddress]);
+  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress]);
 
   return (
     <AnimatePresence>
@@ -426,17 +426,17 @@ export default function WalletsModal({ isOpen, onClose }) {
                         </div>
 
                         <div>
-                          <label className="text-sm text-gray-400 mb-2 block">TON</label>
+                          <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
                           <input
                             type="text"
-                            value={tonAddress}
-                            onChange={(e) => setTonAddress(e.target.value)}
-                            placeholder="UQ..."
+                            value={ltcAddress}
+                            onChange={(e) => setLtcAddress(e.target.value)}
+                            placeholder="ltc1q..."
                             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                           />
-                          {tonAddress && (
-                            <span className={`text-sm ${isValidTON ? 'text-green-500' : 'text-red-500'}`}>
-                              {isValidTON ? '✓ Valid TON' : '⚠️ Invalid TON'}
+                          {ltcAddress && (
+                            <span className={`text-sm ${isValidLTC ? 'text-green-500' : 'text-red-500'}`}>
+                              {isValidLTC ? '✓ Valid LTC' : '⚠️ Invalid LTC'}
                             </span>
                           )}
                         </div>

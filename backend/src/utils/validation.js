@@ -8,7 +8,7 @@ import logger from './logger.js';
 /**
  * Validate crypto wallet address format
  * @param {string} address - Wallet address
- * @param {string} crypto - Cryptocurrency type (BTC, ETH, USDT, TON)
+ * @param {string} crypto - Cryptocurrency type (BTC, ETH, USDT, LTC)
  * @returns {boolean} - True if valid format
  */
 export const validateCryptoAddress = (address, crypto) => {
@@ -17,17 +17,12 @@ export const validateCryptoAddress = (address, crypto) => {
 
     const currency = crypto.toLowerCase();
 
-    // TON is not supported by wallet-validator, use regex
-    if (currency === 'ton') {
-      // TON: starts with EQ or UQ, followed by 46-48 base64url characters
-      return /^(EQ|UQ)[A-Za-z0-9_-]{46,48}$/.test(address);
-    }
-
     // Map crypto names to wallet-validator currency names
     const currencyMap = {
       'btc': 'bitcoin',
       'eth': 'ethereum',
-      'usdt': 'tron'      // USDT uses Tron TRC-20 (TR... addresses)
+      'usdt': 'tron',      // USDT uses Tron TRC-20 (TR... addresses)
+      'ltc': 'litecoin'
     };
 
     const validatorCurrency = currencyMap[currency];
@@ -51,7 +46,7 @@ export const validateCryptoAddress = (address, crypto) => {
 /**
  * Detect cryptocurrency type from address format
  * @param {string} address - Wallet address
- * @returns {string|null} - Detected crypto type (BTC, ETH, USDT, TON) or null
+ * @returns {string|null} - Detected crypto type (BTC, ETH, USDT, LTC) or null
  */
 export const detectCryptoType = (address) => {
   if (!address || typeof address !== 'string') {
@@ -75,9 +70,9 @@ export const detectCryptoType = (address) => {
     return 'USDT';
   }
 
-  // TON: starts with EQ or UQ
-  if (/^(EQ|UQ)[A-Za-z0-9_-]{46,48}$/.test(trimmed)) {
-    return 'TON';
+  // LTC: starts with L, M, or ltc1
+  if (/^(L|M|ltc1)[a-zA-Z0-9]{25,62}$/.test(trimmed)) {
+    return 'LTC';
   }
 
   return null;
@@ -93,7 +88,7 @@ export const getCryptoValidationError = (crypto) => {
     BTC: 'Invalid BTC address format. Must be Legacy (1xxx), P2SH (3xxx), or Bech32 (bc1xxx)',
     ETH: 'Invalid ETH address format. Must be 0x followed by 40 hex characters',
     USDT: 'Invalid USDT address format. Must be TRC-20 Tron address (TRxxx...)',
-    TON: 'Invalid TON address format. Must start with EQ or UQ followed by 46 characters'
+    LTC: 'Invalid LTC address format. Must be Legacy (Lxxx), P2SH (Mxxx), or Bech32 (ltc1xxx)'
   };
   return errors[crypto.toUpperCase()] || 'Invalid crypto address format';
 };

@@ -50,7 +50,7 @@
     "shopRequired": "Create a shop in the bot first",
     "invalidAll": "Enter at least one valid address",
     "invalidAddresses": "Invalid wallet addresses",
-    "supported": "Supported: BTC, ETH, USDT, TON"
+    "supported": "Supported: BTC, ETH, USDT, LTC"
   },
 
   "orders": {

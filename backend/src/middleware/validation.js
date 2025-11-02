@@ -142,8 +142,8 @@ export const productValidation = {
       .withMessage('Price must be greater than 0'),
     body('currency')
       .optional()
-      .isIn(['BTC', 'ETH', 'USDT', 'TON', 'USD'])
-      .withMessage('Currency must be BTC, ETH, USDT, TON, or USD'),
+      .isIn(['BTC', 'ETH', 'USDT', 'LTC', 'USD'])
+      .withMessage('Currency must be BTC, ETH, USDT, LTC, or USD'),
     body('stockQuantity')
       .optional()
       .isInt({ min: 0 })
@@ -313,8 +313,8 @@ export const paymentValidation = {
       .trim()
       .withMessage('Transaction hash is required'),
     body('currency')
-      .isIn(['BTC', 'ETH', 'USDT', 'TON'])
-      .withMessage('Currency must be BTC, ETH, USDT, or TON'),
+      .isIn(['BTC', 'ETH', 'USDT', 'LTC'])
+      .withMessage('Currency must be BTC, ETH, USDT, or LTC'),
     validate
   ],
 
@@ -368,12 +368,12 @@ export const walletValidation = {
         }
         return true;
       }),
-    body('walletTon')
+    body('walletLtc')
       .optional()
       .trim()
       .custom((value) => {
-        if (value && !validateCryptoAddress(value, 'TON')) {
-          throw new Error(getCryptoValidationError('TON'));
+        if (value && !validateCryptoAddress(value, 'LTC')) {
+          throw new Error(getCryptoValidationError('LTC'));
         }
         return true;
       }),
