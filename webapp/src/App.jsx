@@ -20,6 +20,7 @@ const Catalog = lazy(() => import('./pages/Catalog'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Follows = lazy(() => import('./pages/Follows'));
 const FollowDetail = lazy(() => import('./pages/FollowDetail'));
+const DiscountDemo = lazy(() => import('./pages/DiscountDemo'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -133,6 +134,8 @@ function App() {
         return <Catalog />;
       case 'settings':
         return <Settings />;
+      case 'discount-demo':
+        return <DiscountDemo />;
       default:
         return <Subscriptions />;
     }

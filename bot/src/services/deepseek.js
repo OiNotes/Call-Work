@@ -59,8 +59,8 @@ class DeepSeekClient {
           model: 'deepseek-chat',
           messages,
           tools: tools.length > 0 ? tools : undefined,
-          tool_choice: tools.length > 0 ? 'auto' : undefined,
-          temperature: 0.7,  // 0.3 made it worse - reverting to 0.7
+          tool_choice: tools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
+          temperature: tools.length > 0 ? 0.2 : 0.7,  // Низкая temp для function calling, нормальная для чата
           max_tokens: 500
         });
 
@@ -147,8 +147,8 @@ class DeepSeekClient {
         model: 'deepseek-chat',
         messages,
         tools: tools.length > 0 ? tools : undefined,
-        tool_choice: tools.length > 0 ? 'auto' : undefined,
-        temperature: 0.7,
+        tool_choice: tools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
+        temperature: tools.length > 0 ? 0.2 : 0.7,  // Низкая temp для function calling, нормальная для чата
         max_tokens: 500,
         stream: true  // Enable streaming
       });

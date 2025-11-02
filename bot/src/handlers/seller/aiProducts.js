@@ -362,9 +362,11 @@ export async function handleBulkPricesConfirm(ctx) {
       ctx
     );
 
-    // Result message already sent via editMessageText in executeBulkPriceUpdate
-    if (!result.success && result.message) {
-      await cleanReply(ctx, result.message);
+    // Обновить сообщение результатом
+    if (result && result.message) {
+      await ctx.editMessageText(result.message).catch(err => {
+        logger.error('Failed to update bulk prices message:', err);
+      });
     }
 
     logger.info('bulk_prices_confirmed', {
@@ -412,7 +414,7 @@ export async function handleBulkPricesCancel(ctx) {
 export async function handleBulkPricesConfirmText(ctx) {
   try {
     // Send initial progress message (NO answerCbQuery - this is text!)
-    await cleanReply(ctx, '⏳ Применяю изменения...');
+    const progressMsg = await cleanReply(ctx, '⏳ Применяю изменения...');
 
     const result = await executeBulkPriceUpdate(
       ctx.session.shopId,
@@ -420,11 +422,19 @@ export async function handleBulkPricesConfirmText(ctx) {
       ctx
     );
 
-    // Result message already sent via executeBulkPriceUpdate
-    // Only send error if needed
-    if (!result.success && result.message) {
-      await cleanReply(ctx, result.message);
+    // Обновить сообщение результатом
+    if (progressMsg && result && result.message) {
+      await ctx.telegram.editMessageText(
+        ctx.chat.id,
+        progressMsg.message_id,
+        null,
+        result.message
+      ).catch(err => {
+        logger.error('Failed to update bulk prices message:', err);
+      });
     }
+
+    delete ctx.session.pendingBulkUpdate;
 
     logger.info('bulk_prices_confirmed_text', {
       userId: ctx.from.id,

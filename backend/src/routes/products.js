@@ -105,4 +105,26 @@ router.post(
   productController.bulkDeleteByIds
 );
 
+/**
+ * @route   POST /api/products/bulk-discount
+ * @desc    Apply bulk discount to all products in a shop
+ * @access  Private (Shop owner or worker)
+ */
+router.post(
+  '/bulk-discount',
+  verifyToken,
+  productController.applyBulkDiscount
+);
+
+/**
+ * @route   POST /api/products/bulk-discount/remove
+ * @desc    Remove bulk discount from all products in a shop
+ * @access  Private (Shop owner or worker)
+ */
+router.post(
+  '/bulk-discount/remove',
+  verifyToken,
+  productController.removeBulkDiscount
+);
+
 export default router;

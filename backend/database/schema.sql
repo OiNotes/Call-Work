@@ -77,6 +77,9 @@ CREATE TABLE products (
   currency VARCHAR(10) DEFAULT 'USD',
   stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
   reserved_quantity INT DEFAULT 0 CHECK (reserved_quantity >= 0),
+  discount_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
+  original_price DECIMAL(18, 8),
+  discount_expires_at TIMESTAMP,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -88,6 +91,9 @@ COMMENT ON COLUMN products.price IS 'Product price in USD (8 decimal precision)'
 COMMENT ON COLUMN products.currency IS 'Legacy field - products are priced in USD only';
 COMMENT ON COLUMN products.stock_quantity IS 'Total stock quantity';
 COMMENT ON COLUMN products.reserved_quantity IS 'Reserved stock for pending orders (decreased after payment confirmation)';
+COMMENT ON COLUMN products.discount_percentage IS 'Discount percentage (0-100). 0 = no discount';
+COMMENT ON COLUMN products.original_price IS 'Original price before discount. NULL if no discount applied';
+COMMENT ON COLUMN products.discount_expires_at IS 'When discount expires. NULL = permanent discount';
 
 -- ============================================
 -- Shop follows table
@@ -428,6 +434,8 @@ CREATE INDEX IF NOT EXISTS idx_products_shop_active ON products(shop_id, is_acti
 CREATE INDEX IF NOT EXISTS idx_products_shop_active_partial ON products(shop_id) WHERE is_active = true;
 -- Composite index for availability checks (stock reservation system)
 CREATE INDEX IF NOT EXISTS idx_products_availability ON products(id, stock_quantity, reserved_quantity) WHERE is_active = true;
+-- Partial index for active discounts (filtering products with discounts)
+CREATE INDEX IF NOT EXISTS idx_products_discount_active ON products(shop_id, discount_percentage, discount_expires_at) WHERE discount_percentage > 0;
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_shop ON subscriptions(shop_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_telegram_id ON subscriptions(telegram_id);

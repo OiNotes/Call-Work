@@ -33,8 +33,81 @@ function formatPrice(price) {
 }
 
 // Conversation history constants
-const MAX_HISTORY_MESSAGES = 20; // Keep last 20 messages (10 exchanges)
+const MAX_HISTORY_MESSAGES = 40; // Keep last 40 messages (~10 tool exchanges or 20 text exchanges)
 const CONVERSATION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Parse duration string to milliseconds
+ * Supports: "6 часов", "3 дня", "12h", "24 hours", "1 week", etc.
+ * @param {string} text - Duration string
+ * @returns {number|null} Duration in milliseconds or null if invalid
+ */
+function parseDurationToMs(text) {
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+
+  const normalized = text.toLowerCase().trim();
+
+  // Patterns: "6 часов", "3 дня", "12h", "24 hours", etc.
+  const patterns = [
+    // Russian hours
+    { regex: /(\d+)\s*(?:часов|часа|час)/i, multiplier: 60 * 60 * 1000 },
+    // Russian days
+    { regex: /(\d+)\s*(?:дней|дня|день)/i, multiplier: 24 * 60 * 60 * 1000 },
+    // Russian weeks
+    { regex: /(\d+)\s*(?:недель|недели|неделя)/i, multiplier: 7 * 24 * 60 * 60 * 1000 },
+    // English hours
+    { regex: /(\d+)\s*(?:hours?|hrs?|h)/i, multiplier: 60 * 60 * 1000 },
+    // English days
+    { regex: /(\d+)\s*(?:days?|d)/i, multiplier: 24 * 60 * 60 * 1000 },
+    // English weeks
+    { regex: /(\d+)\s*(?:weeks?|w)/i, multiplier: 7 * 24 * 60 * 60 * 1000 }
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.regex.exec(normalized);
+    if (match) {
+      const value = parseInt(match[1], 10);
+      if (Number.isFinite(value) && value > 0) {
+        return value * pattern.multiplier;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Format duration from milliseconds to human-readable string
+ * @param {number} ms - Duration in milliseconds
+ * @returns {string} Human-readable duration (e.g., "6 часов", "3 дня")
+ */
+function formatDuration(ms) {
+  if (!ms || !Number.isFinite(ms)) {
+    return 'постоянная';
+  }
+
+  const hours = ms / (60 * 60 * 1000);
+  const days = ms / (24 * 60 * 60 * 1000);
+
+  if (days >= 1 && days % 1 === 0) {
+    // Days
+    if (days === 1) return '1 день';
+    if (days >= 2 && days <= 4) return `${days} дня`;
+    return `${days} дней`;
+  }
+
+  if (hours >= 1 && hours % 1 === 0) {
+    // Hours
+    if (hours === 1) return '1 час';
+    if (hours >= 2 && hours <= 4) return `${hours} часа`;
+    return `${hours} часов`;
+  }
+
+  // Fallback
+  return `${Math.round(hours)} часов`;
+}
 
 // Natural language shortcuts for stock updates
 const STOCK_KEYWORDS = ['сток', 'наличие', 'остаток', 'stock', 'quantity', 'qty', 'qnty'];
@@ -72,12 +145,44 @@ function getConversationHistory(ctx) {
 }
 
 /**
- * Save messages to conversation history with sliding window
- * @param {Object} ctx - Telegraf context
- * @param {string} userMessage - User's message
- * @param {string} assistantMessage - AI's response
+ * Save messages to conversation history with automatic sliding window management
+ * 
+ * Supports all OpenAI message formats:
+ * - User messages: { role: 'user', content: string }
+ * - Assistant text: { role: 'assistant', content: string }
+ * - Assistant with function calls: { role: 'assistant', content: null, tool_calls: [...] }
+ * - Tool results: { role: 'tool', tool_call_id: string, name: string, content: string }
+ * 
+ * Features:
+ * - Sliding window: automatically keeps only last MAX_HISTORY_MESSAGES
+ * - Metadata tracking: updates lastActivity and messageCount
+ * - Flexible input: accepts single message object or array of messages
+ * 
+ * @param {Object} ctx - Telegraf context with session
+ * @param {Object|Array<Object>} newMessages - Message(s) to add to history
+ * @param {string} newMessages[].role - Message role: 'user' | 'assistant' | 'tool'
+ * @param {string} [newMessages[].content] - Message content (optional for assistant with tool_calls)
+ * @param {Array} [newMessages[].tool_calls] - Tool calls array (if assistant calling functions)
+ * @param {string} [newMessages[].tool_call_id] - Tool call ID (if role is 'tool')
+ * @param {string} [newMessages[].name] - Function name (if role is 'tool')
+ * 
+ * @example
+ * // Save simple text exchange
+ * saveToConversationHistory(ctx, [
+ *   { role: 'user', content: 'Hello' },
+ *   { role: 'assistant', content: 'Hi there!' }
+ * ]);
+ * 
+ * @example
+ * // Save function call exchange
+ * saveToConversationHistory(ctx, [
+ *   { role: 'user', content: 'Add iPhone' },
+ *   { role: 'assistant', content: null, tool_calls: [...] },
+ *   { role: 'tool', tool_call_id: 'call_123', name: 'addProduct', content: '{"success":true}' },
+ *   { role: 'assistant', content: 'iPhone added!' }
+ * ]);
  */
-function saveToConversationHistory(ctx, userMessage, assistantMessage) {
+function saveToConversationHistory(ctx, newMessages) {
   if (!ctx || !ctx.session) {
     return;
   }
@@ -93,11 +198,9 @@ function saveToConversationHistory(ctx, userMessage, assistantMessage) {
 
   const conversation = ctx.session.aiConversation;
 
-  // Add new messages
-  conversation.messages.push(
-    { role: 'user', content: userMessage },
-    { role: 'assistant', content: assistantMessage }
-  );
+  // Add new messages (support array or single message)
+  const messagesToAdd = Array.isArray(newMessages) ? newMessages : [newMessages];
+  conversation.messages.push(...messagesToAdd);
 
   // Implement sliding window - keep only last N messages
   if (conversation.messages.length > MAX_HISTORY_MESSAGES) {
@@ -106,12 +209,13 @@ function saveToConversationHistory(ctx, userMessage, assistantMessage) {
 
   // Update metadata
   conversation.lastActivity = Date.now();
-  conversation.messageCount = (conversation.messageCount || 0) + 1;
+  conversation.messageCount = (conversation.messageCount || 0) + messagesToAdd.length;
 
   logger.debug('conversation_history_saved', {
     userId: ctx.from?.id,
     messageCount: conversation.messageCount,
-    historyLength: conversation.messages.length
+    historyLength: conversation.messages.length,
+    newMessagesCount: messagesToAdd.length
   });
 }
 
@@ -247,8 +351,12 @@ export async function processProductCommand(userCommand, context) {
         products
       );
 
+      // Legacy format - save only text messages for backward compatibility
       if (ctx && result.message) {
-        saveToConversationHistory(ctx, sanitizedCommand, result.message);
+        saveToConversationHistory(ctx, [
+          { role: 'user', content: sanitizedCommand },
+          { role: 'assistant', content: result.message }
+        ]);
       }
 
       return result;
@@ -374,12 +482,138 @@ export async function processProductCommand(userCommand, context) {
       // Execute the appropriate function
       const result = await executeToolCall(functionName, args, { shopId, token, products, ctx });
 
-      // Save conversation history (user command + function result)
-      if (ctx && result.message) {
-        saveToConversationHistory(ctx, sanitizedCommand, result.message);
+      // If function returned legacy message format (backward compatibility)
+      if (result.message && !result.data) {
+        // Legacy format - save only text messages for backward compatibility
+        if (ctx && result.message) {
+          saveToConversationHistory(ctx, [
+            { role: 'user', content: sanitizedCommand },
+            { role: 'assistant', content: result.message }
+          ]);
+        }
+        return result;
       }
 
-      return result;
+      // LOOP-BACK PATTERN: Pass function result back to AI for natural response
+      // Add tool call and result to conversation history
+      conversationHistory.push({
+        role: 'assistant',
+        content: null,
+        tool_calls: [{
+          id: toolCall.id,
+          type: 'function',
+          function: {
+            name: functionName,
+            arguments: toolCall.function.arguments
+          }
+        }]
+      });
+
+      conversationHistory.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        name: functionName,
+        content: JSON.stringify(result.data) // Pass structured data, not message!
+      });
+
+      logger.debug('loop_back_to_ai', {
+        shopId,
+        function: functionName,
+        hasData: !!result.data
+      });
+
+      // Restart typing indicator for second AI call
+      if (ctx) {
+        await ctx.sendChatAction('typing').catch(() => {});
+        typingInterval = setInterval(() => {
+          ctx.sendChatAction('typing').catch(() => {});
+        }, 4000);
+      }
+
+      // Reset streaming state for final AI response
+      streamingMessage = null;
+      lastUpdateTime = 0;
+      wordCount = 0;
+
+      // AI formulates natural response based on function result
+      let finalResponse;
+      try {
+        finalResponse = await deepseek.chatStreaming(
+          systemPrompt,
+          '',
+          [], // No tools on second call - just generate response
+          conversationHistory,
+          onChunk
+        );
+      } finally {
+        // Stop typing indicator
+        if (typingInterval) {
+          clearInterval(typingInterval);
+        }
+      }
+
+      const finalMessage = finalResponse.choices[0].message.content;
+
+      // Final update for streaming message
+      if (streamingMessage && ctx && finalMessage) {
+        try {
+          await ctx.telegram.editMessageText(
+            streamingMessage.chat.id,
+            streamingMessage.message_id,
+            undefined,
+            finalMessage
+          );
+        } catch (err) {
+          if (err.response?.description !== 'Bad Request: message is not modified') {
+            logger.warn('Failed to send final AI message:', err.message);
+          }
+        }
+      } else if (!streamingMessage && ctx && finalMessage) {
+        try {
+          await cleanReply(ctx, finalMessage);
+        } catch (err) {
+          logger.warn('Failed to send AI message:', err.message);
+        }
+      }
+
+      // Save FULL conversation flow with tool calls and tool results
+      if (ctx && finalMessage) {
+        saveToConversationHistory(ctx, [
+          { role: 'user', content: sanitizedCommand },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [{
+              id: toolCall.id,
+              type: 'function',
+              function: {
+                name: functionName,
+                arguments: toolCall.function.arguments
+              }
+            }]
+          },
+          {
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            name: functionName,
+            content: JSON.stringify(result.data)
+          },
+          {
+            role: 'assistant',
+            content: finalMessage
+          }
+        ]);
+      }
+
+      return {
+        success: result.success,
+        message: finalMessage || '✅ Команда обработана',
+        data: result.data,
+        needsConfirmation: result.needsConfirmation,
+        needsClarification: result.needsClarification,
+        keyboard: result.keyboard,
+        operation: result.operation
+      };
     }
 
     // No tool call - AI responded with text
@@ -410,9 +644,12 @@ export async function processProductCommand(userCommand, context) {
       }
     }
 
-    // Save conversation history (user command + AI text response)
+    // Save text conversation (no tool calls)
     if (ctx && aiMessage) {
-      saveToConversationHistory(ctx, sanitizedCommand, aiMessage);
+      saveToConversationHistory(ctx, [
+        { role: 'user', content: sanitizedCommand },
+        { role: 'assistant', content: aiMessage }
+      ]);
     }
 
     return {
@@ -525,21 +762,44 @@ async function handleAddProduct(args, shopId, token) {
   if (!name || name.length < 3) {
     return {
       success: false,
-      message: '❌ Название должно быть минимум 3 символа'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product name must be at least 3 characters',
+          field: 'name',
+          value: name,
+          constraint: 'minLength: 3'
+        }
+      }
     };
   }
 
   if (!price || price <= 0) {
     return {
       success: false,
-      message: '❌ Цена должна быть больше 0'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Price must be greater than 0',
+          field: 'price',
+          value: price,
+          constraint: 'min: 0.01'
+        }
+      }
     };
   }
 
   if (stock === undefined || stock === null) {
     return {
       success: false,
-      message: aiMessages.stockRequired
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Stock quantity is required',
+          field: 'stock',
+          hint: 'Please specify how many items are in stock'
+        }
+      }
     };
   }
 
@@ -565,23 +825,31 @@ async function handleAddProduct(args, shopId, token) {
       stockQuantity: stock
     }, token);
 
-    // Show original name in message if transliterated
-    const displayName = translitInfo.changed 
-      ? `${transliteratedName} (${name})`
-      : transliteratedName;
-
     return {
       success: true,
-      message: `✅ Добавлен: ${displayName} — ${price}${stock > 0 ? ` (количество: ${stock})` : ''}`,
-      data: product,
-      operation: 'add',
-      transliterated: translitInfo.changed
+      data: {
+        action: 'product_created',
+        product: {
+          id: product.id,
+          name: transliteratedName,
+          originalName: translitInfo.changed ? name : null,
+          price: product.price,
+          stock_quantity: product.stock_quantity,
+          transliterated: translitInfo.changed
+        }
+      }
     };
   } catch (error) {
     logger.error('Add product via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось добавить товар'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to create product',
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -596,14 +864,27 @@ async function handleBulkAddProducts(args, shopId, token) {
   if (!products || !Array.isArray(products)) {
     return {
       success: false,
-      message: '❌ Некорректный формат: ожидается массив товаров'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Products array is required',
+          field: 'products'
+        }
+      }
     };
   }
 
   if (products.length < 2) {
     return {
       success: false,
-      message: '❌ Для массового добавления нужно минимум 2 товара'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Bulk add requires at least 2 products',
+          field: 'products',
+          count: products.length
+        }
+      }
     };
   }
 
@@ -620,7 +901,11 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (!name || name.length < 3) {
       results.failed.push({
         name: name || 'unnamed',
-        reason: aiMessages.nameMinLength
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Name must be at least 3 characters',
+          field: 'name'
+        }
       });
       continue;
     }
@@ -628,7 +913,11 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (!price || price <= 0) {
       results.failed.push({
         name,
-        reason: aiMessages.pricePositive
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Price must be greater than 0',
+          field: 'price'
+        }
       });
       continue;
     }
@@ -636,7 +925,11 @@ async function handleBulkAddProducts(args, shopId, token) {
     if (stock === undefined || stock === null) {
       results.failed.push({
         name,
-        reason: aiMessages.stockNotSpecified
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Stock quantity is required',
+          field: 'stock'
+        }
       });
       continue;
     }
@@ -663,63 +956,55 @@ async function handleBulkAddProducts(args, shopId, token) {
         stockQuantity: stock
       }, token);
 
-      const displayName = translitInfo.changed
-        ? `${transliteratedName} (${name})`
-        : transliteratedName;
-
       results.successful.push({
-        name: displayName,
-        price,
-        stock,
-        data: createdProduct
+        name: transliteratedName,
+        originalName: translitInfo.changed ? name : null,
+        price: createdProduct.price,
+        stock_quantity: createdProduct.stock_quantity,
+        id: createdProduct.id,
+        transliterated: translitInfo.changed
       });
     } catch (error) {
       logger.error('Bulk add product failed:', { name, error: error.message });
       results.failed.push({
         name,
-        reason: aiMessages.apiError
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to create product',
+          details: error.message
+        }
       });
     }
   }
 
-  // Build result message
+  // Build result
   const successCount = results.successful.length;
   const failCount = results.failed.length;
 
   if (successCount === 0) {
     return {
       success: false,
-      message: `❌ Не удалось добавить товары (${failCount} ошибок):\n${results.failed.map(f => `• ${f.name}: ${f.reason}`).join('\n')}`,
-      data: results
+      data: {
+        error: {
+          code: 'BULK_ADD_FAILED',
+          message: 'Failed to add any products',
+          totalAttempted: products.length,
+          failures: results.failed
+        }
+      }
     };
-  }
-
-  let message = `✅ Добавлено товаров: ${successCount}/${products.length}\n\n`;
-
-  // Show successful products
-  results.successful.forEach(p => {
-    message += `• ${p.name} — $${formatPrice(p.price)}`;
-    if (p.stock > 0) {
-      message += ` (количество: ${p.stock})`;
-    }
-    message += '\n';
-  });
-
-  // Show failed products if any
-  if (failCount > 0) {
-    message += `\n❌ Ошибки (${failCount}):\n`;
-    results.failed.forEach(f => {
-      message += `• ${f.name}: ${f.reason}\n`;
-    });
   }
 
   return {
     success: true,
-    message: message.trim(),
-    data: results,
-    operation: 'bulkAdd',
-    successCount,
-    failCount
+    data: {
+      action: 'bulk_products_added',
+      totalAttempted: products.length,
+      successCount,
+      failCount,
+      successful: results.successful,
+      failed: failCount > 0 ? results.failed : null
+    }
   };
 }
 
@@ -732,7 +1017,13 @@ async function handleDeleteProduct(args, shopId, token, products) {
   if (!productName) {
     return {
       success: false,
-      message: '❌ Укажите название товара'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product name is required',
+          field: 'productName'
+        }
+      }
     };
   }
 
@@ -743,7 +1034,14 @@ async function handleDeleteProduct(args, shopId, token, products) {
   if (matches.length === 0) {
     return {
       success: false,
-      message: `❌ Товар "${productName}" не найден`
+      data: {
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: 'Product not found',
+          searchQuery: productName,
+          suggestion: 'Try searching with a different name or check the product list'
+        }
+      }
     };
   }
 
@@ -752,13 +1050,16 @@ async function handleDeleteProduct(args, shopId, token, products) {
     return {
       success: false,
       needsClarification: true,
-      message: `Найдено несколько товаров с "${productName}":`,
-      options: matches.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price
-      })),
-      operation: 'delete'
+      data: {
+        action: 'multiple_matches_found',
+        searchQuery: productName,
+        matches: matches.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price
+        })),
+        operation: 'delete'
+      }
     };
   }
 
@@ -770,15 +1071,27 @@ async function handleDeleteProduct(args, shopId, token, products) {
 
     return {
       success: true,
-      message: `✅ Удалён: ${product.name} ($${formatPrice(product.price)})`,
-      data: product,
-      operation: 'delete'
+      data: {
+        action: 'product_deleted',
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price
+        }
+      }
     };
   } catch (error) {
     logger.error('Delete product via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось удалить товар'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to delete product',
+          productName: product.name,
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -787,24 +1100,18 @@ async function handleDeleteProduct(args, shopId, token, products) {
  * List products handler
  */
 async function handleListProducts(products) {
-  if (products.length === 0) {
-    return {
-      success: true,
-      message: '📦 Товаров пока нет',
-      data: [],
-      operation: 'list'
-    };
-  }
-
-  const list = products
-    .map((p, i) => `${i + 1}. ${p.name} — $${formatPrice(p.price)} (количество: ${p.stock_quantity || 0})`)
-    .join('\n');
-
   return {
     success: true,
-    message: `📦 Товары (${products.length}):\n\n${list}`,
-    data: products,
-    operation: 'list'
+    data: {
+      action: 'products_listed',
+      totalCount: products.length,
+      products: products.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        stock_quantity: p.stock_quantity || 0
+      }))
+    }
   };
 }
 
@@ -817,7 +1124,13 @@ async function handleSearchProduct(args, products) {
   if (!query) {
     return {
       success: false,
-      message: '❌ Укажите поисковый запрос'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Search query is required',
+          field: 'query'
+        }
+      }
     };
   }
 
@@ -829,19 +1142,30 @@ async function handleSearchProduct(args, products) {
   if (matches.length === 0) {
     return {
       success: false,
-      message: `❌ Товары с "${query}" не найдены`
+      data: {
+        error: {
+          code: 'NO_RESULTS',
+          message: 'No products found',
+          searchQuery: query,
+          suggestion: 'Try a different search term'
+        }
+      }
     };
   }
 
-  const list = matches
-    .map((p, i) => `${i + 1}. ${p.name} — ${p.price} (количество: ${p.stock_quantity || 0})`)
-    .join('\n');
-
   return {
     success: true,
-    message: `🔍 Найдено (${matches.length}):\n\n${list}`,
-    data: matches,
-    operation: 'search'
+    data: {
+      action: 'products_found',
+      searchQuery: query,
+      totalFound: matches.length,
+      products: matches.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        stock_quantity: p.stock_quantity || 0
+      }))
+    }
   };
 }
 
@@ -854,14 +1178,27 @@ async function handleUpdateProduct(args, shopId, token, products) {
   if (!productName) {
     return {
       success: false,
-      message: '❌ Укажите название товара'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product name is required',
+          field: 'productName'
+        }
+      }
     };
   }
 
   if (!updates || typeof updates !== 'object') {
     return {
       success: false,
-      message: '❌ Укажите что нужно обновить (цену, название или количество)'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Updates object is required',
+          field: 'updates',
+          hint: 'Specify price, name, or stock_quantity to update'
+        }
+      }
     };
   }
 
@@ -870,7 +1207,13 @@ async function handleUpdateProduct(args, shopId, token, products) {
   if (!newName && newPrice === undefined && newStock === undefined) {
     return {
       success: false,
-      message: '❌ Укажите что нужно обновить (цену, название или количество)'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'No fields to update',
+          hint: 'Specify at least one field: name, price, or stock_quantity'
+        }
+      }
     };
   }
 
@@ -881,7 +1224,13 @@ async function handleUpdateProduct(args, shopId, token, products) {
   if (matches.length === 0) {
     return {
       success: false,
-      message: `❌ Товар "${productName}" не найден`
+      data: {
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: 'Product not found',
+          searchQuery: productName
+        }
+      }
     };
   }
 
@@ -889,13 +1238,16 @@ async function handleUpdateProduct(args, shopId, token, products) {
     return {
       success: false,
       needsClarification: true,
-      message: `Найдено несколько товаров с "${productName}":`,
-      options: matches.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price
-      })),
-      operation: 'update'
+      data: {
+        action: 'multiple_matches_found',
+        searchQuery: productName,
+        matches: matches.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price
+        })),
+        operation: 'update'
+      }
     };
   }
 
@@ -903,30 +1255,49 @@ async function handleUpdateProduct(args, shopId, token, products) {
 
   // Build update payload
   const updateData = {};
-  if (newName) updateData.name = newName;
-  if (newPrice !== undefined && newPrice > 0) updateData.price = newPrice;
-  if (newStock !== undefined && newStock >= 0) updateData.stockQuantity = newStock;
+  const changes = {};
+  
+  if (newName) {
+    updateData.name = newName;
+    changes.name = { old: product.name, new: newName };
+  }
+  if (newPrice !== undefined && newPrice > 0) {
+    updateData.price = newPrice;
+    changes.price = { old: product.price, new: newPrice };
+  }
+  if (newStock !== undefined && newStock >= 0) {
+    updateData.stockQuantity = newStock;
+    changes.stock_quantity = { old: product.stock_quantity, new: newStock };
+  }
 
   try {
     const updated = await productApi.updateProduct(product.id, updateData, token);
 
-    // Build change description
-    const changes = [];
-    if (newName) changes.push(`название: "${newName}"`);
-    if (newPrice !== undefined) changes.push(`цена: ${formatPrice(newPrice)}`);
-    if (newStock !== undefined) changes.push(`количество: ${newStock}`);
-
     return {
       success: true,
-      message: `✅ Обновлён: ${product.name}\n${changes.join(', ')}`,
-      data: updated,
-      operation: 'update'
+      data: {
+        action: 'product_updated',
+        product: {
+          id: updated.id,
+          name: updated.name,
+          price: updated.price,
+          stock_quantity: updated.stock_quantity
+        },
+        changes
+      }
     };
   } catch (error) {
     logger.error('Update product via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось обновить товар'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to update product',
+          productName: product.name,
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -940,15 +1311,22 @@ async function handleBulkDeleteAll(shopId, token) {
 
     return {
       success: true,
-      message: `✅ Всего удалено: ${result.deletedCount} товаров`,
-      data: result,
-      operation: 'bulk_delete_all'
+      data: {
+        action: 'bulk_delete_all',
+        deletedCount: result.deletedCount
+      }
     };
   } catch (error) {
     logger.error('Bulk delete all via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось удалить товары'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to delete all products',
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -962,12 +1340,19 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
   if (!productNames || !Array.isArray(productNames) || productNames.length === 0) {
     return {
       success: false,
-      message: '❌ Укажите названия товаров'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product names array is required',
+          field: 'productNames'
+        }
+      }
     };
   }
 
   // Find matching product IDs
   const productIds = [];
+  const found = [];
   const notFound = [];
 
   for (const name of productNames) {
@@ -977,6 +1362,7 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
 
     if (match) {
       productIds.push(match.id);
+      found.push(match.name);
     } else {
       notFound.push(name);
     }
@@ -985,29 +1371,40 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
   if (productIds.length === 0) {
     return {
       success: false,
-      message: `❌ Ни один товар не найден: ${productNames.join(', ')}`
+      data: {
+        error: {
+          code: 'PRODUCTS_NOT_FOUND',
+          message: 'None of the specified products were found',
+          searchedNames: productNames,
+          notFound
+        }
+      }
     };
   }
 
   try {
     const result = await productApi.bulkDeleteByIds(shopId, productIds, token);
 
-    let message = `✅ Удалено товаров: ${result.deletedCount}`;
-    if (notFound.length > 0) {
-      message += `\n⚠️ Не найдены: ${notFound.join(', ')}`;
-    }
-
     return {
       success: true,
-      message,
-      data: result,
-      operation: 'bulk_delete'
+      data: {
+        action: 'bulk_delete_by_names',
+        deletedCount: result.deletedCount,
+        deletedProducts: found,
+        notFound: notFound.length > 0 ? notFound : null
+      }
     };
   } catch (error) {
     logger.error('Bulk delete by names via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось удалить товары'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to delete products',
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -1021,14 +1418,27 @@ async function handleRecordSale(args, shopId, token, products) {
   if (!productName) {
     return {
       success: false,
-      message: '❌ Укажите название товара'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product name is required',
+          field: 'productName'
+        }
+      }
     };
   }
 
   if (quantity <= 0) {
     return {
       success: false,
-      message: '❌ Количество должно быть больше 0'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Quantity must be greater than 0',
+          field: 'quantity',
+          value: quantity
+        }
+      }
     };
   }
 
@@ -1039,7 +1449,13 @@ async function handleRecordSale(args, shopId, token, products) {
   if (matches.length === 0) {
     return {
       success: false,
-      message: `❌ Товар "${productName}" не найден`
+      data: {
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: 'Product not found',
+          searchQuery: productName
+        }
+      }
     };
   }
 
@@ -1047,13 +1463,16 @@ async function handleRecordSale(args, shopId, token, products) {
     return {
       success: false,
       needsClarification: true,
-      message: `Найдено несколько товаров с "${productName}":`,
-      options: matches.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price
-      })),
-      operation: 'record_sale'
+      data: {
+        action: 'multiple_matches_found',
+        searchQuery: productName,
+        matches: matches.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price
+        })),
+        operation: 'record_sale'
+      }
     };
   }
 
@@ -1064,7 +1483,16 @@ async function handleRecordSale(args, shopId, token, products) {
   if (currentStock < quantity) {
     return {
       success: false,
-      message: `❌ Недостаточно товара на складе\nЗапрошено: ${quantity} шт.\nДоступно: ${currentStock} шт.`
+      data: {
+        error: {
+          code: 'INSUFFICIENT_STOCK',
+          message: 'Not enough stock available',
+          productName: product.name,
+          requested: quantity,
+          available: currentStock,
+          shortage: quantity - currentStock
+        }
+      }
     };
   }
 
@@ -1077,15 +1505,32 @@ async function handleRecordSale(args, shopId, token, products) {
 
     return {
       success: true,
-      message: `✅ Продажа записана: ${product.name}\nПродано: ${quantity} шт.\nОсталось: ${newStock} шт.`,
-      data: updated,
-      operation: 'record_sale'
+      data: {
+        action: 'sale_recorded',
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price
+        },
+        sale: {
+          quantity,
+          previousStock: currentStock,
+          newStock
+        }
+      }
     };
   } catch (error) {
     logger.error('Record sale via AI failed:', error);
     return {
       success: false,
-      message: '❌ Не удалось записать продажу'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to record sale',
+          productName: product.name,
+          details: error.message
+        }
+      }
     };
   }
 }
@@ -1099,7 +1544,13 @@ async function handleGetProductInfo(args, products) {
   if (!productName) {
     return {
       success: false,
-      message: '❌ Укажите название товара'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Product name is required',
+          field: 'productName'
+        }
+      }
     };
   }
 
@@ -1111,7 +1562,13 @@ async function handleGetProductInfo(args, products) {
   if (matches.length === 0) {
     return {
       success: false,
-      message: `❌ Товар "${productName}" не найден`
+      data: {
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: 'Product not found',
+          searchQuery: productName
+        }
+      }
     };
   }
 
@@ -1119,13 +1576,16 @@ async function handleGetProductInfo(args, products) {
     return {
       success: false,
       needsClarification: true,
-      message: `Найдено несколько товаров с "${productName}":`,
-      options: matches.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price
-      })),
-      operation: 'info'
+      data: {
+        action: 'multiple_matches_found',
+        searchQuery: productName,
+        matches: matches.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price
+        })),
+        operation: 'info'
+      }
     };
   }
 
@@ -1133,9 +1593,15 @@ async function handleGetProductInfo(args, products) {
 
   return {
     success: true,
-    message: `${product.name}\nЦена: $${formatPrice(product.price)}\nНа складе: ${product.stock_quantity || 0} шт.`,
-    data: product,
-    operation: 'info'
+    data: {
+      action: 'product_info_retrieved',
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        stock_quantity: product.stock_quantity || 0
+      }
+    }
   };
 }
 
@@ -1143,27 +1609,68 @@ async function handleGetProductInfo(args, products) {
  * Bulk update prices handler (discount/increase all products)
  */
 async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
-  const { percentage, operation } = args;
+  const { percentage, operation, duration } = args;
 
   if (!percentage || percentage < 0.1 || percentage > 100) {
     return {
       success: false,
-      message: '❌ Процент должен быть от 0.1 до 100'
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Percentage must be between 0.1 and 100',
+          field: 'percentage',
+          value: percentage,
+          constraint: 'min: 0.1, max: 100'
+        }
+      }
     };
   }
 
   if (!operation || !['increase', 'decrease'].includes(operation)) {
     return {
       success: false,
-      message: aiMessages.invalidOperation
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid operation',
+          field: 'operation',
+          value: operation,
+          allowed: ['increase', 'decrease']
+        }
+      }
     };
   }
 
   if (!products || products.length === 0) {
     return {
       success: false,
-      message: '❌ Нет товаров для изменения цен'
+      data: {
+        error: {
+          code: 'NO_PRODUCTS',
+          message: 'No products available to update prices'
+        }
+      }
     };
+  }
+
+  // Parse duration if provided
+  let durationMs = null;
+  if (duration) {
+    durationMs = parseDurationToMs(duration);
+    if (!durationMs) {
+      return {
+        success: false,
+        data: {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid duration format',
+            field: 'duration',
+            value: duration,
+            hint: 'Use format like "6 hours" or "3 days"'
+          }
+        }
+      };
+    }
   }
 
   // Calculate multiplier
@@ -1171,15 +1678,57 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
     ? (1 - percentage / 100)
     : (1 + percentage / 100);
 
-  const operationText = operation === 'decrease' ? aiMessages.operationNames.decrease : aiMessages.operationNames.increase;
   const operationSymbol = operation === 'decrease' ? '-' : '+';
 
   // Build preview
-  const previewUpdates = products.slice(0, 3).map(p => {
+  const previewProducts = products.slice(0, 3).map(p => {
     const newPrice = Math.round(p.price * multiplier * 100) / 100;
-    return `• ${p.name}: $${formatPrice(p.price)} → $${formatPrice(newPrice)}`;
+    return {
+      name: p.name,
+      oldPrice: p.price,
+      newPrice
+    };
   });
-  const previewText = previewUpdates.join('\n') + (products.length > 3 ? `\n... и ещё ${products.length - 3} товаров` : '');
+
+  // If duration not specified by AI, ask user for type
+  if (!duration) {
+    // Store pending operation in session
+    if (ctx && ctx.session) {
+      ctx.session.pendingDiscountType = {
+        percentage,
+        operation,
+        multiplier,
+        operationSymbol,
+        shopId,
+        token,
+        productCount: products.length,
+        timestamp: Date.now()
+      };
+    }
+
+    // Return structured data for AI to formulate natural question
+    return {
+      success: false,
+      needsInput: 'discount_type',
+      data: {
+        action: 'discount_needs_clarification',
+        context: {
+          percentage,
+          operation,
+          operationSymbol,
+          productCount: products.length,
+          previewProducts,
+          totalProducts: products.length,
+          availableTypes: ['permanent', 'timer'],
+          hint: 'Ask user if this should be a permanent discount or with a timer'
+        }
+      }
+    };
+  }
+
+  // Duration was provided by AI - proceed with confirmation
+  const durationText = formatDuration(durationMs);
+  const discountType = durationMs ? 'timer' : 'permanent';
 
   // Store pending operation in session for confirmation
   if (ctx && ctx.session) {
@@ -1187,27 +1736,41 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
       percentage,
       operation,
       multiplier,
-      operationText,
       operationSymbol,
       shopId,
       token,
       productCount: products.length,
+      discountType,
+      duration: durationMs,
       timestamp: Date.now()
     };
   }
 
-  // Return confirmation prompt
+  // Return confirmation data - AI will formulate natural message
   return {
     success: true,
     needsConfirmation: true,
-    message: `${aiMessages.bulkPricePrompt(operationText, percentage, previewText)}\n\n⚠️ Нажмите кнопку ниже или напишите "да" для применения / "нет" для отмены`,
+    data: {
+      action: 'bulk_discount_confirmation_needed',
+      discount: {
+        percentage,
+        operation,
+        operationSymbol,
+        type: discountType,
+        duration: durationMs,
+        durationText
+      },
+      impact: {
+        totalProducts: products.length,
+        previewProducts
+      }
+    },
     keyboard: {
       inline_keyboard: [[
         { text: '✅ Применить', callback_data: 'bulk_prices_confirm' },
         { text: '◀️ Назад', callback_data: 'bulk_prices_cancel' }
       ]]
-    },
-    operation: 'bulk_update_prices'
+    }
   };
 }
 
@@ -1224,103 +1787,24 @@ export async function executeBulkPriceUpdate(shopId, token, ctx) {
     };
   }
 
-  const { percentage, operation, multiplier, operationText, operationSymbol } = pending;
+  const { percentage, operation, operationSymbol, discountType, duration } = pending;
+  const operationText = operation === 'decrease' ? 'Скидка' : 'Наценка';
 
   try {
-    // Fetch current products
-    const products = await productApi.getShopProducts(shopId);
+    // Убрано - вызывающий код сам управляет сообщением
 
-    if (!products || products.length === 0) {
-      return {
-        success: false,
-        message: '❌ Нет товаров для изменения цен'
-      };
-    }
-
-    // Send initial progress message
-    let progressMsg = null;
-    if (ctx) {
-      progressMsg = await cleanReply(ctx, `⏳ Начинаю изменение цен...\nТоваров: ${products.length}`);
-    }
-
-    let successCount = 0;
-    let failCount = 0;
-    const updates = [];
-
-    const BATCH_SIZE = 10;
-    const batches = [];
-    for (let i = 0; i < products.length; i += BATCH_SIZE) {
-      batches.push(products.slice(i, i + BATCH_SIZE));
-    }
-
-    // Process batches
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-
-      // Update progress every batch
-      if (ctx && progressMsg && batchIndex > 0) {
-        try {
-          await ctx.telegram.editMessageText(
-            ctx.chat.id,
-            progressMsg.message_id,
-            null,
-            `⏳ Обрабатываю цены...\nОбработано: ${batchIndex * BATCH_SIZE}/${products.length} товаров`
-          );
-        } catch (editError) {
-          logger.debug('Failed to update AI price progress message', {
-            error: editError.message
-          });
-        }
-      }
-
-      // Process batch in parallel
-      const batchPromises = batch.map(async (product) => {
-        try {
-          const newPrice = Math.round(product.price * multiplier * 100) / 100;
-          
-          if (newPrice <= 0) {
-            failCount++;
-            return null;
-          }
-
-          await productApi.updateProduct(product.id, {
-            price: newPrice
-          }, token);
-
-          return {
-            name: product.name,
-            oldPrice: product.price,
-            newPrice: newPrice
-          };
-        } catch (error) {
-          logger.error(`Failed to update product ${product.id}:`, error);
-          failCount++;
-          return null;
-        }
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      batchResults.forEach(result => {
-        if (result) {
-          updates.push(result);
-          successCount++;
-        }
-      });
-    }
+    // Call new bulk discount API
+    const result = await productApi.applyBulkDiscount(shopId, token, {
+      percentage,
+      type: discountType || 'permanent',
+      duration: duration || null
+    });
 
     // Clear pending operation
     delete ctx.session.pendingBulkUpdate;
 
-    if (successCount === 0) {
-      // Update progress message with error
-      if (ctx && progressMsg) {
-        await ctx.telegram.editMessageText(
-          ctx.chat.id,
-          progressMsg.message_id,
-          null,
-          '❌ Не удалось обновить ни одного товара'
-        );
-      }
+    if (!result || !result.productsUpdated || result.productsUpdated === 0) {
+      // Убрано - вызывающий код сам обновит сообщение
       return {
         success: false,
         message: '❌ Не удалось обновить ни одного товара'
@@ -1328,44 +1812,29 @@ export async function executeBulkPriceUpdate(shopId, token, ctx) {
     }
 
     // Build success message
-    let message = `✅ ${operationText} ${operationSymbol}${percentage}% применена\n`;
-    message += `Обновлено товаров: ${successCount}/${products.length}\n\n`;
+    const durationInfo = duration ? ` (действует ${formatDuration(duration)})` : '';
+    let message = `✅ ${operationText} ${operationSymbol}${percentage}% применена${durationInfo}\n`;
+    message += `Обновлено товаров: ${result.productsUpdated}\n\n`;
     
-    // Show first 5 updates as examples
-    const exampleUpdates = updates.slice(0, 5);
-    exampleUpdates.forEach(u => {
-      const displayName = u.name.length > 40 ? u.name.slice(0, 37) + '...' : u.name;
-      message += `• ${displayName}: $${formatPrice(u.oldPrice)} → $${formatPrice(u.newPrice)}\n`;
-    });
+    // Show first 5 updates as examples if available
+    if (result.products && result.products.length > 0) {
+      const exampleUpdates = result.products.slice(0, 5);
+      exampleUpdates.forEach(p => {
+        const displayName = p.name.length > 40 ? p.name.slice(0, 37) + '...' : p.name;
+        message += `• ${displayName}: ${formatPrice(p.price)}\n`;
+      });
 
-    if (updates.length > 5) {
-      message += `... и ещё ${updates.length - 5} товаров`;
+      if (result.products.length > 5) {
+        message += `... и ещё ${result.products.length - 5} товаров`;
+      }
     }
 
-    if (failCount > 0) {
-      message += `\n\n⚠️ Не удалось обновить: ${failCount} товаров`;
-    }
-
-    // Update progress message with final result
-    if (ctx && progressMsg) {
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        progressMsg.message_id,
-        null,
-        message
-      );
-    }
+    // Убрано - вызывающий код сам обновит сообщение
 
     return {
       success: true,
       message,
-      data: {
-        updatedCount: successCount,
-        failedCount: failCount,
-        percentage,
-        operation,
-        updates
-      },
+      data: result,
       operation: 'bulk_update_prices'
     };
   } catch (error) {

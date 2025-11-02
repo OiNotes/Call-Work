@@ -399,6 +399,59 @@ export const productQueries = {
       [productIds, shopId]
     );
     return result.rows;
+  },
+
+  // Apply bulk discount to all active products in a shop
+  applyBulkDiscount: async (shopId, discountData) => {
+    const { percentage, type, duration } = discountData;
+
+    // Calculate discount_expires_at if type is "timer"
+    let expiresAt = null;
+    if (type === 'timer' && duration) {
+      const now = new Date();
+      expiresAt = new Date(now.getTime() + duration); // duration in milliseconds
+    }
+
+    // Apply discount to all active products in the shop
+    const result = await query(
+      `UPDATE products
+       SET
+         discount_percentage = $1::DECIMAL,
+         original_price = CASE
+           WHEN discount_percentage = 0 THEN price
+           ELSE COALESCE(original_price, price)
+         END,
+         price = CASE
+           WHEN discount_percentage = 0 THEN price * (1 - $1::DECIMAL/100)
+           ELSE COALESCE(original_price, price) * (1 - $1::DECIMAL/100)
+         END,
+         discount_expires_at = $2,
+         updated_at = NOW()
+       WHERE shop_id = $3 AND is_active = true
+       RETURNING *`,
+      [percentage, expiresAt, shopId]
+    );
+
+    return result.rows;
+  },
+
+  // Remove bulk discount from all products in a shop
+  removeBulkDiscount: async (shopId) => {
+    // Remove discount and restore original_price
+    const result = await query(
+      `UPDATE products
+       SET
+         discount_percentage = 0,
+         price = COALESCE(original_price, price),
+         original_price = NULL,
+         discount_expires_at = NULL,
+         updated_at = NOW()
+       WHERE shop_id = $1 AND discount_percentage > 0
+       RETURNING *`,
+      [shopId]
+    );
+
+    return result.rows;
   }
 };
 

@@ -106,9 +106,24 @@ export const productController = {
         });
       }
 
+      // Enrich product with discount info
+      const now = new Date();
+      const hasDiscount = product.discount_percentage > 0;
+      const isExpired = product.discount_expires_at && new Date(product.discount_expires_at) < now;
+      const discountActive = hasDiscount && !isExpired;
+
+      const enrichedProduct = {
+        ...product,
+        discount_active: discountActive,
+        discounted_price: product.price, // Current price (already discounted)
+        time_left: discountActive && product.discount_expires_at
+          ? new Date(product.discount_expires_at).getTime() - now.getTime()
+          : null
+      };
+
       return res.status(200).json({
         success: true,
-        data: product
+        data: enrichedProduct
       });
 
     } catch (error) {
@@ -156,20 +171,37 @@ export const productController = {
       const products = await productQueries.list(filters);
 
       logger.info('[Products List] Results:', {
-        count: products.length,
-        shopId: filters.shopId,
-        productIds: products.map(p => p.id)
+      count: products.length,
+      shopId: filters.shopId,
+      productIds: products.map(p => p.id)
       });
 
-      return res.status(200).json({
-        success: true,
-        data: products,
-        pagination: {
-          page,
-          limit,
-          total: products.length
-        }
-      });
+      // Enrich products with discount info
+      const enrichedProducts = products.map(product => {
+      const now = new Date();
+      const hasDiscount = product.discount_percentage > 0;
+      const isExpired = product.discount_expires_at && new Date(product.discount_expires_at) < now;
+      const discountActive = hasDiscount && !isExpired;
+
+      return {
+          ...product,
+        discount_active: discountActive,
+        discounted_price: product.price, // Current price (already discounted)
+        time_left: discountActive && product.discount_expires_at
+          ? new Date(product.discount_expires_at).getTime() - now.getTime()
+          : null
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: enrichedProducts,
+      pagination: {
+        page,
+        limit,
+        total: enrichedProducts.length
+      }
+    });
 
     } catch (error) {
       if (error.code) {
@@ -417,6 +449,145 @@ export const productController = {
       return res.status(500).json({
         success: false,
         error: 'Failed to delete products'
+      });
+    }
+  },
+
+  /**
+   * Apply bulk discount to all products in a shop
+   */
+  applyBulkDiscount: async (req, res) => {
+    try {
+      const { percentage, type, duration } = req.body;
+      const shopId = req.body.shopId || req.user?.shopId;
+
+      // Validation
+      if (!shopId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shop ID required'
+        });
+      }
+
+      if (!percentage || percentage < 0 || percentage > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'Discount percentage must be between 0 and 100'
+        });
+      }
+
+      if (!['permanent', 'timer'].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Type must be "permanent" or "timer"'
+        });
+      }
+
+      if (type === 'timer' && !duration) {
+        return res.status(400).json({
+          success: false,
+          error: 'Duration required for timer discount'
+        });
+      }
+
+      // Check authorization (owner OR worker)
+      const isAuthorized = await isAuthorizedToManageShop(shopId, req.user.id);
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can only apply discounts to shops you own or manage as a worker'
+        });
+      }
+
+      // Apply discount
+      const products = await productQueries.applyBulkDiscount(shopId, {
+        percentage,
+        type,
+        duration: duration || null
+      });
+
+      logger.info('Bulk discount applied', {
+        shopId,
+        percentage,
+        type,
+        productsCount: products.length
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          productsUpdated: products.length,
+          products
+        }
+      });
+
+    } catch (error) {
+      logger.error('Apply bulk discount error', {
+        error: error.message,
+        stack: error.stack
+      });
+
+      if (error.code) {
+        const handledError = dbErrorHandler(error);
+        return res.status(handledError.statusCode).json({
+          success: false,
+          error: handledError.message
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to apply bulk discount'
+      });
+    }
+  },
+
+  /**
+   * Remove bulk discount from all products in a shop
+   */
+  removeBulkDiscount: async (req, res) => {
+    try {
+      const shopId = req.body.shopId || req.user?.shopId;
+
+      if (!shopId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shop ID required'
+        });
+      }
+
+      // Check authorization (owner OR worker)
+      const isAuthorized = await isAuthorizedToManageShop(shopId, req.user.id);
+      if (!isAuthorized) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can only remove discounts from shops you own or manage as a worker'
+        });
+      }
+
+      const products = await productQueries.removeBulkDiscount(shopId);
+
+      logger.info('Bulk discount removed', {
+        shopId,
+        productsCount: products.length
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          productsUpdated: products.length,
+          products
+        }
+      });
+
+    } catch (error) {
+      logger.error('Remove bulk discount error', {
+        error: error.message
+      });
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to remove bulk discount'
       });
     }
   }
