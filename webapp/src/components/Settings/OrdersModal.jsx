@@ -127,13 +127,7 @@ export default function OrdersModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadOrders();
-    }
-  }, [isOpen]);
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     triggerHaptic('light');
     const { data, error } = await getMyOrders();
 
@@ -145,7 +139,13 @@ export default function OrdersModal({ isOpen, onClose }) {
       // Поэтому нужно извлечь data.data
       setOrders(data?.data || []);
     }
-  };
+  }, [getMyOrders, triggerHaptic]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadOrders();
+    }
+  }, [isOpen, loadOrders]);
 
   return (
     <AnimatePresence>

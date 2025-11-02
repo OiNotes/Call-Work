@@ -166,7 +166,6 @@ describe('Telegram initData Validation Security', () => {
       params.set('user', tamperedUserJson);
 
       // Keep original hash (which was valid for original data)
-      const originalHash = params.get('hash');
       const tamperedInitData = params.toString();
 
       const result = verifyInitData(tamperedInitData, BOT_TOKEN);

@@ -46,6 +46,42 @@ export async function handleAIProductCommand(ctx) {
       return;
     }
 
+    // Проверка pending операций - обработать подтверждение напрямую (не через AI)
+    if (ctx.session.pendingBulkUpdate || ctx.session.pendingAI) {
+      const normalizedText = userMessage.trim().toLowerCase();
+      
+      // Обработка bulk price update подтверждения
+      if (ctx.session.pendingBulkUpdate) {
+        // Подтверждение
+        if (['да', 'yes', 'apply', 'применить', 'подтверждаю', 'ok', 'ок'].includes(normalizedText)) {
+          logger.info('Text confirmation received for bulk price update', { userId: ctx.from.id });
+          return await handleBulkPricesConfirmText(ctx);
+        }
+        
+        // Отмена
+        if (['нет', 'no', 'отмена', 'cancel', 'назад', 'отменить'].includes(normalizedText)) {
+          logger.info('Text cancellation received for bulk price update', { userId: ctx.from.id });
+          return await handleBulkPricesCancelText(ctx);
+        }
+        
+        // Неопределенный ответ - напомнить о pending операции
+        await smartMessage.send(ctx, {
+          text: '⚠️ Сначала ответьте на предыдущий вопрос.\n\nНажмите кнопку ниже или напишите "да" для применения / "нет" для отмены.',
+          parseMode: 'HTML'
+        });
+        return;
+      }
+      
+      // Аналогично для других pending операций
+      if (ctx.session.pendingAI) {
+        await smartMessage.send(ctx, {
+          text: '⚠️ Пожалуйста, завершите предыдущую операцию.',
+          parseMode: 'HTML'
+        });
+        return;
+      }
+    }
+
     // Filter noise commands (greetings, thanks, etc.)
     if (isNoiseCommand(userMessage)) {
       // Ignore silently - don't waste tokens on "привет" or "спасибо"
@@ -153,8 +189,10 @@ export async function handleAIProductCommand(ctx) {
       userId: ctx.from.id,
       shopId: ctx.session.shopId,
       success: result.success,
-      operation: result.operation || 'unknown',
-      message: userMessage.slice(0, 100)
+      operation: result.operation || 'text_response',
+      hadToolCalls: !!result.operation,
+      hadPendingOperation: !!(ctx.session.pendingBulkUpdate || ctx.session.pendingAI),
+      messagePreview: userMessage.slice(0, 100)
     });
 
   } catch (error) {
@@ -364,6 +402,61 @@ export async function handleBulkPricesCancel(ctx) {
     });
   } catch (error) {
     logger.error('Bulk prices cancel handler error:', error);
+  }
+}
+
+/**
+ * Handle bulk price update confirmation from TEXT message
+ * (when user writes "да" instead of clicking button)
+ */
+export async function handleBulkPricesConfirmText(ctx) {
+  try {
+    // Send initial progress message (NO answerCbQuery - this is text!)
+    await cleanReply(ctx, '⏳ Применяю изменения...');
+
+    const result = await executeBulkPriceUpdate(
+      ctx.session.shopId,
+      ctx.session.token,
+      ctx
+    );
+
+    // Result message already sent via executeBulkPriceUpdate
+    // Only send error if needed
+    if (!result.success && result.message) {
+      await cleanReply(ctx, result.message);
+    }
+
+    logger.info('bulk_prices_confirmed_text', {
+      userId: ctx.from.id,
+      shopId: ctx.session.shopId,
+      success: result.success
+    });
+  } catch (error) {
+    logger.error('Bulk prices confirm text handler error:', error);
+    try {
+      await cleanReply(ctx, '❌ Ошибка при выполнении');
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
+  }
+}
+
+/**
+ * Handle bulk price update cancellation from TEXT message
+ * (when user writes "нет" instead of clicking button)
+ */
+export async function handleBulkPricesCancelText(ctx) {
+  try {
+    // Send cancellation message (NO answerCbQuery - this is text!)
+    await cleanReply(ctx, '❌ Изменение цен отменено');
+    delete ctx.session.pendingBulkUpdate;
+
+    logger.info('bulk_prices_cancelled_text', {
+      userId: ctx.from.id,
+      shopId: ctx.session.shopId
+    });
+  } catch (error) {
+    logger.error('Bulk prices cancel text handler error:', error);
   }
 }
 

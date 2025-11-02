@@ -25,6 +25,58 @@ export function useTelegram() {
 
   const { setUser, setToken } = useStore();
 
+  const waitForTelegramSDK = useCallback(async (maxRetries = 10, delay = 200) => {
+    for (let i = 0; i < maxRetries; i++) {
+      console.log(`Attempt ${i + 1}/${maxRetries}: Checking for Telegram SDK...`);
+
+      if (window.Telegram?.WebApp) {
+        console.log('✅ Telegram SDK found!');
+        const data = initTelegramApp();
+        if (data) {
+          return data;
+        }
+      }
+
+      // Wait before next retry
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    console.error('❌ Telegram SDK not found after', maxRetries, 'retries');
+    return null;
+  }, []);
+
+  const validateTelegramAuth = useCallback(async (initData) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+      const response = await axios.post(
+        `${API_URL}/auth/telegram-validate`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-init-data': initData
+          }
+        }
+      );
+
+      const { user, token } = response.data;
+
+      // Save to store
+      setUser(user);
+      setToken(token);
+
+      console.log('✅ Telegram authentication successful:', user);
+      setError(null);
+
+    } catch (err) {
+      console.error('❌ Telegram auth validation failed:', err);
+      const errorMessage = err.response?.data?.error || err.message;
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [setUser, setToken]);
+
   useEffect(() => {
     async function initialize() {
       try {
@@ -76,67 +128,7 @@ export function useTelegram() {
     }
 
     initialize();
-  }, []);
-
-  /**
-   * Wait for Telegram SDK to load with retry logic
-   * @returns {Promise<Object|null>}
-   */
-  async function waitForTelegramSDK(maxRetries = 10, delay = 200) {
-    for (let i = 0; i < maxRetries; i++) {
-      console.log(`Attempt ${i + 1}/${maxRetries}: Checking for Telegram SDK...`);
-
-      if (window.Telegram?.WebApp) {
-        console.log('✅ Telegram SDK found!');
-        const data = initTelegramApp();
-        if (data) {
-          return data;
-        }
-      }
-
-      // Wait before next retry
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-
-    console.error('❌ Telegram SDK not found after', maxRetries, 'retries');
-    return null;
-  }
-
-  /**
-   * Validate Telegram initData with backend
-   * IMPORTANT: initData is sent in x-telegram-init-data header (not body)
-   */
-  async function validateTelegramAuth(initData) {
-    try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-      const response = await axios.post(
-        `${API_URL}/auth/telegram-validate`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-init-data': initData
-          }
-        }
-      );
-
-      const { user, token } = response.data;
-
-      // Save to store
-      setUser(user);
-      setToken(token);
-
-      console.log('✅ Telegram authentication successful:', user);
-      setError(null);
-
-    } catch (err) {
-      console.error('❌ Telegram auth validation failed:', err);
-      const errorMessage = err.response?.data?.error || err.message;
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
+  }, [validateTelegramAuth, waitForTelegramSDK]);
 
   // Main Button
   const setMainButton = useCallback((text, onClick) => {

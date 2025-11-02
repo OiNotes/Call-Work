@@ -119,7 +119,7 @@ function PaymentHistoryItem({ payment }) {
 
 // Main Modal Component
 export default function SubscriptionModal({ isOpen, onClose }) {
-  const { triggerHaptic, alert } = useTelegram();
+  const { alert } = useTelegram();
   const { fetchApi } = useApi();
 
   const [myShop, setMyShop] = useState(null);
@@ -134,13 +134,7 @@ export default function SubscriptionModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Get shop
@@ -166,7 +160,13 @@ export default function SubscriptionModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchApi]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
 
   const handleUpgrade = async () => {
     await alert('Апгрейд через бота. Перейдите в бота для оплаты.');

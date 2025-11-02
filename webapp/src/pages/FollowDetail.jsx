@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeftIcon, EyeIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useStore } from '../store/useStore';
@@ -24,16 +24,11 @@ const FollowDetail = () => {
   const [showMarkupSlider, setShowMarkupSlider] = useState(false);
   const [showSwitchMode, setShowSwitchMode] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [newMode, setNewMode] = useState(null);
 
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
-  useEffect(() => {
-    loadData();
-  }, [followDetailId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!followDetailId) return;
 
     try {
@@ -61,7 +56,11 @@ const FollowDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [followDetailId, followsApi, setCurrentFollow, setFollowProducts, triggerHaptic]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -102,7 +101,6 @@ const FollowDetail = () => {
   const handleSwitchMode = async () => {
     triggerHaptic('light');
     const targetMode = currentFollow.mode === 'monitor' ? 'resell' : 'monitor';
-    setNewMode(targetMode);
 
     if (targetMode === 'resell') {
       setShowMarkupSlider(true);

@@ -27,7 +27,7 @@ export const settingsHandlers = [
 
     return HttpResponse.json({
       success: true,
-      data: updatedWallets,
+      data: { shopId, wallets: updatedWallets },
       message: 'Wallets updated successfully'
     });
   }),
@@ -41,7 +41,7 @@ export const settingsHandlers = [
 
     return HttpResponse.json({
       success: true,
-      data: updatedWallets,
+      data: { shopId, wallets: updatedWallets },
       message: 'Wallets updated successfully'
     });
   }),

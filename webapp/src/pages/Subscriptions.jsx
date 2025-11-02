@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
-import { useShopApi } from '../hooks/useApi';
+import { useShopApi, useFollowsApi } from '../hooks/useApi';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
@@ -11,14 +11,11 @@ export default function Subscriptions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getSubscriptions } = useShopApi();
+  const { deleteFollow } = useFollowsApi();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    loadSubscriptions();
-  }, []);
-
-  const loadSubscriptions = async () => {
+  const loadSubscriptions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -43,7 +40,11 @@ export default function Subscriptions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getSubscriptions]);
+
+  useEffect(() => {
+    loadSubscriptions();
+  }, [loadSubscriptions]);
 
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');
@@ -58,13 +59,16 @@ export default function Subscriptions() {
     setActiveTab('catalog');
   };
 
-  const handleUnsubscribe = (e, shopId) => {
+  const handleUnsubscribe = async (e, followId) => {
     e.stopPropagation(); // Prevent shop click
     triggerHaptic('medium');
-    // TODO: Implement unsubscribe API call
-    console.log('Unsubscribe from shop:', shopId);
-    // После реализации API, обновить список подписок
-    // setSubscriptions(subscriptions.filter(sub => sub.shopId !== shopId));
+    try {
+      await deleteFollow(followId);
+      setSubscriptions((current) => current.filter(sub => sub.id !== followId));
+    } catch (err) {
+      console.error('Failed to unsubscribe:', err);
+      setError('Не удалось отписаться. Попробуйте позже.');
+    }
   };
 
   const hasSubscriptions = useMemo(() => subscriptions.length > 0, [subscriptions]);

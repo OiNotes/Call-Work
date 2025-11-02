@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
-import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
+import { textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
 
 describe('Create Shop Flow - Wizard Validation (P0)', () => {

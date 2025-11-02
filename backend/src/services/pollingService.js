@@ -2,7 +2,6 @@ import { paymentQueries, invoiceQueries, orderQueries, productQueries, shopQueri
 import { getClient } from '../config/database.js';
 import * as etherscanService from './etherscanService.js';
 import * as tronService from './tronService.js';
-import * as subscriptionService from './subscriptionService.js';
 import telegramService from './telegram.js';
 import logger from '../utils/logger.js';
 
@@ -124,7 +123,7 @@ async function checkPendingPayments() {
       pollCount: stats.pollCount
     });
 
-    // Get all pending invoices for ETH and TRON chains
+    // Get all pending invoices for ETH and TRON (USDT TRC-20) chains
     const pendingInvoices = await getPendingInvoices();
 
     if (pendingInvoices.length === 0) {
@@ -161,13 +160,13 @@ async function checkPendingPayments() {
 }
 
 /**
- * Get pending invoices for ETH and TRON chains
+ * Get pending invoices for ETH and TRON (USDT TRC-20) chains
  * @returns {Promise<Array>} Pending invoices
  */
 async function getPendingInvoices() {
   try {
-    // Query invoices table for pending ETH/TRON invoices
-    const result = await invoiceQueries.findPendingByChains(['ETH', 'TRON']);
+    // Query invoices table for pending ETH/USDT_TRC20 invoices
+    const result = await invoiceQueries.findPendingByChains(['ETH', 'USDT_TRC20']);
     return result || [];
   } catch (error) {
     logger.error('[PollingService] Failed to get pending invoices:', {
@@ -197,7 +196,7 @@ async function processInvoice(invoice) {
     // Check based on chain
     if (invoice.chain === 'ETH') {
       payment = await checkEthPayment(invoice);
-    } else if (invoice.chain === 'TRON') {
+    } else if (invoice.chain === 'USDT_TRC20') {
       payment = await checkTronPayment(invoice);
     } else {
       logger.warn(`[PollingService] Unsupported chain: ${invoice.chain}`);
@@ -544,7 +543,7 @@ async function handleSubscriptionPayment(invoice) {
     try {
       // Get subscription details
       const subResult = await client.query(
-        'SELECT shop_id, tier FROM shop_subscriptions WHERE id = $1',
+        'SELECT shop_id, tier, user_id FROM shop_subscriptions WHERE id = $1',
         [invoice.subscription_id]
       );
 
@@ -590,16 +589,54 @@ async function handleSubscriptionPayment(invoice) {
           shopId: subscription.shop_id,
           tier: subscription.tier
         });
+
+        try {
+          const ownerResult = await client.query(
+            `SELECT s.name AS shop_name, u.telegram_id
+               FROM shops s
+               JOIN users u ON s.owner_id = u.id
+              WHERE s.id = $1`,
+            [subscription.shop_id]
+          );
+          const owner = ownerResult.rows[0];
+          if (owner?.telegram_id) {
+            await telegramService.notifySubscriptionActivated(owner.telegram_id, {
+              shopName: owner.shop_name,
+              tier: subscription.tier,
+              nextPaymentDue: periodEnd
+            });
+          }
+        } catch (notifError) {
+          logger.error('[PollingService] Owner notification error', {
+            error: notifError.message,
+            subscriptionId: invoice.subscription_id
+          });
+        }
       } else {
         logger.info('[PollingService] Subscription paid but shop not created yet', {
           subscriptionId: invoice.subscription_id,
           tier: subscription.tier,
           message: 'User needs to create shop via bot'
         });
-      }
 
-      // TODO: Notify shop owner via Telegram about successful subscription payment
-      // telegramService.notifySubscriptionActivated(owner.telegram_id, { ... });
+        try {
+          const subscriberResult = await client.query(
+            'SELECT telegram_id FROM users WHERE id = $1',
+            [subscription.user_id]
+          );
+          const subscriber = subscriberResult.rows[0];
+          if (subscriber?.telegram_id) {
+            await telegramService.notifySubscriptionPendingSetup(subscriber.telegram_id, {
+              tier: subscription.tier
+            });
+          }
+        } catch (notifError) {
+          logger.error('[PollingService] Subscription pending notification error', {
+            error: notifError.message,
+            subscriptionId: invoice.subscription_id
+          });
+        }
+      }
 
     } finally {
       client.release();

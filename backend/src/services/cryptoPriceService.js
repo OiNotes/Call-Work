@@ -35,7 +35,7 @@ const CRYPTO_DECIMALS = {
 };
 
 // Price cache (in-memory)
-let priceCache = {};
+const priceCache = {};
 let lastFetchTime = 0;
 
 /**

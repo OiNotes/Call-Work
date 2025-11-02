@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import followsData from '../data/follows.json';
-import syncedProductsData from '../data/synced_products.json';
 
 const BASE_URL = 'http://localhost:3000';
 

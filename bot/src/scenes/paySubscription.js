@@ -20,7 +20,7 @@ import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/clean
 import { messages, buttons as buttonText } from '../texts/messages.js';
 import { showSellerMainMenu } from '../utils/sellerNavigation.js';
 
-const { general: generalMessages, seller: sellerMessages, subscription: subMessages } = messages;
+const { general: generalMessages, subscription: subMessages } = messages;
 
 // Chain mappings (Bot → Backend API format)
 const CHAIN_MAPPINGS = {
@@ -227,7 +227,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
     try {
       // Show loading message
-      const loadingMsg = await ctx.editMessageText(
+      await ctx.editMessageText(
         subMessages.generatingInvoice,
         { parse_mode: 'HTML' }
       );
@@ -279,7 +279,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
       // Delete loading message and send QR code with caption
       try {
         await ctx.deleteMessage();
-      } catch (e) {
+      } catch {
         // Ignore delete errors
       }
 

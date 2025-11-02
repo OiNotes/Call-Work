@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import productsData from '../data/products.json';
-import { storage } from '../utils/storage.js';
 
 const BASE_URL = 'http://localhost:3000';
 
@@ -39,13 +38,16 @@ export const productsHandlers = [
       ENTERPRISE: 999999
     };
 
-    // Получаем тир магазина (нужен синхронный import)
-    // Для корректной работы добавляем import shopsData в начало файла
+    // Mock tier detection (чередуем для примера)
+    const tier = shopId % 2 === 0 ? 'PRO' : 'FREE';
+    const limit = limits[tier] ?? limits.FREE;
+
     return HttpResponse.json({
       current: shopProducts.length,
-      limit: 10,
-      canAdd: shopProducts.length < 10,
-      tier: 'FREE'
+      limit,
+      remaining: Math.max(limit - shopProducts.length, 0),
+      canAdd: shopProducts.length < limit,
+      tier
     });
   }),
 

@@ -1,6 +1,5 @@
 import express from 'express';
 import * as blockCypherService from '../services/blockCypherService.js';
-import * as subscriptionService from '../services/subscriptionService.js';
 import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import telegramService from '../services/telegram.js';
@@ -30,7 +29,7 @@ async function handleSubscriptionPayment(invoice, client) {
 
     // Get subscription details
     const subResult = await client.query(
-      'SELECT shop_id, tier FROM shop_subscriptions WHERE id = $1',
+      'SELECT shop_id, tier, user_id FROM shop_subscriptions WHERE id = $1',
       [invoice.subscription_id]
     );
 
@@ -79,8 +78,42 @@ async function handleSubscriptionPayment(invoice, client) {
       tier: subscription.tier
     });
 
-    // TODO: Notify shop owner via Telegram about successful subscription payment
-    // telegramService.notifySubscriptionActivated(owner.telegram_id, { ... });
+    try {
+      if (subscription.shop_id) {
+        const ownerResult = await client.query(
+          `SELECT s.name AS shop_name, u.telegram_id
+             FROM shops s
+             JOIN users u ON s.owner_id = u.id
+            WHERE s.id = $1`,
+          [subscription.shop_id]
+        );
+
+        const owner = ownerResult.rows[0];
+        if (owner?.telegram_id) {
+          await telegramService.notifySubscriptionActivated(owner.telegram_id, {
+            shopName: owner.shop_name,
+            tier: subscription.tier,
+            nextPaymentDue: periodEnd
+          });
+        }
+      } else {
+        const subscriberResult = await client.query(
+          'SELECT telegram_id FROM users WHERE id = $1',
+          [subscription.user_id]
+        );
+        const subscriber = subscriberResult.rows[0];
+        if (subscriber?.telegram_id) {
+          await telegramService.notifySubscriptionPendingSetup(subscriber.telegram_id, {
+            tier: subscription.tier
+          });
+        }
+      }
+    } catch (notifError) {
+      logger.error('[Webhook] Subscription notification error', {
+        error: notifError.message,
+        subscriptionId: invoice.subscription_id
+      });
+    }
 
   } catch (error) {
     logger.error('[Webhook] Failed to handle subscription payment:', {

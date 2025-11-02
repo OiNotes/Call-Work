@@ -3,7 +3,7 @@ import { useMemo, useState, lazy, Suspense } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
-import { CRYPTO_OPTIONS, calculateCryptoAmount } from '../../utils/paymentUtils';
+import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';

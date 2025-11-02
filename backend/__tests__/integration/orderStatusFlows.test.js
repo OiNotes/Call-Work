@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import express from 'express';
 import orderRoutes from '../../src/routes/orders.js';
 import { errorHandler } from '../../src/middleware/errorHandler.js';
-import { optionalTelegramAuth } from '../../src/middleware/telegramAuth.js';
 import { config } from '../../src/config/env.js';
 import {
   getTestPool,
@@ -25,7 +24,6 @@ const createTestApp = () => {
 
 describe('Order status flows', () => {
   let app;
-  let pool;
   let seller;
   let buyer;
   let shop;
@@ -34,7 +32,7 @@ describe('Order status flows', () => {
 
   beforeAll(async () => {
     app = createTestApp();
-    pool = getTestPool();
+    getTestPool();
   });
 
   beforeEach(async () => {

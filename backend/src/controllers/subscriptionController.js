@@ -9,7 +9,6 @@
 
 import * as subscriptionService from '../services/subscriptionService.js';
 import * as subscriptionInvoiceService from '../services/subscriptionInvoiceService.js';
-import { invoiceQueries } from '../models/db.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -338,7 +337,7 @@ async function getUserSubscriptions(req, res) {
  * POST /api/subscriptions/:id/payment/generate
  * 
  * Body: {
- *   chain: 'BTC' | 'LTC' | 'ETH' | 'USDT_ERC20'
+ *   chain: 'BTC' | 'LTC' | 'ETH' | 'USDT_ERC20' | 'USDT_TRC20'
  * }
  */
 async function generatePaymentInvoice(req, res) {

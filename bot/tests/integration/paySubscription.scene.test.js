@@ -24,7 +24,7 @@ describe('Pay Subscription Scene (P1)', () => {
   const subscriptionId = 123; // Mock pending subscription ID
 
   // Helper: Setup invoice generation mock
-  const mockInvoiceGeneration = (chain = 'BTC') => {
+  const mockInvoiceGeneration = (_chain = 'BTC') => {
     mock.onPost(`/subscriptions/${subscriptionId}/payment/generate`).reply(200, {
       data: {
         invoiceId: 456,
@@ -58,6 +58,7 @@ describe('Pay Subscription Scene (P1)', () => {
     // TODO: Fix mock issue - POST /subscriptions/pay is not being intercepted
     it.skip('должен завершить полный payment flow для BASIC + BTC', async () => {
       // Step 1: Enter scene - show tier selection
+      const shopId = 999;
       mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
         data: { subscription: null }
       });
@@ -100,7 +101,7 @@ describe('Pay Subscription Scene (P1)', () => {
 
       // Step 4: Send valid TX hash
       // Set up mock for payment API call
-      mock.onPost('/subscriptions/pay').reply((config) => {
+      mock.onPost('/subscriptions/pay').reply((_config) => {
         // Log for debugging
         console.log('[TEST] POST /subscriptions/pay called');
         return [200, {
@@ -131,6 +132,7 @@ describe('Pay Subscription Scene (P1)', () => {
   describe('PRO Tier Flow', () => {
     // TODO: Fix mock issue - POST /subscriptions/pay is not being intercepted
     it.skip('должен обработать PRO tier с ETH', async () => {
+      const shopId = 888;
       mock.onGet(`/subscriptions/status/${shopId}`).reply(200, {
         data: { subscription: null }
       });

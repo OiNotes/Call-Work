@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from '../../hooks/useTelegram';
-import { PencilIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
 const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
   const [markup, setMarkup] = useState(currentMarkup || '');
@@ -31,12 +30,6 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
     triggerHaptic('success');
     onSave(value);
     onClose();
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSave();
-    }
   };
 
   if (!isOpen) return null;

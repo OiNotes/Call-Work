@@ -245,7 +245,7 @@ describe('Subscription Payment Automation - Integration Tests', () => {
            VALUES ($1, $2, 'BTC', $3, 0, 0.001, 'BTC', 'pending', NOW() + INTERVAL '30 minutes')`,
           [orderResult.rows[0].id, subscription.id, `bc1test_${Date.now()}`]
         );
-        fail('Should have thrown constraint violation');
+        throw new Error('Expected constraint violation for invoice reference');
       } catch (error) {
         expect(error.message).toContain('check_invoice_reference');
       }
@@ -464,7 +464,7 @@ describe('Subscription Payment Automation - Integration Tests', () => {
         [user.id, orderProduct.rows[0].id]
       );
 
-      const orderInvoice = await pool.query(
+      await pool.query(
         `INSERT INTO invoices 
          (order_id, chain, address, address_index, expected_amount, currency, status, expires_at)
          VALUES ($1, 'BTC', $2, 0, 0.002, 'BTC', 'pending', NOW() + INTERVAL '30 minutes')

@@ -99,7 +99,7 @@ export default function AnalyticsModal({ isOpen, onClose }) {
       console.info('[AnalyticsModal] fetch finished');
       setLoading(false);
     }
-  }, [get, getDateRange]);
+  }, [get, getDateRange, period, customRange]);
 
   // Fetch on mount and period change
   useEffect(() => {

@@ -1,7 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import shopsData from '../data/shops.json';
-import productsData from '../data/products.json';
-import { storage } from '../utils/storage.js';
 
 const BASE_URL = 'http://localhost:3000';
 

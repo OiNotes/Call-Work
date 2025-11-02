@@ -2,7 +2,6 @@ import { useState, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import { useTelegram } from '../hooks/useTelegram';
-import { useStore } from '../store/useStore';
 import { useTranslation } from '../i18n/useTranslation';
 import InteractiveListItem from '../components/common/InteractiveListItem';
 
@@ -105,7 +104,6 @@ const getSettingsSections = (t, lang) => {
 
 export default function Settings() {
   const { user, triggerHaptic } = useTelegram();
-  const { clearCart } = useStore();
   const { t, lang } = useTranslation();
   const [showWallets, setShowWallets] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);

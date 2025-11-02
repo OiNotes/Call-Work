@@ -47,19 +47,6 @@ export default function Catalog() {
   const [activeSection, setActiveSection] = useState('stock');
   const [preorderProduct, setPreorderProduct] = useState(null);
 
-  // Загрузить свой магазин
-  useEffect(() => {
-    loadMyShop();
-  }, []);
-
-  // Загрузить товары при изменении магазина
-  useEffect(() => {
-    const shopToLoad = currentShop || myShop;
-    if (shopToLoad) {
-      loadProducts(shopToLoad.id);
-    }
-  }, [currentShop, myShop]);
-
   // Автоматически установить myShop как displayShop при первой загрузке
   useEffect(() => {
     if (myShop && !currentShop) {
@@ -101,6 +88,19 @@ export default function Catalog() {
       setLoading(false);
     }
   }, [get, setStoreProducts]);
+
+  // Загрузить свой магазин
+  useEffect(() => {
+    loadMyShop();
+  }, [loadMyShop]);
+
+  // Загрузить товары при изменении магазина
+  useEffect(() => {
+    const shopToLoad = currentShop || myShop;
+    if (shopToLoad) {
+      loadProducts(shopToLoad.id);
+    }
+  }, [currentShop, myShop, loadProducts]);
 
   const handleBack = useCallback(() => {
     triggerHaptic('light');

@@ -5,7 +5,6 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSurfaceStyle, getSpringPreset, isAndroid } from '../../utils/platform';
-import { gpuAccelStyle } from '../../utils/animationHelpers';
 
 const getTabsConfig = (t, includeFollows = false) => {
   const tabs = [

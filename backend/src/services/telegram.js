@@ -214,6 +214,53 @@ Status: ${orderData.status.toUpperCase()}
   }
 
   /**
+   * Notify shop owner about successful subscription activation
+   * @param {number} telegramId - Owner Telegram ID
+   * @param {object} payload - { shopName, tier, nextPaymentDue }
+   */
+  async notifySubscriptionActivated(telegramId, payload = {}) {
+    if (!telegramId) {
+      return null;
+    }
+
+    const tierLabel = (payload.tier || 'basic').toUpperCase();
+    const nextDue = payload.nextPaymentDue
+      ? new Date(payload.nextPaymentDue).toLocaleDateString('ru-RU', { dateStyle: 'medium' })
+      : 'не задана';
+
+    const message = `
+✅ Подписка активирована
+
+Магазин: ${payload.shopName || 'Ваш магазин'}
+Тариф: ${tierLabel}
+Следующая оплата: ${nextDue}
+
+Спасибо за оплату!`;
+
+    return this.sendMessage(telegramId, message.trim());
+  }
+
+  /**
+   * Notify user that subscription оплачена, но магазин ещё не создан
+   * @param {number} telegramId - User Telegram ID
+   * @param {object} payload - { tier }
+   */
+  async notifySubscriptionPendingSetup(telegramId, payload = {}) {
+    if (!telegramId) {
+      return null;
+    }
+
+    const tierLabel = (payload.tier || 'basic').toUpperCase();
+
+    const message = `
+✅ Оплата подписки (${tierLabel}) получена.
+
+Создайте магазин в боте, чтобы активировать подписку и начать продажу.`;
+
+    return this.sendMessage(telegramId, message.trim());
+  }
+
+  /**
    * Get bot info
    */
   async getBotInfo() {

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
-import { mockShops, mockProducts, mockSubscriptions, mockUser } from '../utils/mockData';
-import { generateOrderId } from '../utils/paymentUtils';
+import { mockShops, mockSubscriptions, mockUser } from '../utils/mockData';
 
 export const normalizeProduct = (product) => {
   const rawStock = product?.stock_quantity ?? product?.stock ?? 0;
@@ -142,7 +141,6 @@ export const useStore = create(
       // Payment Actions
       startCheckout: () => {
         const cart = get().cart;
-        const total = get().getCartTotal();
 
         if (cart.length === 0) return;
 

@@ -1,8 +1,5 @@
 import { motion, AnimatePresence, LazyMotion } from 'framer-motion';
 import { useMemo } from 'react';
-
-// Lazy load domMax for drag gestures
-const loadDomMax = () => import('framer-motion').then(mod => mod.domMax);
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
@@ -11,6 +8,9 @@ import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
 import CartItem from './CartItem';
 import { useBackButton } from '../../hooks/useBackButton';
+
+// Lazy load domMax for drag gestures
+const loadDomMax = () => import('framer-motion').then(mod => mod.domMax);
 
 export default function CartSheet() {
   const { cart, isCartOpen, setCartOpen, clearCart, startCheckout } = useStore(

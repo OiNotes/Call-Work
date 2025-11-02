@@ -426,9 +426,9 @@ async function activatePromoSubscription(shopId, userId, promoCode) {
     );
 
     await client.query(
-      `INSERT INTO shop_subscriptions (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
-       VALUES ($1, 'pro', 0, $2, 'USDT', $3, $4, 'active', NOW())`,
-      [shopId, promoTx, now, periodEnd]
+      `INSERT INTO shop_subscriptions (user_id, shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
+       VALUES ($1, $2, 'pro', 0, $3, 'USDT', $4, $5, 'active', NOW())`,
+      [userId, shopId, promoTx, now, periodEnd]
     );
 
     const updatedShop = await client.query(

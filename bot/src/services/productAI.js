@@ -1200,7 +1200,7 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
   return {
     success: true,
     needsConfirmation: true,
-    message: aiMessages.bulkPricePrompt(operationText, percentage, previewText),
+    message: `${aiMessages.bulkPricePrompt(operationText, percentage, previewText)}\n\n⚠️ Нажмите кнопку ниже или напишите "да" для применения / "нет" для отмены`,
     keyboard: {
       inline_keyboard: [[
         { text: '✅ Применить', callback_data: 'bulk_prices_confirm' },

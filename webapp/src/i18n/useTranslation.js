@@ -1,4 +1,4 @@
-import { t as translate, getLanguage, setLanguage as changeLang } from './index'
+import { t as translate, setLanguage as changeLang } from './index'
 import { useStore } from '../store/useStore'
 
 export function useTranslation() {

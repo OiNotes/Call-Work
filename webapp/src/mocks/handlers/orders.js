@@ -117,21 +117,21 @@ export const ordersHandlers = [
 
     // Расчет аналитики
     const totalOrders = filtered.length;
-    const totalRevenue = filtered
-      .filter(o => o.status === 'delivered')
-      .reduce((sum, o) => sum + o.total_price, 0);
+    const deliveredOrders = filtered.filter(o => o.status === 'delivered');
     const pendingOrders = filtered.filter(o => o.status === 'pending').length;
-    const completedOrders = filtered.filter(o => o.status === 'delivered').length;
+    const completedOrders = deliveredOrders.length;
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total_price, 0);
 
     return HttpResponse.json({
       success: true,
       data: {
         period: { from, to },
         summary: {
-          totalRevenue: totalRevenue,
-          totalOrders: totalOrders,
-          completedOrders: completedOrders,
-          avgOrderValue: totalOrders > 0 ? totalRevenue / completedOrders : 0
+          totalRevenue,
+          totalOrders,
+          completedOrders,
+          pendingOrders,
+          avgOrderValue: completedOrders > 0 ? totalRevenue / completedOrders : 0
         },
         topProducts: []
       }

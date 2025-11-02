@@ -97,9 +97,12 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
             // Resell mode: показываем source + synced
             const sourceProduct = product.source_product || {};
             const syncedProduct = product.synced_product || {};
-            const markupPercent = sourceProduct.price && syncedProduct.price
-              ? (((syncedProduct.price - sourceProduct.price) / sourceProduct.price) * 100).toFixed(0)
-              : 0;
+            const sourcePrice = Number(sourceProduct.price);
+            const followerPrice = Number(syncedProduct.price);
+            const hasMarkup = Number.isFinite(sourcePrice) && sourcePrice > 0 && Number.isFinite(followerPrice);
+            const markupPercent = hasMarkup
+              ? Math.round(((followerPrice - sourcePrice) / sourcePrice) * 100)
+              : null;
 
             return (
               <motion.div
@@ -135,8 +138,15 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                 {/* Price + Stock - одна чистая строка */}
                 <div className="relative flex items-center justify-between">
                   {/* Ваша цена - крупно, акцент */}
-                  <div className="text-orange-primary text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
-                    ${syncedProduct.price}
+                  <div className="flex items-center gap-2">
+                    <div className="text-orange-primary text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+                      ${syncedProduct.price}
+                    </div>
+                    {markupPercent !== null && (
+                      <span className="text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
+                        +{markupPercent}%
+                      </span>
+                    )}
                   </div>
 
                   {/* Количество - компактно справа */}

@@ -306,7 +306,7 @@ export default function ProductsModal({ isOpen, onClose }) {
     }
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Get user's shop
@@ -329,13 +329,13 @@ export default function ProductsModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchApi, mapProduct]);
 
   useEffect(() => {
     if (isOpen) {
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, loadData]);
 
   const handleAddProduct = async (formData) => {
     try {

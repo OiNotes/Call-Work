@@ -101,7 +101,6 @@ export default function FollowsModal({ isOpen, onClose }) {
   const [follows, setFollows] = useState([]);
   const [limitInfo, setLimitInfo] = useState(null);
   const [myShop, setMyShop] = useState(null);
-  const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -115,13 +114,7 @@ export default function FollowsModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Get shop - simplified parsing
@@ -142,16 +135,13 @@ export default function FollowsModal({ isOpen, onClose }) {
 
       if (!shop) {
         console.log('[FollowsModal] No shop - resetting state');
-        setIsPro(false);
         setFollows([]);
         setLimitInfo(null);
         return;
       }
 
       // 2. Check PRO tier
-      const proTier = (shop.tier || '').toLowerCase() === 'pro';
-      console.log('[FollowsModal] Shop tier:', shop.tier, '| isPro:', proTier);
-      setIsPro(proTier);
+      console.log('[FollowsModal] Shop tier:', shop.tier);
 
       // 3. Load follows and limits in parallel
       const [followsRes, limitRes] = await Promise.all([
@@ -216,12 +206,17 @@ export default function FollowsModal({ isOpen, onClose }) {
       console.error('[FollowsModal] Error loading data:', error);
       setFollows([]);
       setLimitInfo(null);
-      setIsPro(false);
       setMyShop(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchApi]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
 
   const handleModeSwitch = async (follow, newMode) => {
     try {
@@ -316,8 +311,6 @@ export default function FollowsModal({ isOpen, onClose }) {
       await alert(error.message || 'Ошибка добавления подписки');
     }
   };
-
-  const canCreateFollow = limitInfo ? (limitInfo.canFollow !== false && !limitInfo.reached) : true;
 
   if (!loading && !myShop) {
     return (

@@ -82,13 +82,7 @@ export default function WorkspaceModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Get shop - simplified parsing
@@ -133,7 +127,13 @@ export default function WorkspaceModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchApi]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
 
   const handleAddWorker = async () => {
     if (!myShop) {

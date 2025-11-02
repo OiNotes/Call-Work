@@ -5,7 +5,7 @@ const BASE_URL = 'http://localhost:3000';
 export const authHandlers = [
   // POST /api/auth/telegram-validate - Telegram WebApp авторизация
   http.post(`${BASE_URL}/api/auth/telegram-validate`, async ({ request }) => {
-    const body = await request.json();
+    await request.json();
 
     // Mock JWT token
     const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidGVsZWdyYW1JZCI6IjEyMzQ1Njc4OSIsInVzZXJuYW1lIjoidGVzdCIsImlhdCI6MTY5MDAwMDAwMCwiZXhwIjoxNzAwMDAwMDAwfQ.mock-signature';
