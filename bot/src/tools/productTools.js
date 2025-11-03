@@ -10,17 +10,18 @@ export const productTools = [
     strict: true,  // DeepSeek strict mode for schema validation
     function: {
       name: 'addProduct',
-      description: `Add a new product to the shop.
+      description: `Add a single product instantly.
 
-Use this when:
-- User wants to create/add a single new product
-- User says "добавь товар", "создай продукт", "add product"
+Use it for commands вида «добавь iPhone 15 за 999», «появился новый чехол 20$». Если нужно несколько товаров сразу — выбирай bulkAddProducts.
 
-Don't use if:
-- User wants to add multiple products at once (use bulkAddProducts)
-- User wants to modify existing product (use updateProduct)
+Примеры:
+- "добавь iPhone 15 999" → addProduct({ name: "iPhone 15", price: 999, stock: 1 })
+- "создай MacBook Air 1299, 3 штуки" → addProduct({ name: "MacBook Air", price: 1299, stock: 3 })
 
-IMPORTANT: If user didn't provide price, you MUST ask "Какая цена?" before calling this function. Don't guess the price.`,
+Правила:
+- Цена обязательна — если её нет, спроси «Сколько поставить?»
+- Сток по умолчанию = 1, если пользователь не уточнил (без вопросов).
+- Имя должно быть осмысленным (не короче 3 символов).`,
       parameters: {
         type: 'object',
         properties: {
@@ -34,10 +35,10 @@ IMPORTANT: If user didn't provide price, you MUST ask "Какая цена?" bef
           },
           stock: {
             type: 'number',
-            description: 'Stock quantity (defaults to 0 if not provided). Examples: 10, 5, 100. If user says "5 штук", "10 pcs", extract the number. Must be >= 0.'
+            description: 'Stock quantity. If missing, treat as 1 automatically. Examples: 1, 5, 100. Must be >= 0.'
           }
         },
-        required: ['name', 'price', 'stock'],
+        required: ['name', 'price'],
         additionalProperties: false
       }
     }
@@ -47,23 +48,25 @@ IMPORTANT: If user didn't provide price, you MUST ask "Какая цена?" bef
     strict: true,
     function: {
       name: 'bulkAddProducts',
-      description: `Add multiple products at once.
+      description: `Add a batch of products in один проход.
 
-Use this when:
-- User wants to add 2 or more products in one message
-- User says "добавь iPhone $500 10шт и Samsung $400 5шт"
-- User provides a list: "add: red car $10, green car $15 2pcs, blue car $20"
+Используй, когда пользователь перечисляет несколько позиций: «добавь iPhone 999 3 шт и AirPods 199», «новинки: красная кружка $10, зелёная $12». Для одиночного товара используй addProduct.
 
-Don't use if:
-- User wants to add only one product (use addProduct)
+Примеры:
+- "добавь: красная машинка $15 4шт, синяя машинка $18" → bulkAddProducts([...])
+- "три позиции: чехол 20, шнур 9.9, адаптер 14" → stock по умолчанию 1, если не указан.
 
-IMPORTANT: DO NOT ask clarifying questions. Extract all products from user's message and add them immediately. Parse quantities from phrases like "5шт", "10 pcs", "2 штуки".`,
+Правила:
+- Разбери весь список и вызывай функцию один раз.
+- Цена обязательна для каждой позиции.
+- Если количество не указано — ставь 1.
+- Не задавай дополнительные вопросы, если данные можно извлечь из текста.`,
       parameters: {
         type: 'object',
         properties: {
           products: {
             type: 'array',
-            description: 'Array of products to add. Each product must have name, price, and stock. Example: [{name: "iPhone", price: 999, stock: 10}, {name: "Samsung", price: 799, stock: 5}]',
+            description: 'Array of products to add. Example: [{name: "iPhone", price: 999, stock: 3}, {name: "AirPods", price: 199}]',
             items: {
               type: 'object',
               properties: {
@@ -77,10 +80,10 @@ IMPORTANT: DO NOT ask clarifying questions. Extract all products from user's mes
                 },
                 stock: {
                   type: 'number',
-                  description: 'Stock quantity (defaults to 10 if not specified). Extract from: "5шт", "10 pcs", "2 штуки". Examples: 5, 10, 100. Must be >= 0.'
+                  description: 'Stock quantity. Defaults to 1 if не указано. Extract from: "5шт", "10 pcs", "2 штуки". Must be >= 0.'
                 }
               },
-              required: ['name', 'price', 'stock'],
+              required: ['name', 'price'],
               additionalProperties: false
             },
             minItems: 2
@@ -182,23 +185,21 @@ Fuzzy match examples:
     strict: true,
     function: {
       name: 'updateProduct',
-      description: `Update product price, name, or stock quantity.
+      description: `Modify an existing product: имя, цена, остаток, скидка.
 
-Use this when:
-- User wants to modify existing product
-- User says "измени цену на...", "переименуй...", "выстави наличие..."
-- User says "change price", "rename", "set stock to...", "update quantity"
-- Keywords: сток, наличие, остаток, stock, quantity, qty
+Применяй при командах "переименуй", "поставь цену", "выстави остаток", "скидка 15%", "сделай нет в наличии".
 
-Don't use if:
-- User wants to add new product (use addProduct)
-- User wants to delete product (use deleteProduct)
-- User wants to change prices for ALL products (use bulkUpdatePrices)
+Примеры:
+- "поставь цену 1299" (после обсуждения MacBook) → updateProduct({ productName: "MacBook...", updates: { price: 1299 } })
+- "выстави остаток 0" → updates.stock_quantity = 0
+- "скидка 25% на iPhone на 3 дня" → updates.discount_percentage = 25, updates.discount_expires_at = "3 дня"
+- "отмени скидку на AirPods" → discount_percentage = 0 (backend вернёт цену из original_price)
 
-IMPORTANT: 
-- If user didn't specify which product, you MUST ask "Какой товар?" BEFORE calling this function
-- If search returns multiple matches, ask user to clarify which one
-- DO NOT respond with text explanation - CALL the function after getting product name`,
+Правила:
+- Если товар не указан и невозможно однозначно понять из контекста — уточни какой именно.
+- Если товар единственный или только что обсуждался — используй его без вопросов.
+- discount_percentage 0–100. Для таймера можно передать ISO дату или фразу «6 часов».
+- Если пользователь даёт несколько изменений сразу, объедини их в один вызов.`,
       parameters: {
         type: 'object',
         properties: {
@@ -221,6 +222,14 @@ IMPORTANT:
               stock_quantity: {
                 type: 'number',
                 description: 'New stock count. Use when user says "выстави наличие 10", "поставь остаток 5", "set stock to 20". Must be >= 0. Examples: "5 штук" → 5, "нет в наличии" → 0, "100 pcs" → 100'
+              },
+              discount_percentage: {
+                type: 'number',
+                description: 'Discount percentage (0-100). Use to apply or remove a discount for this product. 0 removes the discount.'
+              },
+              discount_expires_at: {
+                type: 'string',
+                description: 'Discount expiry for the product. ISO datetime or duration phrase like "6 часов", "24h". Leave empty/null for permanent discount.'
               }
             },
             additionalProperties: false
@@ -245,9 +254,26 @@ Use this when:
 Don't use if:
 - User wants to delete specific products (use deleteProduct or bulkDeleteByNames)
 
-DANGEROUS OPERATION! Always confirm with user before calling:
-- Ask: "Точно удалить ВСЕ товары? Это действие нельзя отменить."
-- Only call function after explicit confirmation`,
+DANGEROUS OPERATION!
+- NEVER call this function directly when user first asks
+- ALWAYS return error asking for confirmation first (call with confirm: false or without confirm parameter)
+- Function will show confirmation buttons to user
+- ONLY call with confirm: true after user clicked confirmation button (you'll see "подтвердил" in next message)
+
+Critical rules:
+- First call: bulkDeleteAll({ confirm: false }) - shows buttons, returns needsConfirmation: true
+- User confirms by clicking button (not by text "да")
+- After button click: function executes automatically
+- DO NOT call this function multiple times in one conversation
+- If function returns needsConfirmation: true - tell user to click button
+
+Example flow:
+1. User: "удали все товары"
+2. You: Call bulkDeleteAll({ confirm: false })
+3. Function: Returns { needsConfirmation: true, message: "..." }
+4. You: Tell user "Нажми кнопку для подтверждения"
+5. User: *clicks button*
+6. System: Executes deletion automatically (you don't call function again)`,
       parameters: {
         type: 'object',
         properties: {
@@ -322,10 +348,10 @@ IMPORTANT:
           },
           quantity: {
             type: 'number',
-            description: 'Number of items sold (defaults to 1 if not specified). Examples: "продал 5 штук" → 5, "bought 10 pcs" → 10, just "продал iPhone" → 1. Must be positive number.'
+            description: 'Number of items sold. If omitted, assume 1 автоматически. Examples: "продал 5 штук" → 5, "продали iPhone" → 1. Must be positive number.'
           }
         },
-        required: ['productName', 'quantity'],
+        required: ['productName'],
         additionalProperties: false
       }
     }
@@ -365,25 +391,20 @@ IMPORTANT: If user didn't specify product name, ask "О каком товаре?
     strict: true,
     function: {
       name: 'bulkUpdatePrices',
-      description: `Apply discount or price increase to ALL products in the shop.
+      description: `Apply discount or markup to the whole catalog.
 
-Use this when:
-- User wants to change prices for ALL products at once
-- User says "скидка 10%", "накрутка 5%", "подними цены на 20%"
-- User says "discount 15%", "increase prices by 10%"
+Используй, когда пользователь явно говорит «скидка 15% на всё», «подними цены на 5%», «распродажа 20% кроме MacBook». Для одного товара выбирай updateProduct.
 
-Don't use if:
-- User wants to change price of ONE product (use updateProduct)
+Примеры:
+- "скидка 20% на все" → bulkUpdatePrices({ percentage: 20, operation: 'decrease', discount_type: 'permanent' })
+- "-15% на каталог на 6 часов" → percentage: 15, operation: 'decrease', discount_type: 'timer', duration: '6 часов'
+- "подними цены на 7%, кроме аксессуаров" → operation: 'increase', excludedProducts: ['аксессуар']
 
-Discount Types (IMPORTANT):
-- "permanent" - Discount stays until manually removed by user
-- "timer" - Discount auto-expires after specified duration
-
-Behavior:
-- If user didn't specify discount type OR duration, leave 'duration' field EMPTY
-- System will automatically ask user naturally: "Это постоянная скидка или с таймером?"
-- DO NOT ask about discount type yourself - just call function with empty duration
-- System handles the conversation flow via needsInput mechanism`,
+Правила:
+- Процент обязателен (0.1–100). Значения >100 отвергни с подсказкой.
+- Если тип не указан, по умолчанию делай постоянную скидку. Таймер требуй только когда пользователь его упоминает.
+- excludedProducts — список названий или их частей, которые нужно пропустить.
+- Маркап (increase) всегда постоянный, duration в этом случае не отправляй.`,
       parameters: {
         type: 'object',
         properties: {
@@ -398,9 +419,19 @@ Behavior:
             enum: ['increase', 'decrease'],
             description: 'Operation type. "decrease" = discount/скидка (lower prices). "increase" = накрутка/markup (raise prices). Examples: "скидка" → decrease, "подними цены" → increase, "discount" → decrease.'
           },
+          discount_type: {
+            type: 'string',
+            enum: ['permanent', 'timer'],
+            description: 'Optional explicit discount type. Use "timer" together with duration, or "permanent" for indefinite discounts.'
+          },
           duration: {
             type: 'string',
-            description: 'Duration for timer discount in human-readable format. Examples: "6 часов", "3 дня", "12h", "2 days", "24 hours". LEAVE EMPTY if user didn\'t specify - system will ask. Only fill if user explicitly mentioned time period.'
+            description: 'Duration for timer discount in human-readable format. Examples: "6 часов", "3 дня", "12h", "2 days", "24 hours". Заполняй только если пользователь дал длительность.'
+          },
+          excludedProducts: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Product names to EXCLUDE from discount. Use when user says "кроме X", "except Y", "всем кроме Z", "без X". Example: ["MacBook", "iPhone"]. Supports partial names - "iPhone" will exclude "iPhone 12 Pro", "iPhone 13", etc. Case insensitive.'
           }
         },
         required: ['percentage', 'operation'],

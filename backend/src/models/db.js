@@ -316,6 +316,19 @@ export const productQueries = {
       originalPrice
     } = productData;
 
+    // Преобразовать undefined → null для корректной работы SQL
+    const params = [
+      id,
+      name ?? null,
+      description ?? null,
+      price ?? null,
+      stockQuantity ?? null,
+      isActive ?? null,
+      discountPercentage ?? null,
+      originalPrice ?? null,
+      discountExpiresAt ?? null
+    ];
+
     const result = await query(
       `UPDATE products
        SET name = COALESCE($2, name),
@@ -343,7 +356,7 @@ export const productQueries = {
            updated_at = NOW()
        WHERE id = $1
        RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, created_at, updated_at`,
-      [id, name, description, price, stockQuantity, isActive, discountPercentage, originalPrice, discountExpiresAt]
+      params
     );
     return result.rows[0];
   },
@@ -445,8 +458,8 @@ export const productQueries = {
       const params = [percentage, expiresAt, shopId];
 
       if (excludedProductIds.length > 0) {
-        // Add NOT IN clause for excluded products - FIX: Add $ prefix for PostgreSQL parameters
-        const placeholders = excludedProductIds.map((_, i) => `${4 + i}`).join(', ');
+        // Add NOT IN clause for excluded products
+        const placeholders = excludedProductIds.map((_, i) => `$${4 + i}`).join(', ');
         whereClause += ` AND id NOT IN (${placeholders})`;
         params.push(...excludedProductIds);
       }

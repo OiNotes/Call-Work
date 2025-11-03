@@ -25,6 +25,10 @@ export const normalizeProduct = (product) => {
     image: product?.image || product?.images?.[0] || null,
     isPreorder,
     availability,
+    // Явно сохраняем поля скидок
+    original_price: product?.original_price ?? null,
+    discount_percentage: product?.discount_percentage ?? 0,
+    discount_expires_at: product?.discount_expires_at ?? null,
   };
 };
 

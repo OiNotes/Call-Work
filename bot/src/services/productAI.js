@@ -825,7 +825,7 @@ export async function processProductCommand(userCommand, context) {
         shopId,
         userId: ctx?.from?.id,
         function: functionName,
-        arguments: args,
+        arguments: JSON.stringify(args),
         clarified: !!clarifiedProductId
       });
 
@@ -1049,7 +1049,7 @@ async function executeToolCall(functionName, args, context) {
         return await handleUpdateProduct(args, shopId, token, products, clarifiedProductId);
 
       case 'bulkDeleteAll':
-        return await handleBulkDeleteAll(shopId, token, ctx);
+        return await handleBulkDeleteAll(args, shopId, token, ctx);
 
       case 'bulkDeleteByNames':
         return await handleBulkDeleteByNames(args, shopId, token, products);
@@ -1818,9 +1818,47 @@ async function handleUpdateProduct(args, shopId, token, products, clarifiedProdu
 /**
  * Bulk delete all products handler
  */
-async function handleBulkDeleteAll(shopId, token) {
+async function handleBulkDeleteAll(args, shopId, token, ctx) {
+  const { Markup } = await import('telegraf');
+  
+  // Логировать вызов
+  logger.info('bulkDeleteAll_called', {
+    shopId,
+    userId: ctx?.from?.id,
+    args: JSON.stringify(args),
+    confirm: args?.confirm,
+    timestamp: new Date().toISOString()
+  });
+
+  // Проверить параметр confirm
+  if (!args || !args.confirm || args.confirm !== true) {
+    logger.info('bulkDeleteAll_needs_confirmation', { shopId, userId: ctx?.from?.id });
+    
+    return {
+      success: false,
+      needsConfirmation: true,
+      message: '⚠️ Точно удалить ВСЕ товары? Это действие нельзя отменить.',
+      keyboard: Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Да, удалить всё', 'confirm_bulk_delete_all')],
+        [Markup.button.callback('❌ Отмена', 'ai_cancel')]
+      ])
+    };
+  }
+
+  // Логировать подтверждённое удаление
+  logger.warn('bulkDeleteAll_confirmed', {
+    shopId,
+    userId: ctx?.from?.id,
+    confirm: args.confirm
+  });
+
   try {
     const result = await productApi.bulkDeleteAll(shopId, token);
+
+    logger.info('bulkDeleteAll_success', {
+      shopId,
+      deletedCount: result.deletedCount
+    });
 
     return {
       success: true,
