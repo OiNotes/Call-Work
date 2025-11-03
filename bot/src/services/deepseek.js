@@ -51,6 +51,13 @@ class DeepSeekClient {
       { role: 'user', content: userMessage }
     ];
 
+    // Debug logging - see what AI actually receives
+    logger.debug('deepseek_api_messages', {
+      messagesCount: messages.length,
+      historyLength: conversationHistory.length,
+      messages: JSON.stringify(messages, null, 2)
+    });
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const startTime = Date.now();
@@ -89,16 +96,24 @@ class DeepSeekClient {
           type: error.type
         });
 
-        // Retry on 503 (server overload) with exponential backoff
-        if (error.status === 503 && attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-          logger.info(`Retrying after ${delay}ms...`);
+        // Retry on 503 (server overload) and 429 (rate limit) with exponential backoff
+        if ((error.status === 503 || error.status === 429) && attempt < maxRetries) {
+          const delay = error.status === 429
+            ? Math.pow(2, attempt) * 2000  // Longer delay for rate limits: 4s, 8s, 16s
+            : Math.pow(2, attempt) * 1000; // Regular delay for 503: 2s, 4s, 8s
+          
+          logger.warn(`DeepSeek API error ${error.status}, retry ${attempt}/${maxRetries}`, {
+            delay,
+            status: error.status,
+            message: error.message
+          });
+          
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
 
-        // Don't retry on 400 (bad request), 401 (auth), 429 (rate limit)
-        if ([400, 401, 429].includes(error.status)) {
+        // Don't retry on 400 (bad request), 401 (auth)
+        if ([400, 401].includes(error.status)) {
           throw error;
         }
 
@@ -136,6 +151,13 @@ class DeepSeekClient {
       ...conversationHistory,
       { role: 'user', content: userMessage }
     ];
+
+    // Debug logging - see what AI actually receives
+    logger.debug('deepseek_api_messages_streaming', {
+      messagesCount: messages.length,
+      historyLength: conversationHistory.length,
+      messages: JSON.stringify(messages, null, 2)
+    });
 
     const startTime = Date.now();
     let fullText = '';

@@ -48,19 +48,25 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
     strict: true,
     function: {
       name: 'bulkAddProducts',
-      description: `Add a batch of products in один проход.
+      description: `Add multiple products at once (2+ items).
 
-Используй, когда пользователь перечисляет несколько позиций: «добавь iPhone 999 3 шт и AirPods 199», «новинки: красная кружка $10, зелёная $12». Для одиночного товара используй addProduct.
+УСЛОВИЯ ВЫЗОВА:
+- User lists 2 or more products in one message → CALL THIS FUNCTION IMMEDIATELY
+- User says "добавь: X, Y, Z" → CALL bulkAddProducts, DON'T describe action in text
+- User says "добавь Чехол 20 5шт, Наушники 150 10шт" → CALL bulkAddProducts({products: [...]})
 
-Примеры:
-- "добавь: красная машинка $15 4шт, синяя машинка $18" → bulkAddProducts([...])
-- "три позиции: чехол 20, шнур 9.9, адаптер 14" → stock по умолчанию 1, если не указан.
+КОГДА ИСПОЛЬЗОВАТЬ:
+✅ "добавь: iPhone 999 3шт, Samsung 799 5шт, Xiaomi 399" → CALL bulkAddProducts
+✅ "добавь Чехол 20 5шт, Наушники 150 10шт, Зарядка 30" → CALL bulkAddProducts
+✅ "новинки: красная кружка $10, зелёная $12" → CALL bulkAddProducts
+❌ "добавь iPhone за 999" → use addProduct (single item)
 
-Правила:
-- Разбери весь список и вызывай функцию один раз.
-- Цена обязательна для каждой позиции.
-- Если количество не указано — ставь 1.
-- Не задавай дополнительные вопросы, если данные можно извлечь из текста.`,
+КРИТИЧНО:
+- NEVER respond with text when user lists multiple products
+- ALWAYS call this function immediately when 2+ products detected
+- Extract all product data from user message and call function
+- Default stock = 1 if not specified
+- DO NOT ask confirmation, DO NOT describe action - just CALL the function`,
       parameters: {
         type: 'object',
         properties: {
@@ -324,21 +330,65 @@ IMPORTANT: DO NOT respond with text explanation. Extract product names from user
     type: 'function',
     strict: true,
     function: {
+      name: 'bulkDeleteExcept',
+      description: `Delete all products EXCEPT specified ones.
+
+УСЛОВИЯ ВЫЗОВА:
+- User says "удали всё кроме iPad", "delete all except iPhone", "убери всё кроме MacBook и AirPods" → CALL THIS FUNCTION IMMEDIATELY
+- User wants to keep specific products and delete the rest → CALL bulkDeleteExcept
+- Extract product names to KEEP from user message → CALL function with excludedProducts
+
+КОГДА ИСПОЛЬЗОВАТЬ:
+✅ "удали всё кроме iPad" → CALL bulkDeleteExcept({ excludedProducts: ["iPad"] })
+✅ "delete all except iPhone and Samsung" → CALL bulkDeleteExcept({ excludedProducts: ["iPhone", "Samsung"] })
+✅ "очисти магазин кроме MacBook" → CALL bulkDeleteExcept({ excludedProducts: ["MacBook"] })
+❌ "удали все товары" → use bulkDeleteAll (no exceptions)
+❌ "удали iPhone и Samsung" → use bulkDeleteByNames (specific products)
+
+КРИТИЧНО:
+- NEVER respond with text when user says "всё кроме X"
+- ALWAYS call this function immediately
+- Extract names of products to KEEP (not to delete)
+- DO NOT ask confirmation - just CALL the function`,
+      parameters: {
+        type: 'object',
+        properties: {
+          excludedProducts: {
+            type: 'array',
+            items: {
+              type: 'string'
+            },
+            description: 'Array of product names to KEEP (not delete). All other products will be deleted. Fuzzy match supported. Examples: ["iPad"] will keep "iPad Pro", ["iPhone", "MacBook"] will keep both. Extract from "кроме X" or "except Y".'
+          }
+        },
+        required: ['excludedProducts'],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: 'function',
+    strict: true,
+    function: {
       name: 'recordSale',
       description: `Record a sale - decrease stock quantity.
 
-Use this when:
-- User reports a sale/purchase
-- User says "продал 5 iPhone", "bought 2 Samsung", "купили Чехол"
-- User says "sold out" (quantity = all remaining stock)
+УСЛОВИЯ ВЫЗОВА:
+- User says "купили iPhone", "продали 3 AirPods", "bought 5 Samsung" → CALL THIS FUNCTION IMMEDIATELY
+- User reports any sale → CALL recordSale, DON'T respond with text
+- Extract product name and quantity from user message → CALL function
 
-Don't use if:
-- User wants to manually set stock quantity (use updateProduct with stock_quantity)
+КОГДА ИСПОЛЬЗОВАТЬ:
+✅ "купили iPhone" → CALL recordSale({ productName: "iPhone", quantity: 1 })
+✅ "продали 3 MacBook" → CALL recordSale({ productName: "MacBook", quantity: 3 })
+✅ "bought 2 AirPods" → CALL recordSale({ productName: "AirPods", quantity: 2 })
+❌ "установи остаток 5" → use updateProduct (manual stock change)
 
-IMPORTANT:
-- If user didn't specify product name, ask "Какой товар продан?"
-- If quantity not mentioned, assume 1 (one item sold)
-- If user says "sold out", first check current stock and use that quantity`,
+КРИТИЧНО:
+- NEVER respond with text when user reports a sale
+- ALWAYS call this function immediately when sale is mentioned
+- Default quantity = 1 if not specified
+- DO NOT describe action - just CALL the function`,
       parameters: {
         type: 'object',
         properties: {
@@ -379,6 +429,67 @@ IMPORTANT: If user didn't specify product name, ask "О каком товаре?
           productName: {
             type: 'string',
             description: 'Product name to get info about (fuzzy match supported). REQUIRED: If user didn\'t mention product, ask before calling. Examples: "iPhone" will find "iPhone 15 Pro", "Наушники" will find "Наушники AirPods"'
+          }
+        },
+        required: ['productName'],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: 'function',
+    strict: true,
+    function: {
+      name: 'applyDiscount',
+      description: `Apply discount to a specific product.
+
+Examples:
+- User: "скидка 30% на iPhone" → applyDiscount({ productName: "iPhone", percentage: 30 })
+- User: "скидка 15% на AirPods на 6 часов" → applyDiscount({ productName: "AirPods", percentage: 15, duration: "6h" })
+- User: "скидка 20% на MacBook на 2 дня" → applyDiscount({ productName: "MacBook", percentage: 20, duration: "2d" })
+
+Duration format:
+- "6h" or "6 hours" - expires in 6 hours
+- "2d" or "2 days" - expires in 2 days
+- "1w" or "1 week" - expires in 1 week
+- null - permanent discount`,
+      parameters: {
+        type: 'object',
+        properties: {
+          productName: {
+            type: 'string',
+            description: 'Name of the product to apply discount to'
+          },
+          percentage: {
+            type: 'number',
+            description: 'Discount percentage (1-99)'
+          },
+          duration: {
+            type: 'string',
+            description: 'Optional: discount duration (e.g. "6h", "2d", "1w"). If not specified - permanent discount.'
+          }
+        },
+        required: ['productName', 'percentage'],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: 'function',
+    strict: true,
+    function: {
+      name: 'removeDiscount',
+      description: `Remove discount from a product.
+
+Examples:
+- User: "убери скидку с iPhone" → removeDiscount({ productName: "iPhone" })
+- User: "удали скидку MacBook" → removeDiscount({ productName: "MacBook" })`,
+      parameters: {
+        type: 'object',
+        properties: {
+          productName: {
+            type: 'string',
+            description: 'Name of the product to remove discount from'
           }
         },
         required: ['productName'],

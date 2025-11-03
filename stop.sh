@@ -1,41 +1,65 @@
 #!/bin/bash
 
 #############################################
-# Telegram Shop - Stop Script
-# Остановка всех сервисов
+# Telegram Shop - Stop All Services
+# Останавливает Backend + Bot + Webapp + ngrok
 #############################################
 
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${RED}╔════════════════════════════════════════════════════╗${NC}"
-echo -e "${RED}║                                                    ║${NC}"
-echo -e "${RED}║     🛑 Telegram Shop - Stopping Services          ║${NC}"
-echo -e "${RED}║                                                    ║${NC}"
-echo -e "${RED}╚════════════════════════════════════════════════════╝${NC}"
+echo -e "${BLUE}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║                                                    ║${NC}"
+echo -e "${BLUE}║     🛑 Telegram Shop - Stopping All Services      ║${NC}"
+echo -e "${BLUE}║                                                    ║${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Stop processes on port 3000
-if lsof -ti:3000 >/dev/null 2>&1; then
-  echo -e "${YELLOW}Stopping Backend...${NC}"
-  lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-  echo -e "  ${GREEN}✓${NC} Backend stopped"
-else
-  echo -e "  ${BLUE}ℹ${NC} No backend process running"
-fi
+echo -e "${YELLOW}Stopping processes...${NC}"
 
-# Stop ngrok
-if pgrep -x "ngrok" >/dev/null; then
-  echo -e "${YELLOW}Stopping ngrok...${NC}"
-  pkill -x ngrok 2>/dev/null || true
-  echo -e "  ${GREEN}✓${NC} ngrok stopped"
-else
-  echo -e "  ${BLUE}ℹ${NC} No ngrok process running"
-fi
+# Kill backend processes
+echo "  ├─ Backend processes..."
+pkill -f "node.*server.js" 2>/dev/null || true
+pkill -f "nodemon.*server" 2>/dev/null || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
+# Kill bot processes
+echo "  ├─ Bot processes..."
+pkill -f "node.*bot.js" 2>/dev/null || true
+pkill -f "nodemon.*bot" 2>/dev/null || true
+
+# Kill webapp dev server
+echo "  ├─ Webapp processes..."
+pkill -f "vite" 2>/dev/null || true
+
+# Kill ngrok
+echo "  └─ ngrok..."
+pkill -x ngrok 2>/dev/null || true
+
+sleep 2
 
 echo ""
-echo -e "${GREEN}✓ All services stopped${NC}"
+
+# Verify cleanup
+REMAINING=$(ps aux | grep -E "node.*(server|bot)|nodemon|vite|ngrok" | grep -v grep | grep -v mcp-server | wc -l)
+if [ "$REMAINING" -gt 0 ]; then
+  echo -e "${YELLOW}⚠️  Warning: $REMAINING project processes still running${NC}"
+  echo ""
+  echo -e "${BLUE}Active processes:${NC}"
+  ps aux | grep -E "node.*(server|bot)|nodemon|vite|ngrok" | grep -v grep | grep -v mcp-server
+  echo ""
+  echo -e "${YELLOW}Tip: Try running this script again or manually kill with:${NC}"
+  echo -e "  ${BLUE}kill -9 <PID>${NC}"
+else
+  echo -e "${GREEN}✅ All Telegram Shop processes stopped${NC}"
+  echo ""
+  echo -e "${BLUE}Verify with:${NC}"
+  echo -e "  ${BLUE}lsof -ti:3000${NC}  # Should return nothing"
+  echo -e "  ${BLUE}pgrep ngrok${NC}    # Should return nothing"
+fi
+
 echo ""

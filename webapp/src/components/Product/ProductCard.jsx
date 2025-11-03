@@ -32,10 +32,11 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
   const lowStock = stock > 0 && stock <= 3;
   
   // Discount logic
-  const hasDiscount = (product.discount_percentage || 0) > 0;
+  // Discount is active only if original_price exists AND discount_percentage > 0
+  const hasDiscount = product.original_price && parseFloat(product.original_price) > 0 && (product.discount_percentage || 0) > 0;
   const isTimerDiscount = hasDiscount && product.discount_expires_at;
-  const originalPrice = product.original_price || product.price;
-  const discountPercentage = product.discount_percentage || 0;
+  const originalPrice = hasDiscount ? product.original_price : product.price;
+  const discountPercentage = hasDiscount ? (product.discount_percentage || 0) : 0;
   const rawPrice = product.price ?? '';
   const priceString = typeof rawPrice === 'number' ? String(rawPrice) : `${rawPrice}`;
   const numericPriceLength = priceString.replace(/[^0-9]/g, '').length;
@@ -80,7 +81,9 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
       whileTap={{ scale: android ? 0.99 : 0.98 }}
       transition={quickSpring}
       className={`relative h-[200px] rounded-3xl overflow-hidden group ${
-        hasDiscount ? 'ring-2 ring-red-500/30' : ''
+        hasDiscount 
+          ? 'ring-2 ring-red-500/50 shadow-[0_0_20px_rgba(255,71,87,0.25)]' 
+          : ''
       }`}
       style={{
         ...gpuAccelStyle,
@@ -101,9 +104,6 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
           }}
         />
       )}
-
-      {/* Discount Badge - top right */}
-      {hasDiscount && <DiscountBadge />}
 
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {product.isPremium && (
@@ -188,11 +188,18 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
             {/* Price with discount logic */}
             {hasDiscount ? (
               <div className="space-y-1">
-                {/* Original price - зачёркнутая */}
-                <div className="text-xs text-gray-400 line-through font-medium">
-                  ${Math.round(originalPrice)}
+                {/* Старая цена + процент скидки */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 line-through font-medium">
+                    ${Math.round(originalPrice)}
+                  </span>
+                  {/* Процент скидки - компактный badge */}
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500 text-white">
+                    -{discountPercentage}%
+                  </span>
                 </div>
-                {/* Discounted price - красная */}
+                
+                {/* Новая цена красная */}
                 <span
                   className={`text-red-500 font-bold leading-tight ${priceSizeClass}`}
                   style={{

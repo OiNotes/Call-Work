@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { generateProductAIPrompt } from '../../src/utils/systemPrompts.js';
+import { productTools } from '../../src/tools/productTools.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,8 +33,9 @@ const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY
 });
 
-// Product tools definition (from productTools.js)
-const tools = [
+// Use real productTools from source
+// const tools = productTools; // УДАЛЕНО - заменили на импорт выше
+const toolsOLD = [
   {
     type: 'function',
     function: {
@@ -183,7 +185,7 @@ async function testCommand(userMessage, products = mockProducts) {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      tools,
+      tools: productTools,
       tool_choice: 'auto',
       temperature: 0.7,  // Match production settings
       max_tokens: 500
@@ -278,7 +280,34 @@ async function runAllTests() {
     // Edge Cases
     { command: 'привет', category: 'NOISE (Greeting)' },
     { command: 'спасибо', category: 'NOISE (Thanks)' },
-    { command: 'hello', category: 'NOISE (English Greeting)' }
+    { command: 'hello', category: 'NOISE (English Greeting)' },
+
+    // ========================================
+    // BULK ADD PRODUCTS (НОВЫЕ ТЕСТЫ)
+    // ========================================
+    { command: 'добавь: iPhone 999 3шт, Samsung 799 5шт, Xiaomi 399', category: 'BULK ADD PRODUCTS (3 items)' },
+    { command: 'добавь товары: красная кружка $10 2шт, синяя кружка $12', category: 'BULK ADD PRODUCTS (2 items)' },
+
+    // ========================================
+    // UPDATE PRODUCT - DISCOUNT (НОВЫЕ ТЕСТЫ)
+    // ========================================
+    { command: 'сделай скидку 30% на iPhone', category: 'UPDATE PRODUCT - Apply Discount' },
+    { command: 'убери скидку с MacBook', category: 'UPDATE PRODUCT - Remove Discount' },
+    { command: 'скидка 15% на AirPods на 6 часов', category: 'UPDATE PRODUCT - Timed Discount' },
+
+    // ========================================
+    // BULK UPDATE PRICES (НОВЫЕ ТЕСТЫ)
+    // ========================================
+    { command: 'скидка 20% на все товары', category: 'BULK UPDATE PRICES - Discount All' },
+    { command: 'подними цены на 10%', category: 'BULK UPDATE PRICES - Increase All' },
+    { command: 'скидка 15% на всё кроме iPhone', category: 'BULK UPDATE PRICES - Exclude Products' },
+    { command: 'распродажа 25% на 24 часа', category: 'BULK UPDATE PRICES - Timed Discount' },
+
+    // ========================================
+    // UPDATE PRODUCT - STOCK (НОВЫЕ ТЕСТЫ)
+    // ========================================
+    { command: 'увеличь остаток iPhone до 50', category: 'UPDATE PRODUCT - Increase Stock' },
+    { command: 'уменьши количество MacBook до 3', category: 'UPDATE PRODUCT - Decrease Stock' }
   ];
 
   let successCount = 0;

@@ -248,7 +248,8 @@ export const productApi = {
         shopId: shopId,  // camelCase для соответствия Backend API
         percentage: discountData.percentage,
         type: discountData.type, // 'permanent' or 'timer'
-        duration: discountData.duration // milliseconds or null
+        duration: discountData.duration, // milliseconds or null
+        excluded_product_ids: discountData.excludedProductIds || []  // НОВОЕ!
       },
       {
         headers: { Authorization: `Bearer ${token}` }

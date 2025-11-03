@@ -102,6 +102,15 @@ export default function Catalog() {
     }
   }, [currentShop, myShop, loadProducts]);
 
+  // Force reload products on component mount (handles F5 refresh)
+  useEffect(() => {
+    const shopToLoad = currentShop || myShop;
+    if (shopToLoad) {
+      loadProducts(shopToLoad.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - runs only on mount
+
   const handleBack = useCallback(() => {
     triggerHaptic('light');
     setCurrentShop(null);

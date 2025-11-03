@@ -1054,11 +1054,20 @@ async function executeToolCall(functionName, args, context) {
       case 'bulkDeleteByNames':
         return await handleBulkDeleteByNames(args, shopId, token, products);
 
+      case 'bulkDeleteExcept':
+        return await handleBulkDeleteExcept(args, shopId, token, products);
+
       case 'recordSale':
         return await handleRecordSale(args, shopId, token, products, clarifiedProductId);
 
       case 'getProductInfo':
         return await handleGetProductInfo(args, products, clarifiedProductId);
+
+      case 'applyDiscount':
+        return await handleApplyDiscount(args, shopId, token, products);
+
+      case 'removeDiscount':
+        return await handleRemoveDiscount(args, shopId, token, products);
 
       case 'bulkUpdatePrices':
         return await handleBulkUpdatePrices(args, shopId, token, products);
@@ -1961,6 +1970,101 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
 }
 
 /**
+ * Bulk delete except handler - delete all products EXCEPT specified ones
+ */
+async function handleBulkDeleteExcept(args, shopId, token, products) {
+  const { excludedProducts } = args;
+
+  if (!excludedProducts || !Array.isArray(excludedProducts) || excludedProducts.length === 0) {
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Excluded products array is required',
+          field: 'excludedProducts'
+        }
+      }
+    };
+  }
+
+  // Find products to KEEP (excluded from deletion)
+  const keepProducts = [];
+  const keepNames = [];
+  const notFoundExclusions = [];
+
+  for (const name of excludedProducts) {
+    const matches = fuzzySearchProducts(name, products, 0.4);
+    
+    if (matches.length > 0) {
+      const match = matches[0].product;
+      keepProducts.push(match.id);
+      keepNames.push(match.name);
+    } else {
+      notFoundExclusions.push(name);
+    }
+  }
+
+  if (keepProducts.length === 0) {
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'PRODUCTS_NOT_FOUND',
+          message: 'None of the excluded products were found. Cannot proceed with deletion.',
+          searchedNames: excludedProducts,
+          notFound: notFoundExclusions
+        }
+      }
+    };
+  }
+
+  // Find products to DELETE (all except kept ones)
+  const deleteProductIds = products
+    .filter(p => !keepProducts.includes(p.id))
+    .map(p => p.id);
+
+  if (deleteProductIds.length === 0) {
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'NO_PRODUCTS_TO_DELETE',
+          message: 'All products are excluded from deletion',
+          keptProducts: keepNames
+        }
+      }
+    };
+  }
+
+  try {
+    const result = await productApi.bulkDeleteByIds(shopId, deleteProductIds, token);
+
+    return {
+      success: true,
+      data: {
+        action: 'bulk_delete_except',
+        deletedCount: result.deletedCount,
+        keptProducts: keepNames,
+        notFoundExclusions: notFoundExclusions.length > 0 ? notFoundExclusions : null
+      }
+    };
+  } catch (error) {
+    logger.error('Bulk delete except via AI failed:', error);
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to delete products',
+          details: error.message
+        }
+      }
+    };
+  }
+}
+
+/**
  * Record sale handler (decrease stock)
  */
 async function handleRecordSale(args, shopId, token, products, clarifiedProductId = null) {
@@ -2197,6 +2301,174 @@ async function handleGetProductInfo(args, products, clarifiedProductId = null) {
       }
     }
   };
+}
+
+/**
+ * Apply discount to a specific product handler
+ */
+async function handleApplyDiscount(args, shopId, token, products) {
+  const { productName, percentage, duration } = args;
+  
+  if (!productName || !percentage) {
+    return { success: false, message: 'Не указано название товара или процент скидки' };
+  }
+  
+  if (percentage < 1 || percentage > 99) {
+    return { success: false, message: 'Скидка должна быть от 1% до 99%' };
+  }
+  
+  try {
+    // Найти товар через fuzzy search
+    const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
+    const matches = fuzzyMatches.map(m => m.product);
+    
+    if (matches.length === 0) {
+      return { 
+        success: false, 
+        message: `Товар "${productName}" не найден. Доступные товары: ${products.map(p => p.name).join(', ')}` 
+      };
+    }
+    
+    if (matches.length > 1) {
+      return {
+        success: false,
+        needsClarification: true,
+        data: {
+          action: 'multiple_matches_found',
+          searchQuery: productName,
+          matches: matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price
+          })),
+          operation: 'apply_discount'
+        }
+      };
+    }
+    
+    const product = matches[0];
+    
+    // Парсить duration в timestamp
+    let expiresAt = null;
+    if (duration) {
+      const durationMs = parseDurationToMs(duration);
+      if (durationMs) {
+        expiresAt = new Date(Date.now() + durationMs).toISOString();
+      }
+    }
+    
+    // Применить скидку через API
+    const originalPrice = product.price;
+    const discountedPrice = originalPrice * (1 - percentage / 100);
+    
+    const updateData = {
+      discountPercentage: percentage,
+      originalPrice: originalPrice,
+      price: discountedPrice,
+      discountExpiresAt: expiresAt
+    };
+    
+    await productApi.updateProduct(product.id, updateData, token);
+    
+    return {
+      success: true,
+      operation: 'applyDiscount',
+      data: {
+        action: 'product_updated',
+        product: {
+          id: product.id,
+          name: product.name,
+          price: discountedPrice,
+          originalPrice,
+          discount_percentage: percentage,
+          discount_expires_at: expiresAt
+        },
+        changes: {
+          price: { old: originalPrice, new: discountedPrice },
+          discount_percentage: { old: product.discount_percentage || 0, new: percentage }
+        }
+      }
+    };
+  } catch (error) {
+    logger.error('Apply discount error:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Remove discount from a product handler
+ */
+async function handleRemoveDiscount(args, shopId, token, products) {
+  const { productName } = args;
+  
+  if (!productName) {
+    return { success: false, message: 'Не указано название товара' };
+  }
+  
+  try {
+    // Найти товар через fuzzy search
+    const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
+    const matches = fuzzyMatches.map(m => m.product);
+    
+    if (matches.length === 0) {
+      return { 
+        success: false, 
+        message: `Товар "${productName}" не найден` 
+      };
+    }
+    
+    if (matches.length > 1) {
+      return {
+        success: false,
+        needsClarification: true,
+        data: {
+          action: 'multiple_matches_found',
+          searchQuery: productName,
+          matches: matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price
+          })),
+          operation: 'remove_discount'
+        }
+      };
+    }
+    
+    const product = matches[0];
+    
+    // Убрать скидку
+    const updateData = {
+      discountPercentage: 0,
+      originalPrice: null,
+      price: product.original_price || product.price,
+      discountExpiresAt: null
+    };
+    
+    const originalPriceValue = product.original_price || product.price;
+    
+    await productApi.updateProduct(product.id, updateData, token);
+    
+    return {
+      success: true,
+      operation: 'removeDiscount',
+      data: {
+        action: 'product_updated',
+        product: {
+          id: product.id,
+          name: product.name,
+          price: originalPriceValue,
+          discount_percentage: 0
+        },
+        changes: {
+          price: { old: product.price, new: originalPriceValue },
+          discount_percentage: { old: product.discount_percentage || 0, new: 0 }
+        }
+      }
+    };
+  } catch (error) {
+    logger.error('Remove discount error:', error);
+    return { success: false, message: error.message };
+  }
 }
 
 /**

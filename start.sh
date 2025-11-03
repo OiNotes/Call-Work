@@ -28,24 +28,39 @@ echo -e "${BLUE}╚════════════════════�
 echo ""
 
 #############################################
-# Step 1: Kill existing processes
+# Step 1: Kill ALL existing processes
 #############################################
-echo -e "${YELLOW}[1/6]${NC} Stopping existing processes..."
+echo -e "${YELLOW}[1/6]${NC} Stopping ALL existing processes..."
 
-# Kill processes on port 3000
-if lsof -ti:3000 >/dev/null 2>&1; then
-  echo "  └─ Killing processes on port 3000..."
-  lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-fi
+# Kill backend processes
+echo "  ├─ Backend processes..."
+pkill -f "node.*server.js" 2>/dev/null || true
+pkill -f "nodemon.*server" 2>/dev/null || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
+# Kill bot processes
+echo "  ├─ Bot processes..."
+pkill -f "node.*bot.js" 2>/dev/null || true
+pkill -f "nodemon.*bot" 2>/dev/null || true
+
+# Kill webapp dev server
+echo "  ├─ Webapp processes..."
+pkill -f "vite" 2>/dev/null || true
 
 # Kill ngrok
-if pgrep -x "ngrok" >/dev/null; then
-  echo "  └─ Stopping ngrok..."
-  pkill -x ngrok 2>/dev/null || true
-  sleep 2
+echo "  ├─ ngrok..."
+pkill -x ngrok 2>/dev/null || true
+
+sleep 2
+
+# Verify cleanup
+REMAINING=$(ps aux | grep -E "node.*(server|bot)|nodemon|vite|ngrok" | grep -v grep | grep -v mcp-server | wc -l)
+if [ "$REMAINING" -gt 0 ]; then
+  echo -e "  ${YELLOW}!${NC} Warning: $REMAINING project processes still running"
+else
+  echo -e "  ${GREEN}✓${NC} All project processes stopped"
 fi
 
-echo -e "  ${GREEN}✓${NC} Cleanup complete"
 echo ""
 
 #############################################
