@@ -230,7 +230,7 @@ export const productApi = {
 
   // Bulk delete specific products by IDs
   async bulkDeleteByIds(shopId, productIds, token) {
-    const { data } = await api.post('/products/bulk-delete',
+    const { data } = await api.post('/products/bulk-delete-by-ids',
       { shopId, productIds },
       {
         headers: { Authorization: `Bearer ${token}` }
