@@ -6,35 +6,243 @@ import { fuzzySearchProducts } from '../utils/fuzzyMatch.js';
 import { autoTransliterateProductName, getTransliterationInfo } from '../utils/transliterate.js';
 import logger from '../utils/logger.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
-import { messages } from '../texts/messages.js';
-const { seller: { aiProducts: aiMessages } } = messages;
 
 /**
  * AI Product Management Service
  * Orchestrates AI calls and executes product operations
  */
-
-/**
- * Format price - remove trailing zeros from PostgreSQL NUMERIC
- * @param {string|number} price - Price value
- * @returns {string} Formatted price (e.g., "1200" or "1200.50")
- */
-function formatPrice(price) {
-  const num = parseFloat(price);
-  if (isNaN(num)) return '0';
-
-  // If integer, return without decimals
-  if (num % 1 === 0) {
-    return num.toString();
-  }
-
-  // Otherwise, format to 2 decimals and remove trailing zeros
-  return num.toFixed(2).replace(/\.?0+$/, '');
-}
-
 // Conversation history constants
 const MAX_HISTORY_MESSAGES = 40; // Keep last 40 messages (~10 tool exchanges or 20 text exchanges)
-const CONVERSATION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const CONVERSATION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
+
+export function noteProductContext(ctx, product, meta = {}) {
+  if (!ctx?.session || !product) {
+    return;
+  }
+
+  const snapshot = {
+    id: product.id ?? null,
+    name: product.name ?? null,
+    price: product.price ?? null,
+    updatedAt: Date.now()
+  };
+
+  const prev = ctx.session.aiContext || {};
+  const recent = [snapshot, ...(prev.recentProducts || [])]
+    .filter(item => item.name)
+    .filter((item, index, array) => array.findIndex(other => other.name === item.name) === index)
+    .slice(0, 5);
+
+  ctx.session.aiContext = {
+    ...prev,
+    lastProductId: snapshot.id ?? prev.lastProductId ?? null,
+    lastProductName: snapshot.name ?? prev.lastProductName ?? null,
+    lastAction: meta.action || prev.lastAction || null,
+    lastCommand: meta.command || prev.lastCommand || null,
+    recentProducts: recent,
+    updatedAt: Date.now()
+  };
+
+  if (meta.relatedProducts) {
+    ctx.session.aiContext.relatedProducts = meta.relatedProducts;
+  }
+}
+
+function updateContextFromResult(ctx, result, command) {
+  if (!ctx?.session || !result?.data) {
+    return;
+  }
+
+  const { data, operation } = result;
+  const action = data.action || operation || null;
+
+  if (data.product) {
+    noteProductContext(ctx, data.product, { action, command });
+    return;
+  }
+
+  if (Array.isArray(data.products) && data.products.length === 1) {
+    noteProductContext(ctx, data.products[0], { action, command });
+    return;
+  }
+
+  if (Array.isArray(data.products) && data.products.length > 1) {
+    const snapshot = data.products[0];
+    noteProductContext(ctx, snapshot, {
+      action,
+      command,
+      relatedProducts: data.products.map(item => ({
+        id: item.id ?? null,
+        name: item.name ?? null,
+        price: item.price ?? null
+      }))
+    });
+  }
+}
+
+function formatUsd(price) {
+  const num = Number(price);
+  if (!Number.isFinite(num)) {
+    return '$0';
+  }
+  const formatted = num % 1 === 0
+    ? num.toFixed(0)
+    : num.toFixed(2).replace(/\.?0+$/, '');
+  return `$${formatted}`;
+}
+
+function formatProductLine(product, index = null) {
+  const priceText = formatUsd(product.price ?? 0);
+  const stock = product.stock_quantity ?? product.stock ?? 0;
+  const stockText = stock > 0 ? ` — ${stock} шт` : ' — нет в наличии';
+  const discount = product.discount_percentage ?? product.discountPercentage ?? null;
+  const discountText = discount && Number(discount) > 0
+    ? ` (скидка ${Number(discount)}%)`
+    : '';
+  const prefix = index !== null ? `${index + 1}. ` : '';
+  return `${prefix}${product.name} — ${priceText}${discountText}${stockText}`;
+}
+
+function buildMessageFromResult(result) {
+  if (!result) {
+    return null;
+  }
+
+  if (result.message) {
+    return result.message;
+  }
+
+  const data = result.data;
+  if (!data) {
+    return result.success ? 'Готово.' : null;
+  }
+
+  if (data.error?.message) {
+    return `Не получилось: ${data.error.message}`;
+  }
+
+  switch (data.action) {
+    case 'product_created': {
+      const product = data.product;
+      if (!product) {
+        return 'Готово.';
+      }
+      const stock = product.stock_quantity ?? product.stock ?? 0;
+      const stockText = stock > 0 ? `, ${stock} шт` : ', нет в наличии';
+      return `Готово, ${product.name}: ${formatUsd(product.price)}${stockText}.`;
+    }
+    case 'bulk_products_added': {
+      const successCount = data.successCount ?? 0;
+      const failCount = data.failCount ?? 0;
+      const sections = [];
+      if (successCount > 0 && Array.isArray(data.successful)) {
+        const preview = data.successful.slice(0, 5).map((p, idx) => formatProductLine(p, idx));
+        sections.push(`Добавил ${successCount} ${successCount === 1 ? 'товар' : 'товара'}:\n${preview.join('\n')}`);
+        if (data.successful.length > 5) {
+          sections.push(`... и ещё ${data.successful.length - 5}`);
+        }
+      }
+      if (failCount > 0 && Array.isArray(data.failed) && data.failed.length) {
+        const failedNames = data.failed.map(item => item.name).filter(Boolean);
+        if (failedNames.length) {
+          sections.push(`Не удалось добавить: ${failedNames.join(', ')}`);
+        }
+      }
+      return sections.join('\n') || 'Готово.';
+    }
+    case 'product_deleted': {
+      const product = data.product;
+      return product ? `Удалил ${product.name}.` : 'Удалил товар.';
+    }
+    case 'products_listed': {
+      const items = data.products || [];
+      if (items.length === 0) {
+        return 'Каталог пуст — добавь первый товар?';
+      }
+      const preview = items.slice(0, 10).map((p, idx) => formatProductLine(p, idx));
+      const extra = items.length > 10 ? `\n... и ещё ${items.length - 10} товаров` : '';
+      return `Сейчас в каталоге ${items.length} товаров:\n${preview.join('\n')}${extra}`;
+    }
+    case 'products_found': {
+      const items = data.products || [];
+      if (items.length === 0) {
+        return `Не нашёл товаров по запросу «${data.searchQuery}».`;
+      }
+      const preview = items.slice(0, 10).map((p, idx) => formatProductLine(p, idx));
+      const extra = items.length > 10 ? `\n... и ещё ${items.length - 10}` : '';
+      return `Нашёл ${items.length} товаров по запросу «${data.searchQuery}»:\n${preview.join('\n')}${extra}`;
+    }
+    case 'product_updated': {
+      const changes = data.changes || {};
+      const changeParts = [];
+      if (changes.name) {
+        changeParts.push(`имя: ${changes.name.old} → ${changes.name.new}`);
+      }
+      if (changes.price) {
+        changeParts.push(`цена: ${formatUsd(changes.price.old)} → ${formatUsd(changes.price.new)}`);
+      }
+      if (changes.stock_quantity) {
+        changeParts.push(`остаток: ${changes.stock_quantity.old ?? 0} → ${changes.stock_quantity.new}`);
+      }
+      if (changes.discount_percentage) {
+        changeParts.push(`скидка: ${changes.discount_percentage.old ?? 0}% → ${changes.discount_percentage.new ?? 0}%`);
+      }
+      if (changes.discount_expires_at) {
+        changeParts.push('обновил таймер скидки');
+      }
+      const productName = data.product?.name || 'товар';
+      return changeParts.length > 0
+        ? `${productName} обновлён: ${changeParts.join(', ')}.`
+        : `Обновил ${productName}.`;
+    }
+    case 'bulk_delete_all': {
+      const count = data.deletedCount ?? 0;
+      return count > 0
+        ? `Удалил все товары (${count} шт).`
+        : 'Каталог уже был пустым.';
+    }
+    case 'bulk_delete_by_names': {
+      const count = data.deletedCount ?? 0;
+      const segments = [];
+      if (count > 0 && data.deletedProducts?.length) {
+        segments.push(`Удалил ${count}: ${data.deletedProducts.join(', ')}`);
+      }
+      if (data.notFound?.length) {
+        segments.push(`Не нашёл: ${data.notFound.join(', ')}`);
+      }
+      return segments.join('\n') || 'Не удалось удалить товары.';
+    }
+    case 'sale_recorded': {
+      const product = data.product;
+      const sale = data.sale;
+      if (!product || !sale) {
+        return 'Продажу зафиксировал.';
+      }
+      return `Зафиксировал продажу: ${product.name}, ${sale.quantity} шт. Остаток ${sale.newStock}.`;
+    }
+    case 'product_info_retrieved': {
+      const product = data.product;
+      if (!product) {
+        return 'Не нашёл информацию о товаре.';
+      }
+      const stock = product.stock_quantity ?? 0;
+      const stockText = stock > 0 ? `${stock} шт` : 'нет в наличии';
+      return `${product.name}: ${formatUsd(product.price)} (${stockText}).`;
+    }
+    case 'bulk_update_prices': {
+      const updated = data.updatedCount ?? 0;
+      const suffix = data.discountType === 'timer' && data.durationText
+        ? ` на ${data.durationText}`
+        : '';
+      const excluded = data.excludedProductIds?.length
+        ? ` (исключено ${data.excludedProductIds.length})`
+        : '';
+      return `${data.operationText} ${data.operationSymbol}${data.percentage}%${suffix} для ${updated} товаров${excluded}.`;
+    }
+    default:
+      return result.success ? 'Готово.' : null;
+  }
+}
 
 /**
  * Parse duration string to milliseconds
@@ -138,6 +346,7 @@ function getConversationHistory(ctx) {
   if (conversation.lastActivity && Date.now() - conversation.lastActivity > CONVERSATION_TIMEOUT) {
     logger.info('conversation_expired', { userId: ctx.from?.id });
     delete ctx.session.aiConversation;
+    delete ctx.session.aiContext;
     return [];
   }
 
@@ -295,6 +504,93 @@ function detectStockUpdateIntent(command) {
   return null;
 }
 
+function detectSingleProductDiscountIntent(command, products, ctx) {
+  if (!command) {
+    return null;
+  }
+
+  const normalized = command.toLowerCase();
+  if (!/(скид|discount|%)/.test(normalized)) {
+    return null;
+  }
+
+  const percentMatch = command.match(/(-?\d+(?:[.,]\d+)?)\s*%/);
+  if (!percentMatch) {
+    return null;
+  }
+
+  const percentage = parseFloat(percentMatch[1].replace(',', '.'));
+  if (!Number.isFinite(percentage)) {
+    return null;
+  }
+
+  if (percentage <= 0) {
+    return {
+      error: {
+        message: 'Скидка должна быть больше 0%. Укажи корректное значение.'
+      }
+    };
+  }
+
+  if (percentage > 100) {
+    return {
+      error: {
+        message: 'Скидка не может быть больше 100%. Сколько поставить?',
+        value: percentage
+      }
+    };
+  }
+
+  const mentionsAll = /(всем|на все|весь|по всем|по каталогу|all|every|each|каталог)/.test(normalized);
+  if (mentionsAll) {
+    return null;
+  }
+
+  const chooseFromContext = () => {
+    const lastName = ctx?.session?.aiContext?.lastProductName;
+    if (!lastName) {
+      return null;
+    }
+    const matches = fuzzySearchProducts(lastName, products, 0.4);
+    if (matches.length === 1) {
+      return matches[0].product;
+    }
+    return null;
+  };
+
+  const chooseByExplicitMention = () => {
+    const cleanedCommand = normalized.replace(/[^a-zа-я0-9\s]/gi, ' ');
+    for (const product of products) {
+      if (!product.name) {
+        continue;
+      }
+      const productName = product.name.toLowerCase();
+      if (cleanedCommand.includes(productName)) {
+        return product;
+      }
+    }
+    return null;
+  };
+
+  let product = chooseFromContext() || chooseByExplicitMention();
+  if (!product && products.length === 1) {
+    product = products[0];
+  }
+
+  if (!product) {
+    return null;
+  }
+
+  const durationMatch = command.match(/\d+\s*(?:час(?:ов|а)?|минут(?:ы|у)?|дн(?:ей|я|ь)?|недел(?:я|и|ь)?|hours?|hrs?|h|days?|d|weeks?|w)/i);
+  const duration = durationMatch ? durationMatch[0] : null;
+
+  return {
+    product,
+    percentage,
+    duration
+  };
+}
+
 /**
  * Process AI command for product management
  * 
@@ -303,7 +599,8 @@ function detectStockUpdateIntent(command) {
  * @returns {Object} Result object with success, message, data, needsClarification
  */
 export async function processProductCommand(userCommand, context) {
-  const { shopId, shopName, token, products = [], ctx } = context;
+  const { shopId, shopName, token, products = [], ctx, clarifiedProductId, clarifiedProductName } = context;
+  const startTime = Date.now();
 
   // Validate context
   if (!shopId || !shopName || !token) {
@@ -333,6 +630,50 @@ export async function processProductCommand(userCommand, context) {
 
   try {
     // Attempt fast-path stock update detection before calling AI
+    const quickDiscount = detectSingleProductDiscountIntent(sanitizedCommand, products, ctx);
+    if (quickDiscount) {
+      if (quickDiscount.error) {
+        return {
+          success: false,
+          message: quickDiscount.error.message
+        };
+      }
+
+      const updates = {
+        discount_percentage: quickDiscount.percentage
+      };
+
+      if (quickDiscount.duration) {
+        updates.discount_expires_at = quickDiscount.duration;
+      }
+
+      const result = await handleUpdateProduct(
+        {
+          productName: quickDiscount.product.name,
+          updates
+        },
+        shopId,
+        token,
+        products
+      );
+
+      if (ctx && result.success) {
+        updateContextFromResult(ctx, result, sanitizedCommand);
+      }
+
+      if (result.success) {
+        const suffix = quickDiscount.duration ? ` на ${quickDiscount.duration}` : '';
+        const message = `Сделал скидку ${quickDiscount.percentage}% на ${quickDiscount.product.name}${suffix}.`;
+        return {
+          ...result,
+          message,
+          operation: 'quick_discount_update'
+        };
+      }
+
+      return result;
+    }
+
     const quickStockUpdate = detectStockUpdateIntent(sanitizedCommand);
     if (quickStockUpdate) {
       logger.info('stock_update_intent_detected', {
@@ -359,11 +700,27 @@ export async function processProductCommand(userCommand, context) {
         ]);
       }
 
+      if (ctx && result.success) {
+        updateContextFromResult(ctx, result, sanitizedCommand);
+      }
+
+      if (result.success && result.data?.product) {
+        const updated = result.data.product;
+        const message = `Готово, ${updated.name}: остаток ${quickStockUpdate.quantity}.`;
+        return {
+          ...result,
+          message,
+          operation: 'quick_stock_update'
+        };
+      }
+
       return result;
     }
 
     // Generate system prompt
-    const systemPrompt = generateProductAIPrompt(shopName, products);
+    const systemPrompt = generateProductAIPrompt(shopName, products, {
+      sessionContext: ctx?.session?.aiContext
+    });
 
     // Get conversation history for context
     const conversationHistory = getConversationHistory(ctx);
@@ -445,10 +802,14 @@ export async function processProductCommand(userCommand, context) {
       }
     }
 
+    const processingTime = Date.now() - startTime;
     logger.info('ai_product_command_processed', {
       shopId,
-      command: sanitizedCommand,
-      streaming: true
+      userId: ctx?.from?.id,
+      command: sanitizedCommand.substring(0, 100),
+      streaming: true,
+      processingTimeMs: processingTime,
+      hadHistory: conversationHistory.length > 0
     });
 
     const choice = response.choices[0];
@@ -459,10 +820,13 @@ export async function processProductCommand(userCommand, context) {
       const functionName = toolCall.function.name;
       const args = JSON.parse(toolCall.function.arguments);
 
+      const toolCallStartTime = Date.now();
       logger.info('ai_tool_call', {
         shopId,
+        userId: ctx?.from?.id,
         function: functionName,
-        arguments: args
+        arguments: args,
+        clarified: !!clarifiedProductId
       });
 
       // Delete streaming message since function result will be in a new message
@@ -480,11 +844,29 @@ export async function processProductCommand(userCommand, context) {
       }
 
       // Execute the appropriate function
-      const result = await executeToolCall(functionName, args, { shopId, token, products, ctx });
+      const result = await executeToolCall(functionName, args, { 
+        shopId, 
+        token, 
+        products, 
+        ctx,
+        clarifiedProductId,  // Pass clarified product ID to tool functions
+        clarifiedProductName  // Pass clarified product name for logging
+      });
+      
+      const toolCallTime = Date.now() - toolCallStartTime;
+      logger.info('ai_tool_call_completed', {
+        shopId,
+        userId: ctx?.from?.id,
+        function: functionName,
+        success: result.success,
+        executionTimeMs: toolCallTime
+      });
 
-      // If function returned legacy message format (backward compatibility)
+      if (ctx && result.success) {
+        updateContextFromResult(ctx, result, sanitizedCommand);
+      }
+
       if (result.message && !result.data) {
-        // Legacy format - save only text messages for backward compatibility
         if (ctx && result.message) {
           saveToConversationHistory(ctx, [
             { role: 'user', content: sanitizedCommand },
@@ -494,125 +876,30 @@ export async function processProductCommand(userCommand, context) {
         return result;
       }
 
-      // LOOP-BACK PATTERN: Pass function result back to AI for natural response
-      // Add tool call and result to conversation history
-      conversationHistory.push({
-        role: 'assistant',
-        content: null,
-        tool_calls: [{
-          id: toolCall.id,
-          type: 'function',
-          function: {
-            name: functionName,
-            arguments: toolCall.function.arguments
-          }
-        }]
-      });
+      const totalTime = Date.now() - startTime;
+      const finalMessage = buildMessageFromResult(result) || 'Готово.';
 
-      conversationHistory.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        name: functionName,
-        content: JSON.stringify(result.data) // Pass structured data, not message!
-      });
-
-      logger.debug('loop_back_to_ai', {
-        shopId,
-        function: functionName,
-        hasData: !!result.data
-      });
-
-      // Restart typing indicator for second AI call
-      if (ctx) {
-        await ctx.sendChatAction('typing').catch(() => {});
-        typingInterval = setInterval(() => {
-          ctx.sendChatAction('typing').catch(() => {});
-        }, 4000);
-      }
-
-      // Reset streaming state for final AI response
-      streamingMessage = null;
-      lastUpdateTime = 0;
-      wordCount = 0;
-
-      // AI formulates natural response based on function result
-      let finalResponse;
-      try {
-        finalResponse = await deepseek.chatStreaming(
-          systemPrompt,
-          '',
-          [], // No tools on second call - just generate response
-          conversationHistory,
-          onChunk
-        );
-      } finally {
-        // Stop typing indicator
-        if (typingInterval) {
-          clearInterval(typingInterval);
-        }
-      }
-
-      const finalMessage = finalResponse.choices[0].message.content;
-
-      // Final update for streaming message
-      if (streamingMessage && ctx && finalMessage) {
-        try {
-          await ctx.telegram.editMessageText(
-            streamingMessage.chat.id,
-            streamingMessage.message_id,
-            undefined,
-            finalMessage
-          );
-        } catch (err) {
-          if (err.response?.description !== 'Bad Request: message is not modified') {
-            logger.warn('Failed to send final AI message:', err.message);
-          }
-        }
-      } else if (!streamingMessage && ctx && finalMessage) {
-        try {
-          await cleanReply(ctx, finalMessage);
-        } catch (err) {
-          logger.warn('Failed to send AI message:', err.message);
-        }
-      }
-
-      // Save FULL conversation flow with tool calls and tool results
+      // НЕ отправляем здесь - handler сам отправит сообщение (aiProducts.js:176)
+      // Только сохраняем в историю для AI контекста
       if (ctx && finalMessage) {
         saveToConversationHistory(ctx, [
           { role: 'user', content: sanitizedCommand },
-          {
-            role: 'assistant',
-            content: null,
-            tool_calls: [{
-              id: toolCall.id,
-              type: 'function',
-              function: {
-                name: functionName,
-                arguments: toolCall.function.arguments
-              }
-            }]
-          },
-          {
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            name: functionName,
-            content: JSON.stringify(result.data)
-          },
-          {
-            role: 'assistant',
-            content: finalMessage
-          }
+          { role: 'assistant', content: finalMessage }
         ]);
       }
 
+      logger.info('ai_command_with_tool_completed', {
+        shopId,
+        userId: ctx?.from?.id,
+        function: functionName,
+        totalTimeMs: totalTime,
+        success: result.success
+      });
+
       return {
-        success: result.success,
-        message: finalMessage || '✅ Команда обработана',
-        data: result.data,
-        needsConfirmation: result.needsConfirmation,
-        needsClarification: result.needsClarification,
-        keyboard: result.keyboard,
-        operation: result.operation
+        ...result,
+        message: finalMessage,
+        operation: result.operation || result.data?.action || functionName
       };
     }
 
@@ -644,6 +931,8 @@ export async function processProductCommand(userCommand, context) {
       }
     }
 
+    const totalTime = Date.now() - startTime;
+    
     // Save text conversation (no tool calls)
     if (ctx && aiMessage) {
       saveToConversationHistory(ctx, [
@@ -651,6 +940,13 @@ export async function processProductCommand(userCommand, context) {
         { role: 'assistant', content: aiMessage }
       ]);
     }
+    
+    logger.info('ai_text_response_completed', {
+      shopId,
+      userId: ctx?.from?.id,
+      totalTimeMs: totalTime,
+      responseLength: aiMessage?.length || 0
+    });
 
     return {
       success: true,
@@ -660,17 +956,31 @@ export async function processProductCommand(userCommand, context) {
     };
 
   } catch (error) {
+    const totalTime = Date.now() - startTime;
     logger.error('AI product command error:', {
+      totalTimeMs: totalTime,
       error: error.message,
+      stack: error.stack,
       shopId,
-      command: sanitizedCommand
+      command: sanitizedCommand.substring(0, 100),
+      status: error.status,
+      code: error.code,
+      timestamp: new Date().toISOString()
     });
 
-    // Handle specific errors
+    // Handle specific errors with user-friendly messages
     if (error.status === 503) {
       return {
         success: false,
-        message: '⏳ AI перегружен. Попробуйте через минуту.',
+        message: '⏳ Сервис временно перегружен\n\nПовторите через минуту.',
+        retry: true
+      };
+    }
+
+    if (error.status === 429) {
+      return {
+        success: false,
+        message: '⚠️ Слишком много запросов\n\nПодождите минуту и попробуйте снова.',
         retry: true
       };
     }
@@ -678,14 +988,30 @@ export async function processProductCommand(userCommand, context) {
     if (error.status === 401) {
       return {
         success: false,
-        message: '❌ Ошибка авторизации AI. Проверьте конфигурацию.',
+        message: '🔐 Проблема с авторизацией\n\nПерезапустите бота командой /start',
         fallbackToMenu: true
+      };
+    }
+
+    if (error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
+      return {
+        success: false,
+        message: '⏱ Превышено время ожидания\n\nПопробуйте упростить запрос или повторите позже.',
+        retry: true
+      };
+    }
+
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      return {
+        success: false,
+        message: '🔌 Проблема с подключением\n\nПовторите через несколько секунд.',
+        retry: true
       };
     }
 
     return {
       success: false,
-      message: '❌ Ошибка AI. Используйте обычное меню.',
+      message: '❌ Не удалось обработать команду\n\nИспользуйте меню или попробуйте переформулировать.',
       fallbackToMenu: true
     };
   }
@@ -700,7 +1026,7 @@ export async function processProductCommand(userCommand, context) {
  * @returns {Object} Result object
  */
 async function executeToolCall(functionName, args, context) {
-  const { shopId, token, products, ctx } = context;
+  const { shopId, token, products, ctx, clarifiedProductId } = context;
 
   try {
     switch (functionName) {
@@ -711,7 +1037,7 @@ async function executeToolCall(functionName, args, context) {
         return await handleBulkAddProducts(args, shopId, token);
 
       case 'deleteProduct':
-        return await handleDeleteProduct(args, shopId, token, products);
+        return await handleDeleteProduct(args, shopId, token, products, clarifiedProductId);
 
       case 'listProducts':
         return await handleListProducts(products);
@@ -720,7 +1046,7 @@ async function executeToolCall(functionName, args, context) {
         return await handleSearchProduct(args, products);
 
       case 'updateProduct':
-        return await handleUpdateProduct(args, shopId, token, products);
+        return await handleUpdateProduct(args, shopId, token, products, clarifiedProductId);
 
       case 'bulkDeleteAll':
         return await handleBulkDeleteAll(shopId, token, ctx);
@@ -729,13 +1055,13 @@ async function executeToolCall(functionName, args, context) {
         return await handleBulkDeleteByNames(args, shopId, token, products);
 
       case 'recordSale':
-        return await handleRecordSale(args, shopId, token, products);
+        return await handleRecordSale(args, shopId, token, products, clarifiedProductId);
 
       case 'getProductInfo':
-        return await handleGetProductInfo(args, products);
+        return await handleGetProductInfo(args, products, clarifiedProductId);
 
       case 'bulkUpdatePrices':
-        return await handleBulkUpdatePrices(args, shopId, token, products, ctx);
+        return await handleBulkUpdatePrices(args, shopId, token, products);
 
       default:
         return {
@@ -789,15 +1115,18 @@ async function handleAddProduct(args, shopId, token) {
     };
   }
 
-  if (stock === undefined || stock === null) {
+  const normalizedStock = stock === undefined || stock === null ? 1 : stock;
+
+  if (!Number.isFinite(normalizedStock) || normalizedStock < 0) {
     return {
       success: false,
       data: {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Stock quantity is required',
+          message: 'Stock quantity must be zero or a positive integer',
           field: 'stock',
-          hint: 'Please specify how many items are in stock'
+          value: stock,
+          hint: 'Например: 1, 5, 10'
         }
       }
     };
@@ -822,7 +1151,7 @@ async function handleAddProduct(args, shopId, token) {
       price,
       currency: 'USD',
       shopId,
-      stockQuantity: stock
+      stockQuantity: normalizedStock
     }, token);
 
     return {
@@ -896,6 +1225,7 @@ async function handleBulkAddProducts(args, shopId, token) {
   // Process each product
   for (const product of products) {
     const { name, price, stock } = product;
+    const normalizedStock = stock === undefined || stock === null ? 1 : stock;
 
     // Validate individual product
     if (!name || name.length < 3) {
@@ -922,13 +1252,14 @@ async function handleBulkAddProducts(args, shopId, token) {
       continue;
     }
 
-    if (stock === undefined || stock === null) {
+    if (!Number.isFinite(normalizedStock) || normalizedStock < 0) {
       results.failed.push({
         name,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Stock quantity is required',
-          field: 'stock'
+          message: 'Stock quantity must be zero or a positive integer',
+          field: 'stock',
+          value: stock
         }
       });
       continue;
@@ -953,7 +1284,7 @@ async function handleBulkAddProducts(args, shopId, token) {
         price,
         currency: 'USD',
         shopId,
-        stockQuantity: stock
+        stockQuantity: normalizedStock
       }, token);
 
       results.successful.push({
@@ -1011,7 +1342,7 @@ async function handleBulkAddProducts(args, shopId, token) {
 /**
  * Delete product handler
  */
-async function handleDeleteProduct(args, shopId, token, products) {
+async function handleDeleteProduct(args, shopId, token, products, clarifiedProductId = null) {
   const { productName } = args;
 
   if (!productName) {
@@ -1027,44 +1358,60 @@ async function handleDeleteProduct(args, shopId, token, products) {
     };
   }
 
-  // Use fuzzy search for better matching
-  const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
-  const matches = fuzzyMatches.map(m => m.product);
+  // If clarifiedProductId is provided, use it directly
+  let product = null;
+  if (clarifiedProductId) {
+    product = products.find(p => p.id === clarifiedProductId);
+    if (product) {
+      logger.info('delete_product_clarified', {
+        shopId,
+        productId: clarifiedProductId,
+        productName: product.name
+      });
+    }
+  }
 
-  if (matches.length === 0) {
-    return {
-      success: false,
-      data: {
-        error: {
-          code: 'PRODUCT_NOT_FOUND',
-          message: 'Product not found',
-          searchQuery: productName,
-          suggestion: 'Try searching with a different name or check the product list'
+  // If no clarified product, use fuzzy search
+  if (!product) {
+    // Use fuzzy search for better matching
+    const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
+    const matches = fuzzyMatches.map(m => m.product);
+
+    if (matches.length === 0) {
+      return {
+        success: false,
+        data: {
+          error: {
+            code: 'PRODUCT_NOT_FOUND',
+            message: 'Product not found',
+            searchQuery: productName,
+            suggestion: 'Try searching with a different name or check the product list'
+          }
         }
-      }
-    };
-  }
+      };
+    }
 
-  if (matches.length > 1) {
-    // Multiple matches - need clarification
-    return {
-      success: false,
-      needsClarification: true,
-      data: {
-        action: 'multiple_matches_found',
-        searchQuery: productName,
-        matches: matches.map(p => ({
-          id: p.id,
-          name: p.name,
-          price: p.price
-        })),
-        operation: 'delete'
-      }
-    };
-  }
+    if (matches.length > 1) {
+      // Multiple matches - need clarification
+      return {
+        success: false,
+        needsClarification: true,
+        data: {
+          action: 'multiple_matches_found',
+          searchQuery: productName,
+          matches: matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price
+          })),
+          operation: 'delete'
+        }
+      };
+    }
 
-  // Single match - delete it
-  const product = matches[0];
+    // Single match - use it
+    product = matches[0];
+  }
 
   try {
     await productApi.deleteProduct(product.id, token);
@@ -1172,7 +1519,7 @@ async function handleSearchProduct(args, products) {
 /**
  * Update product handler
  */
-async function handleUpdateProduct(args, shopId, token, products) {
+async function handleUpdateProduct(args, shopId, token, products, clarifiedProductId = null) {
   const { productName, updates } = args;
 
   if (!productName) {
@@ -1203,71 +1550,234 @@ async function handleUpdateProduct(args, shopId, token, products) {
   }
 
   // Check if at least one update field is provided
-  const { name: newName, price: newPrice, stock_quantity: newStock } = updates;
-  if (!newName && newPrice === undefined && newStock === undefined) {
+  const {
+    name: newName,
+    price: newPrice,
+    stock_quantity: newStock,
+    discount_percentage: rawDiscountPercentage,
+    discount_expires_at: rawDiscountExpiresAt
+  } = updates;
+
+  if (!newName && newPrice === undefined && newStock === undefined &&
+      rawDiscountPercentage === undefined && rawDiscountExpiresAt === undefined) {
     return {
       success: false,
       data: {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'No fields to update',
-          hint: 'Specify at least one field: name, price, or stock_quantity'
+          hint: 'Specify at least one field: name, price, stock_quantity, discount_percentage or discount_expires_at'
         }
       }
     };
   }
 
-  // Use fuzzy search for better matching
-  const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
-  const matches = fuzzyMatches.map(m => m.product);
+  // If clarifiedProductId is provided, use it directly (skip fuzzy search)
+  let product = null;
+  if (clarifiedProductId) {
+    product = products.find(p => p.id === clarifiedProductId);
+    if (product) {
+      logger.info('update_product_clarified', {
+        shopId,
+        productId: clarifiedProductId,
+        productName: product.name
+      });
+    }
+  }
 
-  if (matches.length === 0) {
-    return {
-      success: false,
-      data: {
-        error: {
-          code: 'PRODUCT_NOT_FOUND',
-          message: 'Product not found',
-          searchQuery: productName
+  // If no clarified product, use fuzzy search
+  if (!product) {
+    // Use fuzzy search for better matching
+    const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
+    const matches = fuzzyMatches.map(m => m.product);
+
+    if (matches.length === 0) {
+      return {
+        success: false,
+        data: {
+          error: {
+            code: 'PRODUCT_NOT_FOUND',
+            message: 'Product not found',
+            searchQuery: productName
+          }
         }
-      }
-    };
-  }
+      };
+    }
 
-  if (matches.length > 1) {
-    return {
-      success: false,
-      needsClarification: true,
-      data: {
-        action: 'multiple_matches_found',
-        searchQuery: productName,
-        matches: matches.map(p => ({
-          id: p.id,
-          name: p.name,
-          price: p.price
-        })),
-        operation: 'update'
-      }
-    };
-  }
+    if (matches.length > 1) {
+      return {
+        success: false,
+        needsClarification: true,
+        data: {
+          action: 'multiple_matches_found',
+          searchQuery: productName,
+          matches: matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price
+          })),
+          operation: 'update'
+        }
+      };
+    }
 
-  const product = matches[0];
+    product = matches[0];
+  }
 
   // Build update payload
   const updateData = {};
   const changes = {};
-  
+
   if (newName) {
     updateData.name = newName;
     changes.name = { old: product.name, new: newName };
   }
-  if (newPrice !== undefined && newPrice > 0) {
-    updateData.price = newPrice;
-    changes.price = { old: product.price, new: newPrice };
-  }
-  if (newStock !== undefined && newStock >= 0) {
+
+  if (newStock !== undefined && Number.isFinite(newStock) && newStock >= 0) {
     updateData.stockQuantity = newStock;
     changes.stock_quantity = { old: product.stock_quantity, new: newStock };
+  }
+
+  const currentPrice = Number(product.price);
+  const existingOriginalPrice = product.original_price ? Number(product.original_price) : null;
+  const basePriceWithoutOverride = existingOriginalPrice && existingOriginalPrice > 0
+    ? existingOriginalPrice
+    : currentPrice;
+
+  let priceAssigned = false;
+
+  let discountPercentage;
+  if (rawDiscountPercentage !== undefined) {
+    discountPercentage = Number(rawDiscountPercentage);
+    if (!Number.isFinite(discountPercentage) || discountPercentage < 0 || discountPercentage > 100) {
+      return {
+        success: false,
+        data: {
+          error: {
+            code: 'VALIDATION_ERROR',
+            field: 'discount_percentage',
+            message: 'Discount percentage must be between 0 and 100',
+            value: rawDiscountPercentage
+          }
+        }
+      };
+    }
+  }
+
+  let discountExpiresAtISO = null;
+  if (rawDiscountExpiresAt !== undefined && rawDiscountExpiresAt !== null && rawDiscountExpiresAt !== '') {
+    const expiresInput = String(rawDiscountExpiresAt).trim();
+    const durationMs = parseDurationToMs(expiresInput);
+
+    if (durationMs) {
+      discountExpiresAtISO = new Date(Date.now() + durationMs).toISOString();
+    } else {
+      const parsedDate = new Date(expiresInput);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return {
+          success: false,
+          data: {
+            error: {
+              code: 'VALIDATION_ERROR',
+              field: 'discount_expires_at',
+              message: 'Invalid discount expiration format',
+              value: rawDiscountExpiresAt,
+              hint: 'Use ISO datetime or duration like "6 часов"'
+            }
+          }
+        };
+      }
+      discountExpiresAtISO = parsedDate.toISOString();
+    }
+  }
+
+  if (discountPercentage === undefined && rawDiscountExpiresAt !== undefined) {
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'VALIDATION_ERROR',
+          field: 'discount_expires_at',
+          message: 'Provide discount_percentage together with discount_expires_at'
+        }
+      }
+    };
+  }
+
+  if (discountPercentage !== undefined) {
+    if (discountPercentage === 0) {
+      const restoredPrice = newPrice !== undefined
+        ? newPrice
+        : (existingOriginalPrice !== null ? existingOriginalPrice : currentPrice);
+
+      updateData.discountPercentage = 0;
+      updateData.discountExpiresAt = null;
+      updateData.originalPrice = null;
+
+      if (restoredPrice !== undefined && Number.isFinite(restoredPrice)) {
+        updateData.price = restoredPrice;
+        priceAssigned = true;
+
+        if (restoredPrice !== currentPrice) {
+          changes.price = { old: currentPrice, new: restoredPrice };
+        }
+      }
+
+      changes.discount_percentage = { old: product.discount_percentage, new: 0 };
+      if (product.discount_expires_at || rawDiscountExpiresAt !== undefined) {
+        changes.discount_expires_at = { old: product.discount_expires_at, new: null };
+      }
+    } else {
+      const basePrice = newPrice !== undefined ? newPrice : basePriceWithoutOverride;
+
+      if (!Number.isFinite(basePrice) || basePrice <= 0) {
+        return {
+          success: false,
+          data: {
+            error: {
+              code: 'VALIDATION_ERROR',
+              field: 'price',
+              message: 'Base price is required to apply discount',
+              hint: 'Specify price or make sure product has original price'
+            }
+          }
+        };
+      }
+
+      const discountedPrice = Math.round(basePrice * (1 - discountPercentage / 100) * 100) / 100;
+
+      updateData.price = discountedPrice;
+      updateData.originalPrice = basePrice;
+      updateData.discountPercentage = discountPercentage;
+      updateData.discountExpiresAt = discountExpiresAtISO;
+      priceAssigned = true;
+
+      changes.discount_percentage = { old: product.discount_percentage, new: discountPercentage };
+      if (discountExpiresAtISO !== null || rawDiscountExpiresAt !== undefined) {
+        changes.discount_expires_at = { old: product.discount_expires_at, new: discountExpiresAtISO };
+      }
+      if (discountedPrice !== currentPrice) {
+        changes.price = { old: currentPrice, new: discountedPrice };
+      }
+    }
+  }
+
+  if (!priceAssigned && newPrice !== undefined && Number.isFinite(newPrice) && newPrice > 0) {
+    updateData.price = newPrice;
+    changes.price = { old: currentPrice, new: newPrice };
+
+    if (product.discount_percentage > 0 && discountPercentage === undefined) {
+      updateData.discountPercentage = 0;
+      updateData.discountExpiresAt = null;
+      updateData.originalPrice = null;
+
+      if (!changes.discount_percentage) {
+        changes.discount_percentage = { old: product.discount_percentage, new: 0 };
+      }
+      if (product.discount_expires_at && !changes.discount_expires_at) {
+        changes.discount_expires_at = { old: product.discount_expires_at, new: null };
+      }
+    }
   }
 
   try {
@@ -1281,7 +1791,10 @@ async function handleUpdateProduct(args, shopId, token, products) {
           id: updated.id,
           name: updated.name,
           price: updated.price,
-          stock_quantity: updated.stock_quantity
+          stock_quantity: updated.stock_quantity,
+          discount_percentage: updated.discount_percentage,
+          discount_expires_at: updated.discount_expires_at,
+          original_price: updated.original_price
         },
         changes
       }
@@ -1412,7 +1925,7 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
 /**
  * Record sale handler (decrease stock)
  */
-async function handleRecordSale(args, shopId, token, products) {
+async function handleRecordSale(args, shopId, token, products, clarifiedProductId = null) {
   const { productName, quantity = 1 } = args; // Default quantity to 1 if not specified
 
   if (!productName) {
@@ -1442,41 +1955,59 @@ async function handleRecordSale(args, shopId, token, products) {
     };
   }
 
-  // Use fuzzy search for better matching
-  const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
-  const matches = fuzzyMatches.map(m => m.product);
+  // If clarifiedProductId is provided, use it directly
+  let product = null;
+  if (clarifiedProductId) {
+    product = products.find(p => p.id === clarifiedProductId);
+    if (product) {
+      logger.info('record_sale_clarified', {
+        shopId,
+        productId: clarifiedProductId,
+        productName: product.name,
+        quantity
+      });
+    }
+  }
 
-  if (matches.length === 0) {
-    return {
-      success: false,
-      data: {
-        error: {
-          code: 'PRODUCT_NOT_FOUND',
-          message: 'Product not found',
-          searchQuery: productName
+  // If no clarified product, use fuzzy search
+  if (!product) {
+    // Use fuzzy search for better matching
+    const fuzzyMatches = fuzzySearchProducts(productName, products, 0.6);
+    const matches = fuzzyMatches.map(m => m.product);
+
+    if (matches.length === 0) {
+      return {
+        success: false,
+        data: {
+          error: {
+            code: 'PRODUCT_NOT_FOUND',
+            message: 'Product not found',
+            searchQuery: productName
+          }
         }
-      }
-    };
+      };
+    }
+
+    if (matches.length > 1) {
+      return {
+        success: false,
+        needsClarification: true,
+        data: {
+          action: 'multiple_matches_found',
+          searchQuery: productName,
+          matches: matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price
+          })),
+          operation: 'record_sale'
+        }
+      };
+    }
+
+    product = matches[0];
   }
 
-  if (matches.length > 1) {
-    return {
-      success: false,
-      needsClarification: true,
-      data: {
-        action: 'multiple_matches_found',
-        searchQuery: productName,
-        matches: matches.map(p => ({
-          id: p.id,
-          name: p.name,
-          price: p.price
-        })),
-        operation: 'record_sale'
-      }
-    };
-  }
-
-  const product = matches[0];
   const currentStock = product.stock_quantity || 0;
   
   // Check if enough stock
@@ -1499,7 +2030,7 @@ async function handleRecordSale(args, shopId, token, products) {
   const newStock = currentStock - quantity;
 
   try {
-    const updated = await productApi.updateProduct(product.id, {
+    await productApi.updateProduct(product.id, {
       stockQuantity: newStock
     }, token);
 
@@ -1538,7 +2069,7 @@ async function handleRecordSale(args, shopId, token, products) {
 /**
  * Get product info handler
  */
-async function handleGetProductInfo(args, products) {
+async function handleGetProductInfo(args, products, clarifiedProductId = null) {
   const { productName } = args;
 
   if (!productName) {
@@ -1554,7 +2085,32 @@ async function handleGetProductInfo(args, products) {
     };
   }
 
-  // Search for product
+  // If clarifiedProductId is provided, use it directly
+  let product = null;
+  if (clarifiedProductId) {
+    product = products.find(p => p.id === clarifiedProductId);
+    if (product) {
+      logger.info('get_product_info_clarified', {
+        productId: clarifiedProductId,
+        productName: product.name
+      });
+      
+      return {
+        success: true,
+        data: {
+          action: 'product_info_retrieved',
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            stock_quantity: product.stock_quantity || 0
+          }
+        }
+      };
+    }
+  }
+
+  // If no clarified product, search for product
   const matches = products.filter(p =>
     p.name.toLowerCase().includes(productName.toLowerCase())
   );
@@ -1589,7 +2145,7 @@ async function handleGetProductInfo(args, products) {
     };
   }
 
-  const product = matches[0];
+  product = matches[0];
 
   return {
     success: true,
@@ -1608,8 +2164,16 @@ async function handleGetProductInfo(args, products) {
 /**
  * Bulk update prices handler (discount/increase all products)
  */
-async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
-  const { percentage, operation, duration } = args;
+async function handleBulkUpdatePrices(args, shopId, token, products) {
+  const { percentage, operation, duration, excludedProducts = [], discount_type: explicitDiscountType } = args;
+
+  logger.info('handleBulkUpdatePrices called', {
+    percentage,
+    operation,
+    duration,
+    excludedProducts,
+    totalProducts: products.length
+  });
 
   if (!percentage || percentage < 0.1 || percentage > 100) {
     return {
@@ -1653,7 +2217,26 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
     };
   }
 
-  // Parse duration if provided
+  let excludedProductIds = [];
+  if (excludedProducts && excludedProducts.length > 0) {
+    for (const excludedName of excludedProducts) {
+      const matches = fuzzySearchProducts(excludedName, products, 0.4);
+
+      if (matches.length > 0) {
+        excludedProductIds.push(...matches.map(m => m.product.id));
+
+        logger.info('Excluded product matched', {
+          query: excludedName,
+          matches: matches.map(m => ({ id: m.product.id, name: m.product.name, score: m.score }))
+        });
+      } else {
+        logger.warn('Excluded product not found for discount', { query: excludedName });
+      }
+    }
+
+    excludedProductIds = [...new Set(excludedProductIds)];
+  }
+
   let durationMs = null;
   if (duration) {
     durationMs = parseDurationToMs(duration);
@@ -1673,184 +2256,122 @@ async function handleBulkUpdatePrices(args, shopId, token, products, ctx) {
     }
   }
 
-  // Calculate multiplier
-  const multiplier = operation === 'decrease' 
-    ? (1 - percentage / 100)
-    : (1 + percentage / 100);
-
-  const operationSymbol = operation === 'decrease' ? '-' : '+';
-
-  // Build preview
-  const previewProducts = products.slice(0, 3).map(p => {
-    const newPrice = Math.round(p.price * multiplier * 100) / 100;
-    return {
-      name: p.name,
-      oldPrice: p.price,
-      newPrice
-    };
-  });
-
-  // If duration not specified by AI, ask user for type
-  if (!duration) {
-    // Store pending operation in session
-    if (ctx && ctx.session) {
-      ctx.session.pendingDiscountType = {
-        percentage,
-        operation,
-        multiplier,
-        operationSymbol,
-        shopId,
-        token,
-        productCount: products.length,
-        timestamp: Date.now()
-      };
-    }
-
-    // Return structured data for AI to formulate natural question
+  let discountType = explicitDiscountType ? String(explicitDiscountType).toLowerCase() : null;
+  if (discountType && !['permanent', 'timer'].includes(discountType)) {
     return {
       success: false,
-      needsInput: 'discount_type',
       data: {
-        action: 'discount_needs_clarification',
-        context: {
-          percentage,
-          operation,
-          operationSymbol,
-          productCount: products.length,
-          previewProducts,
-          totalProducts: products.length,
-          availableTypes: ['permanent', 'timer'],
-          hint: 'Ask user if this should be a permanent discount or with a timer'
+        error: {
+          code: 'VALIDATION_ERROR',
+          field: 'discount_type',
+          message: 'discount_type must be "permanent" or "timer"'
         }
       }
     };
   }
 
-  // Duration was provided by AI - proceed with confirmation
-  const durationText = formatDuration(durationMs);
-  const discountType = durationMs ? 'timer' : 'permanent';
-
-  // Store pending operation in session for confirmation
-  if (ctx && ctx.session) {
-    ctx.session.pendingBulkUpdate = {
-      percentage,
-      operation,
-      multiplier,
-      operationSymbol,
-      shopId,
-      token,
-      productCount: products.length,
-      discountType,
-      duration: durationMs,
-      timestamp: Date.now()
-    };
-  }
-
-  // Return confirmation data - AI will formulate natural message
-  return {
-    success: true,
-    needsConfirmation: true,
-    data: {
-      action: 'bulk_discount_confirmation_needed',
-      discount: {
-        percentage,
-        operation,
-        operationSymbol,
-        type: discountType,
-        duration: durationMs,
-        durationText
-      },
-      impact: {
-        totalProducts: products.length,
-        previewProducts
-      }
-    },
-    keyboard: {
-      inline_keyboard: [[
-        { text: '✅ Применить', callback_data: 'bulk_prices_confirm' },
-        { text: '◀️ Назад', callback_data: 'bulk_prices_cancel' }
-      ]]
+  if (operation === 'increase') {
+    discountType = 'permanent';
+    durationMs = null;
+  } else {
+    if (!discountType) {
+      discountType = durationMs ? 'timer' : 'permanent';
     }
-  };
-}
 
-/**
- * Execute bulk price update after confirmation
- */
-export async function executeBulkPriceUpdate(shopId, token, ctx) {
-  const pending = ctx.session?.pendingBulkUpdate;
-  
-  if (!pending) {
-    return {
-      success: false,
-      message: '❌ Операция устарела. Попробуйте снова.'
-    };
-  }
-
-  const { percentage, operation, operationSymbol, discountType, duration } = pending;
-  const operationText = operation === 'decrease' ? 'Скидка' : 'Наценка';
-
-  try {
-    // Убрано - вызывающий код сам управляет сообщением
-
-    // Call new bulk discount API
-    const result = await productApi.applyBulkDiscount(shopId, token, {
-      percentage,
-      type: discountType || 'permanent',
-      duration: duration || null
-    });
-
-    // Clear pending operation
-    delete ctx.session.pendingBulkUpdate;
-
-    if (!result || !result.productsUpdated || result.productsUpdated === 0) {
-      // Убрано - вызывающий код сам обновит сообщение
+    if (discountType === 'timer' && !durationMs) {
       return {
         success: false,
-        message: '❌ Не удалось обновить ни одного товара'
+        data: {
+          error: {
+            code: 'VALIDATION_ERROR',
+            field: 'duration',
+            message: 'Provide duration for timer discount'
+          }
+        }
       };
     }
 
-    // Build success message
-    const durationInfo = duration ? ` (действует ${formatDuration(duration)})` : '';
-    let message = `✅ ${operationText} ${operationSymbol}${percentage}% применена${durationInfo}\n`;
-    message += `Обновлено товаров: ${result.productsUpdated}\n\n`;
-    
-    // Show first 5 updates as examples if available
-    if (result.products && result.products.length > 0) {
-      const exampleUpdates = result.products.slice(0, 5);
-      exampleUpdates.forEach(p => {
-        const displayName = p.name.length > 40 ? p.name.slice(0, 37) + '...' : p.name;
-        message += `• ${displayName}: ${formatPrice(p.price)}\n`;
-      });
-
-      if (result.products.length > 5) {
-        message += `... и ещё ${result.products.length - 5} товаров`;
-      }
+    if (discountType === 'permanent') {
+      durationMs = null;
     }
+  }
 
-    // Убрано - вызывающий код сам обновит сообщение
+  const multiplier = operation === 'decrease'
+    ? (1 - percentage / 100)
+    : (1 + percentage / 100);
+
+  const operationSymbol = operation === 'decrease' ? '-' : '+';
+  const operationText = operation === 'decrease' ? 'Скидка' : 'Наценка';
+
+  const productsToUpdate = products.filter(p => !excludedProductIds.includes(p.id));
+  if (productsToUpdate.length === 0) {
+    return {
+      success: false,
+      data: {
+        error: {
+          code: 'NO_PRODUCTS_TO_UPDATE',
+          message: 'No products left to apply discount after exclusions'
+        }
+      }
+    };
+  }
+
+  const previewProducts = productsToUpdate.slice(0, 3).map(p => {
+    const newPrice = Math.round(Number(p.price) * multiplier * 100) / 100;
+    return {
+      id: p.id,
+      name: p.name,
+      oldPrice: Number(p.price),
+      newPrice
+    };
+  });
+
+  const durationText = durationMs ? formatDuration(durationMs) : null;
+
+  try {
+    const result = await productApi.applyBulkDiscount(shopId, token, {
+      percentage,
+      type: discountType,
+      duration: durationMs,
+      excludedProductIds
+    });
 
     return {
       success: true,
-      message,
-      data: result,
-      operation: 'bulk_update_prices'
+      data: {
+        action: 'bulk_update_prices',
+        percentage,
+        operation,
+        operationText,
+        operationSymbol,
+        discountType,
+        durationMs,
+        durationText,
+        excludedProductIds,
+        previewProducts,
+        updatedCount: result?.productsUpdated ?? productsToUpdate.length,
+        products: result?.updatedProducts || result?.products || []
+      }
     };
   } catch (error) {
     logger.error('Bulk update prices execution failed:', error);
-    
-    // Clear pending operation
-    delete ctx.session?.pendingBulkUpdate;
-    
+
     return {
       success: false,
-      message: '❌ Не удалось обновить цены'
+      data: {
+        error: {
+          code: 'API_ERROR',
+          message: 'Failed to update prices',
+          details: error.message
+        }
+      }
     };
   }
 }
 
+export { saveToConversationHistory };
+
 export default {
   processProductCommand,
-  executeBulkPriceUpdate
+  noteProductContext
 };

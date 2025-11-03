@@ -1,6 +1,7 @@
 import { productQueries, shopQueries, workerQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
+import { broadcast } from '../utils/websocket.js';
 
 /**
  * Helper: Check if user is authorized to manage shop products
@@ -234,6 +235,9 @@ export const productController = {
         isActive
       } = req.body;
       const stockQuantity = req.body.stockQuantity ?? req.body.stock;
+      const discountPercentage = req.body.discountPercentage ?? req.body.discount_percentage;
+      const discountExpiresAt = req.body.discountExpiresAt ?? req.body.discount_expires_at;
+      const originalPrice = req.body.originalPrice ?? req.body.original_price;
 
       // Check if product exists
       const existingProduct = await productQueries.findById(id);
@@ -259,7 +263,16 @@ export const productController = {
         description,
         price,
         stockQuantity,
-        isActive
+        isActive,
+        discountPercentage,
+        discountExpiresAt,
+        originalPrice
+      });
+
+      // Broadcast product update to WebSocket clients for real-time sync
+      broadcast('product:updated', {
+        shopId: product.shop_id,
+        product
       });
 
       return res.status(200).json({
@@ -458,7 +471,7 @@ export const productController = {
    */
   applyBulkDiscount: async (req, res) => {
     try {
-      const { percentage, type, duration } = req.body;
+      const { percentage, type, duration, excluded_product_ids = [] } = req.body;
       const shopId = req.body.shopId || req.user?.shopId;
 
       // Validation
@@ -466,6 +479,14 @@ export const productController = {
         return res.status(400).json({
           success: false,
           error: 'Shop ID required'
+        });
+      }
+      
+      // Validate excluded_product_ids is array
+      if (!Array.isArray(excluded_product_ids)) {
+        return res.status(400).json({
+          success: false,
+          error: 'excluded_product_ids must be array'
         });
       }
 
@@ -500,24 +521,27 @@ export const productController = {
       }
 
       // Apply discount
-      const products = await productQueries.applyBulkDiscount(shopId, {
+      const result = await productQueries.applyBulkDiscount(shopId, {
         percentage,
         type,
-        duration: duration || null
+        duration: duration || null,
+        excludedProductIds: excluded_product_ids
       });
 
       logger.info('Bulk discount applied', {
         shopId,
         percentage,
         type,
-        productsCount: products.length
+        productsUpdated: result.productsUpdated,
+        productsExcluded: result.productsExcluded
       });
 
       return res.status(200).json({
         success: true,
         data: {
-          productsUpdated: products.length,
-          products
+          productsUpdated: result.productsUpdated,
+          productsExcluded: result.productsExcluded,
+          products: result.updatedProducts
         }
       });
 

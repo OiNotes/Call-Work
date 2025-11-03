@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+import { initWebSocket } from './utils/websocket.js';
 import { config } from './config/env.js';
 import { testConnection, closePool } from './config/database.js';
 
@@ -261,6 +262,9 @@ const startServer = async () => {
 
     // Setup WebSocket server for real-time updates
     const wss = new WebSocketServer({ server });
+
+    // Initialize WebSocket module for use in controllers
+    initWebSocket(wss);
 
     wss.on('connection', (ws, req) => {
       logger.info('WebSocket client connected', {

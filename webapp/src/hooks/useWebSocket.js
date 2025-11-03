@@ -112,10 +112,11 @@ export const useWebSocket = () => {
           }
           break;
 
-        case 'product_updated':
+        case 'product:updated':
           console.log('✏️ Product updated:', data);
-          if (data.shopId) {
-            refetchProducts(data.shopId);
+          if (data.shopId || data.data?.shopId) {
+            const shopId = data.shopId || data.data?.shopId;
+            refetchProducts(shopId);
           }
           break;
 

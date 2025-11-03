@@ -305,18 +305,45 @@ export const productQueries = {
 
   // Update product
   update: async (id, productData) => {
-    const { name, description, price, stockQuantity, isActive } = productData;
+    const {
+      name,
+      description,
+      price,
+      stockQuantity,
+      isActive,
+      discountPercentage,
+      discountExpiresAt,
+      originalPrice
+    } = productData;
+
     const result = await query(
       `UPDATE products
        SET name = COALESCE($2, name),
            description = COALESCE($3, description),
-           price = COALESCE($4, price),
+           price = COALESCE(
+             $4,
+             CASE
+               WHEN $7 = 0 AND original_price IS NOT NULL THEN original_price
+               ELSE price
+             END
+           ),
            stock_quantity = COALESCE($5, stock_quantity),
            is_active = COALESCE($6, is_active),
+           original_price = CASE
+             WHEN $7 = 0 THEN NULL
+             WHEN $8 IS NOT NULL THEN $8
+             ELSE original_price
+           END,
+           discount_percentage = COALESCE($7, discount_percentage),
+           discount_expires_at = CASE
+             WHEN $7 = 0 THEN NULL
+             WHEN $9 IS NOT NULL THEN $9
+             ELSE discount_expires_at
+           END,
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, shop_id, name, description, price, currency, stock_quantity, is_active, created_at, updated_at`,
-      [id, name, description, price, stockQuantity, isActive]
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, created_at, updated_at`,
+      [id, name, description, price, stockQuantity, isActive, discountPercentage, originalPrice, discountExpiresAt]
     );
     return result.rows[0];
   },
@@ -403,36 +430,64 @@ export const productQueries = {
 
   // Apply bulk discount to all active products in a shop
   applyBulkDiscount: async (shopId, discountData) => {
-    const { percentage, type, duration } = discountData;
+    const { percentage, type, duration, excludedProductIds = [] } = discountData;
 
-    // Calculate discount_expires_at if type is "timer"
-    let expiresAt = null;
-    if (type === 'timer' && duration) {
-      const now = new Date();
-      expiresAt = new Date(now.getTime() + duration); // duration in milliseconds
+    try {
+      // Calculate discount_expires_at if type is "timer"
+      let expiresAt = null;
+      if (type === 'timer' && duration) {
+        const now = new Date();
+        expiresAt = new Date(now.getTime() + duration); // duration in milliseconds
+      }
+
+      // Build WHERE clause with excluded products
+      let whereClause = 'shop_id = $3 AND is_active = true';
+      const params = [percentage, expiresAt, shopId];
+
+      if (excludedProductIds.length > 0) {
+        // Add NOT IN clause for excluded products - FIX: Add $ prefix for PostgreSQL parameters
+        const placeholders = excludedProductIds.map((_, i) => `${4 + i}`).join(', ');
+        whereClause += ` AND id NOT IN (${placeholders})`;
+        params.push(...excludedProductIds);
+      }
+
+      // Apply discount to matching products
+      const result = await query(
+        `UPDATE products
+         SET
+           discount_percentage = $1::DECIMAL,
+           original_price = CASE
+             WHEN discount_percentage = 0 THEN price
+             ELSE COALESCE(original_price, price)
+           END,
+           price = CASE
+             WHEN discount_percentage = 0 THEN price * (1 - $1::DECIMAL/100)
+             ELSE COALESCE(original_price, price) * (1 - $1::DECIMAL/100)
+           END,
+           discount_expires_at = $2,
+           updated_at = NOW()
+         WHERE ${whereClause}
+         RETURNING *`,
+        params
+      );
+
+      return {
+        success: true,
+        productsUpdated: result.rows.length,
+        productsExcluded: excludedProductIds.length,
+        updatedProducts: result.rows
+      };
+    } catch (error) {
+      console.error('[DB] applyBulkDiscount error:', {
+        shopId,
+        percentage,
+        excludedCount: excludedProductIds.length,
+        excludedIds: excludedProductIds,
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
     }
-
-    // Apply discount to all active products in the shop
-    const result = await query(
-      `UPDATE products
-       SET
-         discount_percentage = $1::DECIMAL,
-         original_price = CASE
-           WHEN discount_percentage = 0 THEN price
-           ELSE COALESCE(original_price, price)
-         END,
-         price = CASE
-           WHEN discount_percentage = 0 THEN price * (1 - $1::DECIMAL/100)
-           ELSE COALESCE(original_price, price) * (1 - $1::DECIMAL/100)
-         END,
-         discount_expires_at = $2,
-         updated_at = NOW()
-       WHERE shop_id = $3 AND is_active = true
-       RETURNING *`,
-      [percentage, expiresAt, shopId]
-    );
-
-    return result.rows;
   },
 
   // Remove bulk discount from all products in a shop
