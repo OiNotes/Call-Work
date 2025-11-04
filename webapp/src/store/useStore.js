@@ -247,29 +247,15 @@ export const useStore = create(
 
           const invoice = response.data.data;
 
-          // Force number coercion for defense-in-depth
+          // Ensure cryptoAmount is NUMBER (backend might return string from PostgreSQL)
           const cryptoAmount = parseFloat(invoice.cryptoAmount);
-
-          // Validate result
           if (!isFinite(cryptoAmount) || cryptoAmount <= 0) {
-            console.error('[selectCrypto] Invalid cryptoAmount from API', {
-              raw: invoice.cryptoAmount,
-              parsed: cryptoAmount,
-              type: typeof invoice.cryptoAmount
-            });
-            throw new Error(`Invalid cryptoAmount from API: ${invoice.cryptoAmount}`);
+            throw new Error('Invalid cryptoAmount from API');
           }
-
-          console.log('[selectCrypto] Invoice received', {
-            cryptoAmount,
-            type: typeof cryptoAmount,
-            address: invoice.address,
-            currency: crypto
-          });
 
           set({
             paymentWallet: invoice.address,
-            cryptoAmount: cryptoAmount,  // Guaranteed NUMBER
+            cryptoAmount,
             invoiceExpiresAt: invoice.expiresAt,
             paymentStep: 'details',
             isGeneratingInvoice: false

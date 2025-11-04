@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from '../../hooks/useTelegram';
-import { safeToFixed } from '../../utils/formatUtils';
 
 const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
   const [markup, setMarkup] = useState(currentMarkup || '');
@@ -185,7 +184,7 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                   animate={{ scale: 1 }}
                   transition={{ duration: 0.2 }}
                 >
-                  ${safeToFixed(100 * (1 + (parseInt(markup, 10) || 0) / 100))}
+                  ${(100 * (1 + (parseInt(markup, 10) || 0) / 100)).toFixed(2)}
                 </motion.div>
               </div>
             </div>

@@ -4,7 +4,6 @@ import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { CRYPTO_OPTIONS, formatCryptoAmount } from '../../utils/paymentUtils';
-import { safeToFixed } from '../../utils/formatUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -264,7 +263,7 @@ export default function PaymentDetailsModal() {
                     )}
                   </div>
                   <p className="text-gray-500 text-sm mb-1">
-                    ${safeToFixed(currentOrder.total_price)} USD
+                    ${currentOrder.total_price?.toFixed(2) || '0.00'} USD
                   </p>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"

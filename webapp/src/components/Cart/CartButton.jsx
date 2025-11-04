@@ -4,7 +4,6 @@ import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
-import { safeToFixed } from '../../utils/formatUtils';
 
 export default function CartButton({ onClick }) {
   const cart = useStore(useShallow((state) => state.cart));
@@ -17,7 +16,7 @@ export default function CartButton({ onClick }) {
   );
 
   const total = useMemo(
-    () => safeToFixed(cart.reduce((sum, item) => sum + item.price * item.quantity, 0)),
+    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2),
     [cart]
   );
 
