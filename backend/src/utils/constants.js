@@ -45,7 +45,7 @@ export const SUPPORTED_CURRENCIES = {
     name: 'Litecoin',
     symbol: 'LTC',
     decimals: 8,
-    confirmations: 6,
+    confirmations: 12,
     network: 'litecoin'
   }
 };

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { config } from '../config/env.js';
 import logger from '../utils/logger.js';
+import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
 
 /**
  * Crypto payment verification service
@@ -85,8 +86,8 @@ class CryptoService {
       // Convert satoshis to BTC
       const amountBTC = output.value / 100000000;
 
-      // Check amount (allow 1% tolerance for fees)
-      const tolerance = expectedAmount * 0.01;
+      // Check amount (allow 0.5% tolerance for fees) - Industry standard
+      const tolerance = expectedAmount * 0.005;
       const amountMatches = Math.abs(amountBTC - expectedAmount) <= tolerance;
 
       if (!amountMatches) {
@@ -100,12 +101,14 @@ class CryptoService {
       const confirmations = tx.block_height ?
         await this.getBitcoinBlockHeight() - tx.block_height + 1 : 0;
 
+      const minConfirmations = SUPPORTED_CURRENCIES.BTC.confirmations; // 3
+
       return {
         verified: true,
         confirmations,
         amount: amountBTC,
         txHash,
-        status: confirmations >= 3 ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
       };
 
     } catch (error) {
@@ -186,8 +189,8 @@ class CryptoService {
       // Convert wei to ETH
       const amountETH = parseInt(tx.value, 16) / 1e18;
 
-      // Check amount (allow 1% tolerance)
-      const tolerance = expectedAmount * 0.01;
+      // Check amount (allow 0.5% tolerance) - Industry standard
+      const tolerance = expectedAmount * 0.005;
       const amountMatches = Math.abs(amountETH - expectedAmount) <= tolerance;
 
       if (!amountMatches) {
@@ -205,12 +208,33 @@ class CryptoService {
         };
       }
       
+      // Get current block number to calculate confirmations
+      const currentBlockResponse = await this.retryWithBackoff(async () => {
+        return await axios.get(
+          'https://api.etherscan.io/api',
+          {
+            params: {
+              module: 'proxy',
+              action: 'eth_blockNumber',
+              apikey: this.etherscanApiKey
+            },
+            timeout: 10000
+          }
+        );
+      });
+      
+      const currentBlock = parseInt(currentBlockResponse.data.result, 16);
+      const txBlock = parseInt(receipt.blockNumber, 16);
+      const confirmations = currentBlock - txBlock + 1;
+      
+      const minConfirmations = SUPPORTED_CURRENCIES.ETH.confirmations; // 12
+      
       return {
         verified: true,
-        confirmations: receipt.confirmations || 0,
+        confirmations,
         amount: amountETH,
         txHash,
-        status: 'confirmed'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
       };
 
     } catch (error) {
@@ -322,8 +346,8 @@ class CryptoService {
       const amountHex = data.substring(72, 136);
       const amountUSDT = parseInt(amountHex, 16) / 1e6;
 
-      // Check amount (allow 1% tolerance)
-      const tolerance = expectedAmount * 0.01;
+      // Check amount (allow 0.5% tolerance) - Industry standard
+      const tolerance = expectedAmount * 0.005;
       const amountMatches = Math.abs(amountUSDT - expectedAmount) <= tolerance;
 
       if (!amountMatches) {
@@ -350,12 +374,14 @@ class CryptoService {
       const blockNumber = info.data?.blockNumber || 0;
       const confirmations = blockNumber > 0 ? 20 : 0; // Simplified: assume confirmed if in block
 
+      const minConfirmations = SUPPORTED_CURRENCIES.USDT.confirmations; // 19
+
       return {
         verified: true,
         confirmations,
         amount: amountUSDT,
         txHash,
-        status: confirmations >= 19 ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
       };
 
     } catch (error) {
@@ -420,8 +446,8 @@ class CryptoService {
       // Convert litoshi to LTC (1 LTC = 100,000,000 litoshi)
       const amountLTC = output.value / 100000000;
 
-      // Check amount (allow 1% tolerance for fees)
-      const tolerance = expectedAmount * 0.01;
+      // Check amount (allow 0.5% tolerance for fees) - Industry standard
+      const tolerance = expectedAmount * 0.005;
       const amountMatches = Math.abs(amountLTC - expectedAmount) <= tolerance;
 
       if (!amountMatches) {
@@ -435,12 +461,14 @@ class CryptoService {
       const confirmations = tx.block_id ? 
         (txData.context?.state || 0) : 0;
 
+      const minConfirmations = SUPPORTED_CURRENCIES.LTC.confirmations; // 6
+
       return {
         verified: true,
         confirmations,
         amount: amountLTC,
         txHash,
-        status: confirmations >= 6 ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
       };
 
     } catch (error) {

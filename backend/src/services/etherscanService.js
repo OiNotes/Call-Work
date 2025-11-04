@@ -1,5 +1,6 @@
 import axios from 'axios';
 import logger from '../utils/logger.js';
+import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
 
 /**
  * Etherscan Service - Ethereum blockchain API integration
@@ -405,8 +406,8 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
     // Convert wei to ETH
     const actualAmount = parseInt(tx.value, 16) / 1e18;
 
-    // Check amount with 1% tolerance
-    const tolerance = expectedAmount * 0.01;
+    // Check amount with 0.5% tolerance - Industry standard
+    const tolerance = expectedAmount * 0.005;
     const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
 
     if (!amountMatches) {
@@ -439,7 +440,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       confirmations,
       amount: actualAmount,
       blockNumber: receipt.blockNumber,
-      status: confirmations >= 3 ? 'confirmed' : 'pending'
+      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending'
     };
   } catch (error) {
     logger.error('[Etherscan] ETH payment verification failed:', {
@@ -524,8 +525,8 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
     // Decode amount (USDT has 6 decimals)
     const actualAmount = parseInt(transferLog.data, 16) / 1e6;
 
-    // Check amount with 1% tolerance
-    const tolerance = expectedAmount * 0.01;
+    // Check amount with 0.5% tolerance - Industry standard
+    const tolerance = expectedAmount * 0.005;
     const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
 
     if (!amountMatches) {
@@ -558,7 +559,7 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       confirmations,
       amount: actualAmount,
       blockNumber: receipt.blockNumber,
-      status: confirmations >= 3 ? 'confirmed' : 'pending'
+      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending'
     };
   } catch (error) {
     logger.error('[Etherscan] USDT payment verification failed:', {

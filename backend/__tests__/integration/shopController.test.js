@@ -1,6 +1,8 @@
 /**
  * Integration tests for shopController
  * Tests shop name validation and uniqueness
+ * 
+ * FIXED: Each test creates a NEW user because backend allows only 1 shop per user (P0 constraint)
  */
 
 import request from 'supertest';
@@ -33,13 +35,12 @@ async function cleanupTestData() {
 }
 
 describe('POST /api/shops - Shop Name Validation', () => {
-  let testUser;
-  let authToken;
-
   beforeAll(async () => {
     await cleanupTestData();
-    testUser = await createTestUser();
-    authToken = generateToken(testUser.id);
+  });
+
+  beforeEach(async () => {
+    await cleanupTestData();
   });
 
   afterAll(async () => {
@@ -48,6 +49,9 @@ describe('POST /api/shops - Shop Name Validation', () => {
 
   describe('Alphanumeric Validation', () => {
     test('should accept valid shop name (letters, numbers, underscore)', async () => {
+      const testUser = await createTestUser();
+      const authToken = generateToken(testUser.id);
+      
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
@@ -62,6 +66,9 @@ describe('POST /api/shops - Shop Name Validation', () => {
     });
 
     test('should reject shop name with spaces', async () => {
+      const testUser = await createTestUser();
+      const authToken = generateToken(testUser.id);
+      
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
@@ -84,6 +91,9 @@ describe('POST /api/shops - Shop Name Validation', () => {
     });
 
     test('should reject shop name with special characters', async () => {
+      const testUser = await createTestUser();
+      const authToken = generateToken(testUser.id);
+      
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
@@ -105,6 +115,9 @@ describe('POST /api/shops - Shop Name Validation', () => {
     });
 
     test('should reject shop name shorter than 3 characters', async () => {
+      const testUser = await createTestUser();
+      const authToken = generateToken(testUser.id);
+      
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
@@ -126,6 +139,9 @@ describe('POST /api/shops - Shop Name Validation', () => {
     });
 
     test('should reject shop name longer than 30 characters', async () => {
+      const testUser = await createTestUser();
+      const authToken = generateToken(testUser.id);
+      
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
@@ -151,10 +167,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject duplicate shop name (exact match)', async () => {
       const shopName = 'test_shop_unique_1';
 
-      // Create first shop
+      // User 1 creates first shop
+      const testUser1 = await createTestUser();
+      const authToken1 = generateToken(testUser1.id);
+
       const response1 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName,
           description: 'First shop'
@@ -162,10 +181,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
 
       expect(response1.status).toBe(201);
 
-      // Try to create duplicate
+      // User 2 tries to create shop with same name
+      const testUser2 = await createTestUser();
+      const authToken2 = generateToken(testUser2.id);
+
       const response2 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: shopName,
           description: 'Duplicate shop'
@@ -179,10 +201,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject duplicate shop name (case-insensitive)', async () => {
       const shopName = 'test_shop_unique_2';
 
-      // Create shop with lowercase name
+      // User 1 creates shop with lowercase name
+      const testUser1 = await createTestUser();
+      const authToken1 = generateToken(testUser1.id);
+
       const response1 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName.toLowerCase(),
           description: 'First shop'
@@ -190,10 +215,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
 
       expect(response1.status).toBe(201);
 
-      // Try to create with uppercase
+      // User 2 tries to create with uppercase
+      const testUser2 = await createTestUser();
+      const authToken2 = generateToken(testUser2.id);
+
       const response2 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: shopName.toUpperCase(),
           description: 'Duplicate shop'
@@ -207,10 +235,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject duplicate shop name (mixed case)', async () => {
       const shopName = 'test_shop_unique_3';
 
-      // Create shop
+      // User 1 creates shop
+      const testUser1 = await createTestUser();
+      const authToken1 = generateToken(testUser1.id);
+
       const response1 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName,
           description: 'First shop'
@@ -218,10 +249,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
 
       expect(response1.status).toBe(201);
 
-      // Try to create with different case: Test_Shop_Unique_3
+      // User 2 tries to create with different case: Test_Shop_Unique_3
+      const testUser2 = await createTestUser();
+      const authToken2 = generateToken(testUser2.id);
+
       const response2 = await request(app)
         .post('/api/shops')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: 'Test_Shop_Unique_3',
           description: 'Duplicate shop'
@@ -274,16 +308,19 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
   });
 
   test('should reject updating shop name to an existing name', async () => {
-    // Create another shop
+    // Create another user and shop with different name
+    const testUser2 = await createTestUser();
+    const authToken2 = generateToken(testUser2.id);
+
     await request(app)
       .post('/api/shops')
-      .set('Authorization', `Bearer ${authToken}`)
+      .set('Authorization', `Bearer ${authToken2}`)
       .send({
         name: 'test_shop_existing',
         description: 'Existing shop'
       });
 
-    // Try to update testShop to existing name
+    // Try to update original testShop to existing name
     const response = await request(app)
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
@@ -297,11 +334,16 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
   });
 
   test('should allow updating shop name to same name (no change)', async () => {
+    // Update testShop.name first to ensure we have current name
+    const currentShop = await request(app)
+      .get(`/api/shops/${testShop.id}`)
+      .set('Authorization', `Bearer ${authToken}`);
+
     const response = await request(app)
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        name: testShop.name // Same name
+        name: currentShop.body.data.name // Same name
       });
 
     expect(response.status).toBe(200);

@@ -64,6 +64,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
     const orderId = orderResponse.body.data.id;
 
     // Try to verify payment WITHOUT payment_address (null/undefined)
+    // P0 fix: Now backend checks if seller configured wallet, not payment_address field
     const response = await request(app)
       .post('/api/payments/verify')
       .set('Authorization', `Bearer ${token}`)
@@ -75,7 +76,8 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       .expect(400);
 
     expect(response.body).toHaveProperty('error');
-    expect(response.body.error).toMatch(/payment_address.*required/i);
+    // Updated expectation: backend now checks seller wallet configuration
+    expect(response.body.error).toMatch(/Seller has not configured.*wallet/i);
   });
 
   it('should reject payment verification with empty payment_address', async () => {

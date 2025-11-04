@@ -96,6 +96,61 @@ export const walletController = {
         });
       }
 
+      // Check for duplicate wallet addresses BEFORE updating
+      const { query } = await import('../config/database.js');
+
+      if (walletBtc) {
+        const duplicateBtc = await query(
+          'SELECT id, name FROM shops WHERE wallet_btc = $1 AND id != $2',
+          [walletBtc, shopId]
+        );
+        if (duplicateBtc.rows.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: `Bitcoin address already used by shop "${duplicateBtc.rows[0].name}"`
+          });
+        }
+      }
+
+      if (walletEth) {
+        const duplicateEth = await query(
+          'SELECT id, name FROM shops WHERE wallet_eth = $1 AND id != $2',
+          [walletEth, shopId]
+        );
+        if (duplicateEth.rows.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: `Ethereum address already used by shop "${duplicateEth.rows[0].name}"`
+          });
+        }
+      }
+
+      if (walletUsdt) {
+        const duplicateUsdt = await query(
+          'SELECT id, name FROM shops WHERE wallet_usdt = $1 AND id != $2',
+          [walletUsdt, shopId]
+        );
+        if (duplicateUsdt.rows.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: `USDT address already used by shop "${duplicateUsdt.rows[0].name}"`
+          });
+        }
+      }
+
+      if (walletLtc) {
+        const duplicateLtc = await query(
+          'SELECT id, name FROM shops WHERE wallet_ltc = $1 AND id != $2',
+          [walletLtc, shopId]
+        );
+        if (duplicateLtc.rows.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: `Litecoin address already used by shop "${duplicateLtc.rows[0].name}"`
+          });
+        }
+      }
+
       // Build update query dynamically based on provided fields
       const updates = [];
       const values = [];
@@ -120,7 +175,7 @@ export const walletController = {
       }
 
       if (walletLtc !== undefined) {
-        updates.push(`wallet_ltc = ${paramCount}`);
+        updates.push(`wallet_ltc = $${paramCount}`);
         values.push(walletLtc || null);
         paramCount++;
       }
@@ -139,8 +194,7 @@ export const walletController = {
       // Add shop ID as last parameter
       values.push(shopId);
 
-      // Execute update query
-      const { query } = await import('../config/database.js');
+      // Execute update query (query already imported above)
       const result = await query(
         `UPDATE shops
          SET ${updates.join(', ')}

@@ -429,8 +429,8 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
     const amountHex = data.substring(72, 136);
     const actualAmount = parseInt(amountHex, 16) / 1e6;
 
-    // Check amount with 1% tolerance
-    const tolerance = expectedAmount * 0.01;
+    // Check amount with 0.5% tolerance - Industry standard
+    const tolerance = expectedAmount * 0.005;
     const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
 
     if (!amountMatches) {

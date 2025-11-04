@@ -126,7 +126,7 @@ export const createTestShop = async (ownerId, shopData = {}) => {
     `INSERT INTO shops (name, description, owner_id, is_active)
      VALUES ($1, $2, $3, $4)
      RETURNING id, owner_id, registration_paid, name, description, logo,
-               wallet_btc, wallet_eth, wallet_usdt, wallet_ton,
+               wallet_btc, wallet_eth, wallet_usdt, wallet_ltc,
                tier, is_active, subscription_status,
                next_payment_due, grace_period_until,
                created_at, updated_at`,
