@@ -334,23 +334,23 @@ export const productQueries = {
        SET name = COALESCE($2, name),
            description = COALESCE($3, description),
            price = COALESCE(
-             $4,
+             $4::NUMERIC,
              CASE
-               WHEN $7 = 0 AND original_price IS NOT NULL THEN original_price
+               WHEN $7::INTEGER = 0 AND original_price IS NOT NULL THEN original_price
                ELSE price
              END
            ),
-           stock_quantity = COALESCE($5, stock_quantity),
-           is_active = COALESCE($6, is_active),
+           stock_quantity = COALESCE($5::INTEGER, stock_quantity),
+           is_active = COALESCE($6::BOOLEAN, is_active),
            original_price = CASE
-             WHEN $7 = 0 THEN NULL
-             WHEN $8 IS NOT NULL THEN $8
+             WHEN $7::INTEGER = 0 THEN NULL
+             WHEN $8::NUMERIC IS NOT NULL THEN $8
              ELSE original_price
            END,
-           discount_percentage = COALESCE($7, discount_percentage),
+           discount_percentage = COALESCE($7::INTEGER, discount_percentage),
            discount_expires_at = CASE
-             WHEN $7 = 0 THEN NULL
-             WHEN $9 IS NOT NULL THEN $9
+             WHEN $7::INTEGER = 0 THEN NULL
+             WHEN $9::TIMESTAMP IS NOT NULL THEN $9
              ELSE discount_expires_at
            END,
            updated_at = NOW()

@@ -6,6 +6,24 @@ import { fuzzySearchProducts } from '../utils/fuzzyMatch.js';
 import { autoTransliterateProductName, getTransliterationInfo } from '../utils/transliterate.js';
 import logger from '../utils/logger.js';
 import { reply as cleanReply } from '../utils/cleanReply.js';
+import { safeApiCall } from '../utils/safeApiCall.js';
+import { generateDeterministicResponse } from '../utils/responseGenerator.js';
+
+/**
+ * Очистить служебные токены DeepSeek из текста
+ */
+function cleanDeepSeekTokens(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  return text
+    .replace(/<｜tool▁calls▁begin｜>/g, '')
+    .replace(/<｜tool▁calls▁end｜>/g, '')
+    .replace(/<｜tool▁sep｜>/g, '')
+    .replace(/<｜tool▁result▁begin｜>/g, '')
+    .replace(/<｜tool▁result▁end｜>/g, '')
+    .replace(/<｜end▁of▁sentence｜>/g, '')
+    .trim();
+}
 
 /**
  * AI Product Management Service
@@ -92,157 +110,41 @@ function formatUsd(price) {
 }
 
 function formatProductLine(product, index = null) {
-  const priceText = formatUsd(product.price ?? 0);
-  const stock = product.stock_quantity ?? product.stock ?? 0;
-  const stockText = stock > 0 ? ` — ${stock} шт` : ' — нет в наличии';
-  const discount = product.discount_percentage ?? product.discountPercentage ?? null;
-  const discountText = discount && Number(discount) > 0
-    ? ` (скидка ${Number(discount)}%)`
-    : '';
   const prefix = index !== null ? `${index + 1}. ` : '';
-  return `${prefix}${product.name} — ${priceText}${discountText}${stockText}`;
+  let line = `${prefix}**${product.name}**`;
+  
+  // Цена с учетом скидки
+  line += ` — ${formatUsd(product.price ?? 0)}`;
+  
+  // ВСЕГДА показывать скидку если есть
+  if (product.discount_percentage && product.discount_percentage > 0) {
+    line += ` (-${product.discount_percentage}%`;
+    
+    // Дата окончания скидки
+    if (product.discount_expires_at) {
+      const expiresDate = new Date(product.discount_expires_at);
+      const formatted = expiresDate.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      line += `, до ${formatted}`;
+    } else {
+      line += `, постоянная`;
+    }
+    
+    line += `)`;
+  }
+  
+  // Остаток
+  const stock = product.stock_quantity ?? product.stock ?? 0;
+  line += ` — остаток ${stock} шт`;
+  
+  return line;
 }
 
-function buildMessageFromResult(result) {
-  if (!result) {
-    return null;
-  }
 
-  if (result.message) {
-    return result.message;
-  }
-
-  const data = result.data;
-  if (!data) {
-    return result.success ? 'Готово.' : null;
-  }
-
-  if (data.error?.message) {
-    return `Не получилось: ${data.error.message}`;
-  }
-
-  switch (data.action) {
-    case 'product_created': {
-      const product = data.product;
-      if (!product) {
-        return 'Готово.';
-      }
-      const stock = product.stock_quantity ?? product.stock ?? 0;
-      const stockText = stock > 0 ? `, ${stock} шт` : ', нет в наличии';
-      return `Готово, ${product.name}: ${formatUsd(product.price)}${stockText}.`;
-    }
-    case 'bulk_products_added': {
-      const successCount = data.successCount ?? 0;
-      const failCount = data.failCount ?? 0;
-      const sections = [];
-      if (successCount > 0 && Array.isArray(data.successful)) {
-        const preview = data.successful.slice(0, 5).map((p, idx) => formatProductLine(p, idx));
-        sections.push(`Добавил ${successCount} ${successCount === 1 ? 'товар' : 'товара'}:\n${preview.join('\n')}`);
-        if (data.successful.length > 5) {
-          sections.push(`... и ещё ${data.successful.length - 5}`);
-        }
-      }
-      if (failCount > 0 && Array.isArray(data.failed) && data.failed.length) {
-        const failedNames = data.failed.map(item => item.name).filter(Boolean);
-        if (failedNames.length) {
-          sections.push(`Не удалось добавить: ${failedNames.join(', ')}`);
-        }
-      }
-      return sections.join('\n') || 'Готово.';
-    }
-    case 'product_deleted': {
-      const product = data.product;
-      return product ? `Удалил ${product.name}.` : 'Удалил товар.';
-    }
-    case 'products_listed': {
-      const items = data.products || [];
-      if (items.length === 0) {
-        return 'Каталог пуст — добавь первый товар?';
-      }
-      const preview = items.slice(0, 10).map((p, idx) => formatProductLine(p, idx));
-      const extra = items.length > 10 ? `\n... и ещё ${items.length - 10} товаров` : '';
-      return `Сейчас в каталоге ${items.length} товаров:\n${preview.join('\n')}${extra}`;
-    }
-    case 'products_found': {
-      const items = data.products || [];
-      if (items.length === 0) {
-        return `Не нашёл товаров по запросу «${data.searchQuery}».`;
-      }
-      const preview = items.slice(0, 10).map((p, idx) => formatProductLine(p, idx));
-      const extra = items.length > 10 ? `\n... и ещё ${items.length - 10}` : '';
-      return `Нашёл ${items.length} товаров по запросу «${data.searchQuery}»:\n${preview.join('\n')}${extra}`;
-    }
-    case 'product_updated': {
-      const changes = data.changes || {};
-      const changeParts = [];
-      if (changes.name) {
-        changeParts.push(`имя: ${changes.name.old} → ${changes.name.new}`);
-      }
-      if (changes.price) {
-        changeParts.push(`цена: ${formatUsd(changes.price.old)} → ${formatUsd(changes.price.new)}`);
-      }
-      if (changes.stock_quantity) {
-        changeParts.push(`остаток: ${changes.stock_quantity.old ?? 0} → ${changes.stock_quantity.new}`);
-      }
-      if (changes.discount_percentage) {
-        changeParts.push(`скидка: ${changes.discount_percentage.old ?? 0}% → ${changes.discount_percentage.new ?? 0}%`);
-      }
-      if (changes.discount_expires_at) {
-        changeParts.push('обновил таймер скидки');
-      }
-      const productName = data.product?.name || 'товар';
-      return changeParts.length > 0
-        ? `${productName} обновлён: ${changeParts.join(', ')}.`
-        : `Обновил ${productName}.`;
-    }
-    case 'bulk_delete_all': {
-      const count = data.deletedCount ?? 0;
-      return count > 0
-        ? `Удалил все товары (${count} шт).`
-        : 'Каталог уже был пустым.';
-    }
-    case 'bulk_delete_by_names': {
-      const count = data.deletedCount ?? 0;
-      const segments = [];
-      if (count > 0 && data.deletedProducts?.length) {
-        segments.push(`Удалил ${count}: ${data.deletedProducts.join(', ')}`);
-      }
-      if (data.notFound?.length) {
-        segments.push(`Не нашёл: ${data.notFound.join(', ')}`);
-      }
-      return segments.join('\n') || 'Не удалось удалить товары.';
-    }
-    case 'sale_recorded': {
-      const product = data.product;
-      const sale = data.sale;
-      if (!product || !sale) {
-        return 'Продажу зафиксировал.';
-      }
-      return `Зафиксировал продажу: ${product.name}, ${sale.quantity} шт. Остаток ${sale.newStock}.`;
-    }
-    case 'product_info_retrieved': {
-      const product = data.product;
-      if (!product) {
-        return 'Не нашёл информацию о товаре.';
-      }
-      const stock = product.stock_quantity ?? 0;
-      const stockText = stock > 0 ? `${stock} шт` : 'нет в наличии';
-      return `${product.name}: ${formatUsd(product.price)} (${stockText}).`;
-    }
-    case 'bulk_update_prices': {
-      const updated = data.updatedCount ?? 0;
-      const suffix = data.discountType === 'timer' && data.durationText
-        ? ` на ${data.durationText}`
-        : '';
-      const excluded = data.excludedProductIds?.length
-        ? ` (исключено ${data.excludedProductIds.length})`
-        : '';
-      return `${data.operationText} ${data.operationSymbol}${data.percentage}%${suffix} для ${updated} товаров${excluded}.`;
-    }
-    default:
-      return result.success ? 'Готово.' : null;
-  }
-}
 
 /**
  * Parse duration string to milliseconds
@@ -541,6 +443,18 @@ function detectSingleProductDiscountIntent(command, products, ctx) {
     };
   }
 
+  // Bug #1 fix: Check for multiple products
+  const hasMultipleProducts = /\s(и|,|а также|плюс)\s/.test(normalized);
+  if (hasMultipleProducts) {
+    return null; // Let AI handle multiple products
+  }
+
+  // Bug #3 fix: Check for multiple discount percentages
+  const percentages = command.match(/\d+%/g);
+  if (percentages && percentages.length > 1) {
+    return null; // Let AI handle different discounts per product
+  }
+
   const mentionsAll = /(всем|на все|весь|по всем|по каталогу|all|every|each|каталог)/.test(normalized);
   if (mentionsAll) {
     return null;
@@ -572,10 +486,10 @@ function detectSingleProductDiscountIntent(command, products, ctx) {
     return null;
   };
 
-  let product = chooseFromContext() || chooseByExplicitMention();
-  if (!product && products.length === 1) {
-    product = products[0];
-  }
+  // Bug #2 fix: Removed fallback to single product
+  // Previously: if only 1 product exists, apply discount regardless of name
+  // Now: only apply discount if product is explicitly mentioned or in context
+  const product = chooseFromContext() || chooseByExplicitMention();
 
   if (!product) {
     return null;
@@ -662,13 +576,55 @@ export async function processProductCommand(userCommand, context) {
       }
 
       if (result.success) {
-        const suffix = quickDiscount.duration ? ` на ${quickDiscount.duration}` : '';
-        const message = `Сделал скидку ${quickDiscount.percentage}% на ${quickDiscount.product.name}${suffix}.`;
-        return {
-          ...result,
-          message,
-          operation: 'quick_discount_update'
-        };
+        // AI generates natural response for discount
+        const messages = [
+          { role: 'user', content: sanitizedCommand },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [{
+              id: 'quick_discount',
+              type: 'function',
+              function: {
+                name: 'updateProduct',
+                arguments: JSON.stringify({ productName: quickDiscount.product.name, updates: { discount_percentage: quickDiscount.percentage } })
+              }
+            }]
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'quick_discount',
+            content: JSON.stringify(result)
+          }
+        ];
+
+        try {
+          const systemPrompt = generateProductAIPrompt(shopName, products, { sessionContext: ctx?.session?.aiContext });
+          const aiResponse = await deepseek.chat({ system: systemPrompt, messages, stream: false });
+          const message = aiResponse.choices[0].message.content || `Сделал скидку ${quickDiscount.percentage}% на ${quickDiscount.product.name}.`;
+
+          if (ctx) {
+            saveToConversationHistory(ctx, [
+              { role: 'user', content: sanitizedCommand },
+              { role: 'assistant', content: message }
+            ]);
+          }
+
+          return {
+            ...result,
+            message,
+            operation: 'quick_discount_update'
+          };
+        } catch (err) {
+          logger.warn('AI response generation failed, using fallback:', err.message);
+          const suffix = quickDiscount.duration ? ` на ${quickDiscount.duration}` : '';
+          const message = `Сделал скидку ${quickDiscount.percentage}% на ${quickDiscount.product.name}${suffix}.`;
+          return {
+            ...result,
+            message,
+            operation: 'quick_discount_update'
+          };
+        }
       }
 
       return result;
@@ -705,13 +661,54 @@ export async function processProductCommand(userCommand, context) {
       }
 
       if (result.success && result.data?.product) {
-        const updated = result.data.product;
-        const message = `Готово, ${updated.name}: остаток ${quickStockUpdate.quantity}.`;
-        return {
-          ...result,
-          message,
-          operation: 'quick_stock_update'
-        };
+        // AI generates natural response for stock update
+        const messages = [
+          { role: 'user', content: sanitizedCommand },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: [{
+              id: 'quick_stock',
+              type: 'function',
+              function: {
+                name: 'updateProduct',
+                arguments: JSON.stringify({ productName: quickStockUpdate.productName, updates: { stock_quantity: quickStockUpdate.quantity } })
+              }
+            }]
+          },
+          {
+            role: 'tool',
+            tool_call_id: 'quick_stock',
+            content: JSON.stringify(result)
+          }
+        ];
+
+        try {
+          const systemPrompt = generateProductAIPrompt(shopName, products, { sessionContext: ctx?.session?.aiContext });
+          const aiResponse = await deepseek.chat({ system: systemPrompt, messages, stream: false });
+          const message = aiResponse.choices[0].message.content || `Готово, ${result.data.product.name}: остаток ${quickStockUpdate.quantity}.`;
+
+          if (ctx) {
+            saveToConversationHistory(ctx, [
+              { role: 'user', content: sanitizedCommand },
+              { role: 'assistant', content: message }
+            ]);
+          }
+
+          return {
+            ...result,
+            message,
+            operation: 'quick_stock_update'
+          };
+        } catch (err) {
+          logger.warn('AI response generation failed, using fallback:', err.message);
+          const message = `Готово, ${result.data.product.name}: остаток ${quickStockUpdate.quantity}.`;
+          return {
+            ...result,
+            message,
+            operation: 'quick_stock_update'
+          };
+        }
       }
 
       return result;
@@ -785,15 +782,14 @@ export async function processProductCommand(userCommand, context) {
       }
     };
 
-    // Call DeepSeek API with streaming
+    // Call DeepSeek API (NON-streaming для надёжности - гарантия полного JSON)
     let response;
     try {
-      response = await deepseek.chatStreaming(
+      response = await deepseek.chat(
         systemPrompt,
         sanitizedCommand,
         productTools,
-        conversationHistory,
-        onChunk
+        conversationHistory
       );
     } finally {
       // Stop typing indicator
@@ -818,7 +814,16 @@ export async function processProductCommand(userCommand, context) {
     if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls) {
       const toolCall = choice.message.tool_calls[0]; // Take first tool call
       const functionName = toolCall.function.name;
-      const args = JSON.parse(toolCall.function.arguments);
+      
+      // Безопасный парсинг JSON
+      let args;
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        logger.error('Failed to parse AI function arguments:', e);
+        await cleanReply(ctx, '❌ Ошибка AI: не удалось распознать параметры команды.');
+        return { success: false, message: 'AI JSON parse error' };
+      }
 
       const toolCallStartTime = Date.now();
       logger.info('ai_tool_call', {
@@ -877,13 +882,56 @@ export async function processProductCommand(userCommand, context) {
       }
 
       const totalTime = Date.now() - startTime;
-      const finalMessage = buildMessageFromResult(result) || 'Готово.';
 
-      // НЕ отправляем здесь - handler сам отправит сообщение (aiProducts.js:176)
-      // Только сохраняем в историю для AI контекста
+      // Build conversation for AI to generate natural response
+      const messages = conversationHistory.slice(); // Copy history
+      messages.push({ role: 'user', content: sanitizedCommand });
+      messages.push({
+        role: 'assistant',
+        content: null,
+        tool_calls: [toolCall]
+      });
+      messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(result)
+      });
+
+      // Инициализируем ответ детерминированным fallback-ом
+      let finalMessage = cleanDeepSeekTokens(generateDeterministicResponse(result));
+
+      // Пытаемся улучшить ответ с помощью AI ТОЛЬКО если операция успешна
+      if (result.success) {
+        try {
+          // Добавляем system message перед вызовом AI
+          messages.push({
+            role: 'system',
+            content: 'КРИТИЧНО: Функция выполнена успешно. Просто озвучь результат пользователю естественным языком. НЕ пытайся анализировать или исправлять то, что уже сделано Backend.'
+          });
+          
+          // Используем новый API с явной температурой 0.7 для креативности
+          const aiResponse = await deepseek.chat({
+            system: systemPrompt,
+            messages,
+            temperature: 0.7,  // Выше для естественной генерации текста
+            maxRetries: 2
+          });
+          
+          if (aiResponse.choices[0].message.content) {
+            finalMessage = cleanDeepSeekTokens(aiResponse.choices[0].message.content);
+          }
+        } catch (err) {
+          logger.warn('AI response generation failed, using deterministic fallback:', err.message);
+          // Мы уже установили детерминированный ответ выше
+        }
+      }
+
+      // Save to conversation history
       if (ctx && finalMessage) {
         saveToConversationHistory(ctx, [
           { role: 'user', content: sanitizedCommand },
+          { role: 'assistant', content: null, tool_calls: [toolCall] },
+          { role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(result) },
           { role: 'assistant', content: finalMessage }
         ]);
       }
@@ -1048,6 +1096,9 @@ async function executeToolCall(functionName, args, context) {
       case 'updateProduct':
         return await handleUpdateProduct(args, shopId, token, products, clarifiedProductId);
 
+      case 'bulkUpdateProducts':
+        return await handleBulkUpdateProducts(args, shopId, token, products);
+
       case 'bulkDeleteAll':
         return await handleBulkDeleteAll(args, shopId, token, ctx);
 
@@ -1154,42 +1205,43 @@ async function handleAddProduct(args, shopId, token) {
     });
   }
 
-  try {
-    const product = await productApi.createProduct({
-      name: transliteratedName,  // Use transliterated name
-      price,
-      currency: 'USD',
-      shopId,
-      stockQuantity: normalizedStock
-    }, token);
+  const apiResult = await safeApiCall(productApi.createProduct, {
+    name: transliteratedName,  // Use transliterated name
+    price,
+    currency: 'USD',
+    shopId,
+    stockQuantity: normalizedStock
+  }, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'product_created',
-        product: {
-          id: product.id,
-          name: transliteratedName,
-          originalName: translitInfo.changed ? name : null,
-          price: product.price,
-          stock_quantity: product.stock_quantity,
-          transliterated: translitInfo.changed
-        }
-      }
-    };
-  } catch (error) {
-    logger.error('Add product via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to create product',
-          details: error.message
+          message: apiResult.error
         }
       }
     };
   }
+
+  const product = apiResult.data;
+
+  return {
+    success: true,
+    data: {
+      action: 'product_created',
+      product: {
+        id: product.id,
+        name: transliteratedName,
+        originalName: translitInfo.changed ? name : null,
+        price: product.price,
+        stock_quantity: product.stock_quantity,
+        transliterated: translitInfo.changed
+      }
+    }
+  };
 }
 
 /**
@@ -1287,34 +1339,35 @@ async function handleBulkAddProducts(args, shopId, token) {
       });
     }
 
-    try {
-      const createdProduct = await productApi.createProduct({
-        name: transliteratedName,
-        price,
-        currency: 'USD',
-        shopId,
-        stockQuantity: normalizedStock
-      }, token);
+    const apiResult = await safeApiCall(productApi.createProduct, {
+      name: transliteratedName,
+      price,
+      currency: 'USD',
+      shopId,
+      stockQuantity: normalizedStock
+    }, token);
 
-      results.successful.push({
-        name: transliteratedName,
-        originalName: translitInfo.changed ? name : null,
-        price: createdProduct.price,
-        stock_quantity: createdProduct.stock_quantity,
-        id: createdProduct.id,
-        transliterated: translitInfo.changed
-      });
-    } catch (error) {
-      logger.error('Bulk add product failed:', { name, error: error.message });
+    if (!apiResult.success) {
       results.failed.push({
         name,
         error: {
           code: 'API_ERROR',
-          message: 'Failed to create product',
-          details: error.message
+          message: apiResult.error
         }
       });
+      continue;
     }
+
+    const createdProduct = apiResult.data;
+
+    results.successful.push({
+      name: transliteratedName,
+      originalName: translitInfo.changed ? name : null,
+      price: createdProduct.price,
+      stock_quantity: createdProduct.stock_quantity,
+      id: createdProduct.id,
+      transliterated: translitInfo.changed
+    });
   }
 
   // Build result
@@ -1422,34 +1475,33 @@ async function handleDeleteProduct(args, shopId, token, products, clarifiedProdu
     product = matches[0];
   }
 
-  try {
-    await productApi.deleteProduct(product.id, token);
+  const apiResult = await safeApiCall(productApi.deleteProduct, product.id, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'product_deleted',
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price
-        }
-      }
-    };
-  } catch (error) {
-    logger.error('Delete product via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to delete product',
-          productName: product.name,
-          details: error.message
+          message: apiResult.error,
+          productName: product.name
         }
       }
     };
   }
+
+  return {
+    success: true,
+    data: {
+      action: 'product_deleted',
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.price
+      }
+    }
+  };
 }
 
 /**
@@ -1713,7 +1765,33 @@ async function handleUpdateProduct(args, shopId, token, products, clarifiedProdu
     };
   }
 
-  if (discountPercentage !== undefined) {
+  // КРИТИЧНО: Handle simultaneous price + discount update
+  // When both price and discount are provided, use price as base and apply discount
+  if (newPrice !== undefined && Number.isFinite(newPrice) && newPrice > 0 && 
+      discountPercentage !== undefined && discountPercentage > 0) {
+    
+    // Calculate discounted price from new base price
+    const basePrice = newPrice;
+    const discountedPrice = Math.round(basePrice * (1 - discountPercentage / 100) * 100) / 100;
+    
+    updateData.price = discountedPrice;
+    updateData.originalPrice = basePrice;
+    updateData.discountPercentage = discountPercentage;
+    
+    if (discountExpiresAtISO) {
+      updateData.discountExpiresAt = discountExpiresAtISO;
+    }
+    
+    priceAssigned = true;
+    
+    logger.info(`Applying price=${basePrice} with discount=${discountPercentage}% → final price=${discountedPrice}`);
+    
+    changes.price = { old: currentPrice, new: discountedPrice };
+    changes.discount_percentage = { old: product.discount_percentage, new: discountPercentage };
+    if (discountExpiresAtISO !== null || rawDiscountExpiresAt !== undefined) {
+      changes.discount_expires_at = { old: product.discount_expires_at, new: discountExpiresAtISO };
+    }
+  } else if (discountPercentage !== undefined) {
     if (discountPercentage === 0) {
       const restoredPrice = newPrice !== undefined
         ? newPrice
@@ -1789,39 +1867,40 @@ async function handleUpdateProduct(args, shopId, token, products, clarifiedProdu
     }
   }
 
-  try {
-    const updated = await productApi.updateProduct(product.id, updateData, token);
+  const apiResult = await safeApiCall(productApi.updateProduct, product.id, updateData, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'product_updated',
-        product: {
-          id: updated.id,
-          name: updated.name,
-          price: updated.price,
-          stock_quantity: updated.stock_quantity,
-          discount_percentage: updated.discount_percentage,
-          discount_expires_at: updated.discount_expires_at,
-          original_price: updated.original_price
-        },
-        changes
-      }
-    };
-  } catch (error) {
-    logger.error('Update product via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to update product',
-          productName: product.name,
-          details: error.message
+          message: apiResult.error,
+          productName: product.name
         }
       }
     };
   }
+
+  const updated = apiResult.data;
+
+  return {
+    success: true,
+    data: {
+      action: 'product_updated',
+      product: {
+        id: updated.id,
+        name: updated.name,
+        price: updated.price,
+        stock_quantity: updated.stock_quantity,
+        discount_percentage: updated.discount_percentage,
+        discount_expires_at: updated.discount_expires_at,
+        original_price: updated.original_price
+      },
+      changes
+    }
+  };
 }
 
 /**
@@ -1861,34 +1940,35 @@ async function handleBulkDeleteAll(args, shopId, token, ctx) {
     confirm: args.confirm
   });
 
-  try {
-    const result = await productApi.bulkDeleteAll(shopId, token);
+  const apiResult = await safeApiCall(productApi.bulkDeleteAll, shopId, token);
 
-    logger.info('bulkDeleteAll_success', {
-      shopId,
-      deletedCount: result.deletedCount
-    });
-
-    return {
-      success: true,
-      data: {
-        action: 'bulk_delete_all',
-        deletedCount: result.deletedCount
-      }
-    };
-  } catch (error) {
-    logger.error('Bulk delete all via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to delete all products',
-          details: error.message
+          message: apiResult.error
         }
       }
     };
   }
+
+  const result = apiResult.data;
+
+  logger.info('bulkDeleteAll_success', {
+    shopId,
+    deletedCount: result.deletedCount
+  });
+
+  return {
+    success: true,
+    data: {
+      action: 'bulk_delete_all',
+      deletedCount: result.deletedCount
+    }
+  };
 }
 
 /**
@@ -1942,31 +2022,32 @@ async function handleBulkDeleteByNames(args, shopId, token, products) {
     };
   }
 
-  try {
-    const result = await productApi.bulkDeleteByIds(shopId, productIds, token);
+  const apiResult = await safeApiCall(productApi.bulkDeleteByIds, shopId, productIds, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'bulk_delete_by_names',
-        deletedCount: result.deletedCount,
-        deletedProducts: found,
-        notFound: notFound.length > 0 ? notFound : null
-      }
-    };
-  } catch (error) {
-    logger.error('Bulk delete by names via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to delete products',
-          details: error.message
+          message: apiResult.error
         }
       }
     };
   }
+
+  const result = apiResult.data;
+
+  return {
+    success: true,
+    data: {
+      action: 'bulk_delete_by_names',
+      deletedCount: result.deletedCount,
+      deletedProducts: found,
+      notFound: notFound.length > 0 ? notFound : null
+    }
+  };
 }
 
 /**
@@ -2037,31 +2118,32 @@ async function handleBulkDeleteExcept(args, shopId, token, products) {
     };
   }
 
-  try {
-    const result = await productApi.bulkDeleteByIds(shopId, deleteProductIds, token);
+  const apiResult = await safeApiCall(productApi.bulkDeleteByIds, shopId, deleteProductIds, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'bulk_delete_except',
-        deletedCount: result.deletedCount,
-        keptProducts: keepNames,
-        notFoundExclusions: notFoundExclusions.length > 0 ? notFoundExclusions : null
-      }
-    };
-  } catch (error) {
-    logger.error('Bulk delete except via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to delete products',
-          details: error.message
+          message: apiResult.error
         }
       }
     };
   }
+
+  const result = apiResult.data;
+
+  return {
+    success: true,
+    data: {
+      action: 'bulk_delete_except',
+      deletedCount: result.deletedCount,
+      keptProducts: keepNames,
+      notFoundExclusions: notFoundExclusions.length > 0 ? notFoundExclusions : null
+    }
+  };
 }
 
 /**
@@ -2171,41 +2253,40 @@ async function handleRecordSale(args, shopId, token, products, clarifiedProductI
 
   const newStock = currentStock - quantity;
 
-  try {
-    await productApi.updateProduct(product.id, {
-      stockQuantity: newStock
-    }, token);
+  const apiResult = await safeApiCall(productApi.updateProduct, product.id, {
+    stockQuantity: newStock
+  }, token);
 
-    return {
-      success: true,
-      data: {
-        action: 'sale_recorded',
-        product: {
-          id: product.id,
-          name: product.name,
-          price: product.price
-        },
-        sale: {
-          quantity,
-          previousStock: currentStock,
-          newStock
-        }
-      }
-    };
-  } catch (error) {
-    logger.error('Record sale via AI failed:', error);
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to record sale',
-          productName: product.name,
-          details: error.message
+          message: apiResult.error,
+          productName: product.name
         }
       }
     };
   }
+
+  return {
+    success: true,
+    data: {
+      action: 'sale_recorded',
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.price
+      },
+      sale: {
+        quantity,
+        previousStock: currentStock,
+        newStock
+      }
+    }
+  };
 }
 
 /**
@@ -2368,7 +2449,20 @@ async function handleApplyDiscount(args, shopId, token, products) {
       discountExpiresAt: expiresAt
     };
     
-    await productApi.updateProduct(product.id, updateData, token);
+    const apiResult = await safeApiCall(productApi.updateProduct, product.id, updateData, token);
+    
+    if (!apiResult.success) {
+      return {
+        success: false,
+        message: apiResult.error,
+        data: {
+          error: {
+            code: 'API_ERROR',
+            message: apiResult.error
+          }
+        }
+      };
+    }
     
     return {
       success: true,
@@ -2391,7 +2485,16 @@ async function handleApplyDiscount(args, shopId, token, products) {
     };
   } catch (error) {
     logger.error('Apply discount error:', error);
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message,
+      data: {
+        error: {
+          code: 'HANDLER_ERROR',
+          message: error.message
+        }
+      }
+    };
   }
 }
 
@@ -2446,7 +2549,20 @@ async function handleRemoveDiscount(args, shopId, token, products) {
     
     const originalPriceValue = product.original_price || product.price;
     
-    await productApi.updateProduct(product.id, updateData, token);
+    const apiResult = await safeApiCall(productApi.updateProduct, product.id, updateData, token);
+    
+    if (!apiResult.success) {
+      return {
+        success: false,
+        message: apiResult.error,
+        data: {
+          error: {
+            code: 'API_ERROR',
+            message: apiResult.error
+          }
+        }
+      };
+    }
     
     return {
       success: true,
@@ -2467,8 +2583,85 @@ async function handleRemoveDiscount(args, shopId, token, products) {
     };
   } catch (error) {
     logger.error('Remove discount error:', error);
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message,
+      data: {
+        error: {
+          code: 'HANDLER_ERROR',
+          message: error.message
+        }
+      }
+    };
   }
+}
+
+/**
+ * Handler: bulkUpdateProducts - обновление нескольких конкретных товаров
+ */
+async function handleBulkUpdateProducts(args, shopId, token, products) {
+  if (!args.products || !Array.isArray(args.products) || args.products.length === 0) {
+    return {
+      success: false,
+      error: 'Не указаны товары для обновления'
+    };
+  }
+
+  const results = [];
+  const errors = [];
+
+  // Обрабатываем каждый товар последовательно
+  for (const item of args.products) {
+    try {
+      const result = await handleUpdateProduct(
+        {
+          productName: item.productName,
+          updates: item.updates
+        },
+        shopId,
+        token,
+        products
+      );
+
+      if (result.success) {
+        results.push({
+          productName: item.productName,
+          success: true,
+          data: result.data
+        });
+      } else {
+        errors.push({
+          productName: item.productName,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      logger.error(`bulkUpdateProducts: ошибка для ${item.productName}:`, error);
+      errors.push({
+        productName: item.productName,
+        error: error.message
+      });
+    }
+  }
+
+  // Возвращаем результат
+  if (results.length === 0) {
+    return {
+      success: false,
+      error: 'Не удалось обновить ни один товар',
+      details: errors
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      updated: results.length,
+      failed: errors.length,
+      results: results,
+      errors: errors.length > 0 ? errors : undefined
+    }
+  };
 }
 
 /**
@@ -2638,45 +2831,45 @@ async function handleBulkUpdatePrices(args, shopId, token, products) {
 
   const durationText = durationMs ? formatDuration(durationMs) : null;
 
-  try {
-    const result = await productApi.applyBulkDiscount(shopId, token, {
-      percentage,
-      type: discountType,
-      duration: durationMs,
-      excludedProductIds
-    });
+  const apiResult = await safeApiCall(productApi.applyBulkDiscount, shopId, token, {
+    percentage,
+    type: discountType,
+    duration: durationMs,
+    excludedProductIds
+  });
 
-    return {
-      success: true,
-      data: {
-        action: 'bulk_update_prices',
-        percentage,
-        operation,
-        operationText,
-        operationSymbol,
-        discountType,
-        durationMs,
-        durationText,
-        excludedProductIds,
-        previewProducts,
-        updatedCount: result?.productsUpdated ?? productsToUpdate.length,
-        products: result?.updatedProducts || result?.products || []
-      }
-    };
-  } catch (error) {
-    logger.error('Bulk update prices execution failed:', error);
-
+  if (!apiResult.success) {
     return {
       success: false,
+      message: apiResult.error,
       data: {
         error: {
           code: 'API_ERROR',
-          message: 'Failed to update prices',
-          details: error.message
+          message: apiResult.error
         }
       }
     };
   }
+
+  const result = apiResult.data;
+
+  return {
+    success: true,
+    data: {
+      action: 'bulk_update_prices',
+      percentage,
+      operation,
+      operationText,
+      operationSymbol,
+      discountType,
+      durationMs,
+      durationText,
+      excludedProductIds,
+      previewProducts,
+      updatedCount: result?.productsUpdated ?? productsToUpdate.length,
+      products: result?.updatedProducts || result?.products || []
+    }
+  };
 }
 
 export { saveToConversationHistory };
