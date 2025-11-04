@@ -34,6 +34,14 @@ export const paymentController = {
         });
       }
 
+      // Check order status - only pending orders can be paid
+      if (order.status !== 'pending') {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot pay for order with status: ${order.status}. Only pending orders can be paid.`
+        });
+      }
+
       // Check if order already has a verified payment
       const existingPayments = await paymentQueries.findByOrderId(orderId);
       const verifiedPayment = existingPayments.find(p => p.status === 'confirmed');

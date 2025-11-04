@@ -200,13 +200,22 @@ Status: Pending Payment
       cancelled: '❌'
     };
 
+    const statusText = {
+      pending: 'Ожидание оплаты',
+      confirmed: 'Подтверждён',
+      shipped: 'Отправлен',
+      delivered: 'Доставлен',
+      cancelled: 'Отменён'
+    };
+
     const emoji = statusEmoji[orderData.status] || '📋';
+    const status = statusText[orderData.status] || orderData.status;
 
     const message = `
-${emoji} Order Status Update
+${emoji} Обновление статуса заказа
 
-Order #${orderData.id}
-Status: ${orderData.status.toUpperCase()}
+Заказ #${orderData.id}
+Статус: ${status}
 📦 ${orderData.product_name}
     `.trim();
 
