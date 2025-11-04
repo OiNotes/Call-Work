@@ -7,6 +7,7 @@ import { CRYPTO_OPTIONS, formatTxHash } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, isAndroid } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
+import { safeToFixed } from '../../utils/formatUtils';
 
 export default function OrderStatusModal() {
   const { paymentStep, currentOrder, selectedCrypto, clearCheckout } = useStore();
@@ -192,7 +193,7 @@ export default function OrderStatusModal() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 text-sm font-medium">{t('payment.amount')}</span>
                     <span className="text-orange-primary font-bold text-lg tabular-nums">
-                      ${currentOrder.total.toFixed(2)}
+                      ${safeToFixed(currentOrder.total || currentOrder.total_price)}
                     </span>
                   </div>
 

@@ -1,13 +1,25 @@
 # Agent SKILLS for Status Stock 4.0
 
-**12 полезных SKILLS** для быстрой разработки, дебаггинга, тестирования и дизайна.
+**14 профессиональных SKILLS** для быстрой разработки, дебаггинга, тестирования, дизайна и deployment.
 
-## Как использовать SKILLS
+## ✅ ВСЕ SKILLS ОБНОВЛЕНЫ (November 4, 2025)
 
-Просто скажите Claude фразу из раздела "Usage" любого SKILL:
+Все skills были **полностью переписаны** под реальную структуру проекта:
+- ✅ Используют реальные пути (`/Users/sile/Documents/Status Stock 4.0`)
+- ✅ Используют существующие скрипты (`./start.sh`, `./stop.sh`)
+- ✅ Корректные пути к логам (`backend/logs/error-YYYY-MM-DD.log`, `bot/logs/error.log`)
+- ✅ Правильные npm команды (`npm run test:coverage`)
+- ✅ Поддержка ngrok (критично для проекта!)
+- ✅ YAML frontmatter во всех skills
+
+---
+
+## 🚀 Быстрый старт
+
+Просто скажи Claude фразу из "Usage" любого skill:
 
 ```
-"quick start"           → Запустит все сервисы
+"quick start"           → Запустит всё (Backend + Bot + ngrok)
 "health check"          → Проверит здоровье системы
 "analyze logs"          → Найдет и покажет ошибки
 "check ui"              → Валидирует дизайн
@@ -18,124 +30,179 @@ Claude автоматически выполнит все необходимые
 
 ---
 
-## 📁 Категории SKILLS
+## 📁 Категории SKILLS (14 штук)
 
-### ⚡ Development (3)
+### ⚡ Development & Startup (3)
 
-**1. quick-start.md** - Моментальный запуск всех сервисов
-- Проверяет зависимости
-- Запускает PostgreSQL
-- Создает БД если нужно
-- Стартует Backend + Bot + WebApp
+**1. quick-start** - Моментальный запуск всего stack
+- ✅ Останавливает существующие процессы
+- ✅ Запускает ngrok tunnel
+- ✅ Обновляет .env файлы с ngrok URL
+- ✅ Билдит webapp
+- ✅ Стартует Backend + Bot
+- Usage: `"quick start"` or `"start project"`
 
-**2. health-check.md** - Комплексная проверка здоровья
-- Backend API health
-- WebApp server status
-- Bot process status
-- PostgreSQL connection
-- Recent error logs
+**2. restart-all** - Безопасный перезапуск
+- ✅ Использует `./stop.sh`
+- ✅ Проверяет что все процессы остановлены
+- ✅ Использует `./start.sh` для нового старта
+- ✅ Новый ngrok tunnel каждый раз
+- Usage: `"restart all"` or `"restart services"`
 
-**3. restart-all.md** - Безопасный перезапуск
-- Graceful shutdown всех сервисов
-- Очистка портов
-- Перезапуск с мониторингом
+**3. health-check** - Комплексная проверка здоровья
+- ✅ Backend API health endpoint
+- ✅ Bot process status
+- ✅ **ngrok tunnel status** (критично!)
+- ✅ PostgreSQL connection
+- ✅ Recent error logs analysis
+- Usage: `"health check"` or `"status"`
 
 ---
 
-### 🐛 Debug (3)
+### 🐛 Debug & Monitoring (3)
 
-**4. analyze-logs.md** - Умный анализ error логов
-- Backend error logs
-- Bot error logs
-- Категоризация ошибок
-- Top 5 most frequent errors
+**4. analyze-logs** - Умный анализ error логов
+- ✅ Backend: `backend/logs/error-YYYY-MM-DD.log`
+- ✅ Bot: `bot/logs/error.log`
+- ✅ ngrok: `logs/ngrok.log`
+- ✅ Категоризация ошибок
+- ✅ Top 5 most frequent errors
+- Usage: `"analyze logs"` or `"what's wrong"`
 
-**5. fix-errors.md** - Автоматическое исправление ошибок
-- Port conflicts (EADDRINUSE)
-- Database connection (ECONNREFUSED)
-- Missing dependencies
-- Schema out of sync
-- Import/Export errors
+**5. fix-errors** - Автоматическое исправление ошибок
+- ✅ Port conflicts (EADDRINUSE)
+- ✅ Database connection (ECONNREFUSED)
+- ✅ Missing dependencies
+- ✅ **ngrok tunnel expired** (критично!)
+- ✅ Import/Export errors
+- Usage: `"fix errors"` or `"auto fix"`
 
-**6. check-ports.md** - Управление портами
-- Проверка портов 3000, 5173, 5432
-- Показывает процессы на портах
-- Освобождает занятые порты
+**6. check-ports** - Управление портами
+- ✅ 3000 (Backend)
+- ✅ 5173 (WebApp dev)
+- ✅ 5432 (PostgreSQL)
+- ✅ **4040 (ngrok dashboard)**
+- Usage: `"check ports"` or `"port status"`
 
 ---
 
 ### 🧪 Testing (2)
 
-**7. run-tests.md** - Запуск всех тестов
-- Backend tests + coverage
-- Bot tests + coverage
-- Coverage summary report
+**7. run-tests** - Запуск всех тестов
+- ✅ Backend tests + coverage (`npm run test:coverage`)
+- ✅ Bot tests + coverage (`npm run test:coverage`)
+- ✅ Coverage summary report
+- Usage: `"run tests"` or `"test all"`
 
-**8. test-integration.md** - Integration тесты бота
-- Full user flow testing
-- Auto backend startup
-- Test cleanup
+**8. test-integration** - Integration тесты бота
+- ✅ Проверяет Backend running
+- ✅ Автостарт Backend если нужно
+- ✅ Full user flow testing
+- ✅ Test cleanup
+- Usage: `"test bot"` or `"integration tests"`
 
 ---
 
-### 🎨 Design (2)
+### 🎨 Design & UI/UX (2)
 
-**9. ui-check.md** - Валидация UI дизайна
-- Glassmorphism effects
-- Color palette (#FF6B00, #181818)
-- Touch-friendly buttons (44px)
-- Typography consistency
+**9. ui-check** - Валидация UI дизайна
+- ✅ Glassmorphism effects (glass-card, glass-elevated)
+- ✅ Color palette (#FF6B00 orange, #181818 dark)
+- ✅ Touch-friendly buttons (min 44px)
+- ✅ Typography consistency
+- Usage: `"check ui"` or `"validate design"`
 
-**10. animation-check.md** - Проверка анимаций
-- Framer Motion usage
-- Performance anti-patterns
-- Spring animations
-- GPU-accelerated transforms
+**10. animation-check** - Проверка анимаций
+- ✅ Framer Motion usage
+- ✅ Performance anti-patterns detection
+- ✅ GPU-accelerated properties check
+- ✅ Spring animations
+- Usage: `"check animations"` or `"animation review"`
 
 ---
 
 ### 🗄️ Database (2)
 
-**11. db-migrate.md** - Безопасные миграции
-- Auto backup before migration
-- Run migrations
-- Verify schema
-- Rollback on errors
+**11. db-migrate** - Безопасные миграции
+- ✅ Auto backup before migration
+- ✅ Run migrations (`npm run db:migrate`)
+- ✅ Verify schema
+- ✅ Rollback on errors
+- Usage: `"migrate db"` or `"run migrations"`
 
-**12. db-query.md** - Быстрые SQL запросы
-- Common queries (users, shops, orders)
-- Table schemas
-- Export to CSV/JSON
-- Database statistics
+**12. db-query** - Быстрые SQL запросы
+- ✅ Common queries (users, shops, orders)
+- ✅ Table schemas
+- ✅ Export to CSV/JSON
+- ✅ Database statistics
+- Usage: `"query db"` or `"check users table"`
 
 ---
 
-## 🚀 Quick Start Examples
+### 🌐 ngrok Management (1) - НОВЫЙ!
 
-### Утренний старт разработки:
+**13. ngrok-management** - Управление ngrok tunnel
+- ✅ Check ngrok status and URL
+- ✅ Restart expired tunnels
+- ✅ Update all .env files
+- ✅ Rebuild webapp with new URL
+- ✅ Verify tunnel working
+- Usage: `"check ngrok"` or `"restart ngrok"`
+
+**КРИТИЧНО:** Этот проект **ТРЕБУЕТ ngrok** для Telegram Mini App. Without it, Mini App button won't work!
+
+---
+
+### 🚀 Deployment (1) - НОВЫЙ!
+
+**14. production-deploy** - Pre-deployment checklist
+- ✅ Run all tests
+- ✅ Check UI/UX compliance
+- ✅ Validate animations
+- ✅ Analyze error logs
+- ✅ Verify build succeeds
+- ✅ Security check (hardcoded secrets)
+- ✅ Generate deployment report
+- Usage: `"production check"` or `"deploy check"`
+
+---
+
+## 🎯 Типичные рабочие сценарии
+
+### Утренний старт:
 ```
-"quick start"           # Запустить всё
-"health check"          # Проверить здоровье
+1. "quick start"           # Запустить всё
+2. "health check"          # Проверить что работает
 ```
 
 ### Когда что-то сломалось:
 ```
-"analyze logs"          # Найти ошибки
-"fix errors"            # Автофикс
-"restart all"           # Перезапустить
+1. "analyze logs"          # Найти ошибки
+2. "fix errors"            # Автофикс
+3. "restart all"           # Перезапустить
+4. "health check"          # Проверить что починилось
 ```
 
 ### Перед коммитом:
 ```
-"run tests"             # Все тесты
-"check ui"              # Дизайн
-"check animations"      # Анимации
+1. "run tests"             # Все тесты
+2. "check ui"              # Дизайн
+3. "check animations"      # Анимации
+4. git add . && git commit
 ```
 
-### Работа с БД:
+### Перед deployment:
 ```
-"migrate db"            # Миграции
-"query db"              # SQL запросы
+1. "production check"      # Comprehensive checklist
+2. Fix any ❌ failures
+3. Deploy to production
+```
+
+### После system sleep/wake:
+```
+1. "check ngrok"           # ngrok tunnel expires!
+2. If expired: "restart ngrok"
+3. "health check"          # Verify all OK
 ```
 
 ---
@@ -144,36 +211,44 @@ Claude автоматически выполнит все необходимые
 
 ### Комбинирование SKILLS:
 
-1. **Morning workflow:**
-   ```
-   "quick start" → "health check" → "analyze logs"
-   ```
+**Morning workflow:**
+```
+"quick start" → "health check" → "analyze logs"
+```
 
-2. **Before commit:**
-   ```
-   "run tests" → "check ui" → "check animations"
-   ```
+**Before commit:**
+```
+"run tests" → "check ui" → "check animations"
+```
 
-3. **Emergency fix:**
-   ```
-   "analyze logs" → "fix errors" → "health check"
-   ```
+**Emergency fix:**
+```
+"analyze logs" → "fix errors" → "health check"
+```
 
-### Кастомизация:
+**Weekly check:**
+```
+"health check" → "analyze logs" → "production check"
+```
 
-Вы можете редактировать любой SKILL файл для:
-- Изменения путей
-- Добавления новых команд
-- Настройки thresholds
-- Добавления своих проверок
+### Когда использовать какой skill:
+
+| Ситуация | Skill |
+|----------|-------|
+| Первый запуск дня | quick-start |
+| После git pull | restart-all |
+| Что-то сломалось | analyze-logs → fix-errors |
+| Mini App не работает | check-ngrok → restart-ngrok |
+| Перед коммитом | run-tests → ui-check |
+| Перед deploy | production-deploy |
+| Система зависла | restart-all |
 
 ---
 
 ## 📊 Статистика
 
-**Всего:** 12 SKILLS
-**Строк кода:** 1235 lines
-**Категорий:** 5 (Development, Debug, Testing, Design, Database)
+**Всего:** 14 SKILLS  
+**Категорий:** 7 (Development, Debug, Testing, Design, Database, ngrok, Deployment)
 
 **Охват:**
 - ⚡ Development: 100%
@@ -181,34 +256,97 @@ Claude автоматически выполнит все необходимые
 - 🧪 Testing: Backend + Bot
 - 🎨 Design: UI + Animations
 - 🗄️ Database: Migrations + Queries
+- 🌐 ngrok: Tunnel management
+- 🚀 Deployment: Pre-flight checklist
 
 ---
 
-## 🎯 Ваши предпочтения учтены
+## 🔧 Кастомизация
 
-Все SKILLS созданы с учетом ваших предпочтений:
+Вы можете редактировать любой skill файл для:
+- Изменения путей (если проект переместился)
+- Добавления новых команд
+- Настройки thresholds
+- Добавления своих проверок
 
-✅ **Скорость** - quick-start, fast restart, instant checks
-✅ **Элегантность** - ui-check, animation-check, design validation
-✅ **Чистый код** - автоматические quality checks
-✅ **Дебаггинг** - smart log analysis, auto-fix
-✅ **Тестирование** - full coverage, integration tests
+**Формат skill файла:**
+```markdown
+---
+name: skill-name
+description: What it does + when to use
+---
+
+# Skill Title
+
+## What this skill does:
+[List of what it does]
+
+## Usage:
+Say: **"trigger phrase"**
+
+## Commands:
+```bash
+# Actual bash commands
+```
+
+[Rest of documentation]
+```
 
 ---
 
-## 📖 Дополнительно
+## 🚧 Roadmap (Следующие недели)
 
-Каждый SKILL файл содержит:
-- Детальное описание
-- Примеры использования
-- Команды bash
-- Best practices
-- Когда использовать
+### Priority 1 (На этой неделе):
+- [ ] `crypto-wallet-validator` - Валидация BTC/ETH/TRON addresses
+- [ ] `telegram-bot-automation` - Автоматизация bot handlers/scenes
+- [ ] `payment-processor` - End-to-end payment flow testing
 
-Просто откройте любой `.md` файл чтобы увидеть полную документацию!
+### Priority 2 (На следующей неделе):
+- [ ] `webhook-delivery-testing` - Webhook idempotency checks
+- [ ] `monitoring-alerting` - Real-time error monitoring
+- [ ] `backup-recovery-automation` - Automated daily backups
+
+### Future:
+- [ ] Hooks integration (auto-lint, auto-format)
+- [ ] Skill chaining (auto-compose complex workflows)
+- [ ] E-Commerce Operations Agent (master skill)
 
 ---
 
-**Created:** 2025-10-31
-**Version:** 1.0
-**Project:** Status Stock 4.0
+## 📖 Дополнительные ресурсы
+
+- **Исследование best practices:** `.claude/SKILLS_RESEARCH.md` (13,000+ words)
+- **Официальная документация:** [docs.claude.com/claude-code/skills](https://docs.claude.com/en/docs/claude-code/skills)
+- **Project structure:** `README.md` (корень проекта)
+- **Database schema:** `backend/database/schema.sql`
+- **Development cheatsheet:** `DEV_CHEATSHEET.md`
+
+---
+
+## ✨ Что изменилось в November 4, 2025
+
+### Полная переработка всех skills:
+
+**Было (до исправления):**
+- ❌ Неправильные пути (использовали `$PROJECT_DIR` без значения)
+- ❌ Не использовали существующие скрипты (`start.sh`, `stop.sh`)
+- ❌ Игнорировали ngrok (критично для проекта!)
+- ❌ Неправильные npm команды
+- ❌ Нет YAML frontmatter
+
+**Стало (после исправления):**
+- ✅ Реальные абсолютные пути
+- ✅ Используют профессиональные скрипты
+- ✅ ngrok management встроен во все dev skills
+- ✅ Правильные npm команды из package.json
+- ✅ YAML frontmatter везде
+- ✅ 2 новых skills (ngrok-management, production-deploy)
+
+**Результат:** Все skills **реально работают** на твоём проекте!
+
+---
+
+**Created:** 2025-10-31  
+**Updated:** 2025-11-04  
+**Version:** 2.0 (Complete Rewrite)  
+**Project:** Status Stock 4.0 - Telegram E-Commerce Platform

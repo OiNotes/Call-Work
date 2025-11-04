@@ -605,13 +605,56 @@ export const orderController = {
         ETH: 0.00042    // ~$2,400 per ETH
       };
 
-      const cryptoAmount = order.total_price * conversionRates[currency];
+      // Convert PostgreSQL DECIMAL (string) to JavaScript number
+      const totalPriceUsd = parseFloat(order.total_price);
+
+      // Validate conversion
+      if (isNaN(totalPriceUsd) || totalPriceUsd <= 0) {
+        logger.error('[GenerateInvoice] Invalid total_price', {
+          orderId: order.id,
+          total_price: order.total_price,
+          parsed: totalPriceUsd
+        });
+        return res.status(500).json({
+          success: false,
+          error: 'Invalid order total price'
+        });
+      }
+
+      // Validate conversion rate exists
+      const rate = conversionRates[currency];
+      if (!rate || rate <= 0) {
+        logger.error('[GenerateInvoice] Invalid conversion rate', {
+          currency,
+          rate
+        });
+        return res.status(500).json({
+          success: false,
+          error: 'Invalid conversion rate'
+        });
+      }
+
+      // Calculate with validated NUMBER
+      const cryptoAmount = totalPriceUsd * rate;
+
+      // Round to appropriate decimals and ensure NUMBER type in response
+      const decimals = currency === 'USDT' ? 2 : (currency === 'BTC' || currency === 'LTC' ? 8 : 6);
+      const roundedAmount = parseFloat(cryptoAmount.toFixed(decimals));
+
+      logger.info('[GenerateInvoice] Calculation successful', {
+        orderId: order.id,
+        totalPriceUsd,
+        currency,
+        rate,
+        cryptoAmount: roundedAmount,
+        type: typeof roundedAmount
+      });
 
       return res.status(200).json({
         success: true,
         data: {
           address,
-          cryptoAmount,
+          cryptoAmount: roundedAmount,  // Guaranteed NUMBER, not STRING
           currency: currency.toUpperCase(),
           shopName: shop.name
         }

@@ -2,6 +2,8 @@
  * Payment utilities for crypto transactions
  */
 
+import { safeToFixed } from './formatUtils.js';
+
 // Generate mock crypto wallet addresses
 export const generateWalletAddress = (crypto) => {
   const randomSuffix = () => Math.random().toString(36).substring(2, 15);
@@ -93,11 +95,29 @@ export const calculateCryptoAmount = (usdAmount, crypto) => {
 
   const amount = usdAmount * (rates[crypto] || 1);
 
-  // Format based on crypto type
-  if (crypto === 'BTC') return amount.toFixed(8);
-  if (crypto === 'USDT') return amount.toFixed(2);
-  if (crypto === 'LTC') return amount.toFixed(5);
-  if (crypto === 'ETH') return amount.toFixed(6);
+  // Format based on crypto type using safeToFixed
+  if (crypto === 'BTC') return safeToFixed(amount, 8);
+  if (crypto === 'USDT') return safeToFixed(amount, 2);
+  if (crypto === 'LTC') return safeToFixed(amount, 5);
+  if (crypto === 'ETH') return safeToFixed(amount, 6);
 
-  return amount.toFixed(8);
+  return safeToFixed(amount, 8);
+};
+
+/**
+ * Format crypto amount with proper decimal places
+ * Safe wrapper that handles strings, numbers, undefined, null, NaN
+ * @param {any} amount - The crypto amount to format (can be string or number)
+ * @param {string} crypto - The cryptocurrency type (BTC, ETH, USDT, LTC)
+ * @returns {string} Formatted amount as string
+ */
+export const formatCryptoAmount = (amount, crypto) => {
+  // Format based on crypto type using safeToFixed (handles type coercion)
+  if (crypto === 'BTC') return safeToFixed(amount, 8);
+  if (crypto === 'USDT') return safeToFixed(amount, 2);
+  if (crypto === 'LTC') return safeToFixed(amount, 5);
+  if (crypto === 'ETH') return safeToFixed(amount, 6);
+
+  // Default fallback
+  return safeToFixed(amount, 8);
 };

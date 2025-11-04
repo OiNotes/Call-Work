@@ -72,6 +72,7 @@ export default function WorkspaceModal({ isOpen, onClose }) {
   const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [telegramId, setTelegramId] = useState('');
 
   const handleClose = useCallback(() => {
@@ -81,6 +82,16 @@ export default function WorkspaceModal({ isOpen, onClose }) {
   }, [onClose]);
 
   useBackButton(isOpen ? handleClose : null);
+
+  // Disable vertical swipes when modal is open (Telegram Mini App)
+  useEffect(() => {
+    if (isOpen && window.Telegram?.WebApp) {
+      window.Telegram.WebApp.disableVerticalSwipes();
+      return () => {
+        window.Telegram.WebApp.enableVerticalSwipes();
+      };
+    }
+  }, [isOpen]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -136,28 +147,31 @@ export default function WorkspaceModal({ isOpen, onClose }) {
   }, [isOpen, loadData]);
 
   const handleAddWorker = async () => {
-    if (!myShop) {
-      await alert('Сначала создайте магазин');
-      return;
-    }
-
-    if (!isPro) {
-      await alert('Работники доступны только на тарифе PRO');
-      return;
-    }
-
-    const input = telegramId.trim();
-    if (!input) {
-      await alert('Введите Telegram ID или @username');
-      return;
-    }
-
-    // Determine if input is username or numeric ID
-    const payload = input.startsWith('@') || isNaN(input)
-      ? { username: input }
-      : { telegram_id: Number.parseInt(input, 10) };
+    if (saving) return;
+    setSaving(true);
 
     try {
+      if (!myShop) {
+        await alert('Сначала создайте магазин');
+        return;
+      }
+
+      if (!isPro) {
+        await alert('Работники доступны только на тарифе PRO');
+        return;
+      }
+
+      const input = telegramId.trim();
+      if (!input) {
+        await alert('Введите Telegram ID или @username');
+        return;
+      }
+
+      // Determine if input is username or numeric ID
+      const payload = input.startsWith('@') || isNaN(input)
+        ? { username: input }
+        : { telegram_id: Number.parseInt(input, 10) };
+
       await fetchApi(`/shops/${myShop.id}/workers`, {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -169,6 +183,8 @@ export default function WorkspaceModal({ isOpen, onClose }) {
       await loadData();
     } catch (error) {
       await alert(error.message || 'Ошибка добавления сотрудника');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -202,8 +218,10 @@ export default function WorkspaceModal({ isOpen, onClose }) {
               className="flex-1 overflow-y-auto"
               style={{
                 paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-                paddingBottom: 'calc(var(--tabbar-total) + 24px)',
-                WebkitOverflowScrolling: 'touch'
+                paddingBottom: 'calc(var(--tabbar-total) + 100px)',
+                maxHeight: '100vh',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch'
               }}
             >
               <div className="px-4 py-6">
@@ -251,7 +269,9 @@ export default function WorkspaceModal({ isOpen, onClose }) {
             className="flex-1 overflow-y-auto"
             style={{
               paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 100px)',
+              maxHeight: '100vh',
+              overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -336,36 +356,20 @@ export default function WorkspaceModal({ isOpen, onClose }) {
                   </p>
                 </div>
 
-                <div className="flex gap-2 pt-2">
-                  <motion.button
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setShowForm(false);
-                      setTelegramId('');
-                    }}
-                    className="flex-1 h-11 rounded-xl font-medium text-gray-300"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Отмена
-                  </motion.button>
-                  <motion.button
-                    onClick={handleAddWorker}
-                    disabled={!telegramId.trim()}
-                    className="flex-1 h-11 rounded-xl font-semibold text-white disabled:opacity-50"
-                    style={{
-                      background: telegramId.trim()
-                        ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
-                        : 'rgba(255, 255, 255, 0.1)'
-                    }}
-                    whileTap={telegramId.trim() ? { scale: 0.98 } : {}}
-                  >
-                    Добавить
-                  </motion.button>
-                </div>
+                {/* Inline Add Button */}
+                <motion.button
+                  onClick={handleAddWorker}
+                  disabled={!telegramId.trim() || saving}
+                  className="w-full py-3 rounded-xl font-semibold text-white disabled:opacity-50 mt-2"
+                  style={{
+                    background: telegramId.trim()
+                      ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+                      : 'rgba(255, 255, 255, 0.1)'
+                  }}
+                  whileTap={telegramId.trim() ? { scale: 0.98 } : {}}
+                >
+                  {saving ? 'Добавление...' : 'Добавить'}
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>

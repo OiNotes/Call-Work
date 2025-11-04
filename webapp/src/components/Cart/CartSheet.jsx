@@ -8,6 +8,7 @@ import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
 import CartItem from './CartItem';
 import { useBackButton } from '../../hooks/useBackButton';
+import { safeToFixed } from '../../utils/formatUtils';
 
 // Lazy load domMax for drag gestures
 const loadDomMax = () => import('framer-motion').then(mod => mod.domMax);
@@ -248,7 +249,7 @@ export default function CartSheet() {
                       className="text-2xl font-bold text-orange-primary tabular-nums"
                       style={{ letterSpacing: '-0.02em' }}
                     >
-                      ${total.toFixed(2)}
+                      ${safeToFixed(total)}
                     </span>
                   </div>
 

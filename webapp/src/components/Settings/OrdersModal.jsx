@@ -5,6 +5,7 @@ import { useShopApi } from '../../hooks/useApi';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useBackButton } from '../../hooks/useBackButton';
 import { useTranslation } from '../../i18n/useTranslation';
+import { safeToFixed } from '../../utils/formatUtils';
 
 // Компонент карточки заказа
 function OrderCard({ order }) {
@@ -86,7 +87,7 @@ function OrderCard({ order }) {
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">{t('orders.amount')}</span>
             <span className="text-white font-bold">
-              ${order.total_amount?.toFixed(2) || order.total?.toFixed(2) || '0.00'}
+              ${safeToFixed(order.total_amount || order.total)}
             </span>
           </div>
         </div>

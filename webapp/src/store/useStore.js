@@ -54,7 +54,7 @@ export const useStore = create(
       // Cart
       cart: [],
       addToCart: (product) => {
-        const currentCart = get().cart;
+        const { cart: currentCart, currentShop } = get();
         const existingItem = currentCart.find(item => item.id === product.id);
 
         if (existingItem) {
@@ -66,7 +66,9 @@ export const useStore = create(
             )
           });
         } else {
-          set({ cart: [...currentCart, { ...product, quantity: 1 }] });
+          // Сохраняем shopId вместе с товаром для восстановления currentShop при checkout
+          const shopId = currentShop?.id || product.shop_id;
+          set({ cart: [...currentCart, { ...product, quantity: 1, shopId }] });
         }
       },
 
@@ -144,11 +146,34 @@ export const useStore = create(
 
       // Payment Actions
       startCheckout: () => {
-        const cart = get().cart;
+        const { cart, shops } = get();
 
-        if (cart.length === 0) return;
+        if (cart.length === 0) {
+          console.warn('[startCheckout] Cannot checkout: cart is empty');
+          return;
+        }
+
+        // Получить shopId из первого товара в корзине
+        const shopId = cart[0]?.shopId;
+
+        if (!shopId) {
+          console.error('[startCheckout] Cannot checkout: shopId not found in cart item');
+          console.error('[startCheckout] Cart item:', cart[0]);
+          return;
+        }
+
+        // Найти shop в shops list или создать минимальный объект
+        let shop = shops?.find(s => s.id === shopId);
+
+        if (!shop) {
+          console.warn(`[startCheckout] Shop ${shopId} not found in shops list, creating minimal shop object`);
+          shop = { id: shopId, name: 'Shop' };
+        }
+
+        console.log('[startCheckout] Setting currentShop:', shop);
 
         set({
+          currentShop: shop,
           paymentStep: 'method'
         });
       },
@@ -172,7 +197,6 @@ export const useStore = create(
             deliveryAddress: null
           }, {
             headers: {
-              'Authorization': `Bearer ${user?.token || ''}`,
               'Content-Type': 'application/json'
             }
           });
@@ -216,7 +240,6 @@ export const useStore = create(
             { currency: crypto },
             {
               headers: {
-                'Authorization': `Bearer ${user?.token || ''}`,
                 'Content-Type': 'application/json'
               }
             }
@@ -224,9 +247,29 @@ export const useStore = create(
 
           const invoice = response.data.data;
 
+          // Force number coercion for defense-in-depth
+          const cryptoAmount = parseFloat(invoice.cryptoAmount);
+
+          // Validate result
+          if (!isFinite(cryptoAmount) || cryptoAmount <= 0) {
+            console.error('[selectCrypto] Invalid cryptoAmount from API', {
+              raw: invoice.cryptoAmount,
+              parsed: cryptoAmount,
+              type: typeof invoice.cryptoAmount
+            });
+            throw new Error(`Invalid cryptoAmount from API: ${invoice.cryptoAmount}`);
+          }
+
+          console.log('[selectCrypto] Invoice received', {
+            cryptoAmount,
+            type: typeof cryptoAmount,
+            address: invoice.address,
+            currency: crypto
+          });
+
           set({
             paymentWallet: invoice.address,
-            cryptoAmount: invoice.cryptoAmount,
+            cryptoAmount: cryptoAmount,  // Guaranteed NUMBER
             invoiceExpiresAt: invoice.expiresAt,
             paymentStep: 'details',
             isGeneratingInvoice: false
@@ -259,7 +302,6 @@ export const useStore = create(
             },
             {
               headers: {
-                'Authorization': `Bearer ${user?.token || ''}`,
                 'Content-Type': 'application/json'
               }
             }

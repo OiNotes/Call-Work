@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 // Базовый URL API (можно вынести в .env)
@@ -14,6 +14,10 @@ export function useApi() {
 
   // Базовый запрос
   const request = useCallback(async (method, endpoint, data = null, config = {}) => {
+    // Создаём AbortController для timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 секунд
+
     setLoading(true);
     setError(null);
 
@@ -30,12 +34,25 @@ export function useApi() {
           'X-Telegram-Init-Data': initData,
           ...config.headers,
         },
+        signal: controller.signal,  // Добавляем signal для timeout
         ...config,
       });
 
+      clearTimeout(timeoutId);  // Очищаем timeout при успехе
       setLoading(false);
       return { data: response.data, error: null };
     } catch (err) {
+      clearTimeout(timeoutId);  // Очищаем timeout при ошибке
+
+      // Обработка timeout ошибки
+      if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
+        const timeoutError = 'Request timeout - please check your connection';
+        setError(timeoutError);
+        setLoading(false);
+        return { data: null, error: timeoutError };
+      }
+
+      // Обычные ошибки
       const apiError = err.response?.data;
       const errorMessage = apiError?.error || apiError?.message || err.message || 'Произошла ошибка';
       setError(errorMessage);
@@ -110,9 +127,9 @@ export function useApi() {
     return result.data;
   }, [get, post, put, del, patch]);
 
-  return {
-    loading,
-    error,
+  // КРИТИЧНО: НЕ включать loading/error в dependencies!
+  // Иначе каждый запрос пересоздаёт объект → infinite loop
+  return useMemo(() => ({
     get,
     post,
     put,
@@ -120,7 +137,7 @@ export function useApi() {
     patch,
     fetchApi,
     clearError,
-  };
+  }), [get, post, put, del, patch, fetchApi, clearError]);
 }
 
 /**
@@ -164,7 +181,7 @@ export function useShopApi() {
     return await api.get('/orders/my');
   }, [api]);
 
-  return {
+  return useMemo(() => ({
     ...api,
     getShops,
     getShop,
@@ -173,7 +190,7 @@ export function useShopApi() {
     createOrder,
     confirmPayment,
     getMyOrders,
-  };
+  }), [api, getShops, getShop, getShopProducts, getSubscriptions, createOrder, confirmPayment, getMyOrders]);
 }
 
 /**
@@ -239,12 +256,12 @@ export function useFollowsApi() {
     }
   }, [api]);
 
-  return {
+  return useMemo(() => ({
     ...api,
     getDetail,
     getProducts,
     updateMarkup,
     switchMode,
     deleteFollow,
-  };
+  }), [api, getDetail, getProducts, updateMarkup, switchMode, deleteFollow]);
 }

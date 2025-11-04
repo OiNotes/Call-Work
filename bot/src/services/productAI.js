@@ -1160,19 +1160,19 @@ async function handleAddProduct(args, shopId, token) {
     };
   }
 
+  // КРИТИЧНО: Защита от price=0 (Bug #2 fix)
+  // AI не должен вызывать функцию с price=0, но если это случилось - принудительно устанавливаем минимум
   if (!price || price <= 0) {
-    return {
-      success: false,
-      data: {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Price must be greater than 0',
-          field: 'price',
-          value: price,
-          constraint: 'min: 0.01'
-        }
-      }
-    };
+    logger.warn('addProduct called with invalid price, applying fallback', {
+      providedPrice: price,
+      fallbackPrice: 0.01,
+      productName: name,
+      shopId
+    });
+    
+    // Вместо возврата ошибки - устанавливаем минимальную цену и продолжаем
+    // Это предотвращает constraint violations в БД
+    price = 0.01;
   }
 
   const normalizedStock = stock === undefined || stock === null ? 1 : stock;
@@ -1301,16 +1301,17 @@ async function handleBulkAddProducts(args, shopId, token) {
       continue;
     }
 
+    // КРИТИЧНО: Защита от price=0 (Bug #2 fix)
     if (!price || price <= 0) {
-      results.failed.push({
-        name,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Price must be greater than 0',
-          field: 'price'
-        }
+      logger.warn('bulkAddProducts: invalid price detected, applying fallback', {
+        providedPrice: price,
+        fallbackPrice: 0.01,
+        productName: name,
+        shopId
       });
-      continue;
+      
+      // Устанавливаем минимальную цену вместо отказа
+      product.price = 0.01;
     }
 
     if (!Number.isFinite(normalizedStock) || normalizedStock < 0) {

@@ -20,6 +20,8 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
 
 Правила:
 - Цена обязательна — если её нет, спроси «Сколько поставить?»
+- КРИТИЧНО: Цена ДОЛЖНА быть > 0, НИКОГДА не используй 0 или отрицательные значения
+- Минимальная цена: 0.01 USD
 - Сток по умолчанию = 1, если пользователь не уточнил (без вопросов).
 - Имя должно быть осмысленным (не короче 3 символов).`,
       parameters: {
@@ -31,7 +33,8 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
           },
           price: {
             type: 'number',
-            description: 'Product price in USD (must be positive). Examples: 999, 1299.99, 49.90. REQUIRED: If user didn\'t mention price, ask before calling function.'
+            description: 'Product price in USD (must be > 0). Examples: 999, 1299.99, 49.90, 0.01 (minimum). REQUIRED: If user didn\'t mention price, ask before calling function. NEVER use 0 or negative values.',
+            minimum: 0.01
           },
           stock: {
             type: 'number',
@@ -82,7 +85,8 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
                 },
                 price: {
                   type: 'number',
-                  description: 'Product price in USD (must be positive). Extract from user message: "$500", "1000$", "цена 999". Examples: 999, 49.90'
+                  description: 'Product price in USD (must be > 0). Extract from user message: "$500", "1000$", "цена 999". Examples: 999, 49.90, 0.01 (minimum). NEVER use 0 or negative values.',
+                  minimum: 0.01
                 },
                 stock: {
                   type: 'number',
@@ -182,6 +186,77 @@ Fuzzy match examples:
           }
         },
         required: ['query'],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: 'function',
+    strict: true,
+    function: {
+      name: 'bulkUpdateProducts',
+      description: `Update MULTIPLE SPECIFIC products (2-5 products) at once by their names.
+
+КОГДА ИСПОЛЬЗОВАТЬ:
+✅ User mentions 2+ specific product names → CALL THIS FUNCTION (not updateProduct multiple times)
+✅ "скидка 20% на iPhone и MacBook" → bulkUpdateProducts([{productName:"iPhone",updates:{discount_percentage:20}},{productName:"MacBook",updates:{discount_percentage:20}}])
+✅ "установи цену 100 для iPhone, iPad, MacBook" → bulkUpdateProducts with 3 products
+✅ "переименуй iPhone в iPhone 15 и MacBook в MacBook Pro" → bulkUpdateProducts with name updates
+❌ "скидка на всё" → use bulkUpdatePrices (all products)
+❌ "скидка на iPhone" → use updateProduct or applyDiscount (single product)
+
+IMPORTANT: When user lists multiple products with same operation (e.g., "скидка 20% на iPhone и MacBook"), DO NOT call updateProduct/applyDiscount multiple times. Instead, call bulkUpdateProducts ONCE with ALL products.
+
+Examples:
+- "скидка 20% на iPhone и MacBook" → bulkUpdateProducts({products:[{productName:"iPhone",updates:{discount_percentage:20}},{productName:"MacBook",updates:{discount_percentage:20}}]})
+- "установи остаток 5 для iPhone и iPad" → bulkUpdateProducts({products:[{productName:"iPhone",updates:{stock_quantity:5}},{productName:"iPad",updates:{stock_quantity:5}}]})
+- "цена 999 для iPhone, 1299 для MacBook" → bulkUpdateProducts({products:[{productName:"iPhone",updates:{price:999}},{productName:"MacBook",updates:{price:1299}}]})`,
+      parameters: {
+        type: 'object',
+        properties: {
+          products: {
+            type: 'array',
+            description: 'Array of products to update with their names and updates',
+            items: {
+              type: 'object',
+              properties: {
+                productName: {
+                  type: 'string',
+                  description: 'Exact name of the product to update'
+                },
+                updates: {
+                  type: 'object',
+                  description: 'Fields to update for this product',
+                  properties: {
+                    name: {
+                      type: 'string',
+                      description: 'New product name'
+                    },
+                    price: {
+                      type: 'number',
+                      description: 'New price in USD'
+                    },
+                    stock_quantity: {
+                      type: 'number',
+                      description: 'New stock quantity'
+                    },
+                    discount_percentage: {
+                      type: 'number',
+                      description: 'Discount percentage (0-100)',
+                      minimum: 0,
+                      maximum: 100
+                    }
+                  },
+                  additionalProperties: false
+                }
+              },
+              required: ['productName', 'updates'],
+              additionalProperties: false
+            },
+            minItems: 2
+          }
+        },
+        required: ['products'],
         additionalProperties: false
       }
     }

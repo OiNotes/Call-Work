@@ -697,6 +697,7 @@ async function getUserSubscriptions(userId) {
   try {
     const { rows } = await pool.query(
       `SELECT
+         sub.id,
          s.id as shop_id,
          s.name as shop_name,
          s.tier,
@@ -725,6 +726,42 @@ async function getUserSubscriptions(userId) {
   }
 }
 
+/**
+ * Get shop subscriptions for current user's shops (seller view)
+ * Returns payment subscriptions for shops owned by user
+ *
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of shop subscriptions
+ */
+async function getMyShopSubscriptions(userId) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         ss.id,
+         ss.shop_id,
+         s.name as shop_name,
+         ss.tier,
+         ss.amount,
+         ss.currency,
+         ss.period_start,
+         ss.period_end,
+         ss.status,
+         ss.created_at,
+         ss.verified_at
+       FROM shop_subscriptions ss
+       LEFT JOIN shops s ON ss.shop_id = s.id
+       WHERE ss.user_id = $1
+       ORDER BY ss.created_at DESC`,
+      [userId]
+    );
+
+    return rows;
+  } catch (error) {
+    logger.error('[Subscription] Error getting shop subscriptions:', error);
+    throw error;
+  }
+}
+
 export {
   processSubscriptionPayment,
   upgradeShopToPro,
@@ -736,6 +773,7 @@ export {
   calculateUpgradeCost,
   calculateUpgradeAmount,
   getUserSubscriptions,
+  getMyShopSubscriptions,
   activatePromoSubscription,
   SUBSCRIPTION_PRICES,
   GRACE_PERIOD_DAYS

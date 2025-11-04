@@ -34,6 +34,14 @@ router.post('/pending', subscriptionController.createPendingSubscription);
 router.get('/', subscriptionController.getUserSubscriptions);
 
 /**
+ * GET /api/subscriptions/my-shops
+ * Get shop subscriptions for current user's shops (seller view)
+ *
+ * Returns payment subscriptions (basic/pro tier) for shops owned by user
+ */
+router.get('/my-shops', subscriptionController.getMyShopSubscriptions);
+
+/**
  * POST /api/subscriptions/pay
  * Pay for monthly subscription (renewal or new)
  *

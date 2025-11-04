@@ -56,6 +56,7 @@ Bash("find . -name '*.js'")
 - `npm run dev`, `npm test` - запуск проекта/тестов
 - `psql -c "SELECT ..."` - read-only SQL запросы
 - Проверка логов (`tail -f`, `docker-compose logs`)
+- **Запуск скриптов:** `./start.sh`, `./stop.sh`
 
 #### 🔧 Инструкции для субагентов по MCP File System
 
@@ -86,7 +87,212 @@ Task({
 
 **Не нужно указывать конкретные названия** - достаточно сказать "используй MCP File System" и запретить обычные tools.
 
-### 3. Субагенты - проактивно использовать
+---
+
+## 3. Agent SKILLS - ПРИОРИТЕТ #1 для разработки
+
+**SKILLS = готовые автоматизированные рабочие процессы.** Используй их ВМЕСТО ручных команд!
+
+### 📍 Расположение и активация
+
+**Где:** `.claude/skills/` (14 skills)  
+**Как активировать:** Просто скажи триггерную фразу, Claude автоматически выполнит skill
+
+**Документация:** `.claude/skills/README.md` - полное описание всех skills
+
+### 🎯 Когда использовать Skills (ОБЯЗАТЕЛЬНО!)
+
+| Ситуация | НЕ делай так ❌ | Делай так ✅ |
+|----------|-----------------|--------------|
+| Запуск проекта | `cd backend && npm run dev` | `"quick start"` |
+| Проверка здоровья | `curl localhost:3000/health` | `"health check"` |
+| Анализ ошибок | `tail -f backend/logs/error.log` | `"analyze logs"` |
+| Исправление ошибок | Ручной дебаг | `"fix errors"` |
+| Перезапуск | `pkill node && npm run dev` | `"restart all"` |
+| Проверка портов | `lsof -ti:3000` | `"check ports"` |
+| Запуск тестов | `npm test` | `"run tests"` |
+| Проверка UI | Ручной просмотр файлов | `"check ui"` |
+| Миграции БД | `npm run db:migrate` | `"migrate db"` |
+| SQL запросы | `psql telegram_shop -c "..."` | `"query db"` |
+| Проверка ngrok | `curl localhost:4040/api/tunnels` | `"check ngrok"` |
+| Pre-deployment | Ручной чеклист | `"production check"` |
+
+### 📚 Полный список Skills (14 штук)
+
+#### ⚡ Development & Startup (3)
+
+**quick-start** - Запуск всего stack  
+Триггеры: `"quick start"`, `"start project"`, `"start everything"`  
+Что делает:
+- Останавливает существующие процессы
+- Запускает ngrok tunnel
+- Обновляет .env файлы с ngrok URL
+- Билдит webapp
+- Стартует Backend + Bot
+
+**restart-all** - Перезапуск всех сервисов  
+Триггеры: `"restart all"`, `"restart services"`, `"reboot"`  
+Что делает:
+- `./stop.sh` для остановки всего
+- Проверка что порты освободились
+- `./start.sh` для нового старта
+- Новый ngrok tunnel
+
+**health-check** - Проверка здоровья системы  
+Триггеры: `"health check"`, `"status"`, `"are we healthy"`  
+Что делает:
+- Backend API health endpoint
+- Bot process status
+- **ngrok tunnel status** (критично!)
+- PostgreSQL connection
+- Recent error logs analysis
+
+#### 🐛 Debug & Monitoring (3)
+
+**analyze-logs** - Анализ error логов  
+Триггеры: `"analyze logs"`, `"check errors"`, `"what's wrong"`  
+Что делает:
+- Backend: `backend/logs/error-YYYY-MM-DD.log`
+- Bot: `bot/logs/error.log`
+- ngrok: `logs/ngrok.log`
+- Категоризация + Top 5 ошибок
+
+**fix-errors** - Автоматическое исправление  
+Триггеры: `"fix errors"`, `"auto fix"`, `"repair"`  
+Исправляет:
+- Port conflicts (EADDRINUSE)
+- Database connection (ECONNREFUSED)
+- Missing dependencies
+- **ngrok tunnel expired**
+- Import/Export errors
+
+**check-ports** - Управление портами  
+Триггеры: `"check ports"`, `"port status"`, `"what's using my ports"`  
+Проверяет: 3000 (Backend), 5173 (WebApp), 5432 (PostgreSQL), 4040 (ngrok)
+
+#### 🧪 Testing (2)
+
+**run-tests** - Запуск всех тестов  
+Триггеры: `"run tests"`, `"test all"`, `"check coverage"`  
+Что делает:
+- Backend: `npm run test:coverage`
+- Bot: `npm run test:coverage`
+- Coverage summary report
+
+**test-integration** - Integration тесты бота  
+Триггеры: `"test bot"`, `"integration tests"`, `"test telegram"`  
+Что делает:
+- Проверяет Backend running
+- Автостарт Backend если нужно
+- Full user flow testing
+
+#### 🎨 Design & UI/UX (2)
+
+**ui-check** - Валидация UI дизайна  
+Триггеры: `"check ui"`, `"validate design"`, `"design review"`  
+Проверяет:
+- Glassmorphism (glass-card, glass-elevated)
+- Colors (#FF6B00, #181818)
+- Touch-friendly buttons (44px)
+- Typography
+
+**animation-check** - Проверка анимаций  
+Триггеры: `"check animations"`, `"animation review"`, `"performance check"`  
+Проверяет:
+- Framer Motion usage
+- Performance anti-patterns
+- GPU-accelerated properties
+- Spring animations
+
+#### 🗄️ Database (2)
+
+**db-migrate** - Безопасные миграции  
+Триггеры: `"migrate db"`, `"run migrations"`, `"update database"`  
+Что делает:
+- Auto backup before migration
+- Run migrations
+- Verify schema
+- Rollback on errors
+
+**db-query** - SQL запросы  
+Триггеры: `"query db"`, `"check users table"`, `"database stats"`  
+Что делает:
+- Common queries (users, shops, orders)
+- Table schemas
+- Export to CSV/JSON
+- Database statistics
+
+#### 🌐 ngrok Management (1) - КРИТИЧНО ДЛЯ ПРОЕКТА!
+
+**ngrok-management** - Управление ngrok tunnel  
+Триггеры: `"check ngrok"`, `"restart ngrok"`, `"ngrok status"`  
+Что делает:
+- Check ngrok status and URL
+- Restart expired tunnels
+- Update all .env files
+- Rebuild webapp with new URL
+
+**ВАЖНО:** Этот проект ТРЕБУЕТ ngrok для Telegram Mini App!
+
+#### 🚀 Deployment (1)
+
+**production-deploy** - Pre-deployment checklist  
+Триггеры: `"production check"`, `"deploy check"`, `"ready for prod"`  
+Проверяет:
+- All tests pass
+- UI/UX compliance
+- Animation performance
+- Error logs clean
+- Build succeeds
+- No hardcoded secrets
+
+### 🔄 Типичные рабочие сценарии
+
+**Утренний старт:**
+```
+1. "quick start"           # Запустить всё
+2. "health check"          # Проверить что работает
+```
+
+**Когда что-то сломалось:**
+```
+1. "analyze logs"          # Найти ошибки
+2. "fix errors"            # Автофикс
+3. "restart all"           # Перезапустить
+4. "health check"          # Проверить что починилось
+```
+
+**Перед коммитом:**
+```
+1. "run tests"             # Все тесты
+2. "check ui"              # Дизайн
+3. "check animations"      # Анимации
+```
+
+**После system sleep/wake:**
+```
+1. "check ngrok"           # ngrok tunnel expires!
+2. If expired: "restart ngrok"
+3. "health check"
+```
+
+**Перед deployment:**
+```
+1. "production check"      # Comprehensive checklist
+2. Fix any ❌ failures
+3. Deploy
+```
+
+### ⚠️ КРИТИЧНЫЕ правила для Skills
+
+1. **ВСЕГДА используй Skills вместо ручных команд** - они протестированы и знают все edge cases
+2. **ngrok критичен** - проверяй `"check ngrok"` после каждого wake from sleep
+3. **Skills auto-activate** - просто скажи триггерную фразу, Claude сам найдёт нужный skill
+4. **Полная документация** - `.claude/skills/README.md` содержит детали каждого skill
+
+---
+
+## 4. Субагенты - проактивно использовать
 
 **Когда использовать Task tool:**
 
@@ -99,6 +305,7 @@ Task({
 | `debug-master` | Debugging, ошибки, тесты, исправления багов |
 | `crypto-integration-specialist` | Blockchain API, payment verification, wallet validation |
 | `design-researcher` | UI/UX research, design trends, visual inspiration |
+| `internel` | Web search, API docs, library comparison, error solutions |
 
 **Примеры делегирования:**
 
@@ -123,61 +330,20 @@ Task({
   description: "Fix failing tests",
   prompt: "Fix 3 failing integration tests in bot/tests/integration/"
 })
+
+// Поиск информации в интернете
+Task({
+  subagent_type: "internel",
+  description: "Find solution for error",
+  prompt: "Find how to fix 'Telegram WebApp SDK initialization timeout' error"
+})
 ```
 
 **Важно:** Субагенты тоже используют MCP File System.
 
-### 4. Agent SKILLS - использовать проактивно
+---
 
-**SKILLS** - готовые сценарии для типовых задач. **Использовать вместо ручных команд!**
-
-**Доступно 12 SKILLS в `.claude/skills/`:**
-
-#### ⚡ Development (запуск/мониторинг)
-- `quick-start` - моментальный запуск всех сервисов + проверки
-- `health-check` - комплексная проверка Backend/Bot/WebApp/PostgreSQL
-- `restart-all` - безопасный перезапуск всех сервисов
-
-#### 🐛 Debug (поиск/исправление ошибок)
-- `analyze-logs` - умный анализ error логов с категоризацией
-- `fix-errors` - автофикс частых ошибок (порты, БД, зависимости)
-- `check-ports` - управление портами 3000, 5173, 5432
-
-#### 🧪 Testing (тестирование)
-- `run-tests` - запуск всех тестов Backend + Bot с coverage
-- `test-integration` - integration тесты бота
-
-#### 🎨 Design (UI/UX качество)
-- `ui-check` - валидация glassmorphism, цветов, spacing
-- `animation-check` - проверка Framer Motion на performance
-
-#### 🗄️ Database (работа с БД)
-- `db-migrate` - безопасные миграции с автобэкапом
-- `db-query` - быстрые SQL запросы + статистика
-
-**Как использовать:**
-```javascript
-// ❌ НЕПРАВИЛЬНО - ручные команды
-Bash("cd backend && npm start")
-Bash("lsof -ti:3000")
-Bash("tail -f backend/logs/error.log")
-
-// ✅ ПРАВИЛЬНО - через SKILLS
-Skill("quick-start")    // Запускает всё автоматически
-Skill("health-check")   // Проверяет всё автоматически
-Skill("analyze-logs")   // Анализирует логи автоматически
-```
-
-**Когда использовать SKILLS:**
-- 🚀 **Перед началом работы:** `health-check` или `quick-start`
-- 🐛 **При ошибках:** `analyze-logs` → `fix-errors`
-- 🧪 **Перед коммитом:** `run-tests` → `ui-check` → `animation-check`
-- 🗄️ **При работе с БД:** `db-migrate` или `db-query`
-- 🔄 **После изменений:** `restart-all` → `health-check`
-
-**Детали:** См. `.claude/skills/README.md` для полного описания каждого SKILL.
-
-### 5. После запуска - проверка логов
+## 5. После запуска - проверка логов
 
 **ВСЕГДА** после запуска любого сервиса проверять логи:
 
@@ -196,19 +362,22 @@ npm run dev  # Смотреть вывод
 - ✅ Нет `[error]` после старта
 - ✅ "Server started" / "Bot started"
 - ✅ "Database: Connected ✓"
+- ✅ "ngrok tunnel active" (если используется)
 - ❌ Если ошибки → остановить, исправить, перезапустить
 
 ---
 
 ## Safety Rules
 
-- ❌ НЕ редактировать `.env` файлы
+- ❌ НЕ редактировать `.env` файлы вручную (только через ./start.sh)
 - ❌ НЕ ломать API контракты (backward compatible)
 - ❌ НЕ создавать .md отчёты после задач
-- ❌ НЕ использовать Bash для файловых операций
+- ❌ НЕ использовать Bash для файловых операций (MCP FS!)
+- ❌ НЕ игнорировать Skills - используй их активно!
 - ✅ Минимальные diffs (точные строки)
 - ✅ MCP File System для всего
 - ✅ Task tool для делегирования
+- ✅ **Skills для типовых задач**
 - ✅ Проверка логов после запуска
 
 ---
@@ -220,6 +389,82 @@ npm run dev  # Смотреть вывод
 - Bot guide: `bot/README.md`
 - WebApp guide: `webapp/README.md`
 - Database schema: `backend/database/schema.sql`
-- **Agent SKILLS:** `.claude/skills/README.md` (12 готовых сценариев)
+- **Agent SKILLS:** `.claude/skills/README.md` (14 skills с полным описанием)
+- **Skills Research:** `.claude/SKILLS_RESEARCH.md` (best practices от community)
 - Субагенты: `.claude/agents/*.md`
 - Development cheatsheet: `DEV_CHEATSHEET.md`
+
+---
+
+## Критичные особенности проекта
+
+### ngrok - обязателен!
+
+Этот проект использует **Telegram Mini App**, который требует HTTPS. ngrok предоставляет:
+- HTTPS tunnel к localhost:3000
+- Public URL для Telegram
+- WebApp serving
+
+**Без ngrok:** Mini App button не работает!
+
+**Skills для ngrok:**
+- `"check ngrok"` - проверка статуса
+- `"restart ngrok"` - перезапуск tunnel (каждые 2 часа на free tier)
+- `"quick start"` - автоматически запускает ngrok
+
+### Структура логов
+
+**Backend:**
+- `backend/logs/error-YYYY-MM-DD.log` - ошибки (daily rotation)
+- `backend/logs/combined-YYYY-MM-DD.log` - все логи
+
+**Bot:**
+- `bot/logs/error.log` - ошибки (single file, может расти большим!)
+- `bot/logs/combined.log` - все логи
+
+**ngrok:**
+- `logs/ngrok.log` - ngrok tunnel logs
+- `logs/backend.log` - backend startup logs
+- `logs/bot.log` - bot startup logs
+
+### npm команды
+
+**Backend:**
+```bash
+npm run dev              # nodemon (для разработки)
+npm start                # production start
+npm test                 # tests
+npm run test:coverage    # tests + coverage
+npm run lint:check       # ESLint check
+```
+
+**Bot:**
+```bash
+npm start                # production start
+npm run dev              # nodemon
+npm test                 # all tests
+npm run test:coverage    # tests + coverage
+npm run test:unit        # unit tests only
+npm run test:integration # integration tests only
+```
+
+**WebApp:**
+```bash
+npm run dev              # Vite dev server
+npm run build            # production build
+```
+
+**Root:**
+```bash
+npm run dev              # Backend + WebApp
+npm run dev:all          # Backend + WebApp + Bot
+npm run install:all      # Install deps for all
+./start.sh               # Production start with ngrok
+./stop.sh                # Stop all services
+```
+
+---
+
+**Updated:** 2025-11-04  
+**Version:** 3.0 (Added Skills documentation)  
+**Skills Version:** 2.0 (14 skills, fully tested)

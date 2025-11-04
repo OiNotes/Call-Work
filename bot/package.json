@@ -15,6 +15,7 @@
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/e2e",
     "test:lint:bot": "node tools/lint-callbacks-ack.js && node tools/lint-webapp-links.js",
     "test:ci": "npm run test:lint:bot && npm test",
+    "test:bulk": "node tests/manual/test-bulk-operations.js",
     "lint": "eslint src/ tests/ --fix",
     "lint:check": "eslint src/ tests/",
     "test:all": "npm run lint:check && npm test"

@@ -3,7 +3,8 @@ import { useMemo, useState, lazy, Suspense } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
-import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
+import { CRYPTO_OPTIONS, formatCryptoAmount } from '../../utils/paymentUtils';
+import { safeToFixed } from '../../utils/formatUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -263,13 +264,13 @@ export default function PaymentDetailsModal() {
                     )}
                   </div>
                   <p className="text-gray-500 text-sm mb-1">
-                    ${currentOrder.total_price?.toFixed(2) || '0.00'} USD
+                    ${safeToFixed(currentOrder.total_price)} USD
                   </p>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"
                     style={{ letterSpacing: '-0.01em' }}
                   >
-                    {cryptoAmount} {selectedCrypto}
+                    {formatCryptoAmount(cryptoAmount, selectedCrypto)} {selectedCrypto}
                   </div>
                   <p className="text-gray-500 text-[10px] mt-2">
                     {copiedAmount ? 'Скопировано!' : 'Нажмите для копирования'}

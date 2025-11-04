@@ -2,7 +2,6 @@ import express from 'express';
 import { orderController } from '../controllers/orderController.js';
 import { orderValidation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
-import { optionalTelegramAuth } from '../middleware/telegramAuth.js';
 
 const router = express.Router();
 
@@ -14,7 +13,6 @@ const router = express.Router();
 router.post(
   '/',
   verifyToken,
-  optionalTelegramAuth,
   orderValidation.create,
   orderController.create
 );
@@ -24,7 +22,7 @@ router.post(
  * @desc    Get current user's orders (as buyer)
  * @access  Private (WebApp)
  */
-router.get('/', verifyToken, optionalTelegramAuth, (req, res, next) => {
+router.get('/', verifyToken, (req, res, next) => {
   // Default to buyer orders only when no explicit shop context provided
   if (!req.query.type && !req.query.shop_id) {
     req.query.type = 'buyer';
@@ -37,14 +35,14 @@ router.get('/', verifyToken, optionalTelegramAuth, (req, res, next) => {
  * @desc    Get current user's orders
  * @access  Private (WebApp)
  */
-router.get('/my', verifyToken, optionalTelegramAuth, orderController.getMyOrders);
+router.get('/my', verifyToken, orderController.getMyOrders);
 
 /**
  * @route   GET /api/orders/sales
  * @desc    Get current user's sales (as seller)
  * @access  Private (WebApp)
  */
-router.get('/sales', verifyToken, optionalTelegramAuth, (req, res, next) => {
+router.get('/sales', verifyToken, (req, res, next) => {
   req.query.type = 'seller';
   return orderController.getMyOrders(req, res, next);
 });
@@ -55,7 +53,7 @@ router.get('/sales', verifyToken, optionalTelegramAuth, (req, res, next) => {
  * @access  Private (WebApp)
  * @query   shop_id (required)
  */
-router.get('/active/count', verifyToken, optionalTelegramAuth, orderController.getActiveCount);
+router.get('/active/count', verifyToken, orderController.getActiveCount);
 
 /**
  * @route   GET /api/orders/analytics
@@ -63,7 +61,7 @@ router.get('/active/count', verifyToken, optionalTelegramAuth, orderController.g
  * @access  Private (WebApp)
  * @query   from (YYYY-MM-DD), to (YYYY-MM-DD)
  */
-router.get('/analytics', verifyToken, optionalTelegramAuth, orderController.getAnalytics);
+router.get('/analytics', verifyToken, orderController.getAnalytics);
 
 /**
  * @route   POST /api/orders/:id/invoice
@@ -73,7 +71,6 @@ router.get('/analytics', verifyToken, optionalTelegramAuth, orderController.getA
 router.post(
   '/:id/invoice',
   verifyToken,
-  optionalTelegramAuth,
   orderController.generateInvoice
 );
 
@@ -85,7 +82,6 @@ router.post(
 router.get(
   '/:id',
   verifyToken,
-  optionalTelegramAuth,
   orderValidation.getById,
   orderController.getById
 );
@@ -98,7 +94,6 @@ router.get(
 router.put(
   '/:id/status',
   verifyToken,
-  optionalTelegramAuth,
   orderValidation.updateStatus,
   orderController.updateStatus
 );
@@ -111,7 +106,6 @@ router.put(
 router.post(
   '/bulk-status',
   verifyToken,
-  optionalTelegramAuth,
   orderValidation.bulkUpdateStatus,
   orderController.bulkUpdateStatus
 );

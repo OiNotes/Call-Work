@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
-import { useShopApi, useFollowsApi } from '../hooks/useApi';
+import { useShopApi } from '../hooks/useApi';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
@@ -10,40 +10,74 @@ export default function Subscriptions() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { getSubscriptions } = useShopApi();
-  const { deleteFollow } = useFollowsApi();
+  const api = useShopApi();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  const loadSubscriptions = useCallback(async () => {
+  const loadSubscriptions = useCallback(async (isCancelled) => {
     try {
       setLoading(true);
       setError(null);
-      const { data, error: apiError } = await getSubscriptions();
+      console.log('[Subscriptions] Loading shop subscriptions...');
+
+      // Use new endpoint for shop payment subscriptions
+      const { data, error: apiError } = await api.get('/subscriptions/my-shops');
+
+      console.log('[Subscriptions] Response:', { data, apiError });
+
+      // Check if component unmounted during request
+      if (isCancelled()) {
+        console.log('[Subscriptions] Component unmounted, skipping state updates');
+        return;
+      }
 
       if (apiError) {
+        console.error('[Subscriptions] API error:', apiError);
         setError('Failed to load subscriptions');
-      } else {
-        const normalized = (data?.data || []).map((item) => ({
-          id: item.id,
-          sourceShopId: item.shop_id,
-          sourceShopName: item.shop_name,
-          subscribedAt: item.subscribed_at,
-          sourceShopLogo: item.source_shop_logo,
-          sourceProductsCount: item.source_products_count,
-        }));
-
-        setSubscriptions(normalized);
+        return; // Early exit, loading will be reset in finally
       }
+
+      // Normalize data for shop subscriptions (payment tier data)
+      const rawData = Array.isArray(data?.data) ? data.data :
+                     Array.isArray(data) ? data : [];
+
+      const normalized = rawData.map((item) => ({
+        id: item.id,
+        shopId: item.shop_id,
+        shopName: item.shop_name,
+        tier: item.tier,
+        amount: item.amount,
+        currency: item.currency,
+        periodStart: item.period_start,
+        periodEnd: item.period_end,
+        status: item.status,
+        createdAt: item.created_at,
+        verifiedAt: item.verified_at,
+      }));
+
+      setSubscriptions(normalized);
     } catch (err) {
-      setError('Failed to load subscriptions');
+      console.error('[Subscriptions] Exception:', err);
+      if (!isCancelled()) {
+        setError('Failed to load subscriptions');
+      }
     } finally {
-      setLoading(false);
+      console.log('[Subscriptions] Loading complete, setLoading(false)');
+      if (!isCancelled()) {
+        setLoading(false); // ALWAYS resets loading state
+      }
     }
-  }, [getSubscriptions]);
+  }, [api]);
 
   useEffect(() => {
-    loadSubscriptions();
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+
+    loadSubscriptions(isCancelled);
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadSubscriptions]);
 
   const handleShopClick = (subscription) => {
@@ -51,25 +85,15 @@ export default function Subscriptions() {
     const { setCurrentShop, setActiveTab } = useStore.getState();
 
     setCurrentShop({
-      id: subscription.sourceShopId,
-      name: subscription.sourceShopName,
-      logo: subscription.sourceShopLogo,
+      id: subscription.shopId,
+      name: subscription.shopName,
+      logo: null, // Shop subscriptions don't include logo
     });
 
     setActiveTab('catalog');
   };
 
-  const handleUnsubscribe = async (e, followId) => {
-    e.stopPropagation(); // Prevent shop click
-    triggerHaptic('medium');
-    try {
-      await deleteFollow(followId);
-      setSubscriptions((current) => current.filter(sub => sub.id !== followId));
-    } catch (err) {
-      console.error('Failed to unsubscribe:', err);
-      setError('Не удалось отписаться. Попробуйте позже.');
-    }
-  };
+
 
   const hasSubscriptions = useMemo(() => subscriptions.length > 0, [subscriptions]);
 
@@ -116,39 +140,33 @@ export default function Subscriptions() {
               <motion.div
                 key={subscription.id}
                 onClick={() => handleShopClick(subscription)}
-                className="glass-card rounded-2xl p-4 cursor-pointer"
+                className="glass-card rounded-2xl p-5 cursor-pointer"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.01, y: -2 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2 }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-white mb-1">
-                      {subscription.sourceShopName}
-                    </h3>
-                    <div className="flex items-center gap-3 text-sm">
-                      <p className="text-gray-400">
-                        {new Date(subscription.subscribedAt).toLocaleDateString('ru-RU')}
-                      </p>
-                      <div className="text-gray-400">
-                        <span className="font-medium text-white">
-                          {subscription.sourceProductsCount || 0}
-                        </span> товаров
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      onClick={(e) => handleUnsubscribe(e, subscription.id)}
-                      className="touch-target bg-dark-elevated hover:bg-dark-card text-gray-400 font-semibold px-3 py-2 rounded-xl transition-colors text-sm"
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {t('subscriptions.unsubscribe')}
-                    </motion.button>
-                    <svg className="w-6 h-6 text-orange-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                <div className="flex items-center justify-between">
+                  {/* Название магазина */}
+                  <h3 className="text-xl font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
+                    {subscription.shopName}
+                  </h3>
+                  
+                  {/* Стрелка навигации */}
+                  <svg 
+                    className="w-6 h-6 text-orange-primary flex-shrink-0" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2.5} 
+                      d="M9 5l7 7-7 7" 
+                    />
+                  </svg>
                 </div>
               </motion.div>
             ))}

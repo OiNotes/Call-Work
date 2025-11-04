@@ -333,6 +333,33 @@ async function getUserSubscriptions(req, res) {
 }
 
 /**
+ * Get shop subscriptions for current user's shops (seller view)
+ * GET /api/subscriptions/my-shops
+ */
+async function getMyShopSubscriptions(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const shopSubscriptions = await subscriptionService.getMyShopSubscriptions(userId);
+
+    res.json({
+      data: shopSubscriptions,
+      count: shopSubscriptions.length
+    });
+  } catch (error) {
+    logger.error('[SubscriptionController] Error getting shop subscriptions:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
+
+    res.status(500).json({
+      error: 'Failed to fetch shop subscriptions'
+    });
+  }
+}
+
+/**
  * Generate payment invoice for subscription
  * POST /api/subscriptions/:id/payment/generate
  * 
@@ -645,6 +672,7 @@ export {
   getHistory,
   getPricing,
   getUserSubscriptions,
+  getMyShopSubscriptions,
   generatePaymentInvoice,
   getPaymentStatus,
   createPendingSubscription

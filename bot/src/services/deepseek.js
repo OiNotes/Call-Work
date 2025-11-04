@@ -32,24 +32,57 @@ class DeepSeekClient {
 
   /**
    * Call DeepSeek API with function calling (tool use)
+   * 
+   * Supports two call styles:
+   * 1. Positional arguments (legacy): chat(systemPrompt, userMessage, tools, history, maxRetries)
+   * 2. Options object (new): chat({ system, messages, tools, temperature, stream, maxRetries })
    *
-   * @param {string} systemPrompt - System prompt with context
-   * @param {string} userMessage - User command
-   * @param {Array} tools - Available tools/functions
-   * @param {Array} conversationHistory - Previous messages for context
-   * @param {number} maxRetries - Max retry attempts
+   * @param {string|Object} systemPromptOrOptions - System prompt OR options object
+   * @param {string} userMessage - User command (if using positional args)
+   * @param {Array} tools - Available tools/functions (if using positional args)
+   * @param {Array} conversationHistory - Previous messages (if using positional args)
+   * @param {number} maxRetries - Max retry attempts (if using positional args)
    * @returns {Object} API response with tool calls
    */
-  async chat(systemPrompt, userMessage, tools = [], conversationHistory = [], maxRetries = 3) {
+  async chat(systemPromptOrOptions, userMessage, tools = [], conversationHistory = [], maxRetries = 3) {
     if (!this.isAvailable()) {
       throw new Error('DeepSeek API not configured');
     }
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory,
-      { role: 'user', content: userMessage }
-    ];
+    // Detect call style
+    let systemPrompt;
+    let messages;
+    let apiTools;
+    let temperature;
+    let retries;
+
+    if (typeof systemPromptOrOptions === 'object' && systemPromptOrOptions !== null && !Array.isArray(systemPromptOrOptions)) {
+      // New style: options object
+      const options = systemPromptOrOptions;
+      systemPrompt = options.system;
+      messages = options.messages || [];
+      apiTools = options.tools || [];
+      temperature = options.temperature;
+      retries = options.maxRetries || 3;
+
+      // If system prompt provided, ensure it's at the start of messages
+      if (systemPrompt && !messages.some(m => m.role === 'system')) {
+        messages = [{ role: 'system', content: systemPrompt }, ...messages];
+      }
+    } else {
+      // Legacy style: positional arguments
+      systemPrompt = systemPromptOrOptions;
+      apiTools = tools;
+      retries = maxRetries;
+      // Auto-detect temperature based on tools (backward compatibility)
+      temperature = undefined;
+
+      messages = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory,
+        { role: 'user', content: userMessage }
+      ];
+    }
 
     // Debug logging - see what AI actually receives
     logger.debug('deepseek_api_messages', {
@@ -58,16 +91,21 @@ class DeepSeekClient {
       messages: JSON.stringify(messages, null, 2)
     });
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const startTime = Date.now();
+
+        // Determine temperature: explicit > auto-detect based on tools > default
+        const finalTemperature = temperature !== undefined 
+          ? temperature 
+          : (apiTools.length > 0 ? 0.2 : 0.7);
 
         const response = await this.client.chat.completions.create({
           model: 'deepseek-chat',
           messages,
-          tools: tools.length > 0 ? tools : undefined,
-          tool_choice: tools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
-          temperature: tools.length > 0 ? 0.2 : 0.7,  // Низкая temp для function calling, нормальная для чата
+          tools: apiTools.length > 0 ? apiTools : undefined,
+          tool_choice: apiTools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
+          temperature: finalTemperature,  // Support explicit temperature override
           max_tokens: 500
         });
 

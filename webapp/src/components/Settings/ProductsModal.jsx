@@ -82,36 +82,7 @@ function ProductCard({ product, onEdit, onDelete }) {
 }
 
 // Product Form Component
-function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
-  const { triggerHaptic } = useTelegram();
-  const [formData, setFormData] = useState({
-    name: product?.name || '',
-    description: product?.description || '',
-    price: product?.price || '',
-    stock: product?.stock ?? product?.stock_quantity ?? '',
-    is_available: product?.is_available ?? true
-  });
-
-  const isEdit = !!product;
-
-  const handleSubmit = () => {
-    if (!formData.name || !formData.price) {
-      return;
-    }
-    triggerHaptic('success');
-    const price = Number(formData.price);
-    const stockValue = formData.stock === '' || formData.stock === null || formData.stock === undefined
-      ? undefined
-      : Number(formData.stock);
-
-    onSubmit({
-      ...formData,
-      price: Number.isFinite(price) ? price : formData.price,
-      stock: stockValue,
-      stockQuantity: stockValue,
-    });
-  };
-
+function ProductForm({ product, formData, setFormData, onSubmit, saving, editingProduct }) {
   return (
     <motion.div
       className="glass-card rounded-2xl p-4 space-y-3"
@@ -160,36 +131,20 @@ function ProductForm({ product, onSubmit, onCancel, limitStatus }) {
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="flex gap-2 pt-2">
-        <motion.button
-          onClick={() => {
-            triggerHaptic('light');
-            onCancel();
-          }}
-          className="flex-1 h-11 rounded-xl font-medium text-gray-300"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Отмена
-        </motion.button>
-        <motion.button
-          onClick={handleSubmit}
-          disabled={!formData.name || !formData.price}
-          className="flex-1 h-11 rounded-xl font-semibold text-white disabled:opacity-50"
-          style={{
-            background: formData.name && formData.price
-              ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
-              : 'rgba(255, 255, 255, 0.1)'
-          }}
-          whileTap={formData.name && formData.price ? { scale: 0.98 } : {}}
-        >
-          {isEdit ? 'Сохранить' : 'Создать'}
-        </motion.button>
-      </div>
+      {/* Inline Save Button */}
+      <motion.button
+        onClick={onSubmit}
+        disabled={!formData.name || !formData.price || saving}
+        className="w-full py-3 rounded-xl font-semibold text-white disabled:opacity-50 mt-2"
+        style={{
+          background: formData.name && formData.price
+            ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+            : 'rgba(255, 255, 255, 0.1)'
+        }}
+        whileTap={formData.name && formData.price ? { scale: 0.98 } : {}}
+      >
+        {saving ? 'Сохранение...' : (editingProduct ? 'Сохранить' : 'Создать')}
+      </motion.button>
     </motion.div>
   );
 }
@@ -219,6 +174,14 @@ export default function ProductsModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock: '',
+    is_available: true
+  });
 
   const mapProduct = useCallback((product) => {
     const stock = product.stock_quantity ?? product.stock ?? 0;
@@ -245,6 +208,16 @@ export default function ProductsModal({ isOpen, onClose }) {
   }, [onClose]);
 
   useBackButton(isOpen ? (showAIChat ? handleCloseAIChat : handleClose) : null);
+
+  // Disable vertical swipes when modal is open (Telegram Mini App)
+  useEffect(() => {
+    if (isOpen && window.Telegram?.WebApp) {
+      window.Telegram.WebApp.disableVerticalSwipes();
+      return () => {
+        window.Telegram.WebApp.enableVerticalSwipes();
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (showAIChat && aiHistory.length === 0) {
@@ -337,46 +310,54 @@ export default function ProductsModal({ isOpen, onClose }) {
     }
   }, [isOpen, loadData]);
 
-  const handleAddProduct = async (formData) => {
+  const handleSubmitProduct = async () => {
+    if (saving) return;
+    setSaving(true);
+
     try {
-      if (!myShop?.id) {
-        await alert('Не удалось определить магазин');
+      if (!formData.name || !formData.price) {
         return;
       }
 
-      await fetchApi('/products', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...formData,
-          stockQuantity: formData.stock ?? formData.stockQuantity,
-          shopId: myShop.id
-        })
-      });
+      const price = Number(formData.price);
+      const stockValue = formData.stock === '' || formData.stock === null || formData.stock === undefined
+        ? undefined
+        : Number(formData.stock);
 
-      triggerHaptic('success');
-      await loadData();
-      setShowForm(false);
-    } catch (error) {
-      await alert(error.message || 'Ошибка создания товара');
-    }
-  };
+      const payload = {
+        ...formData,
+        price: Number.isFinite(price) ? price : formData.price,
+        stock: stockValue,
+        stockQuantity: stockValue,
+      };
 
-  const handleEditProduct = async (formData) => {
-    try {
-      await fetchApi(`/products/${editingProduct.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...formData,
-          stockQuantity: formData.stock ?? formData.stockQuantity,
-        })
-      });
+      if (editingProduct) {
+        // Edit mode
+        await fetchApi(`/products/${editingProduct.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Create mode
+        if (!myShop?.id) {
+          await alert('Не удалось определить магазин');
+          return;
+        }
+        await fetchApi('/products', {
+          method: 'POST',
+          body: JSON.stringify({ ...payload, shopId: myShop.id })
+        });
+      }
 
       triggerHaptic('success');
       await loadData();
       setShowForm(false);
       setEditingProduct(null);
+      setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
     } catch (error) {
-      await alert(error.message || 'Ошибка обновления товара');
+      await alert(error.message || 'Ошибка сохранения товара');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -410,8 +391,10 @@ export default function ProductsModal({ isOpen, onClose }) {
               className="flex-1 overflow-y-auto"
               style={{
                 paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-                paddingBottom: 'calc(var(--tabbar-total) + 24px)',
-                WebkitOverflowScrolling: 'touch'
+                paddingBottom: 'calc(var(--tabbar-total) + 100px)',
+                maxHeight: '100vh',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch'
               }}
             >
               <div className="px-4 py-6">
@@ -476,7 +459,9 @@ export default function ProductsModal({ isOpen, onClose }) {
             className="flex-1 overflow-y-auto"
             style={{
               paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 100px)',
+              maxHeight: '100vh',
+              overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -489,6 +474,7 @@ export default function ProductsModal({ isOpen, onClose }) {
                 triggerHaptic('light');
                 setShowForm(true);
                 setEditingProduct(null);
+                setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
               } else {
                 alert(`Лимит достигнут! Доступно: ${limitStatus?.tier}`);
               }
@@ -512,12 +498,11 @@ export default function ProductsModal({ isOpen, onClose }) {
           {showForm && (
             <ProductForm
               product={editingProduct}
-              onSubmit={editingProduct ? handleEditProduct : handleAddProduct}
-              onCancel={() => {
-                setShowForm(false);
-                setEditingProduct(null);
-              }}
-              limitStatus={limitStatus}
+              formData={formData}
+              setFormData={setFormData}
+              onSubmit={handleSubmitProduct}
+              saving={saving}
+              editingProduct={editingProduct}
             />
           )}
         </AnimatePresence>
@@ -538,7 +523,15 @@ export default function ProductsModal({ isOpen, onClose }) {
                   key={product.id}
                   product={product}
                   onEdit={(p) => {
-                    setEditingProduct(mapProduct(p));
+                    const mapped = mapProduct(p);
+                    setEditingProduct(mapped);
+                    setFormData({
+                      name: mapped.name || '',
+                      description: mapped.description || '',
+                      price: mapped.price || '',
+                      stock: mapped.stock ?? mapped.stock_quantity ?? '',
+                      is_available: mapped.is_available ?? true
+                    });
                     setShowForm(true);
                   }}
                   onDelete={handleDeleteProduct}

@@ -194,6 +194,16 @@ export default function WalletsModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
+  // Disable vertical swipes when modal is open (Telegram Mini App)
+  useEffect(() => {
+    if (isOpen && window.Telegram?.WebApp) {
+      window.Telegram.WebApp.disableVerticalSwipes();
+      return () => {
+        window.Telegram.WebApp.enableVerticalSwipes();
+      };
+    }
+  }, [isOpen]);
+
   const walletList = useMemo(() => {
     return orderedWalletTypes
       .map((type) => {
@@ -239,10 +249,15 @@ export default function WalletsModal({ isOpen, onClose }) {
   }, [alert, put, shop, syncWalletState, t, triggerHaptic]);
 
   const handleSaveWallets = useCallback(async () => {
-    if (!shop) {
-      await alert(t('wallet.shopRequired'));
-      return;
-    }
+    // Prevent double-click
+    if (saving) return;
+    setSaving(true);
+    
+    try {
+      if (!shop) {
+        await alert(t('wallet.shopRequired'));
+        return;
+      }
 
     if (!hasValidAddress) {
       await alert(t('wallet.invalidAll'));
@@ -280,8 +295,13 @@ export default function WalletsModal({ isOpen, onClose }) {
     triggerHaptic('success');
     syncWalletState(response);
     resetForm();
-    setSaving(false);
-  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress]);
+    } catch (err) {
+      console.error('[WalletsModal] Error saving wallets:', err);
+      await alert(t('wallet.saveError'));
+    } finally {
+      setSaving(false);
+    }
+  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress, saving]);
 
   return (
     <AnimatePresence>
@@ -298,7 +318,9 @@ export default function WalletsModal({ isOpen, onClose }) {
             className="flex-1 overflow-y-auto"
             style={{
               paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-              paddingBottom: 'calc(var(--tabbar-total) + 24px)',
+              paddingBottom: 'calc(var(--tabbar-total) + 20px)',
+              maxHeight: '100vh',
+              overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch'
             }}
           >
@@ -368,6 +390,27 @@ export default function WalletsModal({ isOpen, onClose }) {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* Inline Add Wallet Button */}
+                  {!showForm && (
+                    <motion.button
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setShowForm(true);
+                      }}
+                      className="w-full h-14 rounded-2xl font-semibold text-white mt-2"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
+                        boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={saving}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      + {t('wallet.add')}
+                    </motion.button>
+                  )}
 
                   <AnimatePresence>
                     {showForm && (
@@ -441,22 +484,21 @@ export default function WalletsModal({ isOpen, onClose }) {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3 pt-2">
-                          <button
-                            onClick={handleSaveWallets}
-                            className="flex-1 h-12 rounded-xl bg-orange-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-                            disabled={saving || !hasValidAddress}
-                          >
-                            {saving ? t('common.loading') : t('common.save')}
-                          </button>
-                          <button
-                            onClick={resetForm}
-                            className="w-32 h-12 rounded-xl border border-white/10 text-white/70"
-                            disabled={saving}
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        </div>
+                        {/* Inline Save Button */}
+                        <motion.button
+                          className="w-full py-3 rounded-xl font-medium transition-all disabled:opacity-50 mt-2"
+                          style={{
+                            background: hasValidAddress
+                              ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+                              : 'rgba(255, 255, 255, 0.1)',
+                            color: 'white'
+                          }}
+                          onClick={handleSaveWallets}
+                          disabled={saving || !hasValidAddress}
+                          whileTap={hasValidAddress ? { scale: 0.98 } : {}}
+                        >
+                          {saving ? t('common.loading') : t('common.save')}
+                        </motion.button>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -464,33 +506,6 @@ export default function WalletsModal({ isOpen, onClose }) {
               )}
             </div>
           </div>
-
-          {/* Fixed Add Wallet Button */}
-          {!showForm && (
-            <div
-              className="fixed bottom-0 left-0 right-0 p-4 bg-dark-bg/95 backdrop-blur-sm border-t border-white/5"
-              style={{
-                paddingBottom: 'calc(var(--tabbar-total) + 16px)',
-                zIndex: 10
-              }}
-            >
-              <motion.button
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowForm(true);
-                }}
-                className="w-full h-14 rounded-2xl font-semibold text-white"
-                style={{
-                  background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
-                  boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
-                }}
-                whileTap={{ scale: 0.98 }}
-                disabled={saving}
-              >
-                + {t('wallet.add')}
-              </motion.button>
-            </div>
-          )}
         </motion.div>
       )}
     </AnimatePresence>

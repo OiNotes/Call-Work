@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
+    sourcemap: true,  // Enable source maps for debugging minified code
     minify: 'terser',
     terserOptions: {
       compress: {

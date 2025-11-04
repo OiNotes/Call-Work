@@ -1,115 +1,122 @@
-# SKILLS Quick Reference
+# Skills Quick Reference
 
-**Быстрая шпаргалка по Agent SKILLS для моделей и субагентов**
+> Шпаргалка по всем 14 skills для Status Stock 4.0
 
----
+## 🚀 Быстрый старт
 
-## 🚀 Вместо ручных команд → используй SKILLS!
+Просто скажи триггерную фразу → Claude автоматически выполнит skill
 
-### ❌ Старый способ (НЕ ДЕЛАТЬ):
-```bash
-Bash("cd backend && npm start")
-Bash("lsof -ti:3000 | xargs kill -9")
-Bash("tail -100 backend/logs/error.log | grep error")
-Bash("npm test")
 ```
-
-### ✅ Новый способ (ПРАВИЛЬНО):
-```bash
-Skill("quick-start")    # Запускает все сервисы
-Skill("check-ports")    # Проверяет и убивает процессы
-Skill("analyze-logs")   # Анализирует логи
-Skill("run-tests")      # Запускает тесты
+"quick start"       → Запустить всё (Backend + Bot + ngrok)
+"health check"      → Проверить здоровье системы
+"analyze logs"      → Найти ошибки в логах
+"fix errors"        → Автоматически исправить проблемы
+"run tests"         → Запустить все тесты
 ```
 
 ---
 
-## 📋 Все SKILLS (12 штук)
+## 📋 Все Skills (14 штук)
 
-### ⚡ Development
-| SKILL | Что делает | Когда использовать |
-|-------|------------|-------------------|
-| `quick-start` | Запускает все сервисы с проверками | Утренний старт, первый запуск |
-| `health-check` | Проверяет здоровье всей системы | Перед работой, после deploy |
-| `restart-all` | Безопасный перезапуск | После изменений кода |
+### ⚡ Development & Startup
 
-### 🐛 Debug
-| SKILL | Что делает | Когда использовать |
-|-------|------------|-------------------|
-| `analyze-logs` | Анализирует error логи | Когда что-то сломалось |
-| `fix-errors` | Автоматически исправляет ошибки | Port conflicts, DB issues |
-| `check-ports` | Проверяет порты 3000/5173/5432 | EADDRINUSE errors |
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **quick-start** | `"quick start"`, `"start project"` | Запускает Backend + Bot + ngrok, обновляет .env |
+| **restart-all** | `"restart all"`, `"reboot"` | ./stop.sh → ./start.sh → новый ngrok |
+| **health-check** | `"health check"`, `"status"` | Проверяет Backend, Bot, ngrok, PostgreSQL, логи |
+
+### 🐛 Debug & Monitoring
+
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **analyze-logs** | `"analyze logs"`, `"what's wrong"` | Анализирует backend/bot/ngrok логи, Top 5 ошибок |
+| **fix-errors** | `"fix errors"`, `"auto fix"` | Исправляет порты, БД, dependencies, ngrok |
+| **check-ports** | `"check ports"`, `"port status"` | Проверяет 3000, 5173, 5432, 4040 |
 
 ### 🧪 Testing
-| SKILL | Что делает | Когда использовать |
-|-------|------------|-------------------|
-| `run-tests` | Запускает все тесты + coverage | Перед коммитом |
-| `test-integration` | Integration тесты бота | После изменений в bot |
 
-### 🎨 Design
-| SKILL | Что делает | Когда использовать |
-|-------|------------|-------------------|
-| `ui-check` | Валидирует glassmorphism дизайн | После UI изменений |
-| `animation-check` | Проверяет Framer Motion анимации | Performance review |
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **run-tests** | `"run tests"`, `"test all"` | Backend + Bot тесты с coverage |
+| **test-integration** | `"test bot"`, `"integration tests"` | Bot integration тесты, автостарт Backend |
+
+### 🎨 Design & UI/UX
+
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **ui-check** | `"check ui"`, `"validate design"` | Glassmorphism, цвета, кнопки 44px, typography |
+| **animation-check** | `"check animations"`, `"performance check"` | Framer Motion, GPU acceleration, anti-patterns |
 
 ### 🗄️ Database
-| SKILL | Что делает | Когда использовать |
-|-------|------------|-------------------|
-| `db-migrate` | Безопасные миграции с бэкапом | Изменения schema |
-| `db-query` | SQL запросы + статистика | Проверка данных |
+
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **db-migrate** | `"migrate db"`, `"run migrations"` | Backup → migrations → verify → rollback on error |
+| **db-query** | `"query db"`, `"database stats"` | SQL queries, table schemas, export CSV/JSON |
+
+### 🌐 ngrok (КРИТИЧНО!)
+
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **ngrok-management** | `"check ngrok"`, `"restart ngrok"` | Проверка/restart tunnel, обновляет .env, билдит webapp |
+
+### 🚀 Deployment
+
+| Skill | Триггеры | Что делает |
+|-------|----------|------------|
+| **production-deploy** | `"production check"`, `"deploy check"` | Tests, UI, animations, logs, build, secrets check |
 
 ---
 
-## 🎯 Типичные сценарии
+## 🔄 Типичные сценарии
 
-### Утренний старт:
+### Утренний старт
 ```
-1. Skill("health-check")    # Проверить статус
-2. Skill("quick-start")      # Запустить если что-то down
-3. Skill("analyze-logs")     # Проверить нет ли ошибок
+"quick start" → "health check"
 ```
 
-### Что-то сломалось:
+### Что-то сломалось
 ```
-1. Skill("analyze-logs")     # Найти ошибку
-2. Skill("fix-errors")       # Попробовать автофикс
-3. Skill("restart-all")      # Перезапустить
-4. Skill("health-check")     # Проверить что всё работает
+"analyze logs" → "fix errors" → "restart all" → "health check"
 ```
 
-### Перед коммитом:
+### Перед коммитом
 ```
-1. Skill("run-tests")        # Все тесты
-2. Skill("ui-check")         # Дизайн проверка
-3. Skill("animation-check")  # Анимации проверка
+"run tests" → "check ui" → "check animations"
 ```
 
-### Работа с БД:
+### После sleep/wake (ngrok expires!)
 ```
-1. Skill("db-migrate")       # Запустить миграции
-2. Skill("db-query")         # Проверить данные
+"check ngrok" → If expired: "restart ngrok"
+```
+
+### Перед deployment
+```
+"production check" → Fix failures → Deploy
 ```
 
 ---
 
-## 💡 Для субагентов
+## 💡 Pro Tips
 
-**Каждый субагент должен использовать SKILLS где применимо:**
+**ВСЕГДА используй Skills вместо:**
+- ❌ `cd backend && npm run dev` → ✅ `"quick start"`
+- ❌ `tail -f backend/logs/error.log` → ✅ `"analyze logs"`
+- ❌ `lsof -ti:3000` → ✅ `"check ports"`
+- ❌ `npm test` → ✅ `"run tests"`
+- ❌ `psql telegram_shop -c "..."` → ✅ `"query db"`
 
-- **telegram-bot-expert:** `test-integration` после изменений
-- **backend-architect:** `health-check` после API изменений
-- **database-designer:** `db-migrate` после schema изменений
-- **frontend-developer:** `ui-check`, `animation-check` после UI
-- **debug-master:** `analyze-logs`, `fix-errors` для дебаггинга
+**ngrok критичен:**
+- Проверяй после каждого wake from sleep
+- Tunnel expires каждые 2 часа (free tier)
+- Без ngrok Mini App не работает!
+
+**Полная документация:**
+- `.claude/skills/README.md` - детали каждого skill
+- `CLAUDE.md` - основные правила работы
+- `.claude/SKILLS_RESEARCH.md` - best practices
 
 ---
 
-## 📖 Детали
-
-Полное описание каждого SKILL: `.claude/skills/README.md`
-
-Исходные файлы: `.claude/skills/*.md`
-
----
-
-**Помни:** SKILLS экономят время и уменьшают ошибки! 🚀
+**Quick Ref v1.0** | **14 Skills** | **Updated: 2025-11-04**

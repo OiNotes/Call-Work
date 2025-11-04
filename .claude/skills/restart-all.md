@@ -1,14 +1,18 @@
+---
+name: restart-all
+description: Safely restart Backend, Bot, WebApp, ngrok using stop.sh and start.sh scripts. Use after code changes or when services hang.
+---
+
 # Restart All Skill
 
-Safely restart Backend, WebApp, and Bot with graceful shutdown.
+Safely restart all services using the professional stop.sh and start.sh scripts.
 
 ## What this skill does:
 
-1. Gracefully stops all running services
-2. Waits for clean shutdown
-3. Clears port locks
-4. Restarts all services
-5. Monitors startup logs
+1. Uses `./stop.sh` to gracefully stop all services
+2. Waits 3 seconds for clean shutdown
+3. Verifies all processes stopped
+4. Uses `./start.sh` to restart everything with fresh ngrok tunnel
 
 ## Usage:
 
@@ -19,52 +23,62 @@ Say: **"restart all"** or **"restart everything"** or **"reboot"** or **"restart
 ```bash
 PROJECT_DIR="/Users/sile/Documents/Status Stock 4.0"
 
-echo "🔄 Stopping services gracefully..."
+echo "🔄 Restarting all services..."
 
-# Backend (port 3000)
-if lsof -ti:3000 >/dev/null 2>&1; then
-  echo "  ⏹️ Stopping Backend..."
-  lsof -ti:3000 | xargs kill -15
-fi
-
-# WebApp (port 5173)
-if lsof -ti:5173 >/dev/null 2>&1; then
-  echo "  ⏹️ Stopping WebApp..."
-  lsof -ti:5173 | xargs kill -15
-fi
-
-# Bot
-if ps aux | grep "node.*bot.js" | grep -v grep >/dev/null; then
-  echo "  ⏹️ Stopping Bot..."
-  pkill -f "node.*bot.js"
-fi
+# Stop all services
+cd "$PROJECT_DIR"
+./stop.sh
 
 # Wait for clean shutdown
-echo "⏳ Waiting for clean shutdown..."
+echo "⏳ Waiting 3 seconds for clean shutdown..."
 sleep 3
 
-# Verify all stopped
-echo "✓ Verifying shutdown..."
-lsof -ti:3000 && echo "⚠️ Backend still running" || echo "✅ Backend stopped"
-lsof -ti:5173 && echo "⚠️ WebApp still running" || echo "✅ WebApp stopped"
+# Verify ports are free
+echo "✓ Checking ports..."
+if lsof -ti:3000 >/dev/null 2>&1; then
+  echo "⚠️  Warning: Port 3000 still occupied. Force killing..."
+  lsof -ti:3000 | xargs kill -9
+fi
 
-# Restart
-echo "🚀 Starting all services..."
-cd "$PROJECT_DIR"
-npm run dev:all
+# Restart everything
+echo "🚀 Restarting with fresh ngrok tunnel..."
+./start.sh
 ```
+
+## What stop.sh does:
+
+- Stops Backend (port 3000)
+- Stops Bot processes
+- Stops Webapp dev server
+- Stops ngrok tunnel
+- Uses SIGKILL (-9) for reliable cleanup
+
+## What start.sh does:
+
+- Starts fresh ngrok tunnel
+- Updates all .env files with new URL
+- Rebuilds webapp
+- Starts Backend + Bot
 
 ## Safety features:
 
-- ✅ Graceful shutdown (SIGTERM, not SIGKILL)
-- ✅ 3 second wait for cleanup
-- ✅ Verification before restart
-- ✅ Monitors startup logs
+- ✅ Professional scripts with error handling
+- ✅ Port verification before restart
+- ✅ Fresh ngrok URL on each restart
+- ✅ Automatic .env updates
 
 ## When to use:
 
-- 🔄 After code changes
+- 🔄 After code changes (backend, bot, or webapp)
 - 🔄 When services are unresponsive
-- 🔄 After config changes (.env)
-- 🔄 When logs show weird behavior
+- 🔄 After config changes (.env files)
+- 🔄 When ngrok tunnel expired
+- 🔄 After merge conflicts
 - 🔄 Periodic restart for stability
+
+## Verify restart:
+
+After restart, check:
+- Backend: `curl http://localhost:3000/health`
+- ngrok: `curl -s http://localhost:4040/api/tunnels | jq '.tunnels[0].public_url'`
+- Logs: `tail -f logs/backend.log logs/bot.log`

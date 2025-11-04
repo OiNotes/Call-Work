@@ -127,4 +127,15 @@ router.post(
   productController.removeBulkDiscount
 );
 
+/**
+ * @route   POST /api/products/bulk-update
+ * @desc    Update multiple specific products by IDs
+ * @access  Private (Shop owner or worker)
+ */
+router.post(
+  '/bulk-update',
+  verifyToken,
+  productController.bulkUpdateProducts
+);
+
 export default router;
