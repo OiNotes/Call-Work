@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { useStore } from '../store/useStore';
 
 // Базовый URL API (можно вынести в .env)
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -11,6 +12,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const token = useStore((state) => state.token);
 
   // Базовый запрос
   const request = useCallback(async (method, endpoint, data = null, config = {}) => {
@@ -25,18 +27,27 @@ export function useApi() {
       // Получаем initData из Telegram WebApp для авторизации
       const initData = window.Telegram?.WebApp?.initData || '';
 
-      const response = await axios({
+      // Формируем axios config
+      const axiosConfig = {
         method,
         url: `${API_BASE_URL}${endpoint}`,
-        data,
         headers: {
           'Content-Type': 'application/json',
           'X-Telegram-Init-Data': initData,
+          ...(token && { 'Authorization': `Bearer ${token}` }),
           ...config.headers,
         },
         signal: controller.signal,  // Добавляем signal для timeout
         ...config,
-      });
+      };
+
+      // Добавляем data только для методов которые его поддерживают
+      // GET и DELETE не должны иметь body
+      if (method !== 'GET' && method !== 'DELETE' && data !== null) {
+        axiosConfig.data = data;
+      }
+
+      const response = await axios(axiosConfig);
 
       clearTimeout(timeoutId);  // Очищаем timeout при успехе
       setLoading(false);
@@ -59,7 +70,7 @@ export function useApi() {
       setLoading(false);
       return { data: null, error: errorMessage };
     }
-  }, []);
+  }, [token]);
 
   // GET запрос
   const get = useCallback(async (endpoint, config = {}) => {

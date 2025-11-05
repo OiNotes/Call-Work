@@ -20,7 +20,7 @@ async function checkMigrationEligibility(req, res) {
 
     // Verify shop ownership
     const shopResult = await pool.query(
-      'SELECT id, name, owner_id, tier FROM shops WHERE id = $1',
+      'SELECT id, name, owner_id, tier, channel_url FROM shops WHERE id = $1',
       [shopId]
     );
 
@@ -128,7 +128,14 @@ async function initiateMigration(req, res) {
           newChannelUrl,
           oldChannelUrl || null
         );
-        logger.info(`[MigrationController] Broadcast completed for shop ${shopId}`);
+        
+        // Update shop with new channel URL after successful broadcast
+        await pool.query(
+          'UPDATE shops SET channel_url = $1, updated_at = NOW() WHERE id = $2',
+          [newChannelUrl, shopId]
+        );
+        
+        logger.info(`[MigrationController] Broadcast completed for shop ${shopId}, channel_url updated`);
       } catch (error) {
         logger.error(`[MigrationController] Broadcast failed for shop ${shopId}:`, error);
       }
@@ -141,7 +148,7 @@ async function initiateMigration(req, res) {
       shopId,
       shopName: shop.name,
       newChannelUrl,
-      oldChannelUrl: oldChannelUrl || null,
+      oldChannelUrl: shop.channel_url || oldChannelUrl || null,
       subscriberCount: subscribers.length,
       status: 'processing',
       message: `Broadcast started. ${subscribers.length} subscribers will be notified.`,
