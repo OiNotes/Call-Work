@@ -1,0 +1,3036 @@
+
+> telegram-shop-backend@1.0.0 test
+> NODE_OPTIONS=--experimental-vm-modules jest
+
+(node:85138) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:25","txHash":"test_tx_hash_1762361665643"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:25","txHash":"test_tx_hash_1762361665643"}
+[32minfo[39m: [Webhook] Invoice found: 480 for order 808 {"timestamp":"2025-11-05 19:54:25"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361665643 {"timestamp":"2025-11-05 19:54:25"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361665643 not found."},"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361665643"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361665643"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666404"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666404"}
+[32minfo[39m: [Webhook] Invoice found: 481 for order 809 {"timestamp":"2025-11-05 19:54:26"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361666404 {"timestamp":"2025-11-05 19:54:26"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361666404 not found."},"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666404"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666404"}
+[33mwarn[39m: [Webhook] BlockCypher: Invalid or missing webhook token {"ip":"::ffff:127.0.0.1","providedToken":"***","timestamp":"2025-11-05 19:54:26"}
+[33mwarn[39m: [Webhook] BlockCypher: Invalid or missing webhook token {"ip":"::ffff:127.0.0.1","providedToken":"none","timestamp":"2025-11-05 19:54:26"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666684"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666684"}
+[32minfo[39m: [Webhook] Invoice found: 484 for order 812 {"timestamp":"2025-11-05 19:54:26"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361666684 {"timestamp":"2025-11-05 19:54:26"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361666684 not found."},"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666684"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666684"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666948"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:26","txHash":"test_tx_hash_1762361666948"}
+[32minfo[39m: [Webhook] Invoice found: 485 for order 813 {"timestamp":"2025-11-05 19:54:26"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361666948 {"timestamp":"2025-11-05 19:54:26"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361666948 not found."},"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361666948"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361666948"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667205"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667205"}
+[32minfo[39m: [Webhook] Invoice found: 486 for order 814 {"timestamp":"2025-11-05 19:54:27"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 200ms {"timestamp":"2025-11-05 19:54:27"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361667205 {"timestamp":"2025-11-05 19:54:27"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361667205 not found."},"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667205"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667205"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667664"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667664"}
+[32minfo[39m: [Webhook] Invoice found: 487 for order 815 {"timestamp":"2025-11-05 19:54:27"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 20ms {"timestamp":"2025-11-05 19:54:27"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361667664 {"timestamp":"2025-11-05 19:54:27"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361667664 not found."},"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667664"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667664"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667950"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:27","txHash":"test_tx_hash_1762361667950"}
+[32minfo[39m: [Webhook] Invoice found: 488 for order 816 {"timestamp":"2025-11-05 19:54:27"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361667950 {"timestamp":"2025-11-05 19:54:27"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361667950 not found."},"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361667950"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361667950"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668219"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668219"}
+[32minfo[39m: [Webhook] Invoice found: 489 for order 817 {"timestamp":"2025-11-05 19:54:28"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 187ms {"timestamp":"2025-11-05 19:54:28"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361668219 {"timestamp":"2025-11-05 19:54:28"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361668219 not found."},"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668219"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668219"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_rollback_1762361668672"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_rollback_1762361668672"}
+[33mwarn[39m: [Webhook] No invoice found for transaction outputs {"timestamp":"2025-11-05 19:54:28"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668679"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668679"}
+[32minfo[39m: [Webhook] Invoice found: 491 for order 819 {"timestamp":"2025-11-05 19:54:28"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 7ms {"timestamp":"2025-11-05 19:54:28"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361668679 {"timestamp":"2025-11-05 19:54:28"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361668679 not found."},"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668679"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668679"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668943"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:28","txHash":"test_tx_hash_1762361668943"}
+[32minfo[39m: [Webhook] Invoice found: 492 for order 820 {"timestamp":"2025-11-05 19:54:28"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 9ms {"timestamp":"2025-11-05 19:54:28"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361668943 {"timestamp":"2025-11-05 19:54:28"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361668943 not found."},"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361668943"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361668943"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361669218"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361669218"}
+[32minfo[39m: [Webhook] Invoice found: 493 for order 821 {"timestamp":"2025-11-05 19:54:29"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 188ms {"timestamp":"2025-11-05 19:54:29"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_hash_1762361669218 {"timestamp":"2025-11-05 19:54:29"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_hash_1762361669218 not found."},"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361669218"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:29","txHash":"test_tx_hash_1762361669218"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_multi_output_1762361669667"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_multi_output_1762361669667"}
+[32minfo[39m: [Webhook] Invoice found: 494 for order 822 {"timestamp":"2025-11-05 19:54:29"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 20ms {"timestamp":"2025-11-05 19:54:29"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_multi_output_1762361669667 {"timestamp":"2025-11-05 19:54:29"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_multi_output_1762361669667 not found."},"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_multi_output_1762361669667"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:29","txHash":"test_tx_multi_output_1762361669667"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_update_1762361669942"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":1,"timestamp":"2025-11-05 19:54:29","txHash":"test_tx_update_1762361669942"}
+[32minfo[39m: [Webhook] Invoice found: 495 for order 823 {"timestamp":"2025-11-05 19:54:29"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 12ms {"timestamp":"2025-11-05 19:54:29"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_update_1762361669942 {"timestamp":"2025-11-05 19:54:29"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_update_1762361669942 not found."},"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_update_1762361669942"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:30","txHash":"test_tx_update_1762361669942"}
+FAIL __tests__/integration/webhooks.test.js
+  Webhooks - Integration Tests
+    POST /webhooks/blockcypher
+      CVE-PS-001: Secret token verification
+        ✕ should accept webhook with valid token in query parameter (764 ms)
+        ✕ should accept webhook with valid token in header (269 ms)
+        ✓ should reject webhook with invalid token (10 ms)
+        ✓ should reject webhook with missing token (7 ms)
+        ✕ should allow webhook if BLOCKCYPHER_WEBHOOK_SECRET not set (262 ms)
+      CVE-PS-002: Replay attack protection
+        ✕ should process webhook first time (259 ms)
+        ✕ should reject replay of same webhook (same confirmations) (459 ms)
+        ✕ should allow same tx with different confirmations (286 ms)
+        ✕ should store complete webhook payload for forensics (269 ms)
+      CVE-PS-003: Database transactions
+        ✕ should commit transaction on success (453 ms)
+        ✓ should rollback transaction on error (9 ms)
+        ✕ should update order status when payment confirmed (262 ms)
+        ✕ should keep order pending if confirmations insufficient (276 ms)
+        ✕ should handle confirmation threshold from environment (449 ms)
+      Edge cases and validation
+        ✕ should handle multiple outputs correctly (275 ms)
+        ✕ should update existing payment confirmations (253 ms)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should accept webhook with valid token in query parameter
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      147 |           .query({ token: WEBHOOK_SECRET })
+      148 |           .send(payload)
+    > 149 |           .expect(200);
+          |            ^
+      150 |
+      151 |         expect(response.body.status).toBe('success');
+      152 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:149:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should accept webhook with valid token in header
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      159 |           .set('x-webhook-token', WEBHOOK_SECRET)
+      160 |           .send(payload)
+    > 161 |           .expect(200);
+          |            ^
+      162 |
+      163 |         expect(response.body.status).toBe('success');
+      164 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:161:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should allow webhook if BLOCKCYPHER_WEBHOOK_SECRET not set
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      204 |           .post('/webhooks/blockcypher')
+      205 |           .send(payload)
+    > 206 |           .expect(200);
+          |            ^
+      207 |
+      208 |         expect(response.body.status).toBe('success');
+      209 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:206:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should process webhook first time
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      221 |           .query({ token: WEBHOOK_SECRET })
+      222 |           .send(payload)
+    > 223 |           .expect(200);
+          |            ^
+      224 |
+      225 |         expect(response.body.status).toBe('success');
+      226 |         expect(response.body.payment_id).toBeDefined();
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:223:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should reject replay of same webhook (same confirmations)
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      245 |           .query({ token: WEBHOOK_SECRET })
+      246 |           .send(payload)
+    > 247 |           .expect(200);
+          |            ^
+      248 |
+      249 |         expect(response1.body.status).toBe('success');
+      250 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:247:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should allow same tx with different confirmations
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      282 |           .query({ token: WEBHOOK_SECRET })
+      283 |           .send(payload1)
+    > 284 |           .expect(200);
+          |            ^
+      285 |
+      286 |         expect(response1.body.status).toBe('success');
+      287 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:284:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should store complete webhook payload for forensics
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      315 |           .query({ token: WEBHOOK_SECRET })
+      316 |           .send(payload)
+    > 317 |           .expect(200);
+          |            ^
+      318 |
+      319 |         const webhookId = `blockcypher_${payload.hash}_${payload.confirmations}`;
+      320 |         const processed = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:317:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should commit transaction on success
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      337 |           .query({ token: WEBHOOK_SECRET })
+      338 |           .send(payload)
+    > 339 |           .expect(200);
+          |            ^
+      340 |
+      341 |         expect(response.body.status).toBe('success');
+      342 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:339:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should update order status when payment confirmed
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      402 |           .query({ token: WEBHOOK_SECRET })
+      403 |           .send(payload)
+    > 404 |           .expect(200);
+          |            ^
+      405 |
+      406 |         // Verify order status updated
+      407 |         const orderResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:404:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should keep order pending if confirmations insufficient
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      433 |           .query({ token: WEBHOOK_SECRET })
+      434 |           .send(payload)
+    > 435 |           .expect(200);
+          |            ^
+      436 |
+      437 |         // Verify order status still pending
+      438 |         const orderResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:435:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should handle confirmation threshold from environment
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      460 |           .query({ token: WEBHOOK_SECRET })
+      461 |           .send(payload)
+    > 462 |           .expect(200);
+          |            ^
+      463 |
+      464 |         // Verify payment is pending (3 < 5)
+      465 |         const payments = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:462:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › Edge cases and validation › should handle multiple outputs correctly
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      497 |           .query({ token: WEBHOOK_SECRET })
+      498 |           .send(payload)
+    > 499 |           .expect(200);
+          |            ^
+      500 |
+      501 |         expect(response.body.status).toBe('success');
+      502 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:499:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › Edge cases and validation › should update existing payment confirmations
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      518 |           .query({ token: WEBHOOK_SECRET })
+      519 |           .send(payload1)
+    > 520 |           .expect(200);
+          |            ^
+      521 |
+      522 |         // Verify payment created with pending status
+      523 |         let payments = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:520:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670387_0.2726648732036685"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670387_0.2726648732036685"}
+[32minfo[39m: [Webhook] Invoice found: 502 for subscription 306 {"timestamp":"2025-11-05 19:54:30"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_1762361670387_0.2726648732036685 {"timestamp":"2025-11-05 19:54:30"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_1762361670387_0.2726648732036685 not found."},"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670387_0.2726648732036685"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670387_0.2726648732036685"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670671_0.5335763514401493"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670671_0.5335763514401493"}
+[32minfo[39m: [Webhook] Invoice found: 503 for subscription 307 {"timestamp":"2025-11-05 19:54:30"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_1762361670671_0.5335763514401493 {"timestamp":"2025-11-05 19:54:30"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_1762361670671_0.5335763514401493 not found."},"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670671_0.5335763514401493"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670671_0.5335763514401493"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670935_0.9735344892483238"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:30","txHash":"test_tx_1762361670935_0.9735344892483238"}
+[32minfo[39m: [Webhook] Invoice found: 504 for subscription 308 {"timestamp":"2025-11-05 19:54:30"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_1762361670935_0.9735344892483238 {"timestamp":"2025-11-05 19:54:30"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_1762361670935_0.9735344892483238 not found."},"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361670935_0.9735344892483238"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361670935_0.9735344892483238"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671191_0.5352879728477742"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671191_0.5352879728477742"}
+[32minfo[39m: [Webhook] Invoice found: 506 for subscription 309 {"timestamp":"2025-11-05 19:54:31"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 211ms {"timestamp":"2025-11-05 19:54:31"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_1762361671191_0.5352879728477742 {"timestamp":"2025-11-05 19:54:31"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_1762361671191_0.5352879728477742 not found."},"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671191_0.5352879728477742"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671191_0.5352879728477742"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671661_0.6327215217954603"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700003,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671661_0.6327215217954603"}
+[32minfo[39m: [Webhook] Invoice found: 507 for subscription 310 {"timestamp":"2025-11-05 19:54:31"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 11ms {"timestamp":"2025-11-05 19:54:31"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_1762361671661_0.6327215217954603 {"timestamp":"2025-11-05 19:54:31"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_1762361671661_0.6327215217954603 not found."},"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671661_0.6327215217954603"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:31","txHash":"test_tx_1762361671661_0.6327215217954603"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_insufficient_1762361671934"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":700000,"confirmations":3,"timestamp":"2025-11-05 19:54:31","txHash":"test_tx_insufficient_1762361671934"}
+[32minfo[39m: [Webhook] Invoice found: 508 for subscription 311 {"timestamp":"2025-11-05 19:54:31"}
+[34mdebug[39m: [BlockCypher] Rate limit: waiting 1ms {"timestamp":"2025-11-05 19:54:31"}
+[32minfo[39m: [BlockCypher] Fetching transaction: test_tx_insufficient_1762361671934 {"timestamp":"2025-11-05 19:54:31"}
+[31merror[39m: [BlockCypher] Failed to get transaction: {"error":"Request failed with status code 404","response":{"error":"Transaction test_tx_insufficient_1762361671934 not found."},"timestamp":"2025-11-05 19:54:32","txHash":"test_tx_insufficient_1762361671934"}
+[31merror[39m: [Webhook] Blockchain verification failed {"chain":"BTC","error":"Failed to get transaction: Request failed with status code 404","timestamp":"2025-11-05 19:54:32","txHash":"test_tx_insufficient_1762361671934"}
+FAIL __tests__/integration/subscription-payments.test.js
+  Subscription Payment Automation - Integration Tests
+    Invoice Structure - Database Level
+      ✓ ✅ Should create invoice with subscription_id (not order_id) (11 ms)
+      ✓ ✅ Should create invoice with correct tier pricing (5 ms)
+      ✓ ✅ Should enforce mutually exclusive constraint (order_id XOR subscription_id) (5 ms)
+      ✓ ✅ Should allow invoice with only order_id (13 ms)
+    Invoice Status Lifecycle
+      ✓ ✅ Should track invoice status from pending to paid (5 ms)
+      ✓ ✅ Should support expired status (4 ms)
+    POST /webhooks/blockcypher - Subscription Payments
+      ✕ ✅ Should activate subscription on confirmed BTC payment (282 ms)
+      ✕ ✅ Should update shop tier and subscription_status (263 ms)
+      ✕ ✅ Should set next_payment_due to +30 days (255 ms)
+      ✕ ✅ Should handle subscription payments separately from orders (471 ms)
+      ✕ ✅ Should update invoice status to paid (272 ms)
+      ✕ ❌ Should not activate if payment amount insufficient (255 ms)
+    Polling Service Simulation (ETH/USDT)
+      ✓ ✅ Should activate subscription on ETH payment detection (7 ms)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should activate subscription on confirmed BTC payment
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      372 |         .query({ token: WEBHOOK_SECRET })
+      373 |         .send(payload)
+    > 374 |         .expect(200);
+          |          ^
+      375 |
+      376 |       expect(response.body.status).toBe('success');
+      377 |
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:374:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should update shop tier and subscription_status
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      407 |         .query({ token: WEBHOOK_SECRET })
+      408 |         .send(payload)
+    > 409 |         .expect(200);
+          |          ^
+      410 |
+      411 |       // Verify shop updated
+      412 |       const shopResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:409:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should set next_payment_due to +30 days
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      444 |         .query({ token: WEBHOOK_SECRET })
+      445 |         .send(payload)
+    > 446 |         .expect(200);
+          |          ^
+      447 |
+      448 |       // Verify next_payment_due is ~30 days from now
+      449 |       const shopResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:446:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should handle subscription payments separately from orders
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      502 |         .query({ token: WEBHOOK_SECRET })
+      503 |         .send(subPayload)
+    > 504 |         .expect(200);
+          |          ^
+      505 |
+      506 |       // Verify subscription activated but order still pending
+      507 |       const subCheck = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:504:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should update invoice status to paid
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      538 |         .query({ token: WEBHOOK_SECRET })
+      539 |         .send(payload)
+    > 540 |         .expect(200);
+          |          ^
+      541 |
+      542 |       // Verify invoice marked as paid
+      543 |       const invoiceCheck = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:540:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ❌ Should not activate if payment amount insufficient
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      581 |         .query({ token: WEBHOOK_SECRET })
+      582 |         .send(payload)
+    > 583 |         .expect(200);
+          |          ^
+      584 |
+      585 |       // Verify subscription NOT activated due to insufficient amount
+      586 |       const subResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:583:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:32"}
+(node:85138) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:32"}
+[32minfo[39m: [WalletService] Generated BTC address at m/44'/0'/0'/0/0: 1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf {"timestamp":"2025-11-05 19:54:32"}
+[32minfo[39m: [CryptoPriceService] Fetching fresh prices from CoinGecko... {"timestamp":"2025-11-05 19:54:32"}
+[32minfo[39m: [CryptoPriceService] Prices fetched successfully: {"BTC":103882,"ETH":3417.54,"LTC":88.11,"USDT_ERC20":0.999904,"USDT_TRC20":0.999904,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf","addressIndex":0,"chain":"BTC","cryptoAmount":"0.00096744","cryptoPrice":103882,"derivationPath":"m/44'/0'/0'/0/0","orderId":"827","timestamp":"2025-11-05 19:54:33","usdAmount":"100.50000000"}
+[32minfo[39m: Response sent {"duration":"641ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [WalletService] Generated ETH address at m/44'/60'/0'/0/0: 0x28C724BC264b1BEfFbBaA60c34B0852a6590dfAe {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [CryptoPriceService] Using cached price for ETH: $3417.54 {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"0x28C724BC264b1BEfFbBaA60c34B0852a6590dfAe","addressIndex":0,"chain":"ETH","cryptoAmount":"0.029407","cryptoPrice":3417.54,"derivationPath":"m/44'/60'/0'/0/0","orderId":"827","timestamp":"2025-11-05 19:54:33","usdAmount":"100.50000000"}
+[32minfo[39m: Response sent {"duration":"10ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [WalletService] Generated BTC address at m/44'/0'/0'/0/0: 1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [CryptoPriceService] Using cached price for BTC: $103882 {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf","addressIndex":0,"chain":"BTC","cryptoAmount":"0.00096744","cryptoPrice":103882,"derivationPath":"m/44'/0'/0'/0/0","orderId":"827","timestamp":"2025-11-05 19:54:33","usdAmount":"100.50000000"}
+[32minfo[39m: Response sent {"duration":"7ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/828/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [WalletService] Generated BTC address at m/44'/0'/0'/0/1: 19DhbvyWpwVEJbroPTXhtpT7pLdZ4ykT5v {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [CryptoPriceService] Using cached price for BTC: $103882 {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"19DhbvyWpwVEJbroPTXhtpT7pLdZ4ykT5v","addressIndex":1,"chain":"BTC","cryptoAmount":"0.00048131","cryptoPrice":103882,"derivationPath":"m/44'/0'/0'/0/1","orderId":"828","timestamp":"2025-11-05 19:54:33","usdAmount":"50.00000000"}
+[32minfo[39m: Response sent {"duration":"7ms","method":"POST","path":"/828/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [WalletService] Generated BTC address at m/44'/0'/0'/0/0: 1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [CryptoPriceService] Using cached price for BTC: $103882 {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf","addressIndex":0,"chain":"BTC","cryptoAmount":"0.00096744","cryptoPrice":103882,"derivationPath":"m/44'/0'/0'/0/0","orderId":"827","timestamp":"2025-11-05 19:54:33","usdAmount":"100.50000000"}
+[32minfo[39m: Response sent {"duration":"7ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/827/invoice","statusCode":400,"timestamp":"2025-11-05 19:54:33","userId":4859}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/827/invoice","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/827/invoice","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [WalletService] Generated BTC address at m/44'/0'/0'/0/0: 1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [CryptoPriceService] Using cached price for BTC: $103882 {"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: [Invoice] Generated {"address":"1BLjk7hfvYRBZATnGgxQvdrnKuPLmKqycf","addressIndex":0,"chain":"BTC","cryptoAmount":"0.00096744","cryptoPrice":103882,"derivationPath":"m/44'/0'/0'/0/0","orderId":"827","timestamp":"2025-11-05 19:54:33","usdAmount":"100.50000000"}
+[32minfo[39m: Response sent {"duration":"8ms","method":"POST","path":"/827/invoice","statusCode":200,"timestamp":"2025-11-05 19:54:33","userId":4859}
+  console.warn
+    ⚠️  HD_XPUB_USDT not configured, skipping test
+
+      276 |     it('should map USDT to USDT_ERC20 by default', async () => {
+      277 |       if (!process.env.HD_XPUB_USDT) {
+    > 278 |         console.warn('⚠️  HD_XPUB_USDT not configured, skipping test');
+          |                 ^
+      279 |         return;
+      280 |       }
+      281 |
+
+      at Object.<anonymous> (__tests__/payment/hd-wallet-invoice.test.js:278:17)
+
+FAIL __tests__/payment/hd-wallet-invoice.test.js
+  HD Wallet Invoice Generation (P0-PAY-2)
+    POST /api/orders/:id/invoice
+      ✕ should generate BTC invoice with unique HD wallet address (650 ms)
+      ✓ should generate ETH invoice with unique address (13 ms)
+      ✓ should generate unique addresses for different orders (19 ms)
+      ✓ should return existing pending invoice if already generated (13 ms)
+      ✓ should reject invalid chain (3 ms)
+      ✓ should reject unauthorized access (2 ms)
+      ✓ should use real-time crypto prices (11 ms)
+      ✓ should map USDT to USDT_ERC20 by default (9 ms)
+
+  ● HD Wallet Invoice Generation (P0-PAY-2) › POST /api/orders/:id/invoice › should generate BTC invoice with unique HD wallet address
+
+    expect(received).toBeGreaterThan(expected)
+
+    Matcher error: received value must be a number or bigint
+
+    Received has type:  string
+    Received has value: "0.00096744"
+
+      107 |       // Verify crypto amount is reasonable
+      108 |       const cryptoAmount = response.body.data.cryptoAmount;
+    > 109 |       expect(cryptoAmount).toBeGreaterThan(0);
+          |                            ^
+      110 |       expect(cryptoAmount).toBeLessThan(1); // $100 should be less than 1 BTC
+      111 |
+      112 |       // Verify invoice was saved to database
+
+      at Object.<anonymous> (__tests__/payment/hd-wallet-invoice.test.js:109:28)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"4ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:33"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders/bulk-status","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/bulk-status","statusCode":401,"timestamp":"2025-11-05 19:54:34"}
+FAIL __tests__/integration/bulkOrderStatus.test.js
+  POST /api/orders/bulk-status
+    Authentication
+      ✓ should return 401 when no token provided (9 ms)
+      ✓ should return 401 when invalid token provided (3 ms)
+    Validation
+      ✕ should return 400 when order_ids is empty (3 ms)
+      ✕ should return 400 when order_ids is not an array (3 ms)
+      ✕ should return 400 when order_ids contains invalid values (3 ms)
+      ✕ should return 400 when status is invalid (1 ms)
+      ✓ should accept all valid statuses (9 ms)
+    Authorization
+      ✕ should return 404 when orders do not exist (1 ms)
+      ✕ should return 403 when user does not own the shop (2 ms)
+    Successful bulk update
+      ✕ should successfully update multiple orders status (2 ms)
+      ✕ should update database records (4 ms)
+      ✕ should handle partial order list (1 ms)
+      ✕ should handle single order (1 ms)
+    Edge cases
+      ✕ should handle duplicate order IDs (1 ms)
+      ✕ should handle mix of valid and invalid order IDs (5 ms)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids is empty
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      127 |         });
+      128 |
+    > 129 |       expect(response.status).toBe(400);
+          |                               ^
+      130 |       expect(response.body.success).toBe(false);
+      131 |       expect(response.body.error).toBe('Validation failed');
+      132 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:129:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids is not an array
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      141 |         });
+      142 |
+    > 143 |       expect(response.status).toBe(400);
+          |                               ^
+      144 |       expect(response.body.success).toBe(false);
+      145 |     });
+      146 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:143:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids contains invalid values
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      154 |         });
+      155 |
+    > 156 |       expect(response.status).toBe(400);
+          |                               ^
+      157 |       expect(response.body.success).toBe(false);
+      158 |     });
+      159 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:156:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when status is invalid
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      167 |         });
+      168 |
+    > 169 |       expect(response.status).toBe(400);
+          |                               ^
+      170 |       expect(response.body.success).toBe(false);
+      171 |       expect(response.body.error).toBe('Validation failed');
+      172 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:169:31)
+
+  ● POST /api/orders/bulk-status › Authorization › should return 404 when orders do not exist
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      201 |         });
+      202 |
+    > 203 |       expect(response.status).toBe(404);
+          |                               ^
+      204 |       expect(response.body.success).toBe(false);
+      205 |       expect(response.body.error).toBe('One or more orders not found');
+      206 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:203:31)
+
+  ● POST /api/orders/bulk-status › Authorization › should return 403 when user does not own the shop
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 401
+
+      215 |         });
+      216 |
+    > 217 |       expect(response.status).toBe(403);
+          |                               ^
+      218 |       expect(response.body.success).toBe(false);
+      219 |       expect(response.body.error).toContain('permission');
+      220 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:217:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should successfully update multiple orders status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      231 |         });
+      232 |
+    > 233 |       expect(response.status).toBe(200);
+          |                               ^
+      234 |       expect(response.body.success).toBe(true);
+      235 |       expect(response.body.data).toHaveProperty('updated_count');
+      236 |       expect(response.body.data.updated_count).toBe(orderIds.length);
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:233:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should update database records
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "delivered"
+    Received: "pending"
+
+      268 |       expect(result.rows).toHaveLength(orderIds.length);
+      269 |       result.rows.forEach(row => {
+    > 270 |         expect(row.status).toBe('delivered');
+          |                            ^
+      271 |       });
+      272 |     });
+      273 |
+
+      at __tests__/integration/bulkOrderStatus.test.js:270:28
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:269:19)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should handle partial order list
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      284 |         });
+      285 |
+    > 286 |       expect(response.status).toBe(200);
+          |                               ^
+      287 |       expect(response.body.data.updated_count).toBe(2);
+      288 |       expect(response.body.data.orders).toHaveLength(2);
+      289 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:286:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should handle single order
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      298 |         });
+      299 |
+    > 300 |       expect(response.status).toBe(200);
+          |                               ^
+      301 |       expect(response.body.data.updated_count).toBe(1);
+      302 |       expect(response.body.data.orders).toHaveLength(1);
+      303 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:300:31)
+
+  ● POST /api/orders/bulk-status › Edge cases › should handle duplicate order IDs
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      316 |         });
+      317 |
+    > 318 |       expect(response.status).toBe(404);
+          |                               ^
+      319 |       // Database won't find 3 orders because only 2 unique exist
+      320 |     });
+      321 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:318:31)
+
+  ● POST /api/orders/bulk-status › Edge cases › should handle mix of valid and invalid order IDs
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      331 |         });
+      332 |
+    > 333 |       expect(response.status).toBe(404);
+          |                               ^
+      334 |       expect(response.body.error).toBe('One or more orders not found');
+      335 |     });
+      336 |   });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:333:31)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/register","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Existing user logged in: 999999999 (@csrf_test_user) {"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"14ms","method":"POST","path":"/register","statusCode":200,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: 404 Not Found {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"PUT","path":"/api/auth/role","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/shops/123","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"4ms","method":"DELETE","path":"/123","statusCode":404,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: 404 Not Found {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/api/auth/role","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: 404 Not Found {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/api/auth/role","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: 404 Not Found {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/api/auth/role","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","path":"/api/shops/active","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"GET","path":"/active","statusCode":200,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"HEAD","path":"/health","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"HEAD","path":"/health","statusCode":200,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/webhooks/blockcypher","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: [Webhook] BlockCypher notification received: {"blockHeight":800000,"confirmations":3,"timestamp":"2025-11-05 19:54:34","txHash":"0x123test"}
+[32minfo[39m: [BlockCypher] Webhook received: {"blockHeight":800000,"confirmations":3,"timestamp":"2025-11-05 19:54:34","txHash":"0x123test"}
+[33mwarn[39m: [Webhook] No invoice found for transaction outputs {"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"4ms","method":"POST","path":"/blockcypher","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","path":"/health","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"GET","path":"/health","statusCode":200,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: 404 Not Found {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/auth/role","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"PUT","path":"/api/auth/role","statusCode":404,"timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/orders","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/","statusCode":404,"timestamp":"2025-11-05 19:54:34","userId":4862}
+[32minfo[39m: Database pool closed {"timestamp":"2025-11-05 19:54:34"}
+FAIL __tests__/security/csrf.test.js
+  CSRF Protection
+    Origin Validation
+      ✕ should reject POST requests with invalid origin (5 ms)
+      ✕ should reject PUT requests with invalid origin (3 ms)
+      ✕ should reject DELETE requests with invalid origin (4 ms)
+      ✓ should accept POST requests with valid origin (FRONTEND_URL) (2 ms)
+      ✓ should accept POST requests with localhost origin (2 ms)
+    Referer Validation
+      ✕ should reject POST requests with invalid referer (3 ms)
+      ✓ should accept POST requests with valid referer (2 ms)
+    Safe Methods (No CSRF Check)
+      ✓ should allow GET requests without origin check (5 ms)
+      ✓ should allow OPTIONS requests without origin check (2 ms)
+      ✓ should allow HEAD requests without origin check (2 ms)
+    Webhook Exemption
+      ✓ should allow webhook POST without origin (external services) (5 ms)
+    Health Check Exemption
+      ✓ should allow health check without origin (4 ms)
+    Missing Both Origin and Referer
+      ✕ should reject POST when both origin and referer are missing (3 ms)
+    NGROK Support
+      ✓ should accept requests from NGROK_URL if set
+    Attack Scenarios
+      ✕ should prevent evil.com from creating shops (3 ms)
+      ✕ should prevent attacker.com from updating user roles (2 ms)
+      ✕ should prevent phishing-site.com from placing orders (3 ms)
+
+  ● CSRF Protection › Origin Validation › should reject POST requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      62 |         .send({ name: 'Evil Shop' });
+      63 |
+    > 64 |       expect(response.status).toBe(403);
+         |                               ^
+      65 |       expect(response.body.success).toBe(false);
+      66 |       expect(response.body.error).toContain('CSRF');
+      67 |     });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:64:31)
+
+  ● CSRF Protection › Origin Validation › should reject PUT requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      74 |         .send({ role: 'seller' });
+      75 |
+    > 76 |       expect(response.status).toBe(403);
+         |                               ^
+      77 |       expect(response.body.error).toContain('CSRF');
+      78 |     });
+      79 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:76:31)
+
+  ● CSRF Protection › Origin Validation › should reject DELETE requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      84 |         .set('Authorization', `Bearer ${authToken}`);
+      85 |
+    > 86 |       expect(response.status).toBe(403);
+         |                               ^
+      87 |       expect(response.body.error).toContain('CSRF');
+      88 |     });
+      89 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:86:31)
+
+  ● CSRF Protection › Referer Validation › should reject POST requests with invalid referer
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      121 |         .send({ name: 'Phishing Shop' });
+      122 |
+    > 123 |       expect(response.status).toBe(403);
+          |                               ^
+      124 |       expect(response.body.error).toContain('CSRF');
+      125 |     });
+      126 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:123:31)
+
+  ● CSRF Protection › Missing Both Origin and Referer › should reject POST when both origin and referer are missing
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      204 |       // Skip if supertest adds origin automatically
+      205 |       if (!response.request.header.origin && !response.request.header.referer) {
+    > 206 |         expect(response.status).toBe(403);
+          |                                 ^
+      207 |         expect(response.body.error).toContain('CSRF');
+      208 |       }
+      209 |     });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:206:33)
+
+  ● CSRF Protection › Attack Scenarios › should prevent evil.com from creating shops
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      238 |         });
+      239 |
+    > 240 |       expect(response.status).toBe(403);
+          |                               ^
+      241 |       expect(response.body.error).toContain('CSRF');
+      242 |     });
+      243 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:240:31)
+
+  ● CSRF Protection › Attack Scenarios › should prevent attacker.com from updating user roles
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      249 |         .send({ role: 'seller' });
+      250 |
+    > 251 |       expect(response.status).toBe(403);
+          |                               ^
+      252 |       expect(response.body.error).toContain('CSRF');
+      253 |     });
+      254 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:251:31)
+
+  ● CSRF Protection › Attack Scenarios › should prevent phishing-site.com from placing orders
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      263 |         });
+      264 |
+    > 265 |       expect(response.status).toBe(403);
+          |                               ^
+      266 |       expect(response.body.error).toContain('CSRF');
+      267 |     });
+      268 |   });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:265:31)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: [ShopController] Creating shop: {"name":"test_shop_123","tier":"basic","timestamp":"2025-11-05 19:54:34","userId":4863}
+[32minfo[39m: Response sent {"duration":"10ms","method":"POST","path":"/","statusCode":201,"timestamp":"2025-11-05 19:54:34","userId":4863}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4864}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4865}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4866}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":400,"timestamp":"2025-11-05 19:54:34","userId":4867}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: Rate limit exceeded {"ip":"::ffff:127.0.0.1","method":"POST","path":"/","timestamp":"2025-11-05 19:54:34","userId":4868}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":429,"timestamp":"2025-11-05 19:54:34","userId":4868}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: Rate limit exceeded {"ip":"::ffff:127.0.0.1","method":"POST","path":"/","timestamp":"2025-11-05 19:54:34","userId":4869}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":429,"timestamp":"2025-11-05 19:54:34","userId":4869}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: Rate limit exceeded {"ip":"::ffff:127.0.0.1","method":"POST","path":"/","timestamp":"2025-11-05 19:54:34","userId":4870}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":429,"timestamp":"2025-11-05 19:54:34","userId":4870}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: Rate limit exceeded {"ip":"::ffff:127.0.0.1","method":"POST","path":"/","timestamp":"2025-11-05 19:54:34","userId":4871}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":429,"timestamp":"2025-11-05 19:54:34","userId":4871}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops","timestamp":"2025-11-05 19:54:34"}
+[33mwarn[39m: Rate limit exceeded {"ip":"::ffff:127.0.0.1","method":"POST","path":"/","timestamp":"2025-11-05 19:54:34","userId":4872}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/","statusCode":429,"timestamp":"2025-11-05 19:54:34","userId":4872}
+FAIL __tests__/integration/shopController.test.js
+  POST /api/shops - Shop Name Validation
+    Alphanumeric Validation
+      ✓ should accept valid shop name (letters, numbers, underscore) (16 ms)
+      ✓ should reject shop name with spaces (8 ms)
+      ✓ should reject shop name with special characters (6 ms)
+      ✓ should reject shop name shorter than 3 characters (5 ms)
+      ✓ should reject shop name longer than 30 characters (7 ms)
+    Uniqueness Validation
+      ✕ should reject duplicate shop name (exact match) (5 ms)
+      ✕ should reject duplicate shop name (case-insensitive) (4 ms)
+      ✕ should reject duplicate shop name (mixed case) (5 ms)
+  PUT /api/shops/:id - Update Shop Name Validation
+    ✕ should allow updating shop name to a unique name
+    ✕ should reject updating shop name to an existing name (4 ms)
+    ✕ should allow updating shop name to same name (no change)
+    ✕ should reject invalid shop name format on update
+
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (exact match)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      180 |         });
+      181 |
+    > 182 |       expect(response1.status).toBe(201);
+          |                                ^
+      183 |
+      184 |       // User 2 tries to create shop with same name
+      185 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:182:32)
+
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (case-insensitive)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      214 |         });
+      215 |
+    > 216 |       expect(response1.status).toBe(201);
+          |                                ^
+      217 |
+      218 |       // User 2 tries to create with uppercase
+      219 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:216:32)
+
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (mixed case)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      248 |         });
+      249 |
+    > 250 |       expect(response1.status).toBe(201);
+          |                                ^
+      251 |
+      252 |       // User 2 tries to create with different case: Test_Shop_Unique_3
+      253 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:250:32)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should allow updating shop name to a unique name
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      297 |   test('should allow updating shop name to a unique name', async () => {
+      298 |     const response = await request(app)
+    > 299 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      300 |       .set('Authorization', `Bearer ${authToken}`)
+      301 |       .send({
+      302 |         name: 'test_shop_updated_name'
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:299:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should reject updating shop name to an existing name
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      323 |     // Try to update original testShop to existing name
+      324 |     const response = await request(app)
+    > 325 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      326 |       .set('Authorization', `Bearer ${authToken}`)
+      327 |       .send({
+      328 |         name: 'test_shop_existing'
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:325:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should allow updating shop name to same name (no change)
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      337 |     // Update testShop.name first to ensure we have current name
+      338 |     const currentShop = await request(app)
+    > 339 |       .get(`/api/shops/${testShop.id}`)
+          |                                   ^
+      340 |       .set('Authorization', `Bearer ${authToken}`);
+      341 |
+      342 |     const response = await request(app)
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:339:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should reject invalid shop name format on update
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      353 |   test('should reject invalid shop name format on update', async () => {
+      354 |     const response = await request(app)
+    > 355 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      356 |       .set('Authorization', `Bearer ${authToken}`)
+      357 |       .send({
+      358 |         name: 'invalid name!' // Contains space and special character
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:355:35)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"5ms","method":"POST","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops/4029/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/4029/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"GET","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"GET","path":"/api/shops/4028/workers","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"GET","path":"/4028/workers","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/shops/4028/workers/494","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"DELETE","path":"/4028/workers/494","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/shops/4028/workers/495","timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"DELETE","path":"/4028/workers/495","statusCode":401,"timestamp":"2025-11-05 19:54:35"}
+FAIL __tests__/integration/controllers/workerController.test.js
+  WorkerController Integration Tests
+    POST /api/shops/:shopId/workers
+      ✕ should allow PRO shop owner to add worker (9 ms)
+      ✕ should reject FREE shop owner from adding worker (BUG-W1 fix) (3 ms)
+      ✕ should reject non-owner from adding worker (2 ms)
+      ✕ should reject adding non-existent user (2 ms)
+      ✕ should reject adding owner as worker (4 ms)
+    GET /api/shops/:shopId/workers
+      ✕ should return list of workers for shop owner (2 ms)
+      ✕ should reject non-owner from viewing workers (2 ms)
+    DELETE /api/shops/:shopId/workers/:workerId
+      ✕ should allow shop owner to remove worker (5 ms)
+      ✕ should reject non-owner from removing worker (5 ms)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should allow PRO shop owner to add worker
+
+    expected 201 "Created", got 401 "Unauthorized"
+
+      78 |         .set('Authorization', authToken1)
+      79 |         .send({ telegram_id: testUser3.telegram_id })
+    > 80 |         .expect(201);
+         |          ^
+      81 |
+      82 |       expect(response.body.success).toBe(true);
+      83 |       expect(response.body.data.worker_user_id).toBe(testUser3.id);
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:80:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject FREE shop owner from adding worker (BUG-W1 fix)
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      89 |         .set('Authorization', authToken2)
+      90 |         .send({ telegram_id: testUser3.telegram_id })
+    > 91 |         .expect(403);
+         |          ^
+      92 |
+      93 |       expect(response.body.success).toBe(false);
+      94 |       expect(response.body.error).toContain('PRO subscription');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:91:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject non-owner from adding worker
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      100 |         .set('Authorization', authToken3)
+      101 |         .send({ telegram_id: testUser2.telegram_id })
+    > 102 |         .expect(403);
+          |          ^
+      103 |
+      104 |       expect(response.body.success).toBe(false);
+      105 |       expect(response.body.error).toContain('Only shop owner');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:102:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject adding non-existent user
+
+    expected 404 "Not Found", got 401 "Unauthorized"
+
+      111 |         .set('Authorization', authToken1)
+      112 |         .send({ telegram_id: 999999999 })
+    > 113 |         .expect(404);
+          |          ^
+      114 |
+      115 |       expect(response.body.success).toBe(false);
+      116 |       expect(response.body.error).toContain('User not found');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:113:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject adding owner as worker
+
+    expected 400 "Bad Request", got 401 "Unauthorized"
+
+      122 |         .set('Authorization', authToken1)
+      123 |         .send({ telegram_id: testUser1.telegram_id })
+    > 124 |         .expect(400);
+          |          ^
+      125 |
+      126 |       expect(response.body.success).toBe(false);
+      127 |       expect(response.body.error).toContain('owner cannot be added as worker');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:124:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › GET /api/shops/:shopId/workers › should return list of workers for shop owner
+
+    expected 200 "OK", got 401 "Unauthorized"
+
+      134 |         .get(`/api/shops/${proShop.id}/workers`)
+      135 |         .set('Authorization', authToken1)
+    > 136 |         .expect(200);
+          |          ^
+      137 |
+      138 |       expect(response.body.success).toBe(true);
+      139 |       expect(Array.isArray(response.body.data)).toBe(true);
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:136:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › GET /api/shops/:shopId/workers › should reject non-owner from viewing workers
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      145 |         .get(`/api/shops/${proShop.id}/workers`)
+      146 |         .set('Authorization', authToken2)
+    > 147 |         .expect(403);
+          |          ^
+      148 |
+      149 |       expect(response.body.success).toBe(false);
+      150 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:147:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › DELETE /api/shops/:shopId/workers/:workerId › should allow shop owner to remove worker
+
+    expected 200 "OK", got 401 "Unauthorized"
+
+      174 |         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
+      175 |         .set('Authorization', authToken1)
+    > 176 |         .expect(200);
+          |          ^
+      177 |
+      178 |       expect(response.body.success).toBe(true);
+      179 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:176:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › DELETE /api/shops/:shopId/workers/:workerId › should reject non-owner from removing worker
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      183 |         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
+      184 |         .set('Authorization', authToken2)
+    > 185 |         .expect(403);
+          |          ^
+      186 |
+      187 |       expect(response.body.success).toBe(false);
+      188 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:185:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+[32minfo[39m: [SyncQueue] Queued product sync job for follow 1 {"followId":1,"followerShopId":1,"jobId":"18","sourceShopId":2,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Queued product sync job for follow 2 {"followId":2,"followerShopId":2,"jobId":"19","sourceShopId":3,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Sync job already queued for follow 2 {"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Queued product sync job for follow 3 {"followId":3,"followerShopId":3,"jobId":"20","sourceShopId":4,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Queued product sync job for follow 4 {"followId":4,"followerShopId":4,"jobId":"21","sourceShopId":5,"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Closing queue... {"timestamp":"2025-11-05 19:54:35"}
+[32minfo[39m: [SyncQueue] Queue closed {"timestamp":"2025-11-05 19:54:35"}
+PASS __tests__/jobs/syncQueue.test.js
+  Product Sync Queue
+    ✓ should queue a product sync job (8 ms)
+    ✓ should not queue duplicate job for same follow (9 ms)
+    ✓ should get sync status for follow (25 ms)
+    ✓ should return completed status for follow without active job (10 ms)
+    ✓ should process sync job in background (5 ms)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"25ms","method":"POST","path":"/","statusCode":201,"timestamp":"2025-11-05 19:54:36","userId":4876}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"7ms","method":"POST","path":"/","statusCode":201,"timestamp":"2025-11-05 19:54:36","userId":4880}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/","statusCode":403,"timestamp":"2025-11-05 19:54:36","userId":4884}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/products/1778","timestamp":"2025-11-05 19:54:36"}
+  console.warn
+    [WebSocket] Instance not initialized, skipping broadcast
+
+      20 | export function broadcast(event, data) {
+      21 |   if (!wssInstance) {
+    > 22 |     console.warn('[WebSocket] Instance not initialized, skipping broadcast');
+         |             ^
+      23 |     return;
+      24 |   }
+      25 |
+
+      at broadcast (src/utils/websocket.js:22:13)
+      at update (src/controllers/productController.js:278:7)
+
+[32minfo[39m: Response sent {"duration":"6ms","method":"PUT","path":"/1778","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4885}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/products/1779","timestamp":"2025-11-05 19:54:36"}
+  console.warn
+    [WebSocket] Instance not initialized, skipping broadcast
+
+      20 | export function broadcast(event, data) {
+      21 |   if (!wssInstance) {
+    > 22 |     console.warn('[WebSocket] Instance not initialized, skipping broadcast');
+         |             ^
+      23 |     return;
+      24 |   }
+      25 |
+
+      at broadcast (src/utils/websocket.js:22:13)
+      at update (src/controllers/productController.js:278:7)
+
+[32minfo[39m: Response sent {"duration":"4ms","method":"PUT","path":"/1779","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4889}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"PUT","path":"/api/products/1780","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"PUT","path":"/1780","statusCode":403,"timestamp":"2025-11-05 19:54:36","userId":4893}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/products/1781","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"DELETE","path":"/1781","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4894}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/products/1782","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"DELETE","path":"/1782","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4898}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"DELETE","path":"/api/products/1783","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"DELETE","path":"/1783","statusCode":403,"timestamp":"2025-11-05 19:54:36","userId":4902}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-all","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/bulk-delete-all","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4903}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-all","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/bulk-delete-all","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4907}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-all","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/bulk-delete-all","statusCode":403,"timestamp":"2025-11-05 19:54:36","userId":4911}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-by-ids","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/bulk-delete-by-ids","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4912}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-by-ids","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/bulk-delete-by-ids","statusCode":200,"timestamp":"2025-11-05 19:54:36","userId":4916}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/products/bulk-delete-by-ids","timestamp":"2025-11-05 19:54:36"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/bulk-delete-by-ids","statusCode":403,"timestamp":"2025-11-05 19:54:36","userId":4920}
+PASS __tests__/integration/productController.test.js
+  Product Controller - Integration Tests
+    POST /api/products
+      BUG-W2: Worker authorization for product creation
+        ✓ should allow shop owner to create product (52 ms)
+        ✓ should allow shop worker to create product (17 ms)
+        ✓ should reject unauthorized user from creating product (10 ms)
+    PUT /api/products/:id
+      BUG-W2: Worker authorization for product updates
+        ✓ should allow shop owner to update product (13 ms)
+        ✓ should allow shop worker to update product (12 ms)
+        ✓ should reject unauthorized user from updating product (10 ms)
+    DELETE /api/products/:id
+      BUG-W2: Worker authorization for product deletion
+        ✓ should allow shop owner to delete product (10 ms)
+        ✓ should allow shop worker to delete product (9 ms)
+        ✓ should reject unauthorized user from deleting product (10 ms)
+    POST /api/products/bulk-delete-all
+      ✓ should allow shop owner to bulk delete all products (10 ms)
+      ✓ should allow shop worker to bulk delete all products (9 ms)
+      ✓ should reject unauthorized user from bulk deleting (12 ms)
+    POST /api/products/bulk-delete-by-ids
+      ✓ should allow shop owner to bulk delete specific products (10 ms)
+      ✓ should allow shop worker to bulk delete specific products (9 ms)
+      ✓ should reject unauthorized user from bulk deleting by IDs (10 ms)
+
+[34mdebug[39m: Telegram send mocked in test environment {"chatId":"9000300015","text":"📦 Обновление статуса заказа\n\nЗаказ #835\nСтатус: Доставлен\n📦 Test Product","timestamp":"2025-11-05 19:54:36"}
+[34mdebug[39m: Telegram send mocked in test environment {"chatId":"9000300020","text":"✅ Обновление статуса заказа\n\nЗаказ #836\nСтатус: Подтверждён\n📦 Analytics Product 1","timestamp":"2025-11-05 19:54:36"}
+[34mdebug[39m: Telegram send mocked in test environment {"chatId":"9000300020","text":"📦 Обновление статуса заказа\n\nЗаказ #837\nСтатус: Доставлен\n📦 Analytics Product 2","timestamp":"2025-11-05 19:54:36"}
+PASS __tests__/orders.test.js
+  POST /api/orders
+    ✓ should create order successfully with sufficient stock (34 ms)
+    ✓ should reject order with insufficient stock (10 ms)
+    ✓ should prevent race condition (overselling) (19 ms)
+    ✓ should reject order for zero quantity (7 ms)
+    ✓ should reject order for negative quantity (5 ms)
+    ✓ should reject order for non-existent product (4 ms)
+    ✓ should reject order without authentication (3 ms)
+  GET /api/orders
+    ✓ should return user orders (13 ms)
+    ✓ should return empty array for user with no orders (5 ms)
+  PUT /api/orders/:id/status
+    ✓ should update order status (12 ms)
+    ✓ should reject invalid status (5 ms)
+  GET /api/orders/analytics
+    ✓ should return analytics for seller with orders (25 ms)
+    ✓ should return zero statistics for seller with no orders (6 ms)
+    ✓ should reject analytics request without dates (5 ms)
+    ✓ should reject analytics request with invalid date format (4 ms)
+    ✓ should reject analytics request with from > to (5 ms)
+    ✓ should reject analytics request without authentication (2 ms)
+
+[32minfo[39m: Serving webapp static files from: {"path":"/Users/sile/Documents/Status Stock 4.0/webapp/dist","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":111111111,"username":"newuser_test"}
+[32minfo[39m: New user created via Telegram validation: 111111111 (@newuser_test) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"11ms","method":"POST","path":"/telegram-validate","statusCode":201,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":222222222,"username":"existinguser_test"}
+[32minfo[39m: New user created via Telegram validation: 222222222 (@existinguser_test) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/telegram-validate","statusCode":201,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":222222222,"username":"existinguser_test"}
+[32minfo[39m: Existing user logged in via Telegram validation: 222222222 (@existinguser_test) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/telegram-validate","statusCode":200,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":333333333,"username":"updatable_user"}
+[32minfo[39m: New user created via Telegram validation: 333333333 (@updatable_user) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/telegram-validate","statusCode":201,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":333333333,"username":"updatable_user"}
+[32minfo[39m: User info updated via Telegram validation: 333333333 {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"3ms","method":"POST","path":"/telegram-validate","statusCode":200,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[33mwarn[39m: Invalid Telegram initData signature {"expectedHash":"ff99d656...","ip":"::ffff:127.0.0.1","path":"/telegram-validate","providedHash":"deadbeef...","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/telegram-validate","statusCode":401,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[33mwarn[39m: Invalid Telegram initData signature {"expectedHash":"78a32ce6...","ip":"::ffff:127.0.0.1","path":"/telegram-validate","providedHash":"34cf311d...","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/telegram-validate","statusCode":401,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[33mwarn[39m: Missing hash in initData {"ip":"::ffff:127.0.0.1","path":"/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/telegram-validate","statusCode":401,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[33mwarn[39m: Expired Telegram initData {"age":90000,"authDate":1762271677,"currentTime":1762361677,"ip":"::ffff:127.0.0.1","path":"/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"1ms","method":"POST","path":"/telegram-validate","statusCode":401,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[33mwarn[39m: Missing Telegram initData {"ip":"::ffff:127.0.0.1","method":"POST","path":"/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"0ms","method":"POST","path":"/telegram-validate","statusCode":401,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":888888888}
+[32minfo[39m: New user created via Telegram validation: 888888888 (@undefined) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/telegram-validate","statusCode":201,"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Incoming request {"ip":"::ffff:127.0.0.1","method":"POST","path":"/api/auth/telegram-validate","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Telegram user validated {"timestamp":"2025-11-05 19:54:37","userId":999999999,"username":"ivan"}
+[32minfo[39m: New user created via Telegram validation: 999999999 (@ivan) {"timestamp":"2025-11-05 19:54:37"}
+[32minfo[39m: Response sent {"duration":"2ms","method":"POST","path":"/telegram-validate","statusCode":201,"timestamp":"2025-11-05 19:54:37"}
+PASS __tests__/integration/telegramAuth.integration.test.js
+  POST /api/auth/telegram-validate - Integration
+    Valid requests
+      ✓ should create new user and return JWT token (201 Created) (26 ms)
+      ✓ should login existing user and return JWT token (200 OK) (12 ms)
+      ✓ should update user info if changed (9 ms)
+    Security: Invalid signatures
+      ✓ should REJECT request with tampered hash (401 Unauthorized) (2 ms)
+      ✓ should REJECT request with tampered user ID (401 Unauthorized) (2 ms)
+      ✓ should REJECT request without hash (401 Unauthorized) (2 ms)
+    Security: Expired initData
+      ✓ should REJECT expired initData (older than 24 hours) (4 ms)
+    Security: Missing headers
+      ✓ should REJECT request without x-telegram-init-data header (2 ms)
+    Edge cases
+      ✓ should handle user without username (optional field) (7 ms)
+      ✓ should handle Cyrillic names correctly (4 ms)
+
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/verify","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/verify","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/verify","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/verify","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/verify","timestamp":"2025-11-05 19:54:37"}
+PASS __tests__/payments.test.js
+  POST /api/payments/verify - Validation Tests
+    ✓ should reject payment verification with NULL payment_address (45 ms)
+    ✓ should reject payment verification with empty payment_address (18 ms)
+    ✓ should reject payment verification with invalid crypto type (6 ms)
+    ✓ should reject payment verification without authentication (4 ms)
+    ✓ should reject payment verification for non-existent order (7 ms)
+    ✓ should reject payment verification with missing tx_hash (5 ms)
+
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/check-limit","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/check-limit","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/check-limit","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/check-limit","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/check-limit","timestamp":"2025-11-05 19:54:37"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":556,"followerShopId":4081,"mode":"monitor","sourceShopId":4083,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":558,"followerShopId":4086,"mode":"monitor","sourceShopId":4089,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":561,"followerShopId":4097,"mode":"monitor","sourceShopId":4098,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":562,"followerShopId":4097,"mode":"monitor","sourceShopId":4099,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":563,"followerShopId":4097,"mode":"monitor","sourceShopId":4100,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":564,"followerShopId":4102,"mode":"monitor","sourceShopId":4106,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":565,"followerShopId":4102,"mode":"monitor","sourceShopId":4107,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":566,"followerShopId":4102,"mode":"monitor","sourceShopId":4108,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":567,"followerShopId":4102,"mode":"monitor","sourceShopId":4109,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":568,"followerShopId":4102,"mode":"monitor","sourceShopId":4110,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":569,"followerShopId":4102,"mode":"monitor","sourceShopId":4111,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":570,"followerShopId":4102,"mode":"monitor","sourceShopId":4112,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":571,"followerShopId":4102,"mode":"monitor","sourceShopId":4113,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":572,"followerShopId":4102,"mode":"monitor","sourceShopId":4114,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Follow created {"followId":573,"followerShopId":4102,"mode":"monitor","sourceShopId":4115,"timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"POST","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/my","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/578/products","timestamp":"2025-11-05 19:54:38"}
+[34mdebug[39m: Skipping Telegram validation in development/test {"env":"test","method":"GET","path":"/579/products","timestamp":"2025-11-05 19:54:38"}
+PASS __tests__/integration/shopFollowController.test.js
+  Shop Follow Controller - Integration Tests
+    GET /api/follows/check-limit
+      BUG-F1: PRO users unlimited follows
+        ✓ should return unlimited limit for PRO tier shop (38 ms)
+        ✓ should return limited (2) for FREE tier shop (11 ms)
+        ✓ should show correct remaining count for FREE tier (11 ms)
+        ✓ should show limit reached for FREE tier with 2 follows (12 ms)
+        ✓ should allow PRO tier to have 3+ follows (8 ms)
+    POST /api/follows
+      BUG-F1: Follow creation limits by tier
+        ✓ should allow FREE tier to create first follow (20 ms)
+        ✓ should allow FREE tier to create second follow (14 ms)
+        ✓ should reject FREE tier third follow (limit reached) (17 ms)
+        ✓ should allow PRO tier to create 3+ follows (21 ms)
+        ✓ should allow PRO tier unlimited follows (10+ test) (51 ms)
+      Follow validation (existing tests)
+        ✓ should reject if follower shop not found (9 ms)
+        ✓ should reject if source shop not found (8 ms)
+        ✓ should reject self-follow (7 ms)
+        ✓ should reject duplicate follow (7 ms)
+        ✓ should require markup percentage for resell mode (7 ms)
+        ✓ should validate markup percentage range (7 ms)
+    GET /api/follows/my-follows
+      ✓ should return list of active follows (11 ms)
+    GET /api/shop-follows
+      ✓ returns follows using alias endpoint with shop_id query (10 ms)
+    GET /api/follows/:id/products
+      ✓ returns source products for monitor mode (9 ms)
+      ✓ returns synced products and pricing for resell mode (10 ms)
+
+[32minfo[39m: New user registered: 9000123456 (@newuser) {"timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: Existing user logged in: 9000111222 (@different_username) {"timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: User 5021 updating role to: seller {"timestamp":"2025-11-05 19:54:38"}
+[32minfo[39m: User 5022 updating role to: buyer {"timestamp":"2025-11-05 19:54:38"}
+PASS __tests__/auth.test.js
+  POST /api/auth/register
+    ✓ should register a new user and return JWT token (30 ms)
+    ✓ should return existing user if already registered (7 ms)
+    ✓ should reject registration without telegram_id (4 ms)
+  GET /api/auth/profile
+    ✓ should return user profile with valid token (6 ms)
+    ✓ should reject request without token (9 ms)
+    ✓ should reject request with invalid token (3 ms)
+  PATCH /api/auth/role
+    ✓ should switch user role from buyer to seller (6 ms)
+    ✓ should switch user role from seller to buyer (6 ms)
+    ✓ should reject invalid role (6 ms)
+    ✓ should reject request without authentication (7 ms)
+  Auth Middleware
+    ✓ should allow access to protected route with valid token (6 ms)
+    ✓ should block access to protected route without token (3 ms)
+    ✓ should block access with expired token (4 ms)
+
+[34mdebug[39m: Telegram send mocked in test environment {"chatId":"9100000002","text":"🚚 Обновление статуса заказа\n\nЗаказ #850\nСтатус: Отправлен\n📦 Premium Keyboard","timestamp":"2025-11-05 19:54:39"}
+PASS __tests__/integration/orderStatusFlows.test.js
+  Order status flows
+    GET /api/orders?shop_id
+      ✓ returns only confirmed orders when filtered as active (31 ms)
+      ✓ understands delivered/completed aliases (11 ms)
+    GET /api/orders/active/count
+      ✓ counts confirmed orders only (9 ms)
+    POST /api/orders/bulk-status
+      ✓ updates status and reflects changes in active count (23 ms)
+
+[32minfo[39m: Worker added to shop {"addedBy":5036,"shopId":"4173","timestamp":"2025-11-05 19:54:39","workerId":511,"workerUserId":5037}
+[32minfo[39m: Worker added to shop {"addedBy":5051,"shopId":"4187","timestamp":"2025-11-05 19:54:39","workerId":512,"workerUserId":5052}
+[32minfo[39m: Worker removed from shop {"removedBy":5058,"shopId":"4193","timestamp":"2025-11-05 19:54:39","workerId":"514","workerUserId":5059}
+PASS __tests__/integration/workerController.test.js
+  Worker Controller - Integration Tests
+    POST /api/shops/:shopId/workers
+      BUG-W1: PRO tier check
+        ✓ should reject worker addition for FREE tier shop (34 ms)
+        ✓ should allow worker addition for PRO tier shop (16 ms)
+        ✓ should enforce PRO check before other validations (6 ms)
+      Authorization checks
+        ✓ should reject if user is not shop owner (6 ms)
+        ✓ should reject if shop not found (5 ms)
+      Worker validation
+        ✓ should reject if telegram_id not provided (5 ms)
+        ✓ should reject if worker user not found (6 ms)
+        ✓ should reject if owner tries to add themselves (6 ms)
+        ✓ should reject duplicate worker addition (12 ms)
+    GET /api/shops/:shopId/workers
+      ✓ should list workers for shop owner (7 ms)
+      ✓ should reject if user is not shop owner (6 ms)
+    DELETE /api/shops/:shopId/workers/:workerId
+      ✓ should remove worker successfully (11 ms)
+      ✓ should reject if user is not shop owner (7 ms)
+      ✓ should reject if worker not found (6 ms)
+
+[32minfo[39m: [RateLimit] Shop 1: 1/2 migrations used this month {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1: 2/2 migrations used this month {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1: 0/2 migrations used this month {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1 tier: pro {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1 tier: basic {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1 tier: pro {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1: 1/2 migrations used this month {"timestamp":"2025-11-05 19:54:39"}
+[32minfo[39m: [RateLimit] Shop 1 tier: basic {"timestamp":"2025-11-05 19:54:39"}
+PASS src/services/__tests__/rateLimit.test.js
+  Rate Limit Service
+    canMigrate
+      ✓ should allow migration when under limit (2 ms)
+      ✓ should block migration when limit exceeded
+      ✓ should include reset date (1 ms)
+    isProShop
+      ✓ should return true for PRO shop
+      ✓ should return false for basic shop (1 ms)
+    validateMigration
+      ✓ should pass validation for PRO shop under limit (1 ms)
+      ✓ should fail validation for basic shop
+
+PASS __tests__/unit/telegramAuth.test.js
+  Telegram initData Validation Security
+    Valid initData
+      ✓ should validate correct initData with all user fields (1 ms)
+      ✓ should validate initData with minimal user fields
+      ✓ should parse user data correctly from valid initData (1 ms)
+    Security: Invalid signatures (CRITICAL)
+      ✓ should REJECT initData with tampered hash
+      ✓ should REJECT initData with tampered user data (1 ms)
+      ✓ should REJECT initData with completely fake hash
+      ✓ should REJECT initData signed with wrong bot token
+    Security: Missing/invalid parameters
+      ✓ should REJECT initData without hash parameter
+      ✓ should REJECT initData without user parameter
+      ✓ should REJECT initData with malformed JSON in user parameter (1 ms)
+    Security: Expiration check
+      ✓ should REJECT expired initData (older than 24 hours) (1 ms)
+      ✓ should ACCEPT recent initData (within 24 hours)
+    Security: Timing-safe comparison
+      ✓ should use timing-safe comparison (crypto.timingSafeEqual)
+      ✓ should properly compare hashes of different lengths
+    Edge cases
+      ✓ should handle empty initData string
+      ✓ should handle initData with special characters in username
+      ✓ should handle user without username (optional field)
+      ✓ should handle Cyrillic characters in user names
+
+
+ReferenceError: You are trying to `import` a file after the Jest environment has been torn down. From __tests__/api/validation.test.js.
+FAIL __tests__/api/validation.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/validation.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+
+ReferenceError: You are trying to `import` a file after the Jest environment has been torn down. From __tests__/api/rate-limiting.test.js.
+FAIL __tests__/api/rate-limiting.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/rate-limiting.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+
+ReferenceError: You are trying to `import` a file after the Jest environment has been torn down. From __tests__/api/authorization.test.js.
+FAIL __tests__/api/authorization.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/authorization.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+Summary of all failing tests
+FAIL __tests__/integration/webhooks.test.js
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should accept webhook with valid token in query parameter
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      147 |           .query({ token: WEBHOOK_SECRET })
+      148 |           .send(payload)
+    > 149 |           .expect(200);
+          |            ^
+      150 |
+      151 |         expect(response.body.status).toBe('success');
+      152 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:149:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should accept webhook with valid token in header
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      159 |           .set('x-webhook-token', WEBHOOK_SECRET)
+      160 |           .send(payload)
+    > 161 |           .expect(200);
+          |            ^
+      162 |
+      163 |         expect(response.body.status).toBe('success');
+      164 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:161:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-001: Secret token verification › should allow webhook if BLOCKCYPHER_WEBHOOK_SECRET not set
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      204 |           .post('/webhooks/blockcypher')
+      205 |           .send(payload)
+    > 206 |           .expect(200);
+          |            ^
+      207 |
+      208 |         expect(response.body.status).toBe('success');
+      209 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:206:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should process webhook first time
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      221 |           .query({ token: WEBHOOK_SECRET })
+      222 |           .send(payload)
+    > 223 |           .expect(200);
+          |            ^
+      224 |
+      225 |         expect(response.body.status).toBe('success');
+      226 |         expect(response.body.payment_id).toBeDefined();
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:223:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should reject replay of same webhook (same confirmations)
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      245 |           .query({ token: WEBHOOK_SECRET })
+      246 |           .send(payload)
+    > 247 |           .expect(200);
+          |            ^
+      248 |
+      249 |         expect(response1.body.status).toBe('success');
+      250 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:247:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should allow same tx with different confirmations
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      282 |           .query({ token: WEBHOOK_SECRET })
+      283 |           .send(payload1)
+    > 284 |           .expect(200);
+          |            ^
+      285 |
+      286 |         expect(response1.body.status).toBe('success');
+      287 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:284:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-002: Replay attack protection › should store complete webhook payload for forensics
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      315 |           .query({ token: WEBHOOK_SECRET })
+      316 |           .send(payload)
+    > 317 |           .expect(200);
+          |            ^
+      318 |
+      319 |         const webhookId = `blockcypher_${payload.hash}_${payload.confirmations}`;
+      320 |         const processed = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:317:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should commit transaction on success
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      337 |           .query({ token: WEBHOOK_SECRET })
+      338 |           .send(payload)
+    > 339 |           .expect(200);
+          |            ^
+      340 |
+      341 |         expect(response.body.status).toBe('success');
+      342 |
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:339:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should update order status when payment confirmed
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      402 |           .query({ token: WEBHOOK_SECRET })
+      403 |           .send(payload)
+    > 404 |           .expect(200);
+          |            ^
+      405 |
+      406 |         // Verify order status updated
+      407 |         const orderResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:404:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should keep order pending if confirmations insufficient
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      433 |           .query({ token: WEBHOOK_SECRET })
+      434 |           .send(payload)
+    > 435 |           .expect(200);
+          |            ^
+      436 |
+      437 |         // Verify order status still pending
+      438 |         const orderResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:435:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › CVE-PS-003: Database transactions › should handle confirmation threshold from environment
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      460 |           .query({ token: WEBHOOK_SECRET })
+      461 |           .send(payload)
+    > 462 |           .expect(200);
+          |            ^
+      463 |
+      464 |         // Verify payment is pending (3 < 5)
+      465 |         const payments = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:462:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › Edge cases and validation › should handle multiple outputs correctly
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      497 |           .query({ token: WEBHOOK_SECRET })
+      498 |           .send(payload)
+    > 499 |           .expect(200);
+          |            ^
+      500 |
+      501 |         expect(response.body.status).toBe('success');
+      502 |       });
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:499:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Webhooks - Integration Tests › POST /webhooks/blockcypher › Edge cases and validation › should update existing payment confirmations
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      518 |           .query({ token: WEBHOOK_SECRET })
+      519 |           .send(payload1)
+    > 520 |           .expect(200);
+          |            ^
+      521 |
+      522 |         // Verify payment created with pending status
+      523 |         let payments = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/webhooks.test.js:520:12)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+FAIL __tests__/integration/subscription-payments.test.js
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should activate subscription on confirmed BTC payment
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      372 |         .query({ token: WEBHOOK_SECRET })
+      373 |         .send(payload)
+    > 374 |         .expect(200);
+          |          ^
+      375 |
+      376 |       expect(response.body.status).toBe('success');
+      377 |
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:374:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should update shop tier and subscription_status
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      407 |         .query({ token: WEBHOOK_SECRET })
+      408 |         .send(payload)
+    > 409 |         .expect(200);
+          |          ^
+      410 |
+      411 |       // Verify shop updated
+      412 |       const shopResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:409:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should set next_payment_due to +30 days
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      444 |         .query({ token: WEBHOOK_SECRET })
+      445 |         .send(payload)
+    > 446 |         .expect(200);
+          |          ^
+      447 |
+      448 |       // Verify next_payment_due is ~30 days from now
+      449 |       const shopResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:446:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should handle subscription payments separately from orders
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      502 |         .query({ token: WEBHOOK_SECRET })
+      503 |         .send(subPayload)
+    > 504 |         .expect(200);
+          |          ^
+      505 |
+      506 |       // Verify subscription activated but order still pending
+      507 |       const subCheck = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:504:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ✅ Should update invoice status to paid
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      538 |         .query({ token: WEBHOOK_SECRET })
+      539 |         .send(payload)
+    > 540 |         .expect(200);
+          |          ^
+      541 |
+      542 |       // Verify invoice marked as paid
+      543 |       const invoiceCheck = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:540:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● Subscription Payment Automation - Integration Tests › POST /webhooks/blockcypher - Subscription Payments › ❌ Should not activate if payment amount insufficient
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      581 |         .query({ token: WEBHOOK_SECRET })
+      582 |         .send(payload)
+    > 583 |         .expect(200);
+          |          ^
+      584 |
+      585 |       // Verify subscription NOT activated due to insufficient amount
+      586 |       const subResult = await pool.query(
+
+      at Object.<anonymous> (__tests__/integration/subscription-payments.test.js:583:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+FAIL __tests__/payment/hd-wallet-invoice.test.js
+  ● HD Wallet Invoice Generation (P0-PAY-2) › POST /api/orders/:id/invoice › should generate BTC invoice with unique HD wallet address
+
+    expect(received).toBeGreaterThan(expected)
+
+    Matcher error: received value must be a number or bigint
+
+    Received has type:  string
+    Received has value: "0.00096744"
+
+      107 |       // Verify crypto amount is reasonable
+      108 |       const cryptoAmount = response.body.data.cryptoAmount;
+    > 109 |       expect(cryptoAmount).toBeGreaterThan(0);
+          |                            ^
+      110 |       expect(cryptoAmount).toBeLessThan(1); // $100 should be less than 1 BTC
+      111 |
+      112 |       // Verify invoice was saved to database
+
+      at Object.<anonymous> (__tests__/payment/hd-wallet-invoice.test.js:109:28)
+
+FAIL __tests__/integration/bulkOrderStatus.test.js
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids is empty
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      127 |         });
+      128 |
+    > 129 |       expect(response.status).toBe(400);
+          |                               ^
+      130 |       expect(response.body.success).toBe(false);
+      131 |       expect(response.body.error).toBe('Validation failed');
+      132 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:129:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids is not an array
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      141 |         });
+      142 |
+    > 143 |       expect(response.status).toBe(400);
+          |                               ^
+      144 |       expect(response.body.success).toBe(false);
+      145 |     });
+      146 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:143:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when order_ids contains invalid values
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      154 |         });
+      155 |
+    > 156 |       expect(response.status).toBe(400);
+          |                               ^
+      157 |       expect(response.body.success).toBe(false);
+      158 |     });
+      159 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:156:31)
+
+  ● POST /api/orders/bulk-status › Validation › should return 400 when status is invalid
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 401
+
+      167 |         });
+      168 |
+    > 169 |       expect(response.status).toBe(400);
+          |                               ^
+      170 |       expect(response.body.success).toBe(false);
+      171 |       expect(response.body.error).toBe('Validation failed');
+      172 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:169:31)
+
+  ● POST /api/orders/bulk-status › Authorization › should return 404 when orders do not exist
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      201 |         });
+      202 |
+    > 203 |       expect(response.status).toBe(404);
+          |                               ^
+      204 |       expect(response.body.success).toBe(false);
+      205 |       expect(response.body.error).toBe('One or more orders not found');
+      206 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:203:31)
+
+  ● POST /api/orders/bulk-status › Authorization › should return 403 when user does not own the shop
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 401
+
+      215 |         });
+      216 |
+    > 217 |       expect(response.status).toBe(403);
+          |                               ^
+      218 |       expect(response.body.success).toBe(false);
+      219 |       expect(response.body.error).toContain('permission');
+      220 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:217:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should successfully update multiple orders status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      231 |         });
+      232 |
+    > 233 |       expect(response.status).toBe(200);
+          |                               ^
+      234 |       expect(response.body.success).toBe(true);
+      235 |       expect(response.body.data).toHaveProperty('updated_count');
+      236 |       expect(response.body.data.updated_count).toBe(orderIds.length);
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:233:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should update database records
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "delivered"
+    Received: "pending"
+
+      268 |       expect(result.rows).toHaveLength(orderIds.length);
+      269 |       result.rows.forEach(row => {
+    > 270 |         expect(row.status).toBe('delivered');
+          |                            ^
+      271 |       });
+      272 |     });
+      273 |
+
+      at __tests__/integration/bulkOrderStatus.test.js:270:28
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:269:19)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should handle partial order list
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      284 |         });
+      285 |
+    > 286 |       expect(response.status).toBe(200);
+          |                               ^
+      287 |       expect(response.body.data.updated_count).toBe(2);
+      288 |       expect(response.body.data.orders).toHaveLength(2);
+      289 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:286:31)
+
+  ● POST /api/orders/bulk-status › Successful bulk update › should handle single order
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 401
+
+      298 |         });
+      299 |
+    > 300 |       expect(response.status).toBe(200);
+          |                               ^
+      301 |       expect(response.body.data.updated_count).toBe(1);
+      302 |       expect(response.body.data.orders).toHaveLength(1);
+      303 |     });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:300:31)
+
+  ● POST /api/orders/bulk-status › Edge cases › should handle duplicate order IDs
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      316 |         });
+      317 |
+    > 318 |       expect(response.status).toBe(404);
+          |                               ^
+      319 |       // Database won't find 3 orders because only 2 unique exist
+      320 |     });
+      321 |
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:318:31)
+
+  ● POST /api/orders/bulk-status › Edge cases › should handle mix of valid and invalid order IDs
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 401
+
+      331 |         });
+      332 |
+    > 333 |       expect(response.status).toBe(404);
+          |                               ^
+      334 |       expect(response.body.error).toBe('One or more orders not found');
+      335 |     });
+      336 |   });
+
+      at Object.<anonymous> (__tests__/integration/bulkOrderStatus.test.js:333:31)
+
+FAIL __tests__/security/csrf.test.js
+  ● CSRF Protection › Origin Validation › should reject POST requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      62 |         .send({ name: 'Evil Shop' });
+      63 |
+    > 64 |       expect(response.status).toBe(403);
+         |                               ^
+      65 |       expect(response.body.success).toBe(false);
+      66 |       expect(response.body.error).toContain('CSRF');
+      67 |     });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:64:31)
+
+  ● CSRF Protection › Origin Validation › should reject PUT requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      74 |         .send({ role: 'seller' });
+      75 |
+    > 76 |       expect(response.status).toBe(403);
+         |                               ^
+      77 |       expect(response.body.error).toContain('CSRF');
+      78 |     });
+      79 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:76:31)
+
+  ● CSRF Protection › Origin Validation › should reject DELETE requests with invalid origin
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      84 |         .set('Authorization', `Bearer ${authToken}`);
+      85 |
+    > 86 |       expect(response.status).toBe(403);
+         |                               ^
+      87 |       expect(response.body.error).toContain('CSRF');
+      88 |     });
+      89 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:86:31)
+
+  ● CSRF Protection › Referer Validation › should reject POST requests with invalid referer
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      121 |         .send({ name: 'Phishing Shop' });
+      122 |
+    > 123 |       expect(response.status).toBe(403);
+          |                               ^
+      124 |       expect(response.body.error).toContain('CSRF');
+      125 |     });
+      126 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:123:31)
+
+  ● CSRF Protection › Missing Both Origin and Referer › should reject POST when both origin and referer are missing
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      204 |       // Skip if supertest adds origin automatically
+      205 |       if (!response.request.header.origin && !response.request.header.referer) {
+    > 206 |         expect(response.status).toBe(403);
+          |                                 ^
+      207 |         expect(response.body.error).toContain('CSRF');
+      208 |       }
+      209 |     });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:206:33)
+
+  ● CSRF Protection › Attack Scenarios › should prevent evil.com from creating shops
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 400
+
+      238 |         });
+      239 |
+    > 240 |       expect(response.status).toBe(403);
+          |                               ^
+      241 |       expect(response.body.error).toContain('CSRF');
+      242 |     });
+      243 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:240:31)
+
+  ● CSRF Protection › Attack Scenarios › should prevent attacker.com from updating user roles
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      249 |         .send({ role: 'seller' });
+      250 |
+    > 251 |       expect(response.status).toBe(403);
+          |                               ^
+      252 |       expect(response.body.error).toContain('CSRF');
+      253 |     });
+      254 |
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:251:31)
+
+  ● CSRF Protection › Attack Scenarios › should prevent phishing-site.com from placing orders
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 403
+    Received: 404
+
+      263 |         });
+      264 |
+    > 265 |       expect(response.status).toBe(403);
+          |                               ^
+      266 |       expect(response.body.error).toContain('CSRF');
+      267 |     });
+      268 |   });
+
+      at Object.<anonymous> (__tests__/security/csrf.test.js:265:31)
+
+FAIL __tests__/integration/shopController.test.js
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (exact match)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      180 |         });
+      181 |
+    > 182 |       expect(response1.status).toBe(201);
+          |                                ^
+      183 |
+      184 |       // User 2 tries to create shop with same name
+      185 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:182:32)
+
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (case-insensitive)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      214 |         });
+      215 |
+    > 216 |       expect(response1.status).toBe(201);
+          |                                ^
+      217 |
+      218 |       // User 2 tries to create with uppercase
+      219 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:216:32)
+
+  ● POST /api/shops - Shop Name Validation › Uniqueness Validation › should reject duplicate shop name (mixed case)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 201
+    Received: 429
+
+      248 |         });
+      249 |
+    > 250 |       expect(response1.status).toBe(201);
+          |                                ^
+      251 |
+      252 |       // User 2 tries to create with different case: Test_Shop_Unique_3
+      253 |       const testUser2 = await createTestUser();
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:250:32)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should allow updating shop name to a unique name
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      297 |   test('should allow updating shop name to a unique name', async () => {
+      298 |     const response = await request(app)
+    > 299 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      300 |       .set('Authorization', `Bearer ${authToken}`)
+      301 |       .send({
+      302 |         name: 'test_shop_updated_name'
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:299:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should reject updating shop name to an existing name
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      323 |     // Try to update original testShop to existing name
+      324 |     const response = await request(app)
+    > 325 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      326 |       .set('Authorization', `Bearer ${authToken}`)
+      327 |       .send({
+      328 |         name: 'test_shop_existing'
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:325:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should allow updating shop name to same name (no change)
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      337 |     // Update testShop.name first to ensure we have current name
+      338 |     const currentShop = await request(app)
+    > 339 |       .get(`/api/shops/${testShop.id}`)
+          |                                   ^
+      340 |       .set('Authorization', `Bearer ${authToken}`);
+      341 |
+      342 |     const response = await request(app)
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:339:35)
+
+  ● PUT /api/shops/:id - Update Shop Name Validation › should reject invalid shop name format on update
+
+    TypeError: Cannot read properties of undefined (reading 'id')
+
+      353 |   test('should reject invalid shop name format on update', async () => {
+      354 |     const response = await request(app)
+    > 355 |       .put(`/api/shops/${testShop.id}`)
+          |                                   ^
+      356 |       .set('Authorization', `Bearer ${authToken}`)
+      357 |       .send({
+      358 |         name: 'invalid name!' // Contains space and special character
+
+      at Object.<anonymous> (__tests__/integration/shopController.test.js:355:35)
+
+FAIL __tests__/integration/controllers/workerController.test.js
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should allow PRO shop owner to add worker
+
+    expected 201 "Created", got 401 "Unauthorized"
+
+      78 |         .set('Authorization', authToken1)
+      79 |         .send({ telegram_id: testUser3.telegram_id })
+    > 80 |         .expect(201);
+         |          ^
+      81 |
+      82 |       expect(response.body.success).toBe(true);
+      83 |       expect(response.body.data.worker_user_id).toBe(testUser3.id);
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:80:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject FREE shop owner from adding worker (BUG-W1 fix)
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      89 |         .set('Authorization', authToken2)
+      90 |         .send({ telegram_id: testUser3.telegram_id })
+    > 91 |         .expect(403);
+         |          ^
+      92 |
+      93 |       expect(response.body.success).toBe(false);
+      94 |       expect(response.body.error).toContain('PRO subscription');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:91:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject non-owner from adding worker
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      100 |         .set('Authorization', authToken3)
+      101 |         .send({ telegram_id: testUser2.telegram_id })
+    > 102 |         .expect(403);
+          |          ^
+      103 |
+      104 |       expect(response.body.success).toBe(false);
+      105 |       expect(response.body.error).toContain('Only shop owner');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:102:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject adding non-existent user
+
+    expected 404 "Not Found", got 401 "Unauthorized"
+
+      111 |         .set('Authorization', authToken1)
+      112 |         .send({ telegram_id: 999999999 })
+    > 113 |         .expect(404);
+          |          ^
+      114 |
+      115 |       expect(response.body.success).toBe(false);
+      116 |       expect(response.body.error).toContain('User not found');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:113:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › POST /api/shops/:shopId/workers › should reject adding owner as worker
+
+    expected 400 "Bad Request", got 401 "Unauthorized"
+
+      122 |         .set('Authorization', authToken1)
+      123 |         .send({ telegram_id: testUser1.telegram_id })
+    > 124 |         .expect(400);
+          |          ^
+      125 |
+      126 |       expect(response.body.success).toBe(false);
+      127 |       expect(response.body.error).toContain('owner cannot be added as worker');
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:124:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › GET /api/shops/:shopId/workers › should return list of workers for shop owner
+
+    expected 200 "OK", got 401 "Unauthorized"
+
+      134 |         .get(`/api/shops/${proShop.id}/workers`)
+      135 |         .set('Authorization', authToken1)
+    > 136 |         .expect(200);
+          |          ^
+      137 |
+      138 |       expect(response.body.success).toBe(true);
+      139 |       expect(Array.isArray(response.body.data)).toBe(true);
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:136:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › GET /api/shops/:shopId/workers › should reject non-owner from viewing workers
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      145 |         .get(`/api/shops/${proShop.id}/workers`)
+      146 |         .set('Authorization', authToken2)
+    > 147 |         .expect(403);
+          |          ^
+      148 |
+      149 |       expect(response.body.success).toBe(false);
+      150 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:147:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › DELETE /api/shops/:shopId/workers/:workerId › should allow shop owner to remove worker
+
+    expected 200 "OK", got 401 "Unauthorized"
+
+      174 |         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
+      175 |         .set('Authorization', authToken1)
+    > 176 |         .expect(200);
+          |          ^
+      177 |
+      178 |       expect(response.body.success).toBe(true);
+      179 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:176:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+  ● WorkerController Integration Tests › DELETE /api/shops/:shopId/workers/:workerId › should reject non-owner from removing worker
+
+    expected 403 "Forbidden", got 401 "Unauthorized"
+
+      183 |         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
+      184 |         .set('Authorization', authToken2)
+    > 185 |         .expect(403);
+          |          ^
+      186 |
+      187 |       expect(response.body.success).toBe(false);
+      188 |     });
+
+      at Object.<anonymous> (__tests__/integration/controllers/workerController.test.js:185:10)
+      ----
+      at Test._assertStatus (node_modules/supertest/lib/test.js:309:14)
+      at node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (node_modules/supertest/lib/test.js:195:23)
+      at localAssert (node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (node_modules/supertest/lib/test.js:152:11)
+
+FAIL __tests__/api/validation.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/validation.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+FAIL __tests__/api/rate-limiting.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/rate-limiting.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+FAIL __tests__/api/authorization.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../../src/app.js' from '__tests__/api/authorization.test.js'
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+
+
+Test Suites: 10 failed, 11 passed, 21 total
+Tests:       56 failed, 163 passed, 219 total
+Snapshots:   0 total
+Time:        14.346 s
+Ran all test suites.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.
+[32minfo[39m: [SyncQueue] Starting product sync for follow 3 {"followId":3,"followerShopId":3,"sourceShopId":4,"timestamp":"2025-11-05 20:04:29"}
+[31merror[39m: Error syncing products for follow 3: Follow 3 not found {"timestamp":"2025-11-05 20:04:29"}
+[31merror[39m: [SyncQueue] Sync failed for follow 3: {"error":"Follow 3 not found","followId":3,"stack":"","timestamp":"2025-11-05 20:04:29"}
+[31merror[39m: [SyncQueue] Job 24 failed {"attempts":1,"error":"Follow 3 not found","followId":3,"jobId":"24","maxAttempts":3,"timestamp":"2025-11-05 20:04:29"}
+[32minfo[39m: [SyncQueue] Starting product sync for follow 4 {"followId":4,"followerShopId":4,"sourceShopId":5,"timestamp":"2025-11-05 20:04:31"}
+[31merror[39m: Error syncing products for follow 4: Follow 4 not found {"timestamp":"2025-11-05 20:04:31"}
+[31merror[39m: [SyncQueue] Sync failed for follow 4: {"error":"Follow 4 not found","followId":4,"stack":"","timestamp":"2025-11-05 20:04:31"}
+[31merror[39m: [SyncQueue] Job 25 failed {"attempts":2,"error":"Follow 4 not found","followId":4,"jobId":"25","maxAttempts":3,"timestamp":"2025-11-05 20:04:31"}
+[32minfo[39m: [SyncQueue] Starting product sync for follow 4 {"followId":4,"followerShopId":4,"sourceShopId":5,"timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: Error syncing products for follow 4: Follow 4 not found {"timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: [SyncQueue] Sync failed for follow 4: {"error":"Follow 4 not found","followId":4,"stack":"","timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: [SyncQueue] Job 25 failed {"attempts":3,"error":"Follow 4 not found","followId":4,"jobId":"25","maxAttempts":3,"timestamp":"2025-11-05 20:04:37"}
+[32minfo[39m: [SyncQueue] Starting product sync for follow 2 {"followId":2,"followerShopId":2,"sourceShopId":3,"timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: Error syncing products for follow 2: Follow 2 not found {"timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: [SyncQueue] Sync failed for follow 2: {"error":"Follow 2 not found","followId":2,"stack":"","timestamp":"2025-11-05 20:04:37"}
+[31merror[39m: [SyncQueue] Job 23 failed {"attempts":3,"error":"Follow 2 not found","followId":2,"jobId":"23","maxAttempts":3,"timestamp":"2025-11-05 20:04:37"}

@@ -110,6 +110,12 @@ const handleInput = async (ctx) => {
       return; // Ignore non-text messages
     }
 
+    // P1-BOT-007: Track user message ID for cleanup
+    if (!ctx.wizard.state.userMessageIds) {
+      ctx.wizard.state.userMessageIds = [];
+    }
+    ctx.wizard.state.userMessageIds.push(ctx.message.message_id);
+
     const userInput = ctx.message.text.trim();
     const activeOrders = ctx.wizard.state.activeOrders || [];
 
@@ -294,6 +300,16 @@ const markOrdersShippedScene = new Scenes.WizardScene(
 
 // Handle scene leave
 markOrdersShippedScene.leave(async (ctx) => {
+  // P1-BOT-007: Delete user messages
+  const userMsgIds = ctx.wizard.state.userMessageIds || [];
+  for (const msgId of userMsgIds) {
+    try {
+      await ctx.deleteMessage(msgId);
+    } catch (error) {
+      logger.debug(`Could not delete user message ${msgId}:`, error.message);
+    }
+  }
+
   ctx.wizard.state = {};
   logger.info(`User ${ctx.from?.id} left markOrdersShipped scene`);
 });
