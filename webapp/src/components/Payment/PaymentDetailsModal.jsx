@@ -3,6 +3,7 @@ import { useMemo, useState, lazy, Suspense } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
+import { useToast } from '../../hooks/useToast';
 import { CRYPTO_OPTIONS, formatCryptoAmount } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
@@ -20,10 +21,12 @@ export default function PaymentDetailsModal() {
     paymentWallet,
     currentOrder,
     cryptoAmount,
-    setPaymentStep
+    setPaymentStep,
+    isGeneratingInvoice
   } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const toast = useToast();
   const platform = usePlatform();
   const android = isAndroid(platform);
   const ios = isIOS(platform);
@@ -61,6 +64,29 @@ export default function PaymentDetailsModal() {
   );
 
   const isOpen = paymentStep === 'details';
+  const isLoading = isOpen && isGeneratingInvoice;
+
+  // Show loading state if still generating invoice
+  if (isLoading) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(10, 10, 10, 0.85)', backdropFilter: 'blur(8px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-orange-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-white font-semibold text-lg">Загрузка деталей платежа...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   const cryptoInfo = CRYPTO_OPTIONS.find(c => c.id === selectedCrypto);
 
@@ -74,9 +100,12 @@ export default function PaymentDetailsModal() {
       await navigator.clipboard.writeText(paymentWallet);
       setCopied(true);
       triggerHaptic('success');
+      toast.success('Адрес скопирован');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('Не удалось скопировать адрес');
+      triggerHaptic('error');
     }
   };
 
@@ -85,9 +114,12 @@ export default function PaymentDetailsModal() {
       await navigator.clipboard.writeText(`${cryptoAmount} ${selectedCrypto}`);
       setCopiedAmount(true);
       triggerHaptic('success');
+      toast.success('Сумма скопирована');
       setTimeout(() => setCopiedAmount(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('Не удалось скопировать сумму');
+      triggerHaptic('error');
     }
   };
 
@@ -98,7 +130,49 @@ export default function PaymentDetailsModal() {
 
   useBackButton(isOpen ? handleClose : null);
 
+  // Валидация данных
   if (!cryptoInfo || !currentOrder) return null;
+
+  if (!paymentWallet || !cryptoAmount || cryptoAmount <= 0) {
+    // Если данных нет - показываем error state
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              style={getSurfaceStyle('overlay', platform)}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="bg-gray-900 rounded-2xl p-6 max-w-sm text-center">
+                <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-white mb-2">Ошибка загрузки</h3>
+                <p className="text-sm text-gray-400 mb-4">Не удалось получить данные платежа</p>
+                <motion.button
+                  onClick={handleClose}
+                  className="px-6 py-3 rounded-xl font-semibold text-white bg-orange-primary"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Назад
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   const itemCount = currentOrder.quantity || 1;
   const qrSize = ios ? 140 : 160;
@@ -263,7 +337,7 @@ export default function PaymentDetailsModal() {
                     )}
                   </div>
                   <p className="text-gray-500 text-sm mb-1">
-                    ${currentOrder.total_price?.toFixed(2) || '0.00'} USD
+                    ${parseFloat(currentOrder.total_price || 0).toFixed(2)} USD
                   </p>
                   <div
                     className="text-orange-primary font-bold text-3xl tabular-nums"

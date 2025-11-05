@@ -192,7 +192,7 @@ export default function OrderStatusModal() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 text-sm font-medium">{t('payment.amount')}</span>
                     <span className="text-orange-primary font-bold text-lg tabular-nums">
-                      ${currentOrder.total?.toFixed(2) || currentOrder.total_price?.toFixed(2) || '0.00'}
+                      ${parseFloat(currentOrder.total || currentOrder.total_price || 0).toFixed(2)}
                     </span>
                   </div>
 

@@ -86,7 +86,7 @@ function OrderCard({ order }) {
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">{t('orders.amount')}</span>
             <span className="text-white font-bold">
-              ${order.total_amount?.toFixed(2) || order.total?.toFixed(2) || '0.00'}
+              ${parseFloat(order.total_amount || order.total || 0).toFixed(2)}
             </span>
           </div>
         </div>

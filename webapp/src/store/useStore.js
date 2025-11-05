@@ -33,6 +33,35 @@ export const normalizeProduct = (product) => {
   };
 };
 
+/**
+ * Normalize order data from API (PostgreSQL DECIMAL fields come as strings)
+ * @param {Object} order - Raw order from API
+ * @returns {Object} Normalized order with numeric fields
+ */
+export const normalizeOrder = (order) => {
+  if (!order) return null;
+
+  // Convert PostgreSQL DECIMAL strings to numbers
+  const totalPrice = typeof order.total_price === 'number'
+    ? order.total_price
+    : parseFloat(order.total_price) || 0;
+
+  const total = typeof order.total === 'number'
+    ? order.total
+    : parseFloat(order.total) || 0;
+
+  const quantity = typeof order.quantity === 'number'
+    ? order.quantity
+    : parseInt(order.quantity, 10) || 1;
+
+  return {
+    ...order,
+    total_price: totalPrice,
+    total: total,
+    quantity: quantity,
+  };
+};
+
 export const useStore = create(
   persist(
     (set, get) => ({
@@ -226,7 +255,8 @@ export const useStore = create(
             signal: controller.signal
           });
 
-          const order = response.data.data;
+          // Normalize order (PostgreSQL DECIMAL fields come as strings)
+          const order = normalizeOrder(response.data.data);
           set({
             currentOrder: order
           });
@@ -363,13 +393,14 @@ export const useStore = create(
           );
 
           if (response.data.success) {
-            const completedOrder = {
+            // Normalize order before saving to pendingOrders
+            const completedOrder = normalizeOrder({
               ...currentOrder,
               crypto: selectedCrypto,
               txHash: hash,
               status: 'confirmed',
               submittedAt: new Date().toISOString()
-            };
+            });
 
             set({
               pendingOrders: [...get().pendingOrders, completedOrder],
