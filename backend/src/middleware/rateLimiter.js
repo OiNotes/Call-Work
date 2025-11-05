@@ -87,6 +87,24 @@ export const productCreationLimiter = createRateLimiter(
 );
 
 /**
+ * Rate limiter for subscription creation (prevent DoS via subscription spam)
+ */
+export const subscriptionCreationLimiter = createRateLimiter(
+  60 * 60 * 1000, // 1 hour
+  5, // Max 5 subscription creation requests per hour
+  'Too many subscription requests. Please try again in an hour.'
+);
+
+/**
+ * Rate limiter for AI endpoints (expensive operations)
+ */
+export const aiRequestLimiter = createRateLimiter(
+  60 * 60 * 1000, // 1 hour
+  10, // Max 10 AI requests per hour
+  'Too many AI requests. Please try again in an hour.'
+);
+
+/**
  * Custom rate limiter factory
  */
 export const customLimiter = (options = {}) => {
@@ -106,5 +124,7 @@ export default {
   webhookLimiter,
   shopCreationLimiter,
   productCreationLimiter,
+  subscriptionCreationLimiter,
+  aiRequestLimiter,
   customLimiter
 };

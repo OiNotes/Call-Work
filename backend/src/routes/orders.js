@@ -1,6 +1,6 @@
 import express from 'express';
 import { orderController } from '../controllers/orderController.js';
-import { orderValidation } from '../middleware/validation.js';
+import { orderValidation, validateBulkOperation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -106,6 +106,7 @@ router.put(
 router.post(
   '/bulk-status',
   verifyToken,
+  validateBulkOperation,
   orderValidation.bulkUpdateStatus,
   orderController.bulkUpdateStatus
 );

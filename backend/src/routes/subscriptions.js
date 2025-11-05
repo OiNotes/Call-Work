@@ -7,6 +7,7 @@
 import express from 'express';
 import * as subscriptionController from '../controllers/subscriptionController.js';
 import { verifyToken } from '../middleware/auth.js';
+import { subscriptionCreationLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -22,8 +23,14 @@ router.use(verifyToken);
  * Body: {
  *   tier: 'basic' | 'pro'
  * }
+ * 
+ * @security Rate limited to 5 req/hour
  */
-router.post('/pending', subscriptionController.createPendingSubscription);
+router.post(
+  '/pending',
+  subscriptionCreationLimiter,
+  subscriptionController.createPendingSubscription
+);
 
 /**
  * GET /api/subscriptions
@@ -52,8 +59,14 @@ router.get('/my-shops', subscriptionController.getMyShopSubscriptions);
  *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
+ * 
+ * @security Rate limited to 5 req/hour
  */
-router.post('/pay', subscriptionController.paySubscription);
+router.post(
+  '/pay',
+  subscriptionCreationLimiter,
+  subscriptionController.paySubscription
+);
 
 /**
  * POST /api/subscriptions/upgrade
@@ -65,8 +78,14 @@ router.post('/pay', subscriptionController.paySubscription);
  *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
+ * 
+ * @security Rate limited to 5 req/hour
  */
-router.post('/upgrade', subscriptionController.upgradeShop);
+router.post(
+  '/upgrade',
+  subscriptionCreationLimiter,
+  subscriptionController.upgradeShop
+);
 
 /**
  * GET /api/subscriptions/upgrade-cost/:shopId

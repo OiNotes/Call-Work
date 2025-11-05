@@ -402,6 +402,52 @@ export const walletValidation = {
   ]
 };
 
+/**
+ * Bulk operation validation middleware
+ * Prevents DoS attacks via excessively large bulk operations
+ */
+export const validateBulkOperation = [
+  body('productIds')
+    .optional()
+    .isArray({ max: 100 })
+    .withMessage('Cannot process more than 100 items in bulk operation'),
+  body('productIds.*')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Each product ID must be a positive integer'),
+  body('order_ids')
+    .optional()
+    .isArray({ max: 100 })
+    .withMessage('Cannot process more than 100 orders in bulk operation'),
+  body('order_ids.*')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Each order ID must be a positive integer'),
+  validate
+];
+
+/**
+ * AI prompt validation middleware
+ * Prevents excessive AI usage and prompt injection
+ */
+export const aiValidation = {
+  chat: [
+    body('message')
+      .trim()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage('Message must be between 1 and 1000 characters'),
+    body('shopId')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Shop ID must be a positive integer'),
+    body('conversationHistory')
+      .optional()
+      .isArray({ max: 50 })
+      .withMessage('Conversation history cannot exceed 50 messages'),
+    validate
+  ]
+};
+
 export default {
   validate,
   authValidation,
@@ -409,5 +455,7 @@ export default {
   productValidation,
   orderValidation,
   paymentValidation,
-  walletValidation
+  walletValidation,
+  validateBulkOperation,
+  aiValidation
 };

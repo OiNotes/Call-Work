@@ -2,6 +2,7 @@ import express from 'express';
 import * as followController from '../controllers/shopFollowController.js';
 import { verifyToken } from '../middleware/auth.js';
 import { optionalTelegramAuth } from '../middleware/telegramAuth.js';
+import { requireFollowOwner } from '../middleware/authorization.js';
 
 const router = express.Router();
 
@@ -30,13 +31,16 @@ router.post('/', followController.createFollow);
 router.get('/:id', followController.getFollowDetail);
 router.get('/:id/products', followController.getFollowProducts);
 
-// Update follow markup
-router.put('/:id/markup', followController.updateFollowMarkup);
+// P0-PERF-1: Get sync status for background product sync
+router.get('/:id/sync-status', followController.getFollowSyncStatus);
 
-// Switch follow mode
-router.put('/:id/mode', followController.switchFollowMode);
+// Update follow markup (requires ownership)
+router.put('/:id/markup', requireFollowOwner, followController.updateFollowMarkup);
 
-// Delete follow
-router.delete('/:id', followController.deleteFollow);
+// Switch follow mode (requires ownership)
+router.put('/:id/mode', requireFollowOwner, followController.switchFollowMode);
+
+// Delete follow (requires ownership)
+router.delete('/:id', requireFollowOwner, followController.deleteFollow);
 
 export default router;

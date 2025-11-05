@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "worker": "node src/workers/syncWorker.js",
+    "worker:dev": "nodemon src/workers/syncWorker.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
@@ -28,6 +30,7 @@
     "axios": "^1.6.0",
     "bip32": "^4.0.0",
     "bitcoinjs-lib": "^6.1.5",
+    "bull": "^4.16.5",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "decimal.js": "^10.6.0",

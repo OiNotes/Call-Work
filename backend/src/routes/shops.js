@@ -133,6 +133,7 @@ router.put(
 router.get(
   '/:shopId/migration/check',
   verifyToken,
+  requireShopOwner,
   migrationController.checkMigrationEligibility
 );
 
@@ -144,6 +145,7 @@ router.get(
 router.post(
   '/:shopId/migration',
   verifyToken,
+  requireShopOwner,
   migrationController.initiateMigration
 );
 
@@ -155,6 +157,7 @@ router.post(
 router.get(
   '/:shopId/migration/history',
   verifyToken,
+  requireShopOwner,
   migrationController.getMigrationHistory
 );
 
@@ -166,6 +169,7 @@ router.get(
 router.get(
   '/:shopId/migration/:migrationId',
   verifyToken,
+  requireShopOwner,
   migrationController.getMigrationStatus
 );
 

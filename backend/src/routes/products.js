@@ -1,6 +1,6 @@
 import express from 'express';
 import { productController } from '../controllers/productController.js';
-import { productValidation } from '../middleware/validation.js';
+import { productValidation, validateBulkOperation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
 import { productCreationLimiter } from '../middleware/rateLimiter.js';
 import { checkProductLimit, getProductLimitStatus } from '../middleware/productLimits.js';
@@ -103,6 +103,7 @@ router.post(
 router.post(
   '/bulk-delete-by-ids',
   verifyToken,
+  validateBulkOperation,
   productValidation.bulkDeleteByIds,
   productController.bulkDeleteByIds
 );
@@ -137,6 +138,7 @@ router.post(
 router.post(
   '/bulk-update',
   verifyToken,
+  validateBulkOperation,
   productController.bulkUpdateProducts
 );
 

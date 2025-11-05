@@ -3,6 +3,7 @@ import { shopQueries, workerQueries, productQueries } from '../models/db.js';
 import { syncedProductQueries } from '../models/syncedProductQueries.js';
 import { getClient } from '../config/database.js';
 import { syncAllProductsForFollow, updateMarkupForFollow } from '../services/productSyncService.js';
+import { queueProductSync, getSyncStatus } from '../jobs/syncQueue.js';
 import logger from '../utils/logger.js';
 
 const FREE_TIER_LIMIT = 2; // FREE users can follow max 2 shops
@@ -371,59 +372,20 @@ export const createFollow = async (req, res) => {
 
       follow = insertResult.rows[0];
 
-      // P0-DB-2 FIX: If resell mode, sync products WITHIN transaction
-      if (normalizedMode === 'resell') {
-        // Get all active products from source shop
-        const sourceProducts = await client.query(
-          `SELECT id, name, description, price, currency, stock_quantity
-           FROM products
-           WHERE shop_id = $1 AND is_active = true
-           LIMIT 1000`,
-          [sourceId]
-        );
-
-        // Sync each product within transaction
-        for (const sourceProduct of sourceProducts.rows) {
-          try {
-            // Calculate price with markup
-            const newPrice = Math.round(parseFloat(sourceProduct.price) * (1 + markupValue / 100) * 100) / 100;
-
-            // Create product in follower shop
-            const syncedProductResult = await client.query(
-              `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity)
-               VALUES ($1, $2, $3, $4, $5, $6, 0)
-               RETURNING id`,
-              [
-                followerId,
-                sourceProduct.name,
-                sourceProduct.description,
-                newPrice,
-                sourceProduct.currency || 'USD',
-                sourceProduct.stock_quantity
-              ]
-            );
-
-            const syncedProductId = syncedProductResult.rows[0].id;
-
-            // Create synced_products record
-            await client.query(
-              `INSERT INTO synced_products (follow_id, synced_product_id, source_product_id)
-               VALUES ($1, $2, $3)`,
-              [follow.id, syncedProductId, sourceProduct.id]
-            );
-          } catch (productError) {
-            // Log but continue with other products
-            logger.error('Error syncing product during follow creation', {
-              sourceProductId: sourceProduct.id,
-              error: productError.message
-            });
-            // Don't throw - allow partial sync within transaction
-          }
-        }
-      }
-
-      // Commit transaction only if everything succeeded
+      // Commit transaction immediately (don't wait for product sync)
       await client.query('COMMIT');
+      
+      // P0-PERF-1 FIX: Queue product sync in background for resell mode
+      if (normalizedMode === 'resell') {
+        // Queue sync job - non-blocking, returns immediately
+        await queueProductSync(follow.id, sourceId, followerId);
+        
+        logger.info('Product sync queued for follow', {
+          followId: follow.id,
+          sourceShopId: sourceId,
+          followerShopId: followerId,
+        });
+      }
     } catch (txError) {
       // P0-DB-2 FIX: Proper rollback handling
       try {
@@ -452,6 +414,18 @@ export const createFollow = async (req, res) => {
       mode: normalizedMode,
       followId: follow.id
     });
+    
+    // P0-PERF-1 FIX: Return 202 for resell mode (sync in progress)
+    if (normalizedMode === 'resell') {
+      return res.status(202).json({
+        success: true,
+        data: formatFollowResponse(followWithDetails),
+        message: 'Follow created. Products are syncing in background.',
+        sync_status: 'pending'
+      });
+    }
+    
+    // Monitor mode - immediate response
     res.status(201).json({ data: formatFollowResponse(followWithDetails) });
   } catch (error) {
     logger.error('Error creating follow', {
@@ -614,6 +588,48 @@ export const deleteFollow = async (req, res) => {
       params: req.params
     });
     res.status(500).json({ error: 'Failed to delete follow' });
+  }
+};
+
+/**
+ * Get sync status for a follow (P0-PERF-1)
+ */
+export const getFollowSyncStatus = async (req, res) => {
+  try {
+    const followId = Number.parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(followId) || followId <= 0) {
+      return res.status(400).json({ error: 'Valid follow ID is required' });
+    }
+
+    const follow = await shopFollowQueries.findById(followId);
+
+    if (!follow) {
+      return res.status(404).json({ error: 'Follow not found' });
+    }
+
+    const access = await workerQueries.checkAccess(follow.follower_shop_id, req.user.id);
+    if (!access.hasAccess) {
+      return res.status(403).json({ error: 'You do not have access to this follow' });
+    }
+
+    // Get sync status from queue
+    const syncStatus = await getSyncStatus(followId);
+
+    return res.json({
+      success: true,
+      data: {
+        follow_id: followId,
+        ...syncStatus,
+      },
+    });
+  } catch (error) {
+    logger.error('Error getting sync status', {
+      error: error.message,
+      stack: error.stack,
+      followId: req.params?.id,
+    });
+    return res.status(500).json({ error: 'Failed to get sync status' });
   }
 };
 
