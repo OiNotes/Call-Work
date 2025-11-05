@@ -297,14 +297,14 @@ export default function AnalyticsModal({ isOpen, onClose }) {
           {showCustomPicker && (
             <motion.div
               className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end"
-              style={{ padding: '0 16px calc(var(--tabbar-total) + 20px)' }}
+              style={{ padding: '0 12px calc(var(--tabbar-total) + 16px)', maxHeight: '80vh' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowCustomPicker(false)}
             >
               <motion.div
-                className="w-full max-w-xl mx-auto bg-dark-elevated rounded-3xl p-6 shadow-2xl"
+                className="w-full max-w-xl mx-auto bg-dark-elevated rounded-3xl p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[75vh]"
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -312,7 +312,7 @@ export default function AnalyticsModal({ isOpen, onClose }) {
               >
                 <h3 className="text-lg font-semibold text-white mb-4">Выбор периода</h3>
 
-                <div className="space-y-4">
+                <div className="space-y-4 w-full min-w-0">
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">С</label>
                     <input
@@ -334,16 +334,16 @@ export default function AnalyticsModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 sticky bottom-0 bg-dark-elevated pt-4 -mx-6 px-6 pb-2">
                   <button
                     onClick={() => setShowCustomPicker(false)}
-                    className="flex-1 bg-dark-bg text-white px-4 py-3 rounded-xl font-medium"
+                    className="flex-1 bg-dark-bg text-white px-4 py-3 sm:py-4 rounded-xl font-medium min-h-[44px]"
                   >
                     Отмена
                   </button>
                   <button
                     onClick={handleCustomRangeApply}
-                    className="flex-1 bg-orange-primary text-white px-4 py-3 rounded-xl font-medium"
+                    className="flex-1 bg-orange-primary text-white px-4 py-3 sm:py-4 rounded-xl font-medium min-h-[44px]"
                     disabled={!customRange.from || !customRange.to}
                   >
                     Применить
