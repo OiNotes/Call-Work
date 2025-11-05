@@ -72,7 +72,7 @@ export default function PaymentDetailsModal() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center"
+            className="fixed inset-0 z-[60] flex items-center justify-center"
             style={{ background: 'rgba(10, 10, 10, 0.85)', backdropFilter: 'blur(8px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -140,7 +140,7 @@ export default function PaymentDetailsModal() {
         {isOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-50"
+              className="fixed inset-0 z-[60]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -148,7 +148,7 @@ export default function PaymentDetailsModal() {
               style={getSurfaceStyle('overlay', platform)}
             />
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -183,7 +183,7 @@ export default function PaymentDetailsModal() {
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[60]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -194,7 +194,7 @@ export default function PaymentDetailsModal() {
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-[60] flex flex-col"
             style={{ maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32) }}
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -352,7 +352,7 @@ export default function PaymentDetailsModal() {
               </div>
 
               {/* Footer - Compact */}
-              <div className="p-4 border-t border-white/10" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
+              <div className="p-4 border-t border-white/10">
                 <motion.button
                   onClick={handlePaid}
                   className="w-full h-12 text-white font-bold rounded-xl overflow-hidden"
