@@ -100,16 +100,9 @@ export default function Catalog() {
     if (shopToLoad) {
       loadProducts(shopToLoad.id);
     }
-  }, [currentShop, myShop, loadProducts]);
+  }, [currentShop, myShop]);
 
-  // Force reload products on component mount (handles F5 refresh)
-  useEffect(() => {
-    const shopToLoad = currentShop || myShop;
-    if (shopToLoad) {
-      loadProducts(shopToLoad.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - runs only on mount
+
 
   const handleBack = useCallback(() => {
     triggerHaptic('light');
@@ -151,17 +144,7 @@ export default function Catalog() {
     ? productSections.preorder
     : productSections.stock;
 
-  useEffect(() => {
-    if (loading) return;
 
-    if (activeSection === 'stock' && productSections.stock.length === 0 && productSections.preorder.length > 0) {
-      setActiveSection('preorder');
-    }
-
-    if (activeSection === 'preorder' && productSections.preorder.length === 0 && productSections.stock.length > 0) {
-      setActiveSection('stock');
-    }
-  }, [loading, activeSection, productSections.stock.length, productSections.preorder.length]);
 
   const handleSectionChange = useCallback((sectionId) => {
     if (sectionId === activeSection) return;

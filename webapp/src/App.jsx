@@ -104,7 +104,7 @@ function App() {
     };
 
     checkFollows();
-  }, [get, hasFollows, isReady, followsChecked, setHasFollows]);
+  }, [isReady, followsChecked, hasFollows, setHasFollows]);
 
   // Page transition variants
   const pageVariants = {
@@ -135,7 +135,8 @@ function App() {
       case 'settings':
         return <Settings />;
       case 'discount-demo':
-        return <DiscountDemo />;
+        // Демо доступно только в dev mode
+        return import.meta.env.DEV ? <DiscountDemo /> : <Subscriptions />;
       default:
         return <Subscriptions />;
     }

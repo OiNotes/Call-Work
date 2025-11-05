@@ -50,7 +50,7 @@ export default function Follows() {
 
   useEffect(() => {
     loadFollows();
-  }, [loadFollows]);
+  }, []);
 
   const handleFollowClick = useCallback((followId) => {
     triggerHaptic('light');

@@ -28,11 +28,17 @@ function ProductCard({ product, onEdit, onDelete }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <h3 className="text-white font-semibold">{product.name}</h3>
             {!product.is_available && (
               <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
                 Недоступен
+              </span>
+            )}
+            {(product.is_preorder || product.availability === 'preorder') && (
+              <span className="inline-flex items-center gap-1 text-xs text-blue-200 bg-blue-500/15 px-2 py-0.5 rounded-full border border-blue-400/50">
+                <span>🔖</span>
+                <span>Предзаказ</span>
               </span>
             )}
           </div>
@@ -308,7 +314,7 @@ export default function ProductsModal({ isOpen, onClose }) {
     if (isOpen) {
       loadData();
     }
-  }, [isOpen, loadData]);
+  }, [isOpen]);
 
   const handleSubmitProduct = async () => {
     if (saving) return;

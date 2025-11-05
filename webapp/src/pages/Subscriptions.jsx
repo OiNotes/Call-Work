@@ -78,7 +78,7 @@ export default function Subscriptions() {
     return () => {
       cancelled = true;
     };
-  }, [loadSubscriptions]);
+  }, []);
 
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');
@@ -136,40 +136,82 @@ export default function Subscriptions() {
           </div>
         ) : (
           <div className="space-y-4">
-            {subscriptions.map((subscription) => (
-              <motion.div
-                key={subscription.id}
-                onClick={() => handleShopClick(subscription)}
-                className="glass-card rounded-2xl p-5 cursor-pointer"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.01, y: -2 }}
-                whileTap={{ scale: 0.99 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="flex items-center justify-between">
-                  {/* Название магазина */}
-                  <h3 className="text-xl font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
-                    {subscription.shopName}
-                  </h3>
-                  
-                  {/* Стрелка навигации */}
-                  <svg 
-                    className="w-6 h-6 text-orange-primary flex-shrink-0" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2.5} 
-                      d="M9 5l7 7-7 7" 
-                    />
-                  </svg>
-                </div>
-              </motion.div>
-            ))}
+            {subscriptions.map((subscription) => {
+              // Tier badge configuration
+              const tierConfig = {
+                FREE: {
+                  bg: 'bg-gray-500/20',
+                  text: 'text-gray-400',
+                  label: 'FREE'
+                },
+                BASIC: {
+                  bg: 'bg-blue-500/20',
+                  text: 'text-blue-400',
+                  label: 'BASIC'
+                },
+                PRO: {
+                  bg: 'bg-orange-500/20',
+                  text: 'text-orange-400',
+                  label: 'PRO'
+                }
+              };
+
+              const tier = subscription.tier?.toUpperCase() || 'FREE';
+              const config = tierConfig[tier] || tierConfig.FREE;
+              const isActive = subscription.status === 'active';
+
+              return (
+                <motion.div
+                  key={subscription.id}
+                  onClick={() => handleShopClick(subscription)}
+                  className="glass-card rounded-2xl p-6 cursor-pointer min-h-[90px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex items-center justify-between">
+                    {/* Left side - main information */}
+                    <div className="flex-1 space-y-2">
+                      {/* Shop name */}
+                      <h3 className="text-xl font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
+                        {subscription.shopName}
+                      </h3>
+
+                      {/* Tier badge + Status indicator */}
+                      <div className="flex items-center gap-2">
+                        {/* Tier badge */}
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${config.bg} ${config.text}`}>
+                          {config.label}
+                        </span>
+
+                        {/* Status indicator */}
+                        <span className={`flex items-center gap-1.5 text-xs font-medium ${isActive ? 'text-green-400' : 'text-gray-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right side - navigation arrow */}
+                    <svg
+                      className="w-6 h-6 text-orange-primary flex-shrink-0 ml-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

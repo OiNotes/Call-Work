@@ -60,7 +60,7 @@ const FollowDetail = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [followDetailId]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
