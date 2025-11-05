@@ -234,12 +234,12 @@ export const useStore = create(
 
         set({ isCreatingOrder: true });
 
+        let timeoutId; // ✅ Moved BEFORE try block for finally access
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
           const initData = window.Telegram?.WebApp?.initData || '';
           const item = cart[0];
 
-          let timeoutId;
           const controller = new AbortController();
           timeoutId = setTimeout(() => controller.abort(), 15000);
 
