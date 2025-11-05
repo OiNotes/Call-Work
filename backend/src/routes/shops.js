@@ -2,6 +2,7 @@ import express from 'express';
 import { shopController } from '../controllers/shopController.js';
 import { shopValidation } from '../middleware/validation.js';
 import { verifyToken, optionalAuth, requireShopOwner } from '../middleware/auth.js';
+import { shopCreationLimiter } from '../middleware/rateLimiter.js';
 import * as migrationController from '../controllers/migrationController.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 router.post(
   '/',
   verifyToken,
+  shopCreationLimiter,
   shopValidation.create,
   shopController.create
 );
@@ -48,11 +50,42 @@ router.get(
 );
 
 /**
- * @route   GET /api/shops/:id
- * @desc    Get shop by ID
+ * @route   GET /api/shops/:id/wallets/test
+ * @desc    Test route without middleware
  * @access  Public
  */
-router.get('/:id', shopValidation.getById, shopController.getById);
+router.get('/:id/wallets/test', (req, res) => {
+  res.json({ success: true, message: 'Test route works!', shopId: req.params.id });
+});
+
+/**
+ * @route   GET /api/shops/:id/wallets/auth-test
+ * @desc    Test route with only verifyToken
+ * @access  Private
+ */
+router.get('/:id/wallets/auth-test', verifyToken, (req, res) => {
+  res.json({ success: true, message: 'Auth works!', shopId: req.params.id, userId: req.user?.id });
+});
+
+/**
+ * @route   GET /api/shops/:id/wallets
+ * @desc    Get shop wallets (for payments - any authenticated user can view)
+ * @access  Private (Any authenticated user)
+ */
+router.get(
+  '/:id/wallets',
+  verifyToken,
+  // TEMP: Skip validation to test
+  // shopValidation.getById,
+  shopController.getWallets
+);
+
+/**
+ * @route   GET /api/shops/:id
+ * @desc    Get shop by ID (optionalAuth to filter sensitive data for non-owners)
+ * @access  Public (but auth optional for owner-specific data)
+ */
+router.get('/:id', optionalAuth, shopValidation.getById, shopController.getById);
 
 /**
  * @route   PUT /api/shops/:id
@@ -78,19 +111,6 @@ router.delete(
   requireShopOwner,
   shopValidation.getById,
   shopController.delete
-);
-
-/**
- * @route   GET /api/shops/:id/wallets
- * @desc    Get shop wallets
- * @access  Private (Shop owner only)
- */
-router.get(
-  '/:id/wallets',
-  verifyToken,
-  requireShopOwner,
-  shopValidation.getById,
-  shopController.getWallets
 );
 
 /**

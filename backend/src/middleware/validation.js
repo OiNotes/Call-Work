@@ -1,5 +1,6 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { validateCryptoAddress, getCryptoValidationError } from '../utils/validation.js';
+import { isValidPublicUrl } from '../utils/urlValidator.js';
 
 /**
  * Validate request and return errors if any
@@ -76,7 +77,13 @@ export const shopValidation = {
     body('logo')
       .optional()
       .isURL()
-      .withMessage('Logo must be a valid URL'),
+      .withMessage('Logo must be a valid URL')
+      .custom((value) => {
+        if (!isValidPublicUrl(value)) {
+          throw new Error('Logo URL must be a public http/https URL (private IPs not allowed)');
+        }
+        return true;
+      }),
     body('promoCode')
       .optional()
       .trim()
@@ -104,7 +111,13 @@ export const shopValidation = {
     body('logo')
       .optional()
       .isURL()
-      .withMessage('Logo must be a valid URL'),
+      .withMessage('Logo must be a valid URL')
+      .custom((value) => {
+        if (!isValidPublicUrl(value)) {
+          throw new Error('Logo URL must be a public http/https URL (private IPs not allowed)');
+        }
+        return true;
+      }),
     body('isActive')
       .optional()
       .isBoolean()
@@ -165,6 +178,10 @@ export const productValidation = {
       .trim()
       .isLength({ max: 100 })
       .withMessage('Category must not exceed 100 characters'),
+    body('is_preorder')
+      .optional()
+      .isBoolean()
+      .withMessage('is_preorder must be a boolean value'),
     validate
   ],
 
@@ -198,6 +215,10 @@ export const productValidation = {
       .optional()
       .isBoolean()
       .withMessage('isActive must be a boolean'),
+    body('is_preorder')
+      .optional()
+      .isBoolean()
+      .withMessage('is_preorder must be a boolean value'),
     validate
   ],
 

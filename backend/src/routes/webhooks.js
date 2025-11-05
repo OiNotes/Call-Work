@@ -200,6 +200,10 @@ async function sendTelegramNotification(orderId, status) {
  * - CVE-PS-001: Secret token verification
  * - CVE-PS-002: Replay attack protection
  * - CVE-PS-003: Database transactions
+ * - P0-SEC-7: Always verify transactions against blockchain API
+ *
+ * SECURITY NOTE: BlockCypher webhooks don't support HMAC signatures.
+ * We ALWAYS re-verify transactions against the blockchain API to prevent fake webhooks.
  */
 router.post('/blockcypher', async (req, res) => {
   const client = await getClient(); // Get DB client for transaction
@@ -278,6 +282,57 @@ router.post('/blockcypher', async (req, res) => {
       const invoiceType = isOrderPayment ? 'order' : 'subscription';
 
       logger.info(`[Webhook] Invoice found: ${invoice.id} for ${invoiceType} ${invoice.order_id || invoice.subscription_id}`);
+
+      // SECURITY (P0-SEC-7): Always verify transaction against blockchain API
+      // This prevents attackers from sending fake webhook payloads
+      const chain = invoice.chain.toUpperCase();
+      try {
+        const verifiedTx = await blockCypherService.getTransaction(chain, paymentData.txHash);
+        if (!verifiedTx) {
+          logger.error('[Webhook] Transaction not found on blockchain', {
+            txHash: paymentData.txHash,
+            chain
+          });
+          await client.query('COMMIT'); // Commit to mark webhook as processed
+          return res.status(400).json({ error: 'Transaction not found on blockchain' });
+        }
+
+        // Verify transaction data matches webhook payload
+        if (verifiedTx.confirmations !== payload.confirmations) {
+          logger.warn('[Webhook] Confirmation count mismatch - using blockchain value', {
+            webhook: payload.confirmations,
+            blockchain: verifiedTx.confirmations,
+            txHash: paymentData.txHash
+          });
+          // Use blockchain value as source of truth
+          paymentData.confirmations = verifiedTx.confirmations;
+        }
+
+        // Verify amount if it's an order payment
+        if (isOrderPayment) {
+          const expectedAmount = parseFloat(invoice.amount);
+          const receivedAmount = verifiedTx.total / 100000000; // Convert satoshis to BTC/LTC
+          const tolerance = expectedAmount * 0.005; // 0.5% tolerance
+
+          if (Math.abs(receivedAmount - expectedAmount) > tolerance) {
+            logger.error('[Webhook] Amount mismatch', {
+              expected: expectedAmount,
+              received: receivedAmount,
+              txHash: paymentData.txHash
+            });
+            await client.query('COMMIT'); // Commit to mark webhook as processed
+            return res.status(400).json({ error: 'Payment amount does not match invoice' });
+          }
+        }
+      } catch (verifyError) {
+        logger.error('[Webhook] Blockchain verification failed', {
+          error: verifyError.message,
+          txHash: paymentData.txHash,
+          chain
+        });
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: 'Failed to verify transaction on blockchain' });
+      }
 
       // Check if payment already exists
       const existingPayment = await paymentQueries.findByTxHash(paymentData.txHash);

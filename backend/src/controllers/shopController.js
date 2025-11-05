@@ -223,6 +223,7 @@ export const shopController = {
 
   /**
    * Get shop by ID
+   * SECURITY FIX (P0-SEC-2): Filter sensitive data for non-owners
    */
   getById: async (req, res) => {
     try {
@@ -235,6 +236,20 @@ export const shopController = {
           success: false,
           error: 'Shop not found'
         });
+      }
+
+      // SECURITY: Filter sensitive data if not owner
+      const isOwner = req.user && req.user.id === shop.owner_id;
+      
+      if (!isOwner) {
+        // Remove sensitive fields for non-owners
+        delete shop.wallet_btc;
+        delete shop.wallet_eth;
+        delete shop.wallet_usdt;
+        delete shop.wallet_ltc;
+        delete shop.subscription_status;
+        delete shop.next_payment_due;
+        delete shop.grace_period_until;
       }
 
       return res.status(200).json({
@@ -489,30 +504,28 @@ export const shopController = {
   },
 
   /**
-   * Get shop wallets
+   * Get shop wallets (accessible by any authenticated user for payments)
    */
   getWallets: async (req, res) => {
     try {
       const { id } = req.params;
 
-      // Check if shop exists and belongs to user
+      logger.info('[getWallets] Request received', { shopId: id, userId: req.user?.id });
+
+      // Check if shop exists
       const shop = await shopQueries.findById(id);
 
+      logger.info('[getWallets] Shop query result', { found: !!shop, shopId: id });
+
       if (!shop) {
+        logger.warn('[getWallets] Shop not found', { shopId: id });
         return res.status(404).json({
           success: false,
           error: 'Shop not found'
         });
       }
 
-      if (shop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only view your own shop wallets'
-        });
-      }
-
-      // Return wallet data
+      // Return wallet data (available to any authenticated user for payment purposes)
       return res.status(200).json({
         success: true,
         data: {

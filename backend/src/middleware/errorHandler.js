@@ -16,9 +16,10 @@ export class ApiError extends Error {
 
 /**
  * Global error handler middleware
+ * SECURITY FIX (P0-SEC-6): Sanitize errors in production
  */
 export const errorHandler = (err, req, res, _next) => {
-  // Log error
+  // Log error (always log full details internally)
   logger.error('Error occurred', {
     error: err.message,
     stack: err.stack,
@@ -34,21 +35,38 @@ export const errorHandler = (err, req, res, _next) => {
   // Determine error status
   const statusCode = err.statusCode || err.status || 500;
 
-  // Prepare error response
-  const errorResponse = {
-    success: false,
-    error: err.message || 'Internal server error'
-  };
-
-  // Add details in development or for operational errors
-  if (config.nodeEnv === 'development') {
-    errorResponse.stack = err.stack;
-    errorResponse.details = err.details || null;
-  } else if (err.details && err.isOperational) {
-    errorResponse.details = err.details;
+  // SECURITY: In production, sanitize error messages
+  if (config.nodeEnv === 'production') {
+    // For 5xx errors, send generic message (no internal details)
+    if (statusCode >= 500) {
+      return res.status(statusCode).json({
+        success: false,
+        error: 'An error occurred. Please try again later.'
+      });
+    }
+    
+    // For 4xx errors, only send message if it's an operational error
+    const errorResponse = {
+      success: false,
+      error: err.isOperational ? err.message : 'Request failed'
+    };
+    
+    // Only include details for operational errors
+    if (err.details && err.isOperational) {
+      errorResponse.details = err.details;
+    }
+    
+    return res.status(statusCode).json(errorResponse);
   }
 
-  // Send response
+  // Development: send full error details
+  const errorResponse = {
+    success: false,
+    error: err.message || 'Internal server error',
+    stack: err.stack,
+    details: err.details || null
+  };
+
   res.status(statusCode).json(errorResponse);
 };
 
