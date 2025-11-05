@@ -281,6 +281,7 @@ export const handleDeleteFollow = async (ctx) => {
 
 /**
  * Switch follow mode (Monitor ↔ Resell)
+ * P1-BOT-003 FIX: Use scene for markup input to prevent race conditions
  */
 export const handleSwitchMode = async (ctx) => {
   try {
@@ -297,18 +298,16 @@ export const handleSwitchMode = async (ctx) => {
 
     const newMode = follow.mode === 'monitor' ? 'resell' : 'monitor';
 
-    // If switching to resell, need markup percentage
+    // If switching to resell, need markup percentage - use scene
     if (newMode === 'resell') {
-      // Store followId in session for later use
-      ctx.session.editingFollowId = followId;
-      ctx.session.pendingModeSwitch = 'resell';  // Flag that this is a mode switch
-
-      const promptMsg = await ctx.editMessageText(followMessages.markupPrompt);
-      ctx.session.editingMessageId = promptMsg.message_id;  // Save message ID for error handling
+      await ctx.scene.enter('editFollowMarkup', {
+        followId,
+        pendingModeSwitch: 'resell'
+      });
       return;
     }
 
-    // Switch to monitor mode
+    // Switch to monitor mode (no markup needed)
     await followApi.switchMode(followId, newMode, ctx.session.token);
 
     const updated = await followApi.getFollowDetail(followId, ctx.session.token);
@@ -317,9 +316,9 @@ export const handleSwitchMode = async (ctx) => {
     logger.info(`User ${ctx.from.id} switched follow ${followId} to ${newMode}`);
   } catch (error) {
     logger.error('Error switching mode:', error);
-    
+
     const errorMsg = error.response?.data?.error;
-    
+
     if (error.response?.status === 402) {
       await ctx.editMessageText(followMessages.limitReached, followsMenu(false));
     } else if (error.response?.status === 404) {
@@ -334,6 +333,7 @@ export const handleSwitchMode = async (ctx) => {
 
 /**
  * Handle edit markup button click
+ * P1-BOT-003 FIX: Use scene instead of inline handler to prevent race conditions
  */
 export const handleEditMarkup = async (ctx) => {
   try {
@@ -346,12 +346,8 @@ export const handleEditMarkup = async (ctx) => {
       return;
     }
 
-    // Set session flag to capture next text message
-    ctx.session.editingFollowId = followId;
-
-    const promptMsg = await ctx.editMessageText(followMessages.markupPrompt);
-    // Save message ID for later editMessageText
-    ctx.session.editingMessageId = promptMsg.message_id;
+    // Enter scene with followId in state
+    await ctx.scene.enter('editFollowMarkup', { followId });
 
     logger.info(`User ${ctx.from.id} initiated markup edit for follow ${followId}`);
   } catch (error) {
@@ -360,113 +356,12 @@ export const handleEditMarkup = async (ctx) => {
   }
 };
 
-/**
- * Handle markup update when editingFollowId is set
- */
-export const handleMarkupUpdate = async (ctx) => {
-  // Only handle if editingFollowId is set
-  if (!ctx.session?.editingFollowId) {
-    return; // Not our responsibility, pass through
-  }
-
-  try {
-    const followId = ctx.session.editingFollowId;
-    const editingMessageId = ctx.session.editingMessageId;
-
-    // Track user message ID for cleanup
-    const userMsgId = ctx.message.message_id;
-    const markupText = ctx.message.text.trim().replace(',', '.');
-    const markup = parseFloat(markupText);
-
-    if (isNaN(markup) || markup < 1 || markup > 500) {
-      // FIX: Use editMessageText instead of reply
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        editingMessageId,
-        undefined,
-        followMessages.markupInvalid
-      );
-      // Don't delete session - allow retry
-      await ctx.deleteMessage(userMsgId).catch(() => {});
-      return;
-    }
-
-    // Delete user message (clean chat pattern)
-    await ctx.deleteMessage(userMsgId).catch((err) => {
-      logger.debug(`Could not delete user message ${userMsgId}:`, err.message);
-    });
-
-    // Check if this is a mode switch or simple markup update
-    if (ctx.session.pendingModeSwitch) {
-      // Mode switch: use switchMode API (endpoint: /follows/:id/mode)
-      await followApi.switchMode(followId, ctx.session.pendingModeSwitch, ctx.session.token, markup);
-      delete ctx.session.pendingModeSwitch;
-
-      // Fetch updated follow detail to get current mode
-      const follow = await followApi.getFollowDetail(followId, ctx.session.token);
-      const message = formatFollowDetail(follow);
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        editingMessageId,
-        undefined,
-        message,
-        followDetailMenu(followId, follow.mode)
-      );
-    } else {
-      // Simple markup update: use updateMarkup API (endpoint: /follows/:id/markup)
-      await followApi.updateMarkup(followId, markup, ctx.session.token);
-
-      // Fetch updated follow detail to get current mode
-      const follow = await followApi.getFollowDetail(followId, ctx.session.token);
-      const message = formatFollowDetail(follow);
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        editingMessageId,
-        undefined,
-        message,
-        followDetailMenu(followId, follow.mode)
-      );
-    }
-
-    delete ctx.session.editingFollowId;
-    delete ctx.session.editingMessageId;
-    
-    logger.info(`User ${ctx.from.id} updated markup for follow ${followId} to ${markup}%`);
-  } catch (error) {
-    logger.error('Error updating markup:', error);
-
-    const errorMsg = error.response?.data?.error;
-    const editingMessageId = ctx.session.editingMessageId;
-
-    let message = followMessages.switchError;
-    if (error.response?.status === 402) {
-      message = followMessages.limitReached;
-    } else if (error.response?.status === 404) {
-      message = followMessages.notFound;
-    } else if (errorMsg?.toLowerCase().includes('markup')) {
-      message = followMessages.markupInvalid;
-    }
-
-    // Show error with back to follows menu
-    if (editingMessageId) {
-      await ctx.telegram.editMessageText(
-        ctx.chat.id,
-        editingMessageId,
-        undefined,
-        message,
-        followsMenu(Boolean(ctx.session?.hasFollows))
-      ).catch((err) => {
-        logger.debug('Could not edit error message:', err.message);
-      });
-    }
-
-    delete ctx.session.editingFollowId;
-    delete ctx.session.editingMessageId;
-  }
-};
+// P1-BOT-003 FIX: Removed inline handleMarkupUpdate handler
+// Now using editFollowMarkup scene to prevent race conditions
 
 /**
  * Setup follow-related handlers
+ * P1-BOT-003 FIX: Removed inline text handler, now using scene
  */
 export const setupFollowHandlers = (bot) => {
   // View follows list
@@ -488,21 +383,8 @@ export const setupFollowHandlers = (bot) => {
   // Switch mode (pattern: follow_mode:123)
   bot.action(/^follow_mode:(\d+)$/, handleSwitchMode);
 
-  // Edit markup (pattern: follow_edit:123)
+  // Edit markup (pattern: follow_edit:123) - now enters scene
   bot.action(/^follow_edit:(\d+)$/, handleEditMarkup);
-
-  // Handle text for markup updates (EARLY handler - before AI)
-  bot.on('text', async (ctx, next) => {
-    // ONLY handle if editingFollowId is set, otherwise pass through
-    if (ctx.session?.editingFollowId) {
-      await handleMarkupUpdate(ctx);
-      // Дополнительный safeguard для линтера: попытаться удалить текст
-      await ctx.deleteMessage(ctx.message?.message_id).catch(() => {});
-      return;
-    }
-
-    await next(); // Pass to other handlers (AI, etc.)
-  });
 
   logger.info('Follow handlers registered');
 };

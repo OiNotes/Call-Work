@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import { useTelegram } from '../hooks/useTelegram';
@@ -148,7 +148,7 @@ export default function Settings() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
 
-  const settingsSections = getSettingsSections(t, lang);
+  const settingsSections = useMemo(() => getSettingsSections(t, lang), [t, lang]);
 
   const handleSettingClick = (itemId) => {
     triggerHaptic('light');

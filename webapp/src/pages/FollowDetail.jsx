@@ -28,7 +28,7 @@ const FollowDetail = () => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal) => {
     if (!followDetailId) return;
 
     try {
@@ -39,6 +39,11 @@ const FollowDetail = () => {
         followsApi.getDetail(followDetailId),
         followsApi.getProducts(followDetailId, { limit: 100 })
       ]);
+
+      // Check if component unmounted
+      if (signal?.aborted) {
+        return;
+      }
 
       const follow = followData?.data || followData;
       const productsPayload = productsData?.data || productsData;
@@ -51,15 +56,26 @@ const FollowDetail = () => {
       const total = productsPayload.pagination?.total || productsList.length;
       setHasMore(productsList.length < total);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('FollowDetail loadData aborted');
+        return;
+      }
       console.error('Error loading follow detail:', error);
       triggerHaptic('error');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [followDetailId, followsApi, setCurrentFollow, setFollowProducts, triggerHaptic]);
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [loadData]);
 
   const loadMore = async () => {

@@ -1,6 +1,7 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { validateCryptoAddress, getCryptoValidationError } from '../utils/validation.js';
 import { isValidPublicUrl } from '../utils/urlValidator.js';
+import { PAGINATION } from '../utils/constants.js';
 
 /**
  * Validate request and return errors if any
@@ -236,8 +237,8 @@ export const productValidation = {
       .withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 })
-      .withMessage('Limit must be between 1 and 100'),
+      .isInt({ min: 1, max: PAGINATION.MAX_LIMIT })
+      .withMessage(`Limit must be between 1 and ${PAGINATION.MAX_LIMIT}`),
     query('shopId')
       .optional()
       .isInt({ min: 1 })
@@ -448,6 +449,27 @@ export const aiValidation = {
   ]
 };
 
+/**
+ * Query parameter validation for list/pagination endpoints (P1-PERF-005)
+ * Enforces MAX_LIMIT globally to prevent unbounded queries
+ */
+export const validateQueryParams = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: PAGINATION.MAX_LIMIT })
+    .withMessage(`Limit must be between 1 and ${PAGINATION.MAX_LIMIT}`)
+    .customSanitizer((value) => Math.min(parseInt(value, 10), PAGINATION.MAX_LIMIT)),
+  query('offset')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Offset must be a non-negative integer'),
+  validate
+];
+
 export default {
   validate,
   authValidation,
@@ -457,5 +479,6 @@ export default {
   paymentValidation,
   walletValidation,
   validateBulkOperation,
-  aiValidation
+  aiValidation,
+  validateQueryParams
 };

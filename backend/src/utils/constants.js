@@ -70,11 +70,11 @@ export const USER_ROLES = {
   ADMIN: 'admin'
 };
 
-// Pagination defaults
+// Pagination defaults (P1-PERF-005: MAX_LIMIT reduced to 50 to prevent unbounded queries)
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
-  DEFAULT_LIMIT: 50,
-  MAX_LIMIT: 100
+  DEFAULT_LIMIT: 20,
+  MAX_LIMIT: 50 // P1-PERF-005: Reduced from 100 to 50 to prevent large result sets
 };
 
 // Rate limiting

@@ -18,40 +18,39 @@ export default function Follows() {
   const [error, setError] = useState(null);
   const [follows, setFollows] = useState([]);
 
-  useEffect(() => {
-    const loadFollows = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const { data: shopsResponse } = await get('/shops/my');
-        const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+  const loadFollows = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data: shopsResponse } = await get('/shops/my');
+      const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
 
-        if (!shops.length) {
-          setFollows([]);
-          setHasFollows(false);
-          return;
-        }
-
-        const shop = shops[0];
-        const { data: followsResponse } = await get('/follows/my', {
-          params: { shopId: shop.id }
-        });
-
-        const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
-        setFollows(list);
-        setHasFollows(list.length > 0);
-      } catch (err) {
-        setError('Не удалось загрузить подписки');
+      if (!shops.length) {
         setFollows([]);
         setHasFollows(false);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
+      const shop = shops[0];
+      const { data: followsResponse } = await get('/follows/my', {
+        params: { shopId: shop.id }
+      });
+
+      const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
+      setFollows(list);
+      setHasFollows(list.length > 0);
+    } catch (err) {
+      setError('Не удалось загрузить подписки');
+      setFollows([]);
+      setHasFollows(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [get, setHasFollows]);
+
+  useEffect(() => {
     loadFollows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [loadFollows]);
 
   const handleFollowClick = useCallback((followId) => {
     triggerHaptic('light');

@@ -103,7 +103,7 @@ CREATE TABLE shop_follows (
   follower_shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   source_shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   mode VARCHAR(20) NOT NULL CHECK (mode IN ('monitor', 'resell')),
-  markup_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (markup_percentage >= 0 AND markup_percentage <= 500),
+  markup_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (markup_percentage >= 0.1 AND markup_percentage <= 200),
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled')),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -113,7 +113,7 @@ CREATE TABLE shop_follows (
 
 COMMENT ON TABLE shop_follows IS 'Tracks follower→source shop relationships for dropshipping/reseller functionality';
 COMMENT ON COLUMN shop_follows.mode IS 'monitor: just watch, resell: auto-copy with markup';
-COMMENT ON COLUMN shop_follows.markup_percentage IS 'Markup percentage for resell mode (1-500%)';
+COMMENT ON COLUMN shop_follows.markup_percentage IS 'Markup percentage for resell mode (0.1-200%) - P1-SEC-007';
 
 -- ============================================
 -- Synced products table

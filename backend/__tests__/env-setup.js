@@ -5,7 +5,8 @@
 
 // Set test environment variables FIRST
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-secret-key-for-jwt';
+// P1-SEC-005: JWT_SECRET must be at least 32 characters for security
+process.env.JWT_SECRET = 'Fc9hpyCshV57FIM/zrqgpw6rtrUl0yFjvP8XVIK2Sa4=';
 process.env.JWT_EXPIRES_IN = '7d';
 process.env.PORT = '3001';
 // Use same DB as production but with test-only data (telegram_id >= 9000000000)

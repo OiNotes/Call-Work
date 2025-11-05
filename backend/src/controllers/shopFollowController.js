@@ -288,11 +288,15 @@ export const createFollow = async (req, res) => {
 
     if (normalizedMode === 'resell') {
       if (!Number.isFinite(markupValue)) {
-        return res.status(400).json({ error: 'Markup percentage is required for resell mode' });
+        return res.status(400).json({ error: 'Markup percentage is required for resell mode', error_code: 'MARKUP_REQUIRED' });
       }
 
-      if (markupValue < 1 || markupValue > 500) {
-        return res.status(400).json({ error: 'Markup must be between 1% and 500%' });
+      // P1-SEC-007: Limit markup to 0.1-200% to prevent extreme pricing
+      if (markupValue < 0.1 || markupValue > 200) {
+        return res.status(400).json({
+          error: 'Markup must be between 0.1% and 200%',
+          error_code: 'MARKUP_OUT_OF_RANGE'
+        });
       }
     }
 
@@ -452,8 +456,12 @@ export const updateFollowMarkup = async (req, res) => {
       return res.status(400).json({ error: 'Invalid follow ID' });
     }
 
-    if (!Number.isFinite(markupValue) || markupValue < 1 || markupValue > 500) {
-      return res.status(400).json({ error: 'Markup must be between 1% and 500%' });
+    // P1-SEC-007: Limit markup to 0.1-200%
+    if (!Number.isFinite(markupValue) || markupValue < 0.1 || markupValue > 200) {
+      return res.status(400).json({
+        error: 'Markup must be between 0.1% and 200%',
+        error_code: 'MARKUP_OUT_OF_RANGE'
+      });
     }
 
     const existingFollow = await shopFollowQueries.findById(followId);
@@ -518,10 +526,13 @@ export const switchFollowMode = async (req, res) => {
       return res.status(403).json({ error: 'You do not have access to this follow' });
     }
 
-    // If switching to resell, validate markup first
+    // If switching to resell, validate markup first (P1-SEC-007)
     if (normalizedMode === 'resell') {
-      if (!Number.isFinite(markupValue) || markupValue < 1 || markupValue > 500) {
-        return res.status(400).json({ error: 'Markup required for resell mode' });
+      if (!Number.isFinite(markupValue) || markupValue < 0.1 || markupValue > 200) {
+        return res.status(400).json({
+          error: 'Markup must be between 0.1% and 200% for resell mode',
+          error_code: 'MARKUP_OUT_OF_RANGE'
+        });
       }
     }
 

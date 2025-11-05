@@ -60,6 +60,16 @@ export const paymentLimiter = createRateLimiter(
 );
 
 /**
+ * Strict rate limiter for payment verification (P1-SEC-004)
+ * Prevents abuse of payment verification endpoint
+ */
+export const strictPaymentLimiter = createRateLimiter(
+  60 * 1000, // 1 minute
+  3, // Max 3 payment verification requests per minute
+  'Too many payment verification attempts. Please wait before trying again.'
+);
+
+/**
  * Rate limiter for webhook endpoints
  */
 export const webhookLimiter = createRateLimiter(
@@ -121,6 +131,7 @@ export default {
   authLimiter,
   apiLimiter,
   paymentLimiter,
+  strictPaymentLimiter,
   webhookLimiter,
   shopCreationLimiter,
   productCreationLimiter,

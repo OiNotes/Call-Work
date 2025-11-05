@@ -14,72 +14,69 @@ export default function Subscriptions() {
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    let cancelled = false;
-    const isCancelled = () => cancelled;
+  const loadSubscriptions = useCallback(async (signal) => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('[Subscriptions] Loading shop subscriptions...');
 
-    const loadSubscriptions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log('[Subscriptions] Loading shop subscriptions...');
+      // Use new endpoint for shop payment subscriptions
+      const { data, error: apiError } = await api.get('/subscriptions/my-shops');
 
-        // Use new endpoint for shop payment subscriptions
-        const { data, error: apiError } = await api.get('/subscriptions/my-shops');
+      console.log('[Subscriptions] Response:', { data, apiError });
 
-        console.log('[Subscriptions] Response:', { data, apiError });
-
-        // Check if component unmounted during request
-        if (isCancelled()) {
-          console.log('[Subscriptions] Component unmounted, skipping state updates');
-          return;
-        }
-
-        if (apiError) {
-          console.error('[Subscriptions] API error:', apiError);
-          setError('Failed to load subscriptions');
-          return; // Early exit, loading will be reset in finally
-        }
-
-        // Normalize data for shop subscriptions (payment tier data)
-        const rawData = Array.isArray(data?.data) ? data.data :
-                       Array.isArray(data) ? data : [];
-
-        const normalized = rawData.map((item) => ({
-          id: item.id,
-          shopId: item.shop_id,
-          shopName: item.shop_name,
-          tier: item.tier,
-          amount: item.amount,
-          currency: item.currency,
-          periodStart: item.period_start,
-          periodEnd: item.period_end,
-          status: item.status,
-          createdAt: item.created_at,
-          verifiedAt: item.verified_at,
-        }));
-
-        setSubscriptions(normalized);
-      } catch (err) {
-        console.error('[Subscriptions] Exception:', err);
-        if (!isCancelled()) {
-          setError('Failed to load subscriptions');
-        }
-      } finally {
-        console.log('[Subscriptions] Loading complete, setLoading(false)');
-        if (!isCancelled()) {
-          setLoading(false); // ALWAYS resets loading state
-        }
+      // Check if component unmounted during request
+      if (signal?.aborted) {
+        console.log('[Subscriptions] Component unmounted, skipping state updates');
+        return;
       }
-    };
 
-    loadSubscriptions();
+      if (apiError) {
+        console.error('[Subscriptions] API error:', apiError);
+        setError('Failed to load subscriptions');
+        return; // Early exit, loading will be reset in finally
+      }
+
+      // Normalize data for shop subscriptions (payment tier data)
+      const rawData = Array.isArray(data?.data) ? data.data :
+                     Array.isArray(data) ? data : [];
+
+      const normalized = rawData.map((item) => ({
+        id: item.id,
+        shopId: item.shop_id,
+        shopName: item.shop_name,
+        tier: item.tier,
+        amount: item.amount,
+        currency: item.currency,
+        periodStart: item.period_start,
+        periodEnd: item.period_end,
+        status: item.status,
+        createdAt: item.created_at,
+        verifiedAt: item.verified_at,
+      }));
+
+      setSubscriptions(normalized);
+    } catch (err) {
+      console.error('[Subscriptions] Exception:', err);
+      if (!signal?.aborted) {
+        setError('Failed to load subscriptions');
+      }
+    } finally {
+      console.log('[Subscriptions] Loading complete, setLoading(false)');
+      if (!signal?.aborted) {
+        setLoading(false); // ALWAYS resets loading state
+      }
+    }
+  }, [api]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadSubscriptions(controller.signal);
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [loadSubscriptions]);
 
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');

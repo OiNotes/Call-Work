@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import ProductCard from './ProductCard';
 import { useTranslation } from '../../i18n/useTranslation';
 import { usePlatform } from '../../hooks/usePlatform';
@@ -68,32 +69,91 @@ const ProductGrid = memo(function ProductGrid({
     );
   }
 
-  return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 gap-4 p-4 pb-32"
-    >
-      {products.map((product, index) => {
-        // Упрощённая логика isWide - только для действительно длинных названий
-        const isWide = product.name.length > 45;
+  // Use virtualization only for large lists (100+ items) for performance
+  const useVirtualization = products.length > 100;
+  const parentRef = useRef(null);
 
-        return (
-          <motion.div
-            key={product.id}
-            variants={item}
-            className={isWide ? 'col-span-2' : ''}
-          >
-            <ProductCard
-              product={product}
-              onPreorder={onPreorder}
-              isWide={isWide}
-            />
-          </motion.div>
-        );
-      })}
-    </motion.div>
+  const virtualizer = useVirtualizer({
+    count: useVirtualization ? products.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 220, // Estimated row height (2 cards per row)
+    overscan: 5, // Render 5 extra rows for smooth scrolling
+    enabled: useVirtualization,
+  });
+
+  // Non-virtualized render for small lists (better animation support)
+  if (!useVirtualization) {
+    return (
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 gap-4 p-4 pb-32"
+      >
+        {products.map((product) => {
+          const isWide = product.name.length > 45;
+
+          return (
+            <motion.div
+              key={product.id}
+              variants={item}
+              className={isWide ? 'col-span-2' : ''}
+            >
+              <ProductCard
+                product={product}
+                onPreorder={onPreorder}
+                isWide={isWide}
+              />
+            </motion.div>
+          );
+        })}
+      </motion.div>
+    );
+  }
+
+  // Virtualized render for large lists (100+ items)
+  return (
+    <div
+      ref={parentRef}
+      className="p-4 pb-32 overflow-auto"
+      style={{ height: '100%', contain: 'strict' }}
+    >
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const product = products[virtualItem.index];
+          const isWide = product.name.length > 45;
+
+          return (
+            <div
+              key={virtualItem.key}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+            >
+              <div className={`grid grid-cols-2 gap-4 ${isWide ? 'grid-cols-1' : ''}`}>
+                <ProductCard
+                  product={product}
+                  onPreorder={onPreorder}
+                  isWide={isWide}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 });
 

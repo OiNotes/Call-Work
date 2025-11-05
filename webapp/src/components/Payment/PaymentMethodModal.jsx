@@ -24,6 +24,7 @@ export default function PaymentMethodModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [generatingStartTime, setGeneratingStartTime] = useState(null);
   const MAX_RETRIES = 3;
 
@@ -180,8 +181,7 @@ export default function PaymentMethodModal() {
     return () => {
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentShop?.id]);
+  }, [isOpen, currentShop?.id, api, toast]);
 
   // Fallback: если модалка открыта но shop отсутствует
   useEffect(() => {
@@ -213,9 +213,9 @@ export default function PaymentMethodModal() {
     return CRYPTO_OPTIONS.filter(crypto => availableWallets.includes(crypto.id));
   }, [availableWallets, loading]);
 
-  // Retry loading wallets with exponential backoff
+  // Retry loading wallets with exponential backoff and AbortController
   const handleRetry = async () => {
-    if (retryCount >= MAX_RETRIES) {
+    if (retryCount >= MAX_RETRIES || isRetrying) {
       toast.error('Превышен лимит попыток. Попробуйте позже.');
       return;
     }
@@ -223,13 +223,23 @@ export default function PaymentMethodModal() {
     triggerHaptic('light');
     setError(null);
     setLoading(true);
+    setIsRetrying(true); // ✅ Disable button during retry
 
-    // Exponential backoff: 1s, 2s, 4s
-    const delay = Math.pow(2, retryCount) * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
+    const controller = new AbortController();
 
     try {
-      const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`);
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, retryCount) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      // Check if aborted during delay
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`, {
+        signal: controller.signal
+      });
 
       if (apiError) {
         setError(apiError);
@@ -266,6 +276,11 @@ export default function PaymentMethodModal() {
       setRetryCount(0); // Reset on success
       toast.success('Способы оплаты загружены');
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('[PaymentMethodModal] Retry aborted');
+        return;
+      }
+
       console.error('[PaymentMethodModal] Retry failed:', err);
       const errorMsg = err.message || 'Unknown error';
       setError(errorMsg);
@@ -280,6 +295,7 @@ export default function PaymentMethodModal() {
       setAvailableWallets([]);
     } finally {
       setLoading(false);
+      setIsRetrying(false); // ✅ Re-enable button
     }
   };
 
@@ -406,15 +422,18 @@ export default function PaymentMethodModal() {
                     ) : (
                       <motion.button
                         onClick={handleRetry}
-                        className="px-6 py-3 rounded-xl font-semibold text-white"
+                        disabled={isRetrying}
+                        className="px-6 py-3 rounded-xl font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                          background: 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
-                          boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3)'
+                          background: isRetrying
+                            ? 'rgba(74, 74, 74, 0.5)'
+                            : 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
+                          boxShadow: isRetrying ? 'none' : '0 4px 12px rgba(255, 107, 0, 0.3)'
                         }}
-                        whileTap={{ scale: android ? 0.94 : 0.95 }}
+                        whileTap={!isRetrying ? { scale: android ? 0.94 : 0.95 } : {}}
                         transition={controlSpring}
                       >
-                        {t('common.tryAgain') || 'Попробовать снова'}
+                        {isRetrying ? 'Повторная попытка...' : (t('common.tryAgain') || 'Попробовать снова')}
                       </motion.button>
                     )}
                   </div>

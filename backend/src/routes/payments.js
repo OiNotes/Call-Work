@@ -3,7 +3,7 @@ import { paymentController } from '../controllers/paymentController.js';
 import { paymentValidation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
 import { optionalTelegramAuth } from '../middleware/telegramAuth.js';
-import { paymentLimiter } from '../middleware/rateLimiter.js';
+import { paymentLimiter, strictPaymentLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -11,12 +11,13 @@ const router = express.Router();
  * @route   POST /api/payments/verify
  * @desc    Verify crypto payment
  * @access  Private (WebApp)
+ * @security P1-SEC-004: Strict rate limiting (3 req/min) to prevent payment abuse
  */
 router.post(
   '/verify',
   verifyToken,
   optionalTelegramAuth,
-  paymentLimiter,
+  strictPaymentLimiter, // P1-SEC-004: Changed from paymentLimiter to strictPaymentLimiter
   paymentValidation.verify,
   paymentController.verify
 );

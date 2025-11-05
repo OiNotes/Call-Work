@@ -14,6 +14,8 @@ import errorMiddleware from './middleware/error.js';
 import debounceMiddleware from './middleware/debounce.js';
 import sessionRecoveryMiddleware from './middleware/sessionRecovery.js';
 import { createRedisSession } from './middleware/redisSession.js';
+import analyticsMiddleware from './middleware/analytics.js'; // P1-BOT-012
+import userRateLimitMiddleware from './middleware/userRateLimit.js'; // P1-BOT-014
 
 // Scenes
 import chooseTierScene from './scenes/chooseTier.js';
@@ -22,6 +24,7 @@ import addProductScene from './scenes/addProduct.js';
 import searchShopScene from './scenes/searchShop.js';
 import manageWalletsScene from './scenes/manageWallets.js';
 import createFollowScene from './scenes/createFollow.js';
+import editFollowMarkupScene from './scenes/editFollowMarkup.js'; // P1-BOT-003
 import migrateChannelScene from './scenes/migrateChannel.js';
 import paySubscriptionScene from './scenes/paySubscription.js';
 import upgradeShopScene from './scenes/upgradeShop.js';
@@ -35,6 +38,7 @@ import { setupBuyerHandlers } from './handlers/buyer/index.js';
 import { setupCommonHandlers } from './handlers/common.js';
 import { setupAIProductHandlers } from './handlers/seller/aiProducts.js';
 import { setupWorkspaceHandlers } from './handlers/workspace/index.js';
+import { handleHealthCommand } from './commands/health.js'; // P1-BOT-015
 
 dotenv.config();
 
@@ -77,6 +81,7 @@ const stage = new Scenes.Stage([
   searchShopScene,
   manageWalletsScene,
   createFollowScene,
+  editFollowMarkupScene, // P1-BOT-003: Race condition fix
   migrateChannelScene,
   paySubscriptionScene,
   upgradeShopScene,
@@ -105,6 +110,8 @@ bot.use((ctx, next) => {
 });
 
 // Apply middleware
+bot.use(analyticsMiddleware);       // P1-BOT-012: Track usage
+bot.use(userRateLimitMiddleware);   // P1-BOT-014: Rate limiting
 bot.use(debounceMiddleware);        // Prevent rapid clicks
 bot.use(sessionRecoveryMiddleware); // Recover session after restart
 
@@ -112,8 +119,11 @@ bot.use(sessionRecoveryMiddleware); // Recover session after restart
 bot.use(authMiddleware);
 bot.use(errorMiddleware);
 
-// Register handlers
+// Register commands
 bot.start(handleStart);
+bot.command('health', handleHealthCommand); // P1-BOT-015: Health check
+
+// Register handlers
 setupSellerHandlers(bot);
 setupFollowHandlers(bot);
 setupBuyerHandlers(bot);

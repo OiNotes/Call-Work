@@ -48,8 +48,14 @@ const confirmAndAdd = async (ctx) => {
 
     if (input.startsWith('@')) {
       usernameInput = input.slice(1).trim();
-      if (!usernameInput) {
-        await smartMessage.send(ctx, { text: sellerMessages.workerIdInvalid });
+
+      // P1-BOT-005 FIX: Stronger username validation
+      // Telegram usernames: 5-32 chars, alphanumeric + underscore only
+      const usernameRegex = /^[a-zA-Z0-9_]{5,32}$/;
+      if (!usernameInput || !usernameRegex.test(usernameInput)) {
+        await smartMessage.send(ctx, {
+          text: '❌ Некорректный username.\n\nUsername должен:\n• Длина 5-32 символа\n• Только буквы, цифры и _\n\nПример: @john_doe'
+        });
         return;
       }
 

@@ -10,6 +10,7 @@ import TabBarPortal from './components/TabBarPortal';
 import CartSheet from './components/Cart/CartSheet';
 import PaymentFlowManager from './components/Payment/PaymentFlowManager';
 import { ToastContainer } from './components/common/Toast';
+import OfflineBanner from './components/common/OfflineBanner';
 import { useToastStore } from './hooks/useToast';
 import './styles/globals.css';
 import { useApi } from './hooks/useApi';
@@ -230,6 +231,7 @@ function App() {
         <CartSheet />
         <PaymentFlowManager />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <OfflineBanner />
       </div>
       </div>
     </LazyMotion>

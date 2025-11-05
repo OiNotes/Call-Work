@@ -55,54 +55,52 @@ export default function Catalog() {
   }, [myShop, currentShop]);
 
   // Загрузить свой магазин
-  useEffect(() => {
-    const loadMyShop = async () => {
-      try {
-        const { data, error: apiError } = await get('/shops/my');
+  const loadMyShop = useCallback(async () => {
+    try {
+      const { data, error: apiError } = await get('/shops/my');
 
-        if (!apiError && data?.data && data.data.length > 0) {
-          setMyShop(data.data[0]); // Берем первый магазин владельца
-        }
-      } catch (err) {
-        // Error handled silently
+      if (!apiError && data?.data && data.data.length > 0) {
+        setMyShop(data.data[0]); // Берем первый магазин владельца
       }
-    };
+    } catch (err) {
+      // Error handled silently
+    }
+  }, [get]);
 
+  useEffect(() => {
     loadMyShop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [loadMyShop]);
 
   // Загрузить товары при изменении магазина
+  const loadProducts = useCallback(async (shopId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // GET /api/products?shopId=<shopId>
+      const { data, error: apiError } = await get('/products', {
+        params: { shopId }
+      });
+
+      if (apiError) {
+        setError('Failed to load products');
+      } else {
+        const items = Array.isArray(data?.data) ? data.data : [];
+        setStoreProducts(items, shopId);
+      }
+    } catch (err) {
+      setError('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, [get, setStoreProducts]);
+
   useEffect(() => {
     const shopToLoad = currentShop || myShop;
     if (!shopToLoad) return;
 
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // GET /api/products?shopId=<shopId>
-        const { data, error: apiError } = await get('/products', {
-          params: { shopId: shopToLoad.id }
-        });
-
-        if (apiError) {
-          setError('Failed to load products');
-        } else {
-          const items = Array.isArray(data?.data) ? data.data : [];
-          setStoreProducts(items, shopToLoad.id);
-        }
-      } catch (err) {
-        setError('Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentShop, myShop]); // Only trigger when shop changes
+    loadProducts(shopToLoad.id);
+  }, [currentShop, myShop, loadProducts]);
 
 
 

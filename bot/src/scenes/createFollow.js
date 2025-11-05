@@ -80,6 +80,26 @@ const selectMode = async (ctx) => {
       return ctx.scene.leave();
     }
 
+    // P1-BOT-004 FIX: Check circular dependency BEFORE creating follow
+    try {
+      const validation = await followApi.validateCircular(ctx.session.shopId, sourceShopId, ctx.session.token);
+      if (!validation.valid) {
+        logger.warn('Circular dependency detected', {
+          userId: ctx.from.id,
+          followerShopId: ctx.session.shopId,
+          sourceShopId
+        });
+        await smartMessage.send(ctx, {
+          text: followMessages.createCircularDetailed,
+          keyboard: successButtons
+        });
+        return ctx.scene.leave();
+      }
+    } catch (error) {
+      // If validation fails, log but continue (backend will catch it anyway)
+      logger.error('Error validating circular dependency:', error);
+    }
+
     try {
       const limit = await followApi.checkFollowLimit(ctx.session.shopId, ctx.session.token);
       if (limit.reached) {

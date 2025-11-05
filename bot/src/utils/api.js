@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import config from '../config/index.js';
 import logger from './logger.js';
 
@@ -19,6 +20,73 @@ const paymentAxios = axios.create({
   timeout: 60000, // 60 seconds for blockchain queries
   headers: {
     'Content-Type': 'application/json'
+  }
+});
+
+// P1-BOT-002 FIX: Configure retry logic for network errors
+// Retry 3 times with exponential backoff (1s, 2s, 4s)
+// Only retry on network errors (ECONNREFUSED, ETIMEDOUT), NOT on 4xx errors
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Retry on network errors
+    if (axiosRetry.isNetworkError(error)) {
+      logger.warn('Network error detected, retrying...', {
+        url: error.config?.url,
+        attempt: error.config?.['axios-retry']?.retryCount || 0
+      });
+      return true;
+    }
+    // Retry on 5xx server errors (but not 4xx client errors)
+    if (error.response?.status >= 500) {
+      logger.warn('Server error detected, retrying...', {
+        url: error.config?.url,
+        status: error.response.status,
+        attempt: error.config?.['axios-retry']?.retryCount || 0
+      });
+      return true;
+    }
+    // Don't retry on 4xx client errors (bad request, unauthorized, etc.)
+    return false;
+  },
+  onRetry: (retryCount, error) => {
+    logger.info('Retrying API request', {
+      url: error.config?.url,
+      retryCount,
+      error: error.message
+    });
+  }
+});
+
+// Apply same retry logic to payment API
+axiosRetry(paymentAxios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    if (axiosRetry.isNetworkError(error)) {
+      logger.warn('Payment API network error, retrying...', {
+        url: error.config?.url,
+        attempt: error.config?.['axios-retry']?.retryCount || 0
+      });
+      return true;
+    }
+    if (error.response?.status >= 500) {
+      logger.warn('Payment API server error, retrying...', {
+        url: error.config?.url,
+        status: error.response.status,
+        attempt: error.config?.['axios-retry']?.retryCount || 0
+      });
+      return true;
+    }
+    return false;
+  },
+  onRetry: (retryCount, error) => {
+    logger.info('Retrying payment API request', {
+      url: error.config?.url,
+      retryCount,
+      error: error.message
+    });
   }
 });
 
@@ -588,6 +656,29 @@ export const notificationApi = {
 };
 
 export const followApi = {
+  // P1-BOT-004: Validate circular dependency
+  async validateCircular(followerShopId, sourceShopId, token) {
+    try {
+      const { data } = await api.post('/follows/validate-circular',
+        {
+          followerShopId: Number(followerShopId),
+          sourceShopId: Number(sourceShopId)
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      return data.data || data;
+    } catch (error) {
+      // If endpoint doesn't exist yet, skip validation (backward compatible)
+      if (error.response?.status === 404) {
+        logger.warn('Circular validation endpoint not found, skipping validation');
+        return { valid: true };
+      }
+      throw error;
+    }
+  },
+
   // Get my follows (HTTP - requires JWT token)
   async getMyFollows(shopId, token) {
     const { data } = await api.get('/follows/my', {

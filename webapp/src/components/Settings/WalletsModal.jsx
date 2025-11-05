@@ -289,8 +289,7 @@ export default function WalletsModal({ isOpen, onClose }) {
     if (isOpen) {
       loadWallets();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, loadWallets]);
 
   const handleClose = useCallback(() => {
     resetForm();

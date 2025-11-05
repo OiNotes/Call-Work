@@ -22,6 +22,7 @@ import {
   sensitiveDataLogger
 } from './middleware/index.js';
 import { validateOrigin } from './middleware/csrfProtection.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 
 // Import logger
 import logger from './utils/logger.js';
@@ -103,7 +104,7 @@ if (config.nodeEnv === 'production' && process.env.HTTPS_ENABLED === 'true') {
 }
 
 /**
- * CORS configuration
+ * CORS configuration (API-6: Preflight cache added)
  */
 app.use(cors({
   origin: config.frontendUrl,
@@ -111,7 +112,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600 // Cache preflight requests for 10 minutes
+  maxAge: 86400 // API-6: Cache preflight requests for 24 hours (86400 seconds)
 }));
 
 /**
@@ -152,6 +153,11 @@ if (config.nodeEnv === 'development') {
 app.use('/api/', apiLimiter);
 
 /**
+ * Request ID middleware (API-2: X-Request-ID tracing)
+ */
+app.use(requestIdMiddleware);
+
+/**
  * Body parser middleware
  */
 app.use(express.json({ limit: '10mb' }));
@@ -170,15 +176,35 @@ if (fs.existsSync(webappDistPath)) {
 }
 
 /**
- * Health check endpoint
+ * Health check endpoint (API-3: Enhanced with database and memory checks)
  */
-app.get('/health', (req, res) => {
-  res.status(200).json({
+app.get('/health', async (req, res) => {
+  const health = {
     success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString(),
-    environment: config.nodeEnv
-  });
+    environment: config.nodeEnv,
+    uptime: process.uptime(),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      unit: 'MB'
+    }
+  };
+
+  // Check database connection
+  try {
+    const { testConnection } = await import('./config/database.js');
+    await testConnection();
+    health.database = 'Connected';
+  } catch (error) {
+    health.success = false;
+    health.database = 'Disconnected';
+    health.databaseError = error.message;
+    return res.status(503).json(health);
+  }
+
+  res.status(200).json(health);
 });
 
 /**
@@ -300,28 +326,63 @@ const startServer = async () => {
             ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
           }
         } catch (error) {
+          // API-9: Enhanced error handling for WebSocket messages
           logger.error('WebSocket message error', {
-            error: error.message
+            error: error.message,
+            stack: error.stack,
+            rawMessage: message?.toString().substring(0, 100) // Log first 100 chars
           });
+
+          // Send error response to client
+          try {
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: 'Invalid message format',
+              timestamp: Date.now()
+            }));
+          } catch (sendError) {
+            logger.error('Failed to send error response', { error: sendError.message });
+          }
         }
       });
 
-      ws.on('close', () => {
-        logger.info('WebSocket client disconnected');
-      });
-
-      ws.on('error', (error) => {
-        logger.error('WebSocket error', {
-          error: error.message
+      ws.on('close', (code, reason) => {
+        logger.info('WebSocket client disconnected', {
+          code,
+          reason: reason?.toString() || 'No reason provided'
         });
       });
 
-      // Send welcome message
-      ws.send(JSON.stringify({
-        type: 'connected',
-        message: 'Connected to Telegram Shop WebSocket',
-        timestamp: Date.now()
-      }));
+      ws.on('error', (error) => {
+        // API-9: Enhanced WebSocket error logging
+        logger.error('WebSocket error', {
+          error: error.message,
+          stack: error.stack,
+          code: error.code,
+          errno: error.errno
+        });
+      });
+
+      // Send welcome message with error handling
+      try {
+        ws.send(JSON.stringify({
+          type: 'connected',
+          message: 'Connected to Telegram Shop WebSocket',
+          timestamp: Date.now()
+        }));
+      } catch (error) {
+        logger.error('Failed to send welcome message', {
+          error: error.message
+        });
+      }
+    });
+
+    // API-9: Global WebSocket server error handler
+    wss.on('error', (error) => {
+      logger.error('WebSocket server error', {
+        error: error.message,
+        stack: error.stack
+      });
     });
 
     // Broadcast function for real-time updates

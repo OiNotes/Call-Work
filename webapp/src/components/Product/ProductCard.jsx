@@ -9,6 +9,13 @@ import { gpuAccelStyle } from '../../utils/animationHelpers';
 import CountdownTimer from '../common/CountdownTimer';
 import DiscountBadge from '../common/DiscountBadge';
 
+// Move static calculations outside component
+const getSurfaceStyles = (platform) => ({
+  cardSurface: getSurfaceStyle('glassCard', platform),
+  quickSpring: getSpringPreset('quick', platform),
+  pressSpring: getSpringPreset('press', platform),
+});
+
 const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = false }) {
   const { triggerHaptic } = useTelegram();
   const addToCart = useStore((state) => state.addToCart);
@@ -16,9 +23,11 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
   const platform = usePlatform();
   const android = isAndroid(platform);
 
-  const cardSurface = useMemo(() => getSurfaceStyle('glassCard', platform), [platform]);
-  const quickSpring = useMemo(() => getSpringPreset('quick', platform), [platform]);
-  const pressSpring = useMemo(() => getSpringPreset('press', platform), [platform]);
+  // Memoize only once with all styles together
+  const { cardSurface, quickSpring, pressSpring } = useMemo(
+    () => getSurfaceStyles(platform),
+    [platform]
+  );
 
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);

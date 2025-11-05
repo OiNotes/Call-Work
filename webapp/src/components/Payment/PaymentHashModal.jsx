@@ -18,6 +18,9 @@ export default function PaymentHashModal() {
   const android = isAndroid(platform);
   const ios = isIOS(platform);
 
+  // Memoize validation function to avoid recalculation on every render
+  const isValidTxHash = useMemo(() => validateTxHash(txHash), [txHash]);
+
   const overlayStyle = useMemo(
     () => getSurfaceStyle('overlay', platform),
     [platform]
@@ -50,7 +53,7 @@ export default function PaymentHashModal() {
   const handleSubmit = async () => {
     setError('');
 
-    if (!validateTxHash(txHash)) {
+    if (!isValidTxHash) {
       setError(t('payment.txHashInvalid'));
       triggerHaptic('error');
       return;
@@ -245,7 +248,7 @@ export default function PaymentHashModal() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </div>
-                        ) : validateTxHash(txHash) ? (
+                        ) : isValidTxHash ? (
                           <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
                             <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -293,20 +296,20 @@ export default function PaymentHashModal() {
               <div className="p-4 border-t border-white/10" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
                 <motion.button
                   onClick={handleSubmit}
-                  disabled={!validateTxHash(txHash)}
+                  disabled={!isValidTxHash}
                   className="w-full h-12 text-white font-bold rounded-xl overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: validateTxHash(txHash)
+                    background: isValidTxHash
                       ? 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)'
                       : 'rgba(74, 74, 74, 0.5)',
-                    boxShadow: validateTxHash(txHash)
+                    boxShadow: isValidTxHash
                       ? android
                         ? '0 4px 16px rgba(255, 107, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
                         : '0 4px 12px rgba(255, 107, 0, 0.3), 0 8px 24px rgba(255, 107, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       : 'none',
                     letterSpacing: '-0.01em'
                   }}
-                  whileTap={validateTxHash(txHash) ? { scale: android ? 0.985 : 0.98 } : {}}
+                  whileTap={isValidTxHash ? { scale: android ? 0.985 : 0.98 } : {}}
                   transition={controlSpring}
                 >
                   {t('payment.confirmPayment')}

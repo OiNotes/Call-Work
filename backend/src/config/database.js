@@ -26,6 +26,50 @@ pool.on('connect', async (client) => {
 });
 
 /**
+ * P1-DB-004: Connection Pool Metrics
+ * Log pool statistics every 60 seconds for monitoring
+ */
+const logPoolMetrics = () => {
+  const totalCount = pool.totalCount;
+  const idleCount = pool.idleCount;
+  const waitingCount = pool.waitingCount;
+  const activeCount = totalCount - idleCount;
+
+  logger.info('Database Pool Metrics', {
+    total: totalCount,
+    active: activeCount,
+    idle: idleCount,
+    waiting: waitingCount,
+    utilization: totalCount > 0 ? ((activeCount / totalCount) * 100).toFixed(1) + '%' : '0%'
+  });
+
+  // Warning if pool is heavily utilized
+  if (totalCount > 0 && activeCount / totalCount > 0.8) {
+    logger.warn('Database pool utilization high', {
+      activeCount,
+      totalCount,
+      utilization: ((activeCount / totalCount) * 100).toFixed(1) + '%'
+    });
+  }
+
+  // Warning if requests are waiting
+  if (waitingCount > 0) {
+    logger.warn('Database pool has waiting requests', {
+      waiting: waitingCount,
+      suggestion: 'Consider increasing pool.max or optimizing queries'
+    });
+  }
+};
+
+// Log pool metrics every 60 seconds
+const poolMetricsInterval = setInterval(logPoolMetrics, 60000);
+
+// Clear interval on pool close
+pool.on('remove', () => {
+  clearInterval(poolMetricsInterval);
+});
+
+/**
  * Test database connection
  */
 export const testConnection = async () => {
@@ -42,12 +86,23 @@ export const testConnection = async () => {
 
 /**
  * Execute a query
+ * P1-DB-008: Slow Query Logging (queries > 1000ms)
  */
 export const query = async (text, params) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
+
+    // P1-DB-008: Log slow queries (> 1000ms) in ALL environments
+    if (duration > 1000) {
+      logger.warn('Slow query detected', {
+        duration: `${duration}ms`,
+        query: text.substring(0, 200) + (text.length > 200 ? '...' : ''), // Truncate long queries
+        rows: res.rowCount,
+        params: params ? (params.length > 5 ? `[${params.length} params]` : params) : undefined
+      });
+    }
 
     if (config.nodeEnv === 'development') {
       logger.debug('Executed query', { text, duration, rows: res.rowCount });
