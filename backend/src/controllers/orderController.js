@@ -1,8 +1,10 @@
-import { orderQueries, productQueries, shopQueries } from '../models/db.js';
+import { orderQueries, productQueries, shopQueries, invoiceQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
+import { generateAddress } from '../services/walletService.js';
+import { getCryptoPrice, convertUsdToCrypto, roundCryptoAmount } from '../services/cryptoPriceService.js';
 
 /**
  * Order Controller
@@ -534,68 +536,145 @@ export const orderController = {
   },
 
   /**
-   * Generate invoice for order (returns seller's wallet address)
+   * Generate invoice for order with HD wallet address generation
    */
   generateInvoice: async (req, res) => {
     try {
       const { id: orderId } = req.params;
-      const { currency } = req.body;
+      const { chain } = req.body;
 
-      // Validate currency
-      const supportedCurrencies = ['BTC', 'ETH', 'USDT', 'LTC'];
-      if (!currency || !supportedCurrencies.includes(currency.toUpperCase())) {
+      // Map chain names for consistency
+      const chainMapping = {
+        'BTC': 'BTC',
+        'ETH': 'ETH',
+        'LTC': 'LTC',
+        'USDT': 'USDT_ERC20', // Default USDT to ERC20
+        'USDT_ERC20': 'USDT_ERC20',
+        'USDT_TRC20': 'USDT_TRC20'
+      };
+
+      // Validate chain
+      const normalizedChain = chain ? chainMapping[chain.toUpperCase()] : null;
+      const supportedChains = ['BTC', 'ETH', 'LTC', 'USDT_ERC20', 'USDT_TRC20'];
+
+      if (!normalizedChain || !supportedChains.includes(normalizedChain)) {
         return res.status(400).json({
           success: false,
-          error: `Invalid currency. Supported: ${supportedCurrencies.join(', ')}`
+          error: `Invalid chain. Supported: ${supportedChains.join(', ')}`
         });
       }
 
-      // Get order with shop and wallet data (optimized single query)
-      const invoiceData = await orderQueries.getInvoiceData(orderId);
+      // Get order
+      const order = await orderQueries.findById(orderId);
 
-      if (!invoiceData) {
+      if (!order) {
         return res.status(404).json({
           success: false,
           error: 'Order not found'
         });
       }
 
-      // Check if user owns this order
-      if (invoiceData.buyer_id !== req.user.id) {
+      // Check ownership
+      if (order.buyer_id !== req.user.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
         });
       }
 
-      // Get seller's wallet for selected currency
-      const walletField = `wallet_${currency.toLowerCase()}`;
-      const address = invoiceData[walletField];
-
-      if (!address) {
-        return res.status(400).json({
-          success: false,
-          error: `Seller has not configured ${currency} wallet. Please choose another currency or contact seller.`
+      // Check if invoice already exists for this order
+      const existingInvoice = await invoiceQueries.findByOrderId(orderId);
+      if (existingInvoice && existingInvoice.status === 'pending') {
+        // Return existing pending invoice
+        return res.status(200).json({
+          success: true,
+          data: {
+            id: existingInvoice.id,
+            address: existingInvoice.address,
+            cryptoAmount: parseFloat(existingInvoice.expected_amount),
+            chain: existingInvoice.chain,
+            currency: existingInvoice.currency,
+            expiresAt: existingInvoice.expires_at,
+            status: existingInvoice.status
+          }
         });
       }
 
-      // Calculate crypto amount (mock conversion - should use real rates in production)
-      const conversionRates = {
-        BTC: 0.000024,  // ~$42,000 per BTC
-        USDT: 1.0,      // 1:1 with USD
-        LTC: 0.011,     // ~$90 per LTC
-        ETH: 0.00042    // ~$2,400 per ETH
-      };
+      // Get next address index for this chain
+      const addressIndex = await invoiceQueries.getNextIndex(normalizedChain);
 
-      const cryptoAmount = invoiceData.total_price * conversionRates[currency];
+      // Get xpub from environment
+      const xpubKey = `HD_XPUB_${normalizedChain.split('_')[0]}`; // BTC, ETH, LTC, USDT
+      const xpub = process.env[xpubKey];
+
+      if (!xpub) {
+        logger.error(`[Invoice] Missing xpub for ${normalizedChain}: ${xpubKey}`);
+        return res.status(500).json({
+          success: false,
+          error: `Payment system not configured for ${normalizedChain}. Please contact support.`
+        });
+      }
+
+      // Generate unique HD wallet address
+      const { address, derivationPath } = await generateAddress(
+        normalizedChain.split('_')[0], // Remove _ERC20/_TRC20 suffix
+        xpub,
+        addressIndex
+      );
+
+      // Get real-time crypto price
+      const priceChain = normalizedChain.startsWith('USDT') ? 'USDT_ERC20' : normalizedChain;
+      const cryptoPrice = await getCryptoPrice(priceChain);
+
+      if (!cryptoPrice) {
+        return res.status(500).json({
+          success: false,
+          error: `Unable to fetch ${normalizedChain} price. Please try again later.`
+        });
+      }
+
+      // Convert USD to crypto amount with proper precision
+      const rawCryptoAmount = convertUsdToCrypto(parseFloat(order.total_price), cryptoPrice);
+      const cryptoAmount = roundCryptoAmount(rawCryptoAmount, priceChain);
+
+      // Calculate expiration (1 hour from now)
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Create invoice in database
+      const invoice = await invoiceQueries.create({
+        orderId: parseInt(orderId),
+        chain: normalizedChain,
+        address,
+        addressIndex,
+        expectedAmount: cryptoAmount,
+        currency: normalizedChain,
+        webhookSubscriptionId: null, // Will be set by webhook service
+        expiresAt
+      });
+
+      logger.info('[Invoice] Generated', {
+        orderId,
+        chain: normalizedChain,
+        address,
+        derivationPath,
+        addressIndex,
+        cryptoAmount,
+        usdAmount: order.total_price,
+        cryptoPrice
+      });
 
       return res.status(200).json({
         success: true,
         data: {
+          id: invoice.id,
           address,
           cryptoAmount,
-          currency: currency.toUpperCase(),
-          shopName: invoiceData.shop_name
+          chain: normalizedChain,
+          currency: normalizedChain,
+          usdAmount: parseFloat(order.total_price),
+          cryptoPrice,
+          expiresAt: invoice.expires_at,
+          status: invoice.status
         }
       });
 
