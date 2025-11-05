@@ -28,40 +28,39 @@ const FollowDetail = () => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!followDetailId) return;
 
-    const loadData = async () => {
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        // Загрузить детали + товары параллельно
-        const [followData, productsData] = await Promise.all([
-          followsApi.getDetail(followDetailId),
-          followsApi.getProducts(followDetailId, { limit: 100 })
-        ]);
+      // Загрузить детали + товары параллельно
+      const [followData, productsData] = await Promise.all([
+        followsApi.getDetail(followDetailId),
+        followsApi.getProducts(followDetailId, { limit: 100 })
+      ]);
 
-        const follow = followData?.data || followData;
-        const productsPayload = productsData?.data || productsData;
-        const productsList = productsPayload.products || [];
+      const follow = followData?.data || followData;
+      const productsPayload = productsData?.data || productsData;
+      const productsList = productsPayload.products || [];
 
-        setCurrentFollow(follow);
-        setFollowProducts(productsList);
+      setCurrentFollow(follow);
+      setFollowProducts(productsList);
 
-        // Проверяем есть ли еще товары
-        const total = productsPayload.pagination?.total || productsList.length;
-        setHasMore(productsList.length < total);
-      } catch (error) {
-        console.error('Error loading follow detail:', error);
-        triggerHaptic('error');
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Проверяем есть ли еще товары
+      const total = productsPayload.pagination?.total || productsList.length;
+      setHasMore(productsList.length < total);
+    } catch (error) {
+      console.error('Error loading follow detail:', error);
+      triggerHaptic('error');
+    } finally {
+      setLoading(false);
+    }
+  }, [followDetailId, followsApi, setCurrentFollow, setFollowProducts, triggerHaptic]);
 
+  useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [followDetailId]); // Only trigger when followDetailId changes
+  }, [loadData]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;

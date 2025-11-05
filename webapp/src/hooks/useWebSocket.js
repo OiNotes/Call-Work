@@ -72,6 +72,12 @@ export const useWebSocket = () => {
           setIsConnected(false);
           wsRef.current = null;
 
+          // Clear existing timeout before creating new one
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
+
           // Exponential backoff for reconnection
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
@@ -85,6 +91,12 @@ export const useWebSocket = () => {
       } catch (error) {
         console.error('Failed to create WebSocket connection:', error);
         setIsConnected(false);
+
+        // Clear existing timeout before creating new one
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
 
         // Retry connection after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {

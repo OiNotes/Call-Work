@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 
 /**
  * Live countdown timer для временных скидок
@@ -13,8 +13,12 @@ import { useState, useEffect, memo } from 'react';
  */
 const CountdownTimer = memo(function CountdownTimer({ expiresAt }) {
   const [timeLeft, setTimeLeft] = useState(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    // Set mounted flag
+    isMountedRef.current = true;
+
     // Валидация входных данных
     if (!expiresAt) return;
 
@@ -22,6 +26,11 @@ const CountdownTimer = memo(function CountdownTimer({ expiresAt }) {
       const now = new Date();
       const end = new Date(expiresAt);
       const diff = end - now; // миллисекунды
+
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) {
+        return;
+      }
 
       // Если время истекло - скрыть таймер
       if (diff <= 0) {
@@ -49,7 +58,10 @@ const CountdownTimer = memo(function CountdownTimer({ expiresAt }) {
     const interval = setInterval(calculateTimeLeft, 1000);
 
     // Cleanup при unmount
-    return () => clearInterval(interval);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+    };
   }, [expiresAt]);
 
   // Если время истекло или данных нет - не показывать

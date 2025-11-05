@@ -22,9 +22,12 @@ const walletFieldMap = {
 
 const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'LTC'];
 
-function WalletCard({ wallet, onRemove }) {
+function WalletCard({ wallet, onRemove, onEdit }) {
   const { triggerHaptic, confirm } = useTelegram();
   const { t } = useTranslation();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(wallet.address);
+  const [saving, setSaving] = useState(false);
 
   const handleRemove = async () => {
     triggerHaptic('medium');
@@ -32,6 +35,37 @@ function WalletCard({ wallet, onRemove }) {
     if (confirmed) {
       triggerHaptic('success');
       onRemove(wallet);
+    }
+  };
+
+  const handleEdit = () => {
+    triggerHaptic('medium');
+    setIsEditing(true);
+    setEditValue(wallet.address);
+  };
+
+  const handleCancel = () => {
+    triggerHaptic('light');
+    setIsEditing(false);
+    setEditValue(wallet.address);
+  };
+
+  const isValid = editValue.trim() ? WALLET_PATTERNS[wallet.type].test(editValue.trim()) : false;
+
+  const handleSave = async () => {
+    if (!isValid || saving) return;
+
+    triggerHaptic('medium');
+    setSaving(true);
+
+    try {
+      await onEdit(wallet.type, editValue.trim());
+      setIsEditing(false);
+      triggerHaptic('success');
+    } catch (error) {
+      console.error('Failed to save wallet edit:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -50,35 +84,106 @@ function WalletCard({ wallet, onRemove }) {
       exit={{ opacity: 0, x: -20 }}
       layout
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+      {isEditing ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
             <span className={`text-sm font-bold ${typeColors[wallet.type] || 'text-gray-400'}`}>
               {wallet.type}
             </span>
-            <span className="text-green-500 text-xs">✓</span>
+            <span className="text-blue-400 text-xs">✏️ Editing</span>
           </div>
-          <p className="text-white font-mono text-sm break-all">
-            {wallet.address}
-          </p>
-          <p className="text-gray-500 text-xs mt-1">
-            {t('wallet.added', { date: new Date(wallet.addedAt || Date.now()).toLocaleDateString('ru-RU') })}
-          </p>
+
+          <input
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            placeholder={wallet.address}
+            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-blue-400"
+            autoFocus
+          />
+
+          {editValue && (
+            <span className={`text-xs ${isValid ? 'text-green-500' : 'text-red-500'}`}>
+              {isValid ? '✓ Valid address' : '⚠️ Invalid address format'}
+            </span>
+          )}
+
+          <div className="flex gap-2">
+            <motion.button
+              onClick={handleSave}
+              disabled={!isValid || saving}
+              className="flex-1 py-2.5 rounded-xl font-medium text-white disabled:opacity-50"
+              style={{
+                background: isValid
+                  ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
+                  : 'rgba(255, 255, 255, 0.1)'
+              }}
+              whileTap={isValid ? { scale: 0.98 } : {}}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </motion.button>
+
+            <motion.button
+              onClick={handleCancel}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl font-medium text-white"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)'
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Cancel
+            </motion.button>
+          </div>
         </div>
-        <motion.button
-          onClick={handleRemove}
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-red-400"
-          style={{
-            background: 'rgba(255, 59, 48, 0.1)',
-            border: '1px solid rgba(255, 59, 48, 0.2)'
-          }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </motion.button>
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-sm font-bold ${typeColors[wallet.type] || 'text-gray-400'}`}>
+                {wallet.type}
+              </span>
+              <span className="text-green-500 text-xs">✓</span>
+            </div>
+            <p className="text-white font-mono text-sm break-all">
+              {wallet.address}
+            </p>
+            <p className="text-gray-500 text-xs mt-1">
+              {t('wallet.added', { date: new Date(wallet.addedAt || Date.now()).toLocaleDateString('ru-RU') })}
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <motion.button
+              onClick={handleEdit}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-400"
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.2)'
+              }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </motion.button>
+
+            <motion.button
+              onClick={handleRemove}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-red-400"
+              style={{
+                background: 'rgba(255, 59, 48, 0.1)',
+                border: '1px solid rgba(255, 59, 48, 0.2)'
+              }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </motion.button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -222,6 +327,14 @@ export default function WalletsModal({ isOpen, onClose }) {
       .filter(Boolean);
   }, [walletMap, walletMeta.updatedAt]);
 
+  // Доступные типы для добавления (те, которых ещё нет)
+  const availableWalletTypes = useMemo(() => {
+    return orderedWalletTypes.filter((type) => {
+      const mapping = walletFieldMap[type];
+      return !walletMap[mapping.key]; // Показываем только если кошелёк ещё не добавлен
+    });
+  }, [walletMap]);
+
   const handleRemoveWallet = useCallback(async (wallet) => {
     if (!shop) {
       return;
@@ -248,9 +361,45 @@ export default function WalletsModal({ isOpen, onClose }) {
     setSaving(false);
   }, [alert, put, shop, syncWalletState, t, triggerHaptic]);
 
+  const handleEditWallet = useCallback(async (walletType, newAddress) => {
+    if (!shop) {
+      await alert(t('wallet.shopRequired'));
+      throw new Error('No shop found');
+    }
+
+    const mapping = walletFieldMap[walletType];
+    if (!mapping) {
+      await alert('Invalid wallet type');
+      throw new Error('Invalid wallet type');
+    }
+
+    // Validate address format
+    if (!WALLET_PATTERNS[walletType].test(newAddress)) {
+      await alert(t('wallet.invalidAddress'));
+      throw new Error('Invalid address format');
+    }
+
+    setSaving(true);
+    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
+      [mapping.field]: newAddress
+    });
+
+    if (error) {
+      await alert(t('wallet.saveError'));
+      setSaving(false);
+      throw new Error('Failed to update wallet');
+    }
+
+    syncWalletState(response);
+    setSaving(false);
+  }, [alert, put, shop, syncWalletState, t]);
+
   const handleSaveWallets = useCallback(async () => {
-    // Prevent double-click
-    if (saving) return;
+    // Prevent double-click with synchronous check
+    if (saving) {
+      console.log('[WalletsModal] Already saving, ignoring duplicate request');
+      return;
+    }
     setSaving(true);
     
     try {
@@ -378,6 +527,7 @@ export default function WalletsModal({ isOpen, onClose }) {
                           key={wallet.type}
                           wallet={wallet}
                           onRemove={handleRemoveWallet}
+                          onEdit={handleEditWallet}
                         />
                       ))
                     ) : (
@@ -392,7 +542,7 @@ export default function WalletsModal({ isOpen, onClose }) {
                   </AnimatePresence>
 
                   {/* Inline Add Wallet Button */}
-                  {!showForm && (
+                  {!showForm && availableWalletTypes.length > 0 && (
                     <motion.button
                       onClick={() => {
                         triggerHaptic('light');
@@ -412,6 +562,17 @@ export default function WalletsModal({ isOpen, onClose }) {
                     </motion.button>
                   )}
 
+                  {/* Сообщение когда все кошельки добавлены */}
+                  {!showForm && availableWalletTypes.length === 0 && walletList.length > 0 && (
+                    <motion.div
+                      className="glass-card rounded-2xl p-4 text-center text-gray-400 text-sm"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      ✅ Все доступные кошельки добавлены
+                    </motion.div>
+                  )}
+
                   <AnimatePresence>
                     {showForm && (
                       <motion.div
@@ -420,69 +581,78 @@ export default function WalletsModal({ isOpen, onClose }) {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                       >
-                        <div>
-                          <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
-                          <input
-                            type="text"
-                            value={btcAddress}
-                            onChange={(e) => setBtcAddress(e.target.value)}
-                            placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                          />
-                          {btcAddress && (
-                            <span className={`text-sm ${isValidBTC ? 'text-green-500' : 'text-red-500'}`}>
-                              {isValidBTC ? '✓ Valid BTC' : '⚠️ Invalid BTC'}
-                            </span>
-                          )}
-                        </div>
+                        {/* Показываем только поля для доступных типов */}
+                        {availableWalletTypes.includes('BTC') && (
+                          <div>
+                            <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
+                            <input
+                              type="text"
+                              value={btcAddress}
+                              onChange={(e) => setBtcAddress(e.target.value)}
+                              placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                            />
+                            {btcAddress && (
+                              <span className={`text-sm ${isValidBTC ? 'text-green-500' : 'text-red-500'}`}>
+                                {isValidBTC ? '✓ Valid BTC' : '⚠️ Invalid BTC'}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
-                        <div>
-                          <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
-                          <input
-                            type="text"
-                            value={ethAddress}
-                            onChange={(e) => setEthAddress(e.target.value)}
-                            placeholder="0x742d35Cc6634C0532925a3b844Bc7e759f42bE1"
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                          />
-                          {ethAddress && (
-                            <span className={`text-sm ${isValidETH ? 'text-green-500' : 'text-red-500'}`}>
-                              {isValidETH ? '✓ Valid ETH' : '⚠️ Invalid ETH'}
-                            </span>
-                          )}
-                        </div>
+                        {availableWalletTypes.includes('ETH') && (
+                          <div>
+                            <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
+                            <input
+                              type="text"
+                              value={ethAddress}
+                              onChange={(e) => setEthAddress(e.target.value)}
+                              placeholder="0x742d35Cc6634C0532925a3b844Bc7e759f42bE1"
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                            />
+                            {ethAddress && (
+                              <span className={`text-sm ${isValidETH ? 'text-green-500' : 'text-red-500'}`}>
+                                {isValidETH ? '✓ Valid ETH' : '⚠️ Invalid ETH'}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
-                        <div>
-                          <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
-                          <input
-                            type="text"
-                            value={usdtAddress}
-                            onChange={(e) => setUsdtAddress(e.target.value)}
-                            placeholder="0x1234..."
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                          />
-                          {usdtAddress && (
-                            <span className={`text-sm ${isValidUSDT ? 'text-green-500' : 'text-red-500'}`}>
-                              {isValidUSDT ? '✓ Valid USDT' : '⚠️ Invalid USDT'}
-                            </span>
-                          )}
-                        </div>
+                        {availableWalletTypes.includes('USDT') && (
+                          <div>
+                            <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
+                            <input
+                              type="text"
+                              value={usdtAddress}
+                              onChange={(e) => setUsdtAddress(e.target.value)}
+                              placeholder="0x1234..."
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                            />
+                            {usdtAddress && (
+                              <span className={`text-sm ${isValidUSDT ? 'text-green-500' : 'text-red-500'}`}>
+                                {isValidUSDT ? '✓ Valid USDT' : '⚠️ Invalid USDT'}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
-                        <div>
-                          <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
-                          <input
-                            type="text"
-                            value={ltcAddress}
-                            onChange={(e) => setLtcAddress(e.target.value)}
-                            placeholder="ltc1q..."
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
-                          />
-                          {ltcAddress && (
-                            <span className={`text-sm ${isValidLTC ? 'text-green-500' : 'text-red-500'}`}>
-                              {isValidLTC ? '✓ Valid LTC' : '⚠️ Invalid LTC'}
-                            </span>
-                          )}
-                        </div>
+                        {availableWalletTypes.includes('LTC') && (
+                          <div>
+                            <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
+                            <input
+                              type="text"
+                              value={ltcAddress}
+                              onChange={(e) => setLtcAddress(e.target.value)}
+                              placeholder="ltc1q..."
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
+                            />
+                            {ltcAddress && (
+                              <span className={`text-sm ${isValidLTC ? 'text-green-500' : 'text-red-500'}`}>
+                                {isValidLTC ? '✓ Valid LTC' : '⚠️ Invalid LTC'}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Inline Save Button */}
                         <motion.button
