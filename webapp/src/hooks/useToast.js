@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useMemo } from 'react';
 
 const useToastStore = create((set) => ({
   toasts: [],
@@ -18,13 +19,13 @@ const useToastStore = create((set) => ({
 
 export function useToast() {
   const { addToast } = useToastStore();
-  
-  return {
+
+  return useMemo(() => ({
     success: (message, duration = 3000) => addToast({ type: 'success', message, duration }),
     error: (message, duration = 3000) => addToast({ type: 'error', message, duration }),
     warning: (message, duration = 3000) => addToast({ type: 'warning', message, duration }),
     info: (message, duration = 3000) => addToast({ type: 'info', message, duration }),
-  };
+  }), [addToast]);
 }
 
 export { useToastStore };

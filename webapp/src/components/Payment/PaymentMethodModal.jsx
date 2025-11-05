@@ -1,24 +1,31 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useToastStore } from '../../hooks/useToast';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { useApi } from '../../hooks/useApi';
+import { useToast } from '../../hooks/useToast';
 import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentMethodModal() {
-  const { paymentStep, selectCrypto, setPaymentStep, currentShop, selectedCrypto } = useStore();
+  const { paymentStep, selectCrypto, setPaymentStep, currentShop, selectedCrypto, isGeneratingInvoice } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const api = useApi();
+  const toast = useToast();
   const platform = usePlatform();
   const android = isAndroid(platform);
 
   const [availableWallets, setAvailableWallets] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [generatingStartTime, setGeneratingStartTime] = useState(null);
+  const MAX_RETRIES = 3;
 
   const overlayStyle = useMemo(
     () => getSurfaceStyle('overlay', platform),
@@ -58,16 +65,33 @@ export default function PaymentMethodModal() {
   };
 
   const handleSelectCrypto = async (cryptoId) => {
-    triggerHaptic('medium');
+    if (isGeneratingInvoice) return;
     
+    triggerHaptic('medium');
+    setGeneratingStartTime(Date.now());
+
     try {
       // Вызываем selectCrypto из store - создаёт order + invoice + переход к details
       await selectCrypto(cryptoId);
       // Store автоматически выставит paymentStep = 'details'
+      toast.success('Платёжный метод выбран');
     } catch (error) {
       console.error('[PaymentMethodModal] Failed to select crypto:', error);
       triggerHaptic('error');
-      // Можно добавить toast notification для пользователя
+
+      // Детальные toast сообщения
+      const errorMsg = error.response?.data?.error || error.message;
+      if (errorMsg?.includes('order')) {
+        toast.error('Не удалось создать заказ. Попробуйте снова.');
+      } else if (errorMsg?.includes('invoice')) {
+        toast.error('Ошибка генерации счёта. Попробуйте снова.');
+      } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
+        toast.error('Проблема с соединением. Проверьте интернет.');
+      } else {
+        toast.error('Не удалось выбрать способ оплаты');
+      }
+    } finally {
+      setGeneratingStartTime(null);
     }
   };
 
@@ -76,57 +100,75 @@ export default function PaymentMethodModal() {
   // Load shop wallets when modal opens
   useEffect(() => {
     if (!isOpen || !currentShop?.id) {
-      console.log('🔍 [DEBUG] Modal closed or no shop ID:', { isOpen, shopId: currentShop?.id });
+      setLoading(false);
+      setError(null);
       return;
     }
 
-    const loadWallets = async () => {
+    const controller = new AbortController();
+
+    const loadWallets = async (attemptNum = 0) => {
       try {
         setLoading(true);
-        console.log('🔍 [DEBUG] Loading wallets for shop:', currentShop.id);
+        setError(null);
 
-        const { data, error } = await api.get(`/shops/${currentShop.id}/wallets`);
-
-        console.log('🔍 [DEBUG] API response:', {
-          error,
-          data,
-          hasDataProp: !!data?.data,
-          dataType: typeof data?.data
+        const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`, {
+          signal: controller.signal
         });
-        console.log('🔍 [DEBUG] data?.data contents:', data?.data);
 
-        if (!error && data?.data) {
-          // Transform API response { wallet_btc: "...", wallet_eth: null, ... } to array ["BTC", "ETH"]
-          const currencies = Object.entries(data.data)
-            .filter(([key, value]) => {
-              const startsWithWallet = key.startsWith('wallet_');
-              const hasValue = !!value;
-              const isString = typeof value === 'string';
-              const isTrimmed = isString && !!value.trim();
+        if (apiError) {
+          // API returned error
+          setError(apiError);
 
-              console.log(`🔍 [DEBUG] Wallet ${key}:`, {
-                value: `"${value}"`,
-                startsWithWallet,
-                hasValue,
-                isString,
-                isTrimmed,
-                willInclude: startsWithWallet && hasValue && isString && isTrimmed
-              });
-
-              return startsWithWallet && value && isString && value.trim();
-            })
-            .map(([key]) => key.replace('wallet_', '').toUpperCase());
-
-          console.log('🔍 [DEBUG] Extracted currencies:', currencies);
-          setAvailableWallets(currencies);
-        } else {
-          // If no data - don't show fallback, keep empty
-          console.warn('[PaymentMethodModal] No wallet data received', { error, hasData: !!data?.data });
+          // Детальные toast сообщения для разных ошибок
+          if (apiError.includes('404')) {
+            toast.error('Магазин не найден');
+          } else if (apiError.includes('network') || apiError.includes('timeout')) {
+            toast.error('Проблема с соединением. Проверьте интернет.');
+          } else {
+            toast.error('Не удалось загрузить способы оплаты');
+          }
           setAvailableWallets([]);
+          setLoading(false);
+          return;
         }
+
+        if (!data?.data) {
+          // No data in response
+          console.warn('[PaymentMethodModal] No wallet data in response');
+          setAvailableWallets([]);
+          setLoading(false);
+          return;
+        }
+
+        // Transform API response { wallet_btc: "...", wallet_eth: null, ... } to array ["BTC", "ETH"]
+        const currencies = Object.entries(data.data)
+          .filter(([key, value]) => {
+            return key.startsWith('wallet_') && value && typeof value === 'string' && value.trim();
+          })
+          .map(([key]) => key.replace('wallet_', '').toUpperCase());
+
+        setAvailableWallets(currencies);
+        setError(null);
+        setRetryCount(0); // Reset retry count on success
+
       } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('[PaymentMethodModal] Request aborted');
+          return;
+        }
         console.error('[PaymentMethodModal] Failed to load wallets:', err);
-        // При ошибке API - не показываем fallback криптовалюты
+        const errorMsg = err.message || 'Unknown error';
+        setError(errorMsg);
+
+        // Детальные toast сообщения
+        if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+          toast.error('Нет соединения с сервером');
+        } else if (errorMsg.includes('404')) {
+          toast.error('Кошельки не найдены');
+        } else {
+          toast.error('Ошибка загрузки способов оплаты');
+        }
         setAvailableWallets([]);
       } finally {
         setLoading(false);
@@ -134,37 +176,112 @@ export default function PaymentMethodModal() {
     };
 
     loadWallets();
-  }, [isOpen, currentShop?.id, api]);
+
+    return () => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentShop?.id]);
+
+  // Fallback: если модалка открыта но shop отсутствует
+  useEffect(() => {
+    if (isOpen && !currentShop?.id) {
+      const timeout = setTimeout(() => {
+        const toast = useToastStore.getState().addToast;
+        toast({ type: 'error', message: 'Магазин не найден', duration: 3000 });
+        setPaymentStep('idle');
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isOpen, currentShop?.id, setPaymentStep]);
+
+  // Cleanup при unmount
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+      setError(null);
+    };
+  }, []);
 
   // Фильтруем криптовалюты - показываем только те, для которых есть кошельки
   const availableCryptoOptions = useMemo(() => {
-    console.log('🔍 [DEBUG] Filtering crypto options:', {
-      loading,
-      availableWallets,
-      availableWalletsLength: availableWallets.length
-    });
-
-    // Во время загрузки - не показываем криптовалюты
-    if (loading) {
-      console.log('🔍 [DEBUG] Still loading, returning empty array');
+    if (loading || availableWallets.length === 0) {
       return [];
     }
 
-    // Если нет кошельков - не показываем криптовалюты
-    if (availableWallets.length === 0) {
-      console.log('🔍 [DEBUG] No wallets available, returning empty array');
-      return [];
-    }
-
-    const filtered = CRYPTO_OPTIONS.filter(crypto => {
-      const isIncluded = availableWallets.includes(crypto.id);
-      console.log(`🔍 [DEBUG] Checking crypto ${crypto.id}:`, isIncluded ? '✅ INCLUDED' : '❌ EXCLUDED');
-      return isIncluded;
-    });
-
-    console.log('🔍 [DEBUG] Final filtered options:', filtered.map(c => c.id));
-    return filtered;
+    return CRYPTO_OPTIONS.filter(crypto => availableWallets.includes(crypto.id));
   }, [availableWallets, loading]);
+
+  // Retry loading wallets with exponential backoff
+  const handleRetry = async () => {
+    if (retryCount >= MAX_RETRIES) {
+      toast.error('Превышен лимит попыток. Попробуйте позже.');
+      return;
+    }
+
+    triggerHaptic('light');
+    setError(null);
+    setLoading(true);
+
+    // Exponential backoff: 1s, 2s, 4s
+    const delay = Math.pow(2, retryCount) * 1000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    try {
+      const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`);
+
+      if (apiError) {
+        setError(apiError);
+        setRetryCount(prev => prev + 1);
+
+        // Детальные toast сообщения
+        if (apiError.includes('404')) {
+          toast.error('Магазин не найден');
+        } else if (apiError.includes('network') || apiError.includes('timeout')) {
+          toast.error(`Нет соединения (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+        } else {
+          toast.error(`Не удалось загрузить (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+        }
+        setAvailableWallets([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!data?.data) {
+        console.warn('[PaymentMethodModal] No wallet data in response');
+        setAvailableWallets([]);
+        setLoading(false);
+        return;
+      }
+
+      const currencies = Object.entries(data.data)
+        .filter(([key, value]) => {
+          return key.startsWith('wallet_') && value && typeof value === 'string' && value.trim();
+        })
+        .map(([key]) => key.replace('wallet_', '').toUpperCase());
+
+      setAvailableWallets(currencies);
+      setError(null);
+      setRetryCount(0); // Reset on success
+      toast.success('Способы оплаты загружены');
+    } catch (err) {
+      console.error('[PaymentMethodModal] Retry failed:', err);
+      const errorMsg = err.message || 'Unknown error';
+      setError(errorMsg);
+      setRetryCount(prev => prev + 1);
+
+      // Детальные toast сообщения
+      if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+        toast.error(`Нет соединения (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+      } else {
+        toast.error(`Ошибка загрузки (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+      }
+      setAvailableWallets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -229,10 +346,80 @@ export default function PaymentMethodModal() {
                 style={{ paddingBottom: 'calc(var(--tabbar-total) + 72px)' }}
               >
                 {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="space-y-4 py-4">
+                    {/* Loading skeleton with retry count */}
+                    <div className="flex flex-col items-center justify-center py-8 gap-4">
+                      <div className="w-12 h-12 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="text-center">
+                        <p className="text-white font-semibold mb-1">Загрузка...</p>
+                        {retryCount > 0 && (
+                          <p className="text-sm text-gray-400">
+                            Попытка {retryCount + 1} из {MAX_RETRIES}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Skeleton cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div
+                          key={i}
+                          className="rounded-2xl p-5 animate-pulse"
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                          }}
+                        >
+                          <div className="w-12 h-12 rounded-xl bg-gray-700 mb-3" />
+                          <div className="h-4 bg-gray-700 rounded mb-2 w-3/4" />
+                          <div className="h-3 bg-gray-700 rounded w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : error ? (
+                  // Error state - show retry button with attempt counter
+                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                    <svg className="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-red-400 mb-2">
+                      {t('payment.loadError') || 'Не удалось загрузить'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {error || 'Проблема с соединением'}
+                    </p>
+                    {retryCount > 0 && retryCount < MAX_RETRIES && (
+                      <p className="text-xs text-gray-600 mb-4">
+                        Попытка {retryCount}/{MAX_RETRIES}
+                      </p>
+                    )}
+                    {retryCount >= MAX_RETRIES ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-yellow-500 font-semibold mb-2">
+                          Превышен лимит попыток
+                        </p>
+                        <p className="text-xs text-gray-500 mb-4">
+                          Попробуйте закрыть и открыть окно снова
+                        </p>
+                      </div>
+                    ) : (
+                      <motion.button
+                        onClick={handleRetry}
+                        className="px-6 py-3 rounded-xl font-semibold text-white"
+                        style={{
+                          background: 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
+                          boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3)'
+                        }}
+                        whileTap={{ scale: android ? 0.94 : 0.95 }}
+                        transition={controlSpring}
+                      >
+                        {t('common.tryAgain') || 'Попробовать снова'}
+                      </motion.button>
+                    )}
                   </div>
                 ) : availableCryptoOptions.length === 0 ? (
+                  // Empty state - no wallets configured
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                     <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -241,7 +428,7 @@ export default function PaymentMethodModal() {
                       {t('payment.noWallets') || 'No payment methods'}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {t('payment.noWalletsDesc') || 'Please configure wallets in shop settings'}
+                      {t('payment.noWalletsDesc') || 'This shop hasn\'t configured payment wallets yet'}
                     </p>
                   </div>
                 ) : (
@@ -324,6 +511,41 @@ export default function PaymentMethodModal() {
               </div>
             </div>
           </motion.div>
+
+          {/* Generating Invoice Overlay */}
+          {isGeneratingInvoice && (
+            <motion.div
+              className="fixed inset-0 z-60 flex items-center justify-center"
+              style={{
+                background: 'rgba(10, 10, 10, 0.85)',
+                backdropFilter: 'blur(8px)'
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-orange-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-white font-semibold text-lg">Генерация счёта...</p>
+                <p className="text-gray-400 text-sm mt-2">Подождите несколько секунд</p>
+                
+                {generatingStartTime && Date.now() - generatingStartTime > 15000 && (
+                  <motion.button
+                    onClick={() => {
+                      setPaymentStep('method');
+                      setGeneratingStartTime(null);
+                      toast.error('Превышено время ожидания. Попробуйте снова.');
+                    }}
+                    className="mt-4 px-6 py-3 rounded-xl bg-red-500 text-white font-semibold"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    Отменить
+                  </motion.button>
+                )}
+              </div>
+            </motion.div>
+          )}
         </>
       )}
     </AnimatePresence>

@@ -100,8 +100,10 @@ export default function CartSheet() {
 
   const handleCheckout = () => {
     triggerHaptic('success');
-    startCheckout();
+
+    // Close cart first, then open payment modal after animation
     setCartOpen(false);
+    setTimeout(() => startCheckout(), 200);
   };
 
   const handleClearCart = async () => {
