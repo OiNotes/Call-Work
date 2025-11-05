@@ -57,11 +57,35 @@ export const paymentController = {
       const existingTx = await paymentQueries.findByTxHash(txHash);
 
       if (existingTx) {
-        return res.status(400).json({
-          success: false,
-          error: 'Transaction already submitted',
-          payment: existingTx
-        });
+        // CRITICAL: Check if tx_hash used for DIFFERENT order (double-spending attack)
+        if (existingTx.order_id && existingTx.order_id !== orderId) {
+          logger.warn('Double-spending attempt detected', {
+            txHash,
+            existingOrderId: existingTx.order_id,
+            attemptedOrderId: orderId,
+            userId: req.user.id
+          });
+          return res.status(400).json({
+            success: false,
+            error: 'This transaction is already used for another order'
+          });
+        }
+
+        // If same order, allow (idempotency)
+        if (existingTx.order_id === orderId) {
+          logger.info('Idempotent payment verification request', { txHash, orderId });
+          return res.json({
+            success: true,
+            message: 'Payment already processed',
+            data: {
+              payment: existingTx,
+              verification: {
+                verified: true,
+                status: existingTx.status
+              }
+            }
+          });
+        }
       }
 
       // Get product and shop to retrieve seller's wallet address

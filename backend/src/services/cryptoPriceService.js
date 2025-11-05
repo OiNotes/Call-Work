@@ -11,6 +11,7 @@
 
 import axios from 'axios';
 import logger from '../utils/logger.js';
+import { convertUsdToCrypto as convertUsdToCryptoDecimal, roundCryptoAmount as roundCryptoAmountDecimal } from '../utils/decimal.js';
 
 // CoinGecko API configuration
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -112,10 +113,11 @@ export async function getCryptoPrice(chain) {
 
 /**
  * Convert USD amount to cryptocurrency amount
+ * Uses Decimal.js for precise calculations (no floating point errors)
  *
  * @param {number} usdAmount - Amount in USD
  * @param {number} cryptoPrice - Current crypto price in USD
- * @returns {number} Amount in crypto
+ * @returns {string} Amount in crypto (string to preserve precision)
  * @throws {Error} If cryptoPrice is invalid
  */
 export function convertUsdToCrypto(usdAmount, cryptoPrice) {
@@ -123,35 +125,38 @@ export function convertUsdToCrypto(usdAmount, cryptoPrice) {
     throw new Error('Invalid crypto price');
   }
 
-  return usdAmount / cryptoPrice;
+  // Use Decimal.js for precise conversion
+  return convertUsdToCryptoDecimal(usdAmount, cryptoPrice);
 }
 
 /**
  * Round crypto amount to appropriate decimal places
+ * Uses Decimal.js to avoid precision loss
  *
- * @param {number} amount - Crypto amount (unrounded)
+ * @param {number|string} amount - Crypto amount (unrounded)
  * @param {string} chain - Chain name
- * @returns {number} Rounded crypto amount
+ * @returns {string} Rounded crypto amount (string to preserve precision)
  */
 export function roundCryptoAmount(amount, chain) {
   const decimals = CRYPTO_DECIMALS[chain] || 8; // Default to 8 decimals
-  return parseFloat(amount.toFixed(decimals));
+  return roundCryptoAmountDecimal(amount, decimals);
 }
 
 /**
  * Get USD → Crypto conversion with proper rounding (convenience method)
+ * Returns string amounts to preserve precision
  *
  * @param {number} usdAmount - Amount in USD
  * @param {string} chain - Chain name
- * @returns {Promise<object>} { cryptoAmount, usdRate }
+ * @returns {Promise<object>} { cryptoAmount (string), usdRate (number) }
  */
 export async function convertAndRound(usdAmount, chain) {
   const cryptoPrice = await getCryptoPrice(chain);
-  const rawAmount = convertUsdToCrypto(usdAmount, cryptoPrice);
-  const cryptoAmount = roundCryptoAmount(rawAmount, chain);
+  const cryptoAmount = convertUsdToCrypto(usdAmount, cryptoPrice);
+  // cryptoAmount is already rounded by convertUsdToCrypto (8 decimals)
 
   return {
-    cryptoAmount,
+    cryptoAmount, // String to preserve precision
     usdRate: cryptoPrice
   };
 }

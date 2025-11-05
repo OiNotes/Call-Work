@@ -2,6 +2,7 @@ import axios from 'axios';
 import { config } from '../config/env.js';
 import logger from '../utils/logger.js';
 import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
+import { amountsMatch } from '../utils/decimal.js';
 
 /**
  * Crypto payment verification service
@@ -87,10 +88,8 @@ class CryptoService {
       const amountBTC = output.value / 100000000;
 
       // Check amount (allow 0.5% tolerance for fees) - Industry standard
-      const tolerance = expectedAmount * 0.005;
-      const amountMatches = Math.abs(amountBTC - expectedAmount) <= tolerance;
-
-      if (!amountMatches) {
+      // Use Decimal.js for precise comparison
+      if (!amountsMatch(amountBTC, expectedAmount, 0.5)) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} BTC, Received: ${amountBTC} BTC`
@@ -190,10 +189,8 @@ class CryptoService {
       const amountETH = parseInt(tx.value, 16) / 1e18;
 
       // Check amount (allow 0.5% tolerance) - Industry standard
-      const tolerance = expectedAmount * 0.005;
-      const amountMatches = Math.abs(amountETH - expectedAmount) <= tolerance;
-
-      if (!amountMatches) {
+      // Use Decimal.js for precise comparison
+      if (!amountsMatch(amountETH, expectedAmount, 0.5)) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${amountETH} ETH`
@@ -347,10 +344,8 @@ class CryptoService {
       const amountUSDT = parseInt(amountHex, 16) / 1e6;
 
       // Check amount (allow 0.5% tolerance) - Industry standard
-      const tolerance = expectedAmount * 0.005;
-      const amountMatches = Math.abs(amountUSDT - expectedAmount) <= tolerance;
-
-      if (!amountMatches) {
+      // Use Decimal.js for precise comparison
+      if (!amountsMatch(amountUSDT, expectedAmount, 0.5)) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${amountUSDT} USDT`
@@ -447,10 +442,8 @@ class CryptoService {
       const amountLTC = output.value / 100000000;
 
       // Check amount (allow 0.5% tolerance for fees) - Industry standard
-      const tolerance = expectedAmount * 0.005;
-      const amountMatches = Math.abs(amountLTC - expectedAmount) <= tolerance;
-
-      if (!amountMatches) {
+      // Use Decimal.js for precise comparison
+      if (!amountsMatch(amountLTC, expectedAmount, 0.5)) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} LTC, Received: ${amountLTC} LTC`

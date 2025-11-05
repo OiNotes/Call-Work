@@ -52,6 +52,9 @@ import pollingService from './services/pollingService.js';
 // Import order cleanup service
 import orderCleanupService from './services/orderCleanupService.js';
 
+// Import invoice cleanup service
+import { startInvoiceCleanup } from './services/invoiceCleanupService.js';
+
 /**
  * Initialize Express app
  */
@@ -270,6 +273,10 @@ const startServer = async () => {
       // Start order cleanup service
       orderCleanupService.startOrderCleanup();
       logger.info('Order cleanup service started');
+
+      // Start invoice cleanup service (cleanup expired invoices every hour)
+      startInvoiceCleanup();
+      logger.info('Invoice cleanup service started');
     });
 
     // Setup WebSocket server for real-time updates
