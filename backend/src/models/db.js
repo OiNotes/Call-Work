@@ -561,7 +561,11 @@ export const orderQueries = {
   },
 
   // Find orders by buyer ID
+  // P0-DB-3 FIX: Enforce MAX_LIMIT
   findByBuyerId: async (buyerId, limit = 50, offset = 0) => {
+    const MAX_LIMIT = 1000;
+    const safeLimit = Math.min(limit, MAX_LIMIT);
+    
     const result = await query(
       `SELECT o.*, p.name as product_name, s.name as shop_name
        FROM orders o
@@ -570,7 +574,7 @@ export const orderQueries = {
        WHERE o.buyer_id = $1
        ORDER BY o.created_at DESC
        LIMIT $2 OFFSET $3`,
-      [buyerId, limit, offset]
+      [buyerId, safeLimit, offset]
     );
     return result.rows;
   },

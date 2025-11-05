@@ -329,6 +329,7 @@ export const createFollow = async (req, res) => {
     const followerTier = (followerShop.tier || '').toLowerCase();
     const isPro = followerTier === 'pro';
 
+    // P0-DB-2 FIX: Wrap follow creation + product sync in single transaction
     const client = await getClient();
     let follow;
 
@@ -370,33 +371,78 @@ export const createFollow = async (req, res) => {
 
       follow = insertResult.rows[0];
 
+      // P0-DB-2 FIX: If resell mode, sync products WITHIN transaction
+      if (normalizedMode === 'resell') {
+        // Get all active products from source shop
+        const sourceProducts = await client.query(
+          `SELECT id, name, description, price, currency, stock_quantity
+           FROM products
+           WHERE shop_id = $1 AND is_active = true
+           LIMIT 1000`,
+          [sourceId]
+        );
+
+        // Sync each product within transaction
+        for (const sourceProduct of sourceProducts.rows) {
+          try {
+            // Calculate price with markup
+            const newPrice = Math.round(parseFloat(sourceProduct.price) * (1 + markupValue / 100) * 100) / 100;
+
+            // Create product in follower shop
+            const syncedProductResult = await client.query(
+              `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity)
+               VALUES ($1, $2, $3, $4, $5, $6, 0)
+               RETURNING id`,
+              [
+                followerId,
+                sourceProduct.name,
+                sourceProduct.description,
+                newPrice,
+                sourceProduct.currency || 'USD',
+                sourceProduct.stock_quantity
+              ]
+            );
+
+            const syncedProductId = syncedProductResult.rows[0].id;
+
+            // Create synced_products record
+            await client.query(
+              `INSERT INTO synced_products (follow_id, synced_product_id, source_product_id)
+               VALUES ($1, $2, $3)`,
+              [follow.id, syncedProductId, sourceProduct.id]
+            );
+          } catch (productError) {
+            // Log but continue with other products
+            logger.error('Error syncing product during follow creation', {
+              sourceProductId: sourceProduct.id,
+              error: productError.message
+            });
+            // Don't throw - allow partial sync within transaction
+          }
+        }
+      }
+
+      // Commit transaction only if everything succeeded
       await client.query('COMMIT');
     } catch (txError) {
-      await client.query('ROLLBACK');
+      // P0-DB-2 FIX: Proper rollback handling
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Rollback error in createFollow', { error: rollbackError.message });
+      }
 
       if (txError.code === '23505') {
         return res.status(409).json({ error: 'Already following this shop' });
       }
 
-      throw txError;
+      logger.error('Transaction error in createFollow', {
+        error: txError.message,
+        stack: txError.stack
+      });
+      return res.status(500).json({ error: 'Failed to create follow' });
     } finally {
       client.release();
-    }
-
-    // If resell mode, sync all products
-    if (normalizedMode === 'resell') {
-      try {
-        await syncAllProductsForFollow(follow.id);
-      } catch (syncError) {
-        logger.error('Failed to sync products during follow creation', {
-          followId: follow.id,
-          error: syncError.message,
-          stack: syncError.stack
-        });
-        // Roll back follow to avoid inconsistent state
-        await shopFollowQueries.delete(follow.id);
-        return res.status(500).json({ error: 'Failed to sync products for resell follow' });
-      }
     }
 
     const followWithDetails = await shopFollowQueries.findById(follow.id);

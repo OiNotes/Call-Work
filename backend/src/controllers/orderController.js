@@ -188,11 +188,16 @@ export const orderController = {
 
   /**
    * Get orders for current user
+   * P0-DB-3 FIX: Add MAX_LIMIT to prevent unbounded queries
    */
   getMyOrders: async (req, res) => {
     try {
+      // P0-DB-3 FIX: Enforce maximum limit to prevent memory exhaustion
+      const MAX_LIMIT = 1000;
+      const requestedLimit = parseInt(req.query.limit, 10) || 50;
+      const limit = Math.min(requestedLimit, MAX_LIMIT);
+      
       const page = parseInt(req.query.page, 10) || 1;
-      const limit = parseInt(req.query.limit, 10) || 50;
       const offset = (page - 1) * limit;
       const type = req.query.type; // 'buyer' or 'seller'
       const hasShopFilter = typeof req.query.shop_id !== 'undefined';
@@ -254,7 +259,13 @@ export const orderController = {
 
       return res.status(200).json({
         success: true,
-        data: orders
+        data: orders,
+        pagination: {
+          page,
+          limit,
+          maxLimit: MAX_LIMIT,
+          hasMore: orders.length === limit
+        }
       });
 
     } catch (error) {

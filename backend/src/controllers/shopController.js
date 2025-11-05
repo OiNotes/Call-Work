@@ -2,8 +2,7 @@ import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
 import { activatePromoSubscription } from '../services/subscriptionService.js';
-
-const PROMO_CODE = 'comi9999';
+import * as promoCodeQueries from '../../database/queries/promoCodeQueries.js';
 
 /**
  * Shop Controller
@@ -154,7 +153,17 @@ export const shopController = {
       }
 
       // Handle promo code creation (existing flow)
-      if (wantsPro && normalizedPromo !== PROMO_CODE) {
+      if (wantsPro && normalizedPromo) {
+        // Validate promo code against database
+        const validation = await promoCodeQueries.validatePromoCode(normalizedPromo, 'pro');
+        
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            error: validation.error || 'Invalid promo code'
+          });
+        }
+      } else if (wantsPro && !normalizedPromo) {
         return res.status(402).json({
           success: false,
           error: 'PRO plan requires payment or valid promo code'
@@ -169,12 +178,22 @@ export const shopController = {
         tier
       });
 
-      if (wantsPro) {
-        if (normalizedPromo === PROMO_CODE) {
+      if (wantsPro && normalizedPromo) {
+        // Re-validate promo code (additional safety check)
+        const validation = await promoCodeQueries.validatePromoCode(normalizedPromo, 'pro');
+        
+        if (validation.valid) {
           try {
             shop = await activatePromoSubscription(shop.id, req.user.id, normalizedPromo);
-          logger.info(`Promo code applied for shop ${shop.id} by user ${req.user.id}`);
-        } catch (promoError) {
+            
+            // Increment promo code usage count
+            await promoCodeQueries.incrementUsageCount(validation.promoCode.id);
+            
+            logger.info(`Promo code applied for shop ${shop.id} by user ${req.user.id}`, {
+              promoCode: normalizedPromo,
+              promoCodeId: validation.promoCode.id
+            });
+          } catch (promoError) {
           logger.error('Promo activation failed', { error: promoError.message, stack: promoError.stack });
 
           // Check if it's idempotency error (promo already used)
@@ -195,8 +214,8 @@ export const shopController = {
             error: 'Failed to apply promo code. Shop was not created.'
           });
         }
-        }
       }
+    }
 
       return res.status(201).json({
         success: true,
@@ -548,6 +567,7 @@ export const shopController = {
 
   /**
    * Update shop wallets
+   * P0-DB-1 FIX: Check for wallet duplicates before updating
    */
   updateWallets: async (req, res) => {
     try {
@@ -578,7 +598,37 @@ export const shopController = {
       if (wallet_usdt !== undefined) {walletUpdates.wallet_usdt = wallet_usdt;}
       if (wallet_ltc !== undefined) {walletUpdates.wallet_ltc = wallet_ltc;}
 
-      // Update wallets
+      // P0-DB-1 FIX: Check for duplicate wallets before updating
+      // Only check wallets that are being updated and are not empty
+      const pool = (await import('../config/database.js')).default;
+      
+      for (const [field, value] of Object.entries(walletUpdates)) {
+        // Skip empty/null values (allowed)
+        if (!value || value.trim() === '') continue;
+        
+        const normalizedValue = value.trim();
+        
+        // Check if this wallet address is already used by another shop
+        const duplicateCheck = await pool.query(
+          `SELECT id, name FROM shops WHERE ${field} = $1 AND id != $2`,
+          [normalizedValue, id]
+        );
+        
+        if (duplicateCheck.rows.length > 0) {
+          const conflictShop = duplicateCheck.rows[0];
+          return res.status(409).json({
+            success: false,
+            error: `Wallet address already in use by another shop`,
+            details: {
+              wallet_type: field.replace('wallet_', '').toUpperCase(),
+              conflicting_shop_id: conflictShop.id,
+              conflicting_shop_name: conflictShop.name
+            }
+          });
+        }
+      }
+
+      // Update wallets (database constraint will also catch duplicates)
       const shop = await shopQueries.updateWallets(id, walletUpdates);
 
       return res.status(200).json({
@@ -592,6 +642,15 @@ export const shopController = {
       });
 
     } catch (error) {
+      // P0-DB-1: Handle unique constraint violation
+      if (error.code === '23505' && error.constraint?.includes('wallet')) {
+        const walletType = error.constraint.replace('shops_wallet_', '').replace('_unique', '').toUpperCase();
+        return res.status(409).json({
+          success: false,
+          error: `${walletType} wallet address already in use by another shop`
+        });
+      }
+
       logger.error('Update wallets error', { error: error.message, stack: error.stack });
       return res.status(500).json({
         success: false,
