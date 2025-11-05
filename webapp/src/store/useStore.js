@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
 import { mockShops, mockSubscriptions, mockUser } from '../utils/mockData';
+import { useToastStore } from '../hooks/useToast';
 
 export const normalizeProduct = (product) => {
   const rawStock = product?.stock_quantity ?? product?.stock ?? 0;
@@ -54,7 +55,7 @@ export const useStore = create(
       // Cart
       cart: [],
       addToCart: (product) => {
-        const { cart: currentCart, currentShop } = get();
+        const { cart: currentCart, currentShop, productsShopId } = get();
         const existingItem = currentCart.find(item => item.id === product.id);
 
         if (existingItem) {
@@ -67,7 +68,15 @@ export const useStore = create(
           });
         } else {
           // Сохраняем shopId вместе с товаром для восстановления currentShop при checkout
-          const shopId = currentShop?.id || product.shop_id;
+          const shopId = currentShop?.id || product.shop_id || product.shopId || productsShopId;
+
+          if (!shopId) {
+            console.error('[addToCart] CRITICAL: Cannot add to cart - shopId missing!', product);
+            const toast = useToastStore.getState().addToast;
+            toast({ type: 'error', message: 'Ошибка: товар без магазина', duration: 3000 });
+            return;
+          }
+
           set({ cart: [...currentCart, { ...product, quantity: 1, shopId }] });
         }
       },
@@ -147,9 +156,11 @@ export const useStore = create(
       // Payment Actions
       startCheckout: () => {
         const { cart, shops } = get();
+        const toast = useToastStore.getState().addToast;
 
         if (cart.length === 0) {
           console.warn('[startCheckout] Cannot checkout: cart is empty');
+          toast({ type: 'warning', message: 'Корзина пуста', duration: 2500 });
           return;
         }
 
@@ -157,8 +168,17 @@ export const useStore = create(
         const shopId = cart[0]?.shopId;
 
         if (!shopId) {
-          console.error('[startCheckout] Cannot checkout: shopId not found in cart item');
+          console.error('[startCheckout] CRITICAL: Cannot checkout - shopId missing!');
           console.error('[startCheckout] Cart item:', cart[0]);
+          
+          toast({ 
+            type: 'error', 
+            message: 'Ошибка оформления заказа. Очистите корзину и попробуйте снова.', 
+            duration: 4000 
+          });
+          
+          // Открыть обратно корзину, чтобы пользователь мог что-то сделать
+          set({ isCartOpen: true });
           return;
         }
 
@@ -187,9 +207,12 @@ export const useStore = create(
 
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-          // For now, support single product checkout
+          const initData = window.Telegram?.WebApp?.initData || '';
           const item = cart[0];
+
+          let timeoutId;
+          const controller = new AbortController();
+          timeoutId = setTimeout(() => controller.abort(), 15000);
 
           const response = await axios.post(`${API_URL}/orders`, {
             productId: item.id,
@@ -197,26 +220,47 @@ export const useStore = create(
             deliveryAddress: null
           }, {
             headers: {
-              'Content-Type': 'application/json'
-            }
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData
+            },
+            signal: controller.signal
           });
 
           const order = response.data.data;
           set({
-            currentOrder: order,
-            isCreatingOrder: false
+            currentOrder: order
           });
 
           return order;
         } catch (error) {
           console.error('Create order error:', error);
-          set({ isCreatingOrder: false });
+          
+          const toast = useToastStore.getState().addToast;
+          
+          if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+            toast({ type: 'error', message: 'Timeout: проверьте соединение', duration: 3500 });
+          } else if (error.response?.status === 401) {
+            toast({ type: 'error', message: 'Ошибка авторизации', duration: 3000 });
+          } else {
+            toast({ type: 'error', message: 'Не удалось создать заказ', duration: 3000 });
+          }
+
           throw error;
+        } finally {
+          // CRITICAL: Always cleanup timeout and reset loading state
+          if (timeoutId) clearTimeout(timeoutId);
+          set({ isCreatingOrder: false });
         }
       },
 
       selectCrypto: async (crypto) => {
-        const { currentOrder, user } = get();
+        const { currentOrder, user, isGeneratingInvoice } = get();
+        const toast = useToastStore.getState().addToast;
+
+        if (isGeneratingInvoice) {
+          console.warn('[selectCrypto] Already generating invoice, ignoring');
+          return;
+        }
 
         set({
           selectedCrypto: crypto,
@@ -229,6 +273,8 @@ export const useStore = create(
           if (!order) {
             order = await get().createOrder();
             if (!order) {
+              const errorMsg = 'Не удалось создать заказ';
+              toast({ type: 'error', message: errorMsg, duration: 3000 });
               throw new Error('Failed to create order');
             }
           }
@@ -250,6 +296,8 @@ export const useStore = create(
           // Ensure cryptoAmount is NUMBER (backend might return string from PostgreSQL)
           const cryptoAmount = parseFloat(invoice.cryptoAmount);
           if (!isFinite(cryptoAmount) || cryptoAmount <= 0) {
+            const errorMsg = 'Некорректная сумма от сервера';
+            toast({ type: 'error', message: errorMsg, duration: 3000 });
             throw new Error('Invalid cryptoAmount from API');
           }
 
@@ -257,23 +305,44 @@ export const useStore = create(
             paymentWallet: invoice.address,
             cryptoAmount,
             invoiceExpiresAt: invoice.expiresAt,
-            paymentStep: 'details',
-            isGeneratingInvoice: false
+            paymentStep: 'details'
           });
         } catch (error) {
           console.error('Generate invoice error:', error);
+
+          // Детальные toast сообщения
+          const errorMsg = error.response?.data?.error || error.message;
+          if (errorMsg?.includes('order')) {
+            toast({ type: 'error', message: 'Не удалось создать заказ', duration: 3500 });
+          } else if (errorMsg?.includes('wallet') || errorMsg?.includes('address')) {
+            toast({ type: 'error', message: 'Кошелёк недоступен. Обратитесь к продавцу.', duration: 3500 });
+          } else if (errorMsg?.includes('timeout') || errorMsg?.includes('network')) {
+            toast({ type: 'error', message: 'Проблема с соединением. Попробуйте снова.', duration: 3500 });
+          } else if (errorMsg?.includes('expired')) {
+            toast({ type: 'error', message: 'Заказ истёк. Создайте новый.', duration: 3500 });
+          } else {
+            toast({ type: 'error', message: 'Ошибка генерации счёта', duration: 3000 });
+          }
+
           set({
-            isGeneratingInvoice: false,
+            paymentStep: 'method', // Вернуть на выбор метода при ошибке
             verifyError: error.response?.data?.error || 'Ошибка генерации invoice'
           });
           throw error;
+        } finally {
+          // CRITICAL: Always reset loading state, even on unhandled errors
+          set({ isGeneratingInvoice: false });
         }
       },
 
       submitPaymentHash: async (hash) => {
         const { currentOrder, selectedCrypto, user } = get();
+        const toast = useToastStore.getState().addToast;
 
-        if (!currentOrder) return;
+        if (!currentOrder) {
+          toast({ type: 'error', message: 'Заказ не найден', duration: 3000 });
+          return;
+        }
 
         set({ isVerifying: true, verifyError: null });
 
@@ -304,19 +373,46 @@ export const useStore = create(
 
             set({
               pendingOrders: [...get().pendingOrders, completedOrder],
-              paymentStep: 'success',
-              isVerifying: false
+              paymentStep: 'success'
             });
 
             // Clear cart
             get().clearCart();
+
+            // Success toast
+            toast({ type: 'success', message: 'Платёж подтверждён!', duration: 3500 });
           }
         } catch (error) {
           console.error('Verify payment error:', error);
+
+          // Детальные toast сообщения для разных ошибок
+          const errorMsg = error.response?.data?.error || error.message;
+          const statusCode = error.response?.status;
+
+          if (statusCode === 404) {
+            toast({ type: 'error', message: 'Транзакция не найдена в блокчейне', duration: 4000 });
+          } else if (errorMsg?.includes('confirmation')) {
+            toast({ type: 'warning', message: 'Недостаточно подтверждений. Ожидайте...', duration: 4000 });
+          } else if (errorMsg?.includes('amount') || errorMsg?.includes('сумма')) {
+            toast({ type: 'error', message: 'Неверная сумма транзакции', duration: 3500 });
+          } else if (errorMsg?.includes('address') || errorMsg?.includes('wallet')) {
+            toast({ type: 'error', message: 'Неверный адрес получателя', duration: 3500 });
+          } else if (errorMsg?.includes('expired')) {
+            toast({ type: 'error', message: 'Счёт истёк. Создайте новый заказ.', duration: 4000 });
+          } else if (errorMsg?.includes('timeout') || errorMsg?.includes('network')) {
+            toast({ type: 'error', message: 'Проблема с соединением. Попробуйте снова.', duration: 3500 });
+          } else if (errorMsg?.includes('invalid') || errorMsg?.includes('hash')) {
+            toast({ type: 'error', message: 'Некорректный hash транзакции', duration: 3500 });
+          } else {
+            toast({ type: 'error', message: 'Ошибка проверки платежа', duration: 3000 });
+          }
+
           set({
-            isVerifying: false,
             verifyError: error.response?.data?.error || 'Ошибка проверки платежа'
           });
+        } finally {
+          // CRITICAL: Always reset loading state
+          set({ isVerifying: false });
         }
       },
 
