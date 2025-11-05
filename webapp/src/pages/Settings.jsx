@@ -14,11 +14,12 @@ const SubscriptionModal = lazy(() => import('../components/Settings/Subscription
 const WorkspaceModal = lazy(() => import('../components/Settings/WorkspaceModal'));
 const FollowsModal = lazy(() => import('../components/Settings/FollowsModal'));
 const AnalyticsModal = lazy(() => import('../components/Settings/AnalyticsModal'));
+const MigrationModal = lazy(() => import('../components/Settings/MigrationModal'));
 
 const getSettingsSections = (t, lang) => {
   const languageNames = { 'ru': 'Русский', 'en': 'English' };
 
-  return [
+  const sections = [
     {
       title: 'УПРАВЛЕНИЕ',
       items: [
@@ -72,18 +73,13 @@ const getSettingsSections = (t, lang) => {
             </svg>
           ),
         },
-      ],
-    },
-    {
-      title: 'РАЗРАБОТКА',
-      items: [
         {
-          id: 'discount-demo',
-          label: 'Демо: Скидки',
-          description: 'Тестирование компонентов скидок',
+          id: 'migration',
+          label: 'Канал заблокирован?',
+          description: 'Миграция на новый канал',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           ),
         },
@@ -116,6 +112,27 @@ const getSettingsSections = (t, lang) => {
       ],
     },
   ];
+
+  // Добавляем секцию РАЗРАБОТКА только в dev mode
+  if (import.meta.env.DEV) {
+    sections.splice(1, 0, {
+      title: 'РАЗРАБОТКА',
+      items: [
+        {
+          id: 'discount-demo',
+          label: 'Демо: Скидки',
+          description: 'Тестирование компонентов скидок',
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          )
+        }
+      ],
+    });
+  }
+
+  return sections;
 };
 
 export default function Settings() {
@@ -129,6 +146,7 @@ export default function Settings() {
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showFollows, setShowFollows] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showMigration, setShowMigration] = useState(false);
 
   const settingsSections = getSettingsSections(t, lang);
 
@@ -156,6 +174,9 @@ export default function Settings() {
         break;
       case 'follows':
         setShowFollows(true);
+        break;
+      case 'migration':
+        setShowMigration(true);
         break;
       case 'discount-demo':
         setActiveTab('discount-demo');
@@ -277,6 +298,7 @@ export default function Settings() {
         {showFollows && <FollowsModal isOpen={showFollows} onClose={() => setShowFollows(false)} />}
         {showWallets && <WalletsModal isOpen={showWallets} onClose={() => setShowWallets(false)} />}
         {showLanguage && <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />}
+        {showMigration && <MigrationModal isOpen={showMigration} onClose={() => setShowMigration(false)} />}
       </Suspense>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
+import SegmentedControl from '../common/SegmentedControl';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useApi } from '../../hooks/useApi';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -8,11 +9,24 @@ import { useBackButton } from '../../hooks/useBackButton';
 // Plan Card Component
 function PlanCard({ plan, planName, isActive, onUpgrade, canUpgrade }) {
   const { triggerHaptic } = useTelegram();
+  const [period, setPeriod] = useState('month');
 
   const tierColors = {
     basic: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
     pro: 'bg-gradient-to-r from-orange-500/20 to-purple-500/20 text-orange-400 border-orange-500/30',
   };
+
+  // Calculate pricing based on period
+  const hasPeriods = plan.pricing && (plan.pricing.month || plan.pricing.year);
+  const currentPrice = hasPeriods
+    ? (period === 'year' ? plan.pricing.year : plan.pricing.month)
+    : plan.price;
+  const displayPeriod = hasPeriods ? period : plan.period;
+
+  // Calculate discount if year selected
+  const yearDiscount = hasPeriods && period === 'year' && plan.pricing.month && plan.pricing.year
+    ? Math.round((1 - (plan.pricing.year / 12) / plan.pricing.month) * 100)
+    : 0;
 
   return (
     <motion.div
@@ -27,10 +41,22 @@ function PlanCard({ plan, planName, isActive, onUpgrade, canUpgrade }) {
           <h3 className="text-xl font-bold text-white capitalize mb-1">
             {planName}
           </h3>
-          <p className="text-2xl font-bold text-orange-primary">
-            ${plan.price}
-            <span className="text-sm text-gray-400 font-normal">/{plan.period}</span>
-          </p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-2xl font-bold text-orange-primary">
+              ${currentPrice}
+              <span className="text-sm text-gray-400 font-normal">/{displayPeriod}</span>
+            </p>
+            {yearDiscount > 0 && (
+              <motion.span
+                className="px-2 py-0.5 rounded-md text-xs font-semibold bg-green-500/20 text-green-400"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              >
+                Скидка {yearDiscount}%
+              </motion.span>
+            )}
+          </div>
         </div>
         {isActive && (
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
@@ -38,6 +64,21 @@ function PlanCard({ plan, planName, isActive, onUpgrade, canUpgrade }) {
           </span>
         )}
       </div>
+
+      {/* Period selector - only show if pricing has both month and year */}
+      {hasPeriods && (
+        <div className="mb-4 flex justify-center">
+          <SegmentedControl
+            options={[
+              { value: 'month', label: 'Month' },
+              { value: 'year', label: 'Year' }
+            ]}
+            value={period}
+            onChange={setPeriod}
+            size="md"
+          />
+        </div>
+      )}
 
       <ul className="space-y-2 mb-5">
         {plan.features.map((feature, index) => (

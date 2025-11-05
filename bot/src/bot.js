@@ -1,4 +1,5 @@
-import { Telegraf, Scenes, session } from 'telegraf';
+import { Telegraf, Scenes } from 'telegraf';
+import Redis from 'ioredis';
 import dotenv from 'dotenv';
 import config from './config/index.js';
 import logger from './utils/logger.js';
@@ -12,6 +13,7 @@ import authMiddleware from './middleware/auth.js';
 import errorMiddleware from './middleware/error.js';
 import debounceMiddleware from './middleware/debounce.js';
 import sessionRecoveryMiddleware from './middleware/sessionRecovery.js';
+import { createRedisSession } from './middleware/redisSession.js';
 
 // Scenes
 import chooseTierScene from './scenes/chooseTier.js';
@@ -45,6 +47,28 @@ if (!config.botToken) {
 // Initialize bot
 const bot = new Telegraf(config.botToken);
 
+// Setup Redis for persistent sessions
+const redis = new Redis(config.redisUrl, {
+  lazyConnect: true,
+  retryStrategy: (times) => {
+    if (times > 3) {
+      logger.error('Redis connection failed after 3 retries');
+      return null;
+    }
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
+
+// Connect to Redis
+try {
+  await redis.connect();
+  logger.info('Redis connected successfully for session storage');
+} catch (error) {
+  logger.error('Failed to connect to Redis:', error);
+  logger.warn('Falling back to memory session storage (sessions will be lost on restart)');
+}
+
 // Setup session and scenes
 const stage = new Scenes.Stage([
   chooseTierScene,
@@ -60,7 +84,9 @@ const stage = new Scenes.Stage([
   markOrdersShippedScene
 ]);
 
-bot.use(session());
+// Configure session middleware with Redis store
+bot.use(createRedisSession(redis));
+
 bot.use(stage.middleware());
 
 // Session state logging middleware (for debugging)
@@ -103,6 +129,13 @@ const shutdown = async () => {
   try {
     await bot.stop();
     logger.info('Bot stopped successfully');
+    
+    // Close Redis connection
+    if (redis && redis.status === 'ready') {
+      await redis.quit();
+      logger.info('Redis connection closed');
+    }
+    
     process.exit(0);
   } catch (error) {
     logger.error('Error during shutdown:', error);
@@ -117,23 +150,28 @@ process.once('SIGTERM', shutdown);
 bot.catch((err, ctx) => {
   logger.error(`Bot error for ${ctx.updateType}:`, err);
 
-  // CRITICAL FIX (BUG #5): Clear corrupted scene to allow /start to work
+  // P0-BOT-5 FIX: Only leave scene, DON'T clear session
+  // Scene leave is enough to unstuck user, session data should persist
   if (ctx.scene) {
-    ctx.scene.leave().catch(() => {});
+    try {
+      ctx.scene.leave();
+      logger.info('Left corrupted scene after error', {
+        userId: ctx.from?.id,
+        updateType: ctx.updateType
+      });
+    } catch (leaveError) {
+      logger.error('Failed to leave scene:', leaveError);
+    }
   }
 
-  // Clear session state if corrupted
-  if (ctx.session && typeof ctx.session === 'object') {
-    // Keep essential auth data, clear wizard state
-    const { token, user, shopId, shopName, role } = ctx.session;
-    ctx.session = { token, user, shopId, shopName, role };
-  }
+  // DON'T clear session - preserve shopId, token, role, etc.
+  // Only wizard state (ctx.wizard.state) should be cleared, which happens in scene.leave()
 
   cleanReply(ctx, generalMessages.restartRequired).catch(() => {});
 });
 
-// Export bot instance for backend integration
-export { bot };
+// Export bot instance and redis for backend integration
+export { bot, redis };
 
 // Launch function (can be called from backend or standalone)
 export async function startBot() {

@@ -115,8 +115,9 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
 
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         {isPreorder ? (
-          <div className="px-3 py-1 rounded-full border border-orange-400/60 bg-orange-500/20 text-[10px] font-semibold text-orange-200 uppercase tracking-[0.16em] shadow-[0_10px_30px_rgba(255,120,40,0.3)]">
-            Предзаказ
+          <div className="px-3 py-1 rounded-full border border-blue-400/60 bg-blue-500/20 text-[10px] font-semibold text-blue-200 uppercase tracking-[0.16em] shadow-[0_10px_30px_rgba(59,130,246,0.3)] flex items-center gap-1">
+            <span>🔖</span>
+            <span>Предзаказ</span>
           </div>
         ) : stock > 0 && (
           <div

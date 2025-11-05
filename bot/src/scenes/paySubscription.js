@@ -12,8 +12,7 @@
  */
 
 import { Scenes, Markup } from 'telegraf';
-import QRCode from 'qrcode';
-import { subscriptionApi } from '../utils/api.js';
+import { subscriptionApi, walletApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
@@ -255,15 +254,21 @@ const paySubscriptionScene = new Scenes.WizardScene(
       // Display currency name for user
       const currencyDisplayName = subMessages.chainMappings[chain] || currency;
 
-      // Generate QR code for payment address
-      const qrCodeBuffer = await QRCode.toBuffer(invoice.address, {
-        width: 512,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      });
+      // P0-BOT-8 FIX: Generate QR code via backend (non-blocking)
+      // Backend generates QR, bot just fetches it
+      const qrResponse = await walletApi.generateQR({
+        address: invoice.address,
+        amount: 0,
+        currency: currency
+      }, token);
+
+      if (!qrResponse || !qrResponse.success || !qrResponse.data?.qrCode) {
+        throw new Error('Failed to generate QR code from backend');
+      }
+
+      // Convert base64 to buffer
+      const base64Data = qrResponse.data.qrCode.replace(/^data:image\/png;base64,/, '');
+      const qrCodeBuffer = Buffer.from(base64Data, 'base64');
 
       // Prepare message with crypto amount if available
       const cryptoAmount = invoice.cryptoAmount || null;

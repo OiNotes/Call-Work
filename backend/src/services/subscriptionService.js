@@ -12,10 +12,16 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import * as cryptoService from './crypto.js';
 
-// Subscription pricing
+// Subscription pricing (monthly)
 const SUBSCRIPTION_PRICES = {
   basic: 25.00,
   pro: 35.00
+};
+
+// Yearly subscription pricing (with ~17% discount)
+const SUBSCRIPTION_PRICES_YEARLY = {
+  basic: 250.00,  // $25/month * 12 = $300, discounted to $250 (17% off)
+  pro: 350.00     // $35/month * 12 = $420, discounted to $350 (17% off)
 };
 
 // Grace period in days
@@ -776,5 +782,6 @@ export {
   getMyShopSubscriptions,
   activatePromoSubscription,
   SUBSCRIPTION_PRICES,
+  SUBSCRIPTION_PRICES_YEARLY,
   GRACE_PERIOD_DAYS
 };

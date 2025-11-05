@@ -240,9 +240,15 @@ async function getPricing(req, res) {
   try {
     res.json({
       basic: {
+        // Legacy fields for backward compatibility
         price: subscriptionService.SUBSCRIPTION_PRICES.basic,
         currency: 'USD',
         period: '30 days',
+        // New pricing structure with month/year options
+        pricing: {
+          month: subscriptionService.SUBSCRIPTION_PRICES.basic,
+          year: subscriptionService.SUBSCRIPTION_PRICES_YEARLY.basic
+        },
         features: [
           'Create and manage shop',
           'Up to 4 products',
@@ -251,9 +257,15 @@ async function getPricing(req, res) {
         ]
       },
       pro: {
+        // Legacy fields for backward compatibility
         price: subscriptionService.SUBSCRIPTION_PRICES.pro,
         currency: 'USD',
         period: '30 days',
+        // New pricing structure with month/year options
+        pricing: {
+          month: subscriptionService.SUBSCRIPTION_PRICES.pro,
+          year: subscriptionService.SUBSCRIPTION_PRICES_YEARLY.pro
+        },
         features: [
           'All Basic features',
           'Unlimited products',

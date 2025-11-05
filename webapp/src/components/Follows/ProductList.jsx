@@ -79,6 +79,13 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                     >
                       {product.name}
                     </h3>
+                    {/* Preorder Badge */}
+                    {(product.is_preorder || product.availability === 'preorder') && (
+                      <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-400/50 bg-blue-500/15 text-[10px] font-semibold text-blue-200 uppercase tracking-wider">
+                        <span>🔖</span>
+                        <span>Предзаказ</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Price & Stock */}
@@ -133,6 +140,14 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                   >
                     {sourceProduct.name || syncedProduct.name}
                   </h3>
+                  {/* Preorder Badge */}
+                  {((sourceProduct.is_preorder || sourceProduct.availability === 'preorder') ||
+                    (syncedProduct.is_preorder || syncedProduct.availability === 'preorder')) && (
+                    <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-400/50 bg-blue-500/15 text-[10px] font-semibold text-blue-200 uppercase tracking-wider">
+                      <span>🔖</span>
+                      <span>Предзаказ</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Price + Stock - одна чистая строка */}

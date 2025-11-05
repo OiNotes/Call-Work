@@ -81,6 +81,8 @@ export const handleWorkspaceRole = async (ctx) => {
 /**
  * Handle workspace shop selection
  * User selected a specific shop to work in
+ * 
+ * P0-BOT-6 FIX: Server-side authorization verification
  */
 export const handleWorkspaceShopSelect = async (ctx) => {
   try {
@@ -88,27 +90,71 @@ export const handleWorkspaceShopSelect = async (ctx) => {
 
     const shopId = parseInt(ctx.match[1]);
 
-    // Validate shop exists in accessible shops
-    const shop = ctx.session.accessibleShops?.find(s => s.id === shopId);
-    if (!shop) {
+    // P0-BOT-6 FIX: Server-side verification
+    // Don't trust session data - verify with backend
+    if (!ctx.session.token) {
+      logger.error('Missing token in workspace shop select', {
+        userId: ctx.from.id,
+        shopId
+      });
       await ctx.editMessageText(
-        workspaceMessages.shopNotFoundOrRevoked
+        generalMessages.authorizationRequired
       );
       return;
     }
 
-    // Set workspace mode
-    ctx.session.workspaceMode = true;
-    ctx.session.shopId = shop.id;
-    ctx.session.shopName = shop.name;
+    try {
+      // Fetch worker shops from backend (server-side verification)
+      const workerShops = await shopApi.getWorkerShops(ctx.session.token);
+      const authorizedShops = Array.isArray(workerShops)
+        ? workerShops
+        : Array.isArray(workerShops?.data)
+          ? workerShops.data
+          : [];
 
-    logger.info(`User ${ctx.from.id} entered workspace for shop ${shop.id}`);
+      // Verify user has access to this shop
+      const shop = authorizedShops.find(s => s.id === shopId);
+      
+      if (!shop) {
+        logger.warn('Unauthorized workspace access attempt', {
+          userId: ctx.from.id,
+          shopId,
+          authorizedShops: authorizedShops.map(s => s.id)
+        });
+        
+        await ctx.editMessageText(
+          workspaceMessages.shopNotFoundOrRevoked
+        );
+        return;
+      }
 
-    // Show workspace menu (restricted)
-    await ctx.editMessageText(
-      workspaceMessages.header(shop.name),
-      workspaceMenu(shop.name)
-    );
+      // Update session with verified data
+      ctx.session.accessibleShops = authorizedShops;
+      ctx.session.workspaceMode = true;
+      ctx.session.shopId = shop.id;
+      ctx.session.shopName = shop.name;
+
+      logger.info(`User ${ctx.from.id} entered workspace for shop ${shop.id} (verified)`);
+
+      // Show workspace menu (restricted)
+      await ctx.editMessageText(
+        workspaceMessages.header(shop.name),
+        workspaceMenu(shop.name)
+      );
+
+    } catch (verifyError) {
+      logger.error('Error verifying workspace access:', verifyError);
+      
+      if (verifyError.response?.status === 403) {
+        await ctx.editMessageText(
+          workspaceMessages.shopNotFoundOrRevoked
+        );
+      } else {
+        await ctx.editMessageText(
+          workspaceMessages.loadError
+        );
+      }
+    }
 
   } catch (error) {
     logger.error('Error in workspace shop select handler:', error);

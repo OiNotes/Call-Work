@@ -36,7 +36,10 @@ const config = {
     role: null,
     shopId: null,
     tempData: {}
-  }
+  },
+
+  // Redis configuration
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379'
 };
 
 export default config;

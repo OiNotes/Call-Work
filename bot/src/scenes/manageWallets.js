@@ -398,16 +398,27 @@ ${formatted}`
       // Clear editing state
       ctx.wizard.state.editingWallet = null;
 
-      if (ctx.session.manageWalletsRefreshTimer) {
-        clearTimeout(ctx.session.manageWalletsRefreshTimer);
+      // P0-BOT-3 FIX: Store timeout in wizard state, not session
+      // Clear any existing timeout first
+      if (ctx.wizard.state.refreshTimer) {
+        clearTimeout(ctx.wizard.state.refreshTimer);
       }
 
-      ctx.session.manageWalletsRefreshTimer = setTimeout(async () => {
+      // Set new timeout and store ID in wizard state
+      ctx.wizard.state.refreshTimer = setTimeout(async () => {
         try {
-          ctx.wizard.selectStep(0);
-          await showWallets(ctx);
+          // Check if still in scene before refreshing
+          if (ctx.scene && ctx.scene.current && ctx.scene.current.id === 'manageWallets') {
+            ctx.wizard.selectStep(0);
+            await showWallets(ctx);
+          }
         } catch (refreshError) {
           logger.error('Error refreshing wallets view:', refreshError);
+        } finally {
+          // Clear timer reference after execution
+          if (ctx.wizard.state) {
+            delete ctx.wizard.state.refreshTimer;
+          }
         }
       }, 1000);
       return;
@@ -435,11 +446,13 @@ const manageWalletsScene = new Scenes.WizardScene(
 
 // Handle scene leave
 manageWalletsScene.leave(async (ctx) => {
-  if (ctx.session.manageWalletsRefreshTimer) {
-    clearTimeout(ctx.session.manageWalletsRefreshTimer);
-    delete ctx.session.manageWalletsRefreshTimer;
+  // P0-BOT-3 FIX: Clear timeout from wizard state
+  if (ctx.wizard.state.refreshTimer) {
+    clearTimeout(ctx.wizard.state.refreshTimer);
+    delete ctx.wizard.state.refreshTimer;
   }
 
+  // Clean up wizard state
   ctx.wizard.state = {};
   logger.info(`User ${ctx.from?.id} left manageWallets scene`);
 });

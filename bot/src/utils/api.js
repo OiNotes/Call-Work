@@ -3,6 +3,7 @@ import config from '../config/index.js';
 import logger from './logger.js';
 
 // Create axios instance with base URL
+// Default timeout: 10s for normal requests
 const api = axios.create({
   baseURL: config.backendUrl + '/api',
   timeout: 10000,
@@ -10,6 +11,62 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+// Create axios instance for payment endpoints with longer timeout
+// Payment endpoints need 60s timeout for blockchain API queries
+const paymentAxios = axios.create({
+  baseURL: config.backendUrl + '/api',
+  timeout: 60000, // 60 seconds for blockchain queries
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Apply interceptors to payment API instance
+paymentAxios.interceptors.request.use(
+  (config) => {
+    logger.debug(`Payment API Request: ${config.method.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    logger.error('Payment API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+paymentAxios.interceptors.response.use(
+  (response) => {
+    logger.debug(`Payment API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      let requestBody = null;
+      if (error.config?.data) {
+        if (typeof error.config.data === 'string') {
+          try {
+            requestBody = JSON.parse(error.config.data);
+          } catch {
+            requestBody = error.config.data;
+          }
+        } else {
+          requestBody = error.config.data;
+        }
+      }
+
+      logger.error(`Payment API Error: ${error.response.status} ${error.response.config.url}`, {
+        responseData: error.response.data,
+        requestBody,
+        validationErrors: error.response.data?.details || null
+      });
+    } else if (error.request) {
+      logger.error('Payment API Error: No response received', { url: error.config?.url });
+    } else {
+      logger.error('Payment API Error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Request interceptor for logging
 api.interceptors.request.use(
@@ -400,10 +457,11 @@ export const orderApi = {
   }
 };
 
+// P0-BOT-7 FIX: Use paymentAxios with 60s timeout for payment endpoints
 export const paymentApi = {
-  // Verify crypto payment
+  // Verify crypto payment (blockchain query - needs 60s timeout)
   async verifyPayment(paymentData, token) {
-    const { data } = await api.post('/payments/verify', paymentData, {
+    const { data } = await paymentAxios.post('/payments/verify', paymentData, {
       headers: { Authorization: `Bearer ${token}` }
     });
     // Unwrap response: return data.data (payment object) instead of wrapper
@@ -412,7 +470,7 @@ export const paymentApi = {
 
   // Generate crypto address
   async generateAddress(currency, token) {
-    const { data } = await api.post('/payments/address',
+    const { data } = await paymentAxios.post('/payments/address',
       { currency },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -474,9 +532,9 @@ export const subscriptionApi = {
     return data.data || data;
   },
 
-  // Generate payment invoice for subscription
+  // Generate payment invoice for subscription (blockchain query - needs 60s timeout)
   async generateSubscriptionInvoice(subscriptionId, chain, token) {
-    const { data } = await api.post(
+    const { data } = await paymentAxios.post(
       `/subscriptions/${subscriptionId}/payment/generate`,
       { chain },
       {
@@ -487,9 +545,9 @@ export const subscriptionApi = {
     return data.invoice || data.data || data;
   },
 
-  // Get payment status for subscription
+  // Get payment status for subscription (blockchain query - needs 60s timeout)
   async getSubscriptionPaymentStatus(subscriptionId, token) {
-    const { data } = await api.get(
+    const { data } = await paymentAxios.get(
       `/subscriptions/${subscriptionId}/payment/status`,
       {
         headers: { Authorization: `Bearer ${token}` }

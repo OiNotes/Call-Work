@@ -957,6 +957,85 @@ async function rollbackShopWorkersFeature() {
 }
 
 /**
+ * Run incremental migration: Add channel_url to shops table
+ * - Adds channel_url VARCHAR(255) for storing Telegram channel URL
+ * - Creates index for faster lookups
+ * - Enables channel migration tracking and UI display
+ */
+async function addChannelUrlToShops() {
+  log.header('Running Incremental Migration: Add channel_url to shops');
+  const client = await pool.connect();
+  try {
+    // Step 1: Check if column exists
+    log.info('Checking if channel_url column exists in shops...');
+    const checkColumn = await client.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'shops'
+      AND column_name = 'channel_url'
+    `);
+    
+    if (checkColumn.rows.length > 0) {
+      log.warning('Column channel_url already exists in shops, skipping');
+      return;
+    }
+    
+    // Step 2: Add channel_url column
+    log.info('Adding channel_url column to shops table...');
+    await client.query(`
+      ALTER TABLE shops
+      ADD COLUMN channel_url VARCHAR(255)
+    `);
+    log.success('Column channel_url added to shops');
+    
+    // Step 3: Create index
+    log.info('Creating index on channel_url...');
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_shops_channel_url ON shops(channel_url)
+    `);
+    log.success('Index idx_shops_channel_url created');
+    
+    // Step 4: Add comment
+    log.info('Adding comment to channel_url...');
+    await client.query(`
+      COMMENT ON COLUMN shops.channel_url IS 'Telegram channel URL for shop notifications (format: @channel_name or https://t.me/channel_name)'
+    `);
+    log.success('Comment added');
+    
+    log.success('Migration completed: channel_url added to shops');
+  } catch (error) {
+    log.error(`Migration failed: ${error.message}`);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Rollback incremental migration: Remove channel_url from shops
+ */
+async function rollbackChannelUrlFromShops() {
+  log.header('Rolling back channel_url from shops');
+  const client = await pool.connect();
+  try {
+    log.info('Dropping index idx_shops_channel_url...');
+    await client.query('DROP INDEX IF EXISTS idx_shops_channel_url');
+    log.success('Index dropped');
+    
+    log.info('Removing channel_url column from shops...');
+    await client.query('ALTER TABLE shops DROP COLUMN IF EXISTS channel_url');
+    log.success('Column channel_url removed');
+    
+    log.success('Rollback completed: channel_url removed from shops');
+  } catch (error) {
+    log.error(`Rollback failed: ${error.message}`);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Main migration runner
  */
 async function migrate(options = {}) {
@@ -1048,6 +1127,14 @@ async function migrate(options = {}) {
       await rollbackShopWorkersFeature();
     }
 
+    if (options.addChannelUrl) {
+      await addChannelUrlToShops();
+    }
+
+    if (options.rollbackChannelUrl) {
+      await rollbackChannelUrlFromShops();
+    }
+
     // Verify tables
     if (verify) {
       await verifyTables();
@@ -1091,6 +1178,8 @@ function parseArgs() {
     addRecurringSubscriptions: args.includes('--add-recurring-subscriptions'),
     addShopWorkers: args.includes('--add-shop-workers'),
     rollbackShopWorkers: args.includes('--rollback-shop-workers'),
+    addChannelUrl: args.includes('--add-channel-url'),
+    rollbackChannelUrl: args.includes('--rollback-channel-url'),
   };
 
   // Show help
@@ -1114,6 +1203,8 @@ Options:
   --add-recurring-subscriptions Run incremental migration: Add Recurring Subscriptions feature (shop_subscriptions table, subscription tracking in shops)
   --add-shop-workers     Run incremental migration: Add Shop Workers feature (workspace functionality)
   --rollback-shop-workers Rollback Shop Workers feature (WARNING: deletes all worker assignments!)
+  --add-channel-url      Run incremental migration: Add channel_url to shops table
+  --rollback-channel-url Rollback channel_url from shops table
   --no-schema            Skip schema migration
   --no-indexes           Skip index creation
   --no-extensions        Skip extension setup
@@ -1165,4 +1256,6 @@ module.exports = {
   addRecurringSubscriptions,
   addShopWorkersFeature,
   rollbackShopWorkersFeature,
+  addChannelUrlToShops,
+  rollbackChannelUrlFromShops,
 };

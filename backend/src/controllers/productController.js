@@ -33,7 +33,8 @@ export const productController = {
         shopId,
         name,
         description,
-        price
+        price,
+        is_preorder
       } = req.body;
       const stockQuantity = req.body.stockQuantity ?? req.body.stock ?? 0;
       // Currency is now legacy field - products are priced in USD only
@@ -66,7 +67,8 @@ export const productController = {
         description,
         price,
         currency,
-        stockQuantity
+        stockQuantity,
+        isPreorder: is_preorder
       });
 
       return res.status(201).json({
@@ -233,7 +235,8 @@ export const productController = {
         name,
         description,
         price,
-        isActive
+        isActive,
+        is_preorder
       } = req.body;
       const stockQuantity = req.body.stockQuantity ?? req.body.stock;
       const discountPercentage = req.body.discountPercentage ?? req.body.discount_percentage;
@@ -267,7 +270,8 @@ export const productController = {
         isActive,
         discountPercentage,
         discountExpiresAt,
-        originalPrice
+        originalPrice,
+        isPreorder: is_preorder
       });
 
       // Broadcast product update to WebSocket clients for real-time sync
@@ -719,7 +723,8 @@ export const productController = {
             isActive,
             discountPercentage,
             discountExpiresAt,
-            originalPrice
+            originalPrice,
+            isPreorder
           } = productUpdates;
 
           const params = [
@@ -731,7 +736,8 @@ export const productController = {
             isActive ?? null,
             discountPercentage ?? null,
             originalPrice ?? null,
-            discountExpiresAt ?? null
+            discountExpiresAt ?? null,
+            isPreorder ?? null
           ];
 
           const updateResult = await client.query(
@@ -758,9 +764,10 @@ export const productController = {
                    WHEN $9::TIMESTAMP IS NOT NULL THEN $9
                    ELSE discount_expires_at
                  END,
+                 is_preorder = COALESCE($10::BOOLEAN, is_preorder),
                  updated_at = NOW()
              WHERE id = $1
-             RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, created_at, updated_at`,
+             RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, is_preorder, created_at, updated_at`,
             params
           );
 
