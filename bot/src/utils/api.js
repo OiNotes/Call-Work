@@ -530,7 +530,7 @@ export const notificationApi = {
 };
 
 export const followApi = {
-  // Get my follows
+  // Get my follows (HTTP - requires JWT token)
   async getMyFollows(shopId, token) {
     const { data } = await api.get('/follows/my', {
       params: { shopId },

@@ -78,6 +78,7 @@ export const showSellerMainMenu = async (ctx) => {
 
     let hasFollows = false;
     try {
+      // Use HTTP API with JWT token
       const follows = await followApi.getMyFollows(shopId, ctx.session.token);
       hasFollows = Array.isArray(follows) && follows.length > 0;
     } catch (followError) {

@@ -32,17 +32,19 @@ const getSellerMenu = async (ctx) => {
   const shopId = ctx.session.shopId;
   const token = ctx.session.token;
 
-  if (shopId && token) {
+  if (shopId) {
     try {
       const [count, follows] = await Promise.all([
-        orderApi.getActiveOrdersCount(shopId, token).catch((error) => {
+        // Active orders count requires token (user-specific data)
+        token ? orderApi.getActiveOrdersCount(shopId, token).catch((error) => {
           logger.error('Failed to get active orders count:', error);
           return 0;
-        }),
-        followApi.getMyFollows(shopId, token).catch((error) => {
+        }) : Promise.resolve(0),
+        // Follows list - use HTTP API with token
+        token ? followApi.getMyFollows(shopId, token).catch((error) => {
           logger.error('Failed to get follows for menu:', error);
           return [];
-        })
+        }) : Promise.resolve([])
       ]);
 
       activeCount = count || 0;
@@ -241,6 +243,7 @@ export const handleSellerRole = async (ctx) => {
         // Determine follows to show dynamic menu button
         let hasFollows = false;
         try {
+          // Use HTTP API with JWT token
           const follows = await followApi.getMyFollows(shop.id, ctx.session.token);
           hasFollows = Array.isArray(follows) && follows.length > 0;
         } catch (error) {
