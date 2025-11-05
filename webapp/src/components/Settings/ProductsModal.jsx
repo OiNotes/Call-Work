@@ -285,36 +285,37 @@ export default function ProductsModal({ isOpen, onClose }) {
     }
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Get user's shop
-      const shopsRes = await fetchApi('/shops/my');
-      if (shopsRes.data && shopsRes.data.length > 0) {
-        const shop = shopsRes.data[0];
-        setMyShop(shop);
-
-        // Get products
-        const productsRes = await fetchApi(`/products?shopId=${shop.id}`);
-        const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
-        setProducts(items.map(mapProduct));
-
-        // Get limit status
-        const limitRes = await fetchApi(`/products/limit-status/${shop.id}`);
-        setLimitStatus(limitRes);
-      }
-    } catch (error) {
-      // Error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchApi, mapProduct]);
-
   useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Get user's shop
+        const shopsRes = await fetchApi('/shops/my');
+        if (shopsRes.data && shopsRes.data.length > 0) {
+          const shop = shopsRes.data[0];
+          setMyShop(shop);
+
+          // Get products
+          const productsRes = await fetchApi(`/products?shopId=${shop.id}`);
+          const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
+          setProducts(items.map(mapProduct));
+
+          // Get limit status
+          const limitRes = await fetchApi(`/products/limit-status/${shop.id}`);
+          setLimitStatus(limitRes);
+        }
+      } catch (error) {
+        // Error handled silently
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // Only trigger when modal opens
 
   const handleSubmitProduct = async () => {
     if (saving) return;
