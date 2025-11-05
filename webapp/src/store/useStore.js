@@ -416,14 +416,64 @@ export const useStore = create(
         }
       },
 
-      clearCheckout: () => {
-        get().clearCart();
+      // Universal payment flow reset with options
+      resetPaymentFlow: (options = {}) => {
+        const {
+          clearCart = false,           // Clear shopping cart?
+          clearPendingOrders = false,  // Clear order history?
+          keepOrder = false,           // Keep currentOrder for retry?
+          reason = 'manual'            // 'manual', 'success', 'error', 'timeout'
+        } = options;
+
+        // Logging for debugging
+        if (import.meta.env.DEV) {
+          console.log(`[resetPaymentFlow] Reason: ${reason}`, {
+            clearCart,
+            clearPendingOrders,
+            keepOrder,
+            currentState: {
+              paymentStep: get().paymentStep,
+              hasOrder: !!get().currentOrder,
+              hasCrypto: !!get().selectedCrypto
+            }
+          });
+        }
+
+        // Clear cart if requested
+        if (clearCart) {
+          get().clearCart();
+        }
+
+        // Full payment state cleanup
         set({
-          currentOrder: null,
+          // Order data
+          currentOrder: keepOrder ? get().currentOrder : null,
           selectedCrypto: null,
+
+          // Flow control
           paymentStep: 'idle',
-          paymentWallet: null
+
+          // Payment details
+          paymentWallet: null,
+          cryptoAmount: 0,
+          invoiceExpiresAt: null,
+
+          // Loading states (CRITICAL to reset!)
+          isCreatingOrder: false,
+          isGeneratingInvoice: false,
+          isVerifying: false,
+
+          // Errors
+          verifyError: null,
+
+          // History (optional)
+          ...(clearPendingOrders ? { pendingOrders: [] } : {})
         });
+      },
+
+      clearCheckout: () => {
+        // Use universal reset function
+        get().resetPaymentFlow({ clearCart: true, reason: 'manual' });
       },
 
       setPaymentStep: (step) => set({ paymentStep: step }),
