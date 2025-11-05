@@ -105,7 +105,7 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
       expect(address).toMatch(/^(1|3|bc1)/);
 
       // Verify crypto amount is reasonable
-      const cryptoAmount = response.body.data.cryptoAmount;
+      const cryptoAmount = parseFloat(response.body.data.cryptoAmount);
       expect(cryptoAmount).toBeGreaterThan(0);
       expect(cryptoAmount).toBeLessThan(1); // $100 should be less than 1 BTC
 

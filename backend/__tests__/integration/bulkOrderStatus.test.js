@@ -3,8 +3,10 @@
  */
 
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
 import { getClient } from '../../src/config/database.js';
+import { config } from '../../src/config/env.js';
 
 describe('POST /api/orders/bulk-status', () => {
   let client;
@@ -13,6 +15,8 @@ describe('POST /api/orders/bulk-status', () => {
   let shopId;
   let productId;
   let orderIds;
+  let testUserToken;
+  let otherUserToken;
 
   beforeAll(async () => {
     client = await getClient();
@@ -77,6 +81,19 @@ describe('POST /api/orders/bulk-status', () => {
       order2.rows[0].id,
       order3.rows[0].id
     ];
+
+    // Generate real JWT tokens
+    testUserToken = jwt.sign(
+      { id: testUserId, telegramId: 888001, username: 'bulktest_seller' },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+
+    otherUserToken = jwt.sign(
+      { id: otherUserId, telegramId: 888002, username: 'bulktest_buyer' },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
   });
 
   afterAll(async () => {
@@ -120,7 +137,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 400 when order_ids is empty', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [],
           status: 'shipped'
@@ -134,7 +151,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 400 when order_ids is not an array', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: 'not-an-array',
           status: 'shipped'
@@ -147,7 +164,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 400 when order_ids contains invalid values', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [1, 'abc', -5],
           status: 'shipped'
@@ -160,7 +177,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 400 when status is invalid', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [1, 2],
           status: 'invalid_status'
@@ -177,7 +194,7 @@ describe('POST /api/orders/bulk-status', () => {
       for (const status of validStatuses) {
         const response = await request(app)
           .post('/api/orders/bulk-status')
-          .set('Authorization', `Bearer test_token_user_${testUserId}`)
+          .set('Authorization', `Bearer ${testUserToken}`)
           .send({
             order_ids: orderIds,
             status
@@ -194,7 +211,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 404 when orders do not exist', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [999999, 999998],
           status: 'shipped'
@@ -208,7 +225,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should return 403 when user does not own the shop', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${otherUserId}`)
+        .set('Authorization', `Bearer ${otherUserToken}`)
         .send({
           order_ids: orderIds,
           status: 'shipped'
@@ -224,7 +241,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should successfully update multiple orders status', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: orderIds,
           status: 'shipped'
@@ -253,7 +270,7 @@ describe('POST /api/orders/bulk-status', () => {
       // Update to delivered
       await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: orderIds,
           status: 'delivered'
@@ -277,7 +294,7 @@ describe('POST /api/orders/bulk-status', () => {
 
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: partialIds,
           status: 'confirmed'
@@ -291,7 +308,7 @@ describe('POST /api/orders/bulk-status', () => {
     test('should handle single order', async () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [orderIds[0]],
           status: 'pending'
@@ -309,7 +326,7 @@ describe('POST /api/orders/bulk-status', () => {
 
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: duplicateIds,
           status: 'confirmed'
@@ -324,7 +341,7 @@ describe('POST /api/orders/bulk-status', () => {
 
       const response = await request(app)
         .post('/api/orders/bulk-status')
-        .set('Authorization', `Bearer test_token_user_${testUserId}`)
+        .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: mixedIds,
           status: 'shipped'

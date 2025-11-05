@@ -7,7 +7,7 @@
 
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import app from '../../src/app.js';
+import app from '../../src/server.js';
 import { config } from '../../src/config/env.js';
 import { 
   userQueries, 

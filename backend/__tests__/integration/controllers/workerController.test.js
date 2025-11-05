@@ -1,6 +1,8 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from '../../../src/server.js';
 import { query } from '../../../src/config/database.js';
+import { config } from '../../../src/config/env.js';
 
 /**
  * Integration tests for WorkerController
@@ -58,10 +60,22 @@ describe('WorkerController Integration Tests', () => {
     );
     freeShop = freeShopRes.rows[0];
 
-    // Generate JWT tokens (simplified - в продакшене используйте реальный JWT)
-    authToken1 = `Bearer test_token_user_${testUser1.id}`;
-    authToken2 = `Bearer test_token_user_${testUser2.id}`;
-    authToken3 = `Bearer test_token_user_${testUser3.id}`;
+    // Generate real JWT tokens
+    authToken1 = jwt.sign(
+      { id: testUser1.id, telegramId: testUser1.telegram_id, username: testUser1.username },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+    authToken2 = jwt.sign(
+      { id: testUser2.id, telegramId: testUser2.telegram_id, username: testUser2.username },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+    authToken3 = jwt.sign(
+      { id: testUser3.id, telegramId: testUser3.telegram_id, username: testUser3.username },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
   });
 
   afterAll(async () => {
@@ -75,7 +89,7 @@ describe('WorkerController Integration Tests', () => {
     it('should allow PRO shop owner to add worker', async () => {
       const response = await request(app)
         .post(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken1)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({ telegram_id: testUser3.telegram_id })
         .expect(201);
 
@@ -86,7 +100,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject FREE shop owner from adding worker (BUG-W1 fix)', async () => {
       const response = await request(app)
         .post(`/api/shops/${freeShop.id}/workers`)
-        .set('Authorization', authToken2)
+        .set('Authorization', `Bearer ${authToken2}`)
         .send({ telegram_id: testUser3.telegram_id })
         .expect(403);
 
@@ -97,7 +111,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject non-owner from adding worker', async () => {
       const response = await request(app)
         .post(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken3)
+        .set('Authorization', `Bearer ${authToken3}`)
         .send({ telegram_id: testUser2.telegram_id })
         .expect(403);
 
@@ -108,7 +122,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject adding non-existent user', async () => {
       const response = await request(app)
         .post(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken1)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({ telegram_id: 999999999 })
         .expect(404);
 
@@ -119,7 +133,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject adding owner as worker', async () => {
       const response = await request(app)
         .post(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken1)
+        .set('Authorization', `Bearer ${authToken1}`)
         .send({ telegram_id: testUser1.telegram_id })
         .expect(400);
 
@@ -132,7 +146,7 @@ describe('WorkerController Integration Tests', () => {
     it('should return list of workers for shop owner', async () => {
       const response = await request(app)
         .get(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken1)
+        .set('Authorization', `Bearer ${authToken1}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -143,7 +157,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject non-owner from viewing workers', async () => {
       const response = await request(app)
         .get(`/api/shops/${proShop.id}/workers`)
-        .set('Authorization', authToken2)
+        .set('Authorization', `Bearer ${authToken2}`)
         .expect(403);
 
       expect(response.body.success).toBe(false);
@@ -172,7 +186,7 @@ describe('WorkerController Integration Tests', () => {
     it('should allow shop owner to remove worker', async () => {
       const response = await request(app)
         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
-        .set('Authorization', authToken1)
+        .set('Authorization', `Bearer ${authToken1}`)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -181,7 +195,7 @@ describe('WorkerController Integration Tests', () => {
     it('should reject non-owner from removing worker', async () => {
       const response = await request(app)
         .delete(`/api/shops/${proShop.id}/workers/${workerToDelete.id}`)
-        .set('Authorization', authToken2)
+        .set('Authorization', `Bearer ${authToken2}`)
         .expect(403);
 
       expect(response.body.success).toBe(false);
