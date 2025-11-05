@@ -144,6 +144,17 @@ describe('Subscription Payment Automation - Integration Tests', () => {
    * Note: schema.sql only allows 'active', 'expired', 'cancelled' statuses
    */
   async function createTestSubscription(shopId, tier = 'basic', status = 'active') {
+    // Get shop owner's user_id (required by migration 009)
+    const shopResult = await pool.query(
+      'SELECT owner_id FROM shops WHERE id = $1',
+      [shopId]
+    );
+
+    if (!shopResult.rows[0]) {
+      throw new Error(`Shop with id ${shopId} not found`);
+    }
+
+    const userId = shopResult.rows[0].owner_id;
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const amount = tier === 'pro' ? 35.00 : 25.00;
@@ -151,10 +162,10 @@ describe('Subscription Payment Automation - Integration Tests', () => {
 
     const result = await pool.query(
       `INSERT INTO shop_subscriptions 
-       (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status)
-       VALUES ($1, $2, $3, $4, 'USDT', $5, $6, $7)
+       (shop_id, user_id, tier, amount, tx_hash, currency, period_start, period_end, status)
+       VALUES ($1, $2, $3, $4, $5, 'USDT', $6, $7, $8)
        RETURNING *`,
-      [shopId, tier, amount, mockTxHash, now, periodEnd, status]
+      [shopId, userId, tier, amount, mockTxHash, now, periodEnd, status]
     );
 
     return result.rows[0];

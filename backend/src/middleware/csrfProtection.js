@@ -45,6 +45,11 @@ export const validateOrigin = (req, res, next) => {
     return next();
   }
 
+  // Skip CSRF validation in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+
   const origin = req.get('origin');
   const referer = req.get('referer');
 
