@@ -283,19 +283,26 @@ export const useStore = create(
         }
       },
 
-      selectCrypto: async (crypto) => {
-        const { currentOrder, user, isGeneratingInvoice } = get();
-        const toast = useToastStore.getState().addToast;
+      // ✅ Use closure for synchronous lock to prevent race condition on fast double-clicks
+      selectCrypto: (() => {
+        let invoiceInProgress = false; // Synchronous lock
 
-        if (isGeneratingInvoice) {
-          console.warn('[selectCrypto] Already generating invoice, ignoring');
-          return;
-        }
+        return async (crypto) => {
+          const { currentOrder, user, isGeneratingInvoice } = get();
+          const toast = useToastStore.getState().addToast;
 
-        set({
-          selectedCrypto: crypto,
-          isGeneratingInvoice: true
-        });
+          // Check BOTH store state AND closure variable
+          if (isGeneratingInvoice || invoiceInProgress) {
+            console.warn('[selectCrypto] Already generating invoice, ignoring');
+            return;
+          }
+
+          // Set BOTH locks IMMEDIATELY (synchronous)
+          invoiceInProgress = true;
+          set({
+            selectedCrypto: crypto,
+            isGeneratingInvoice: true
+          });
 
         try {
           // Create order if not exists
@@ -361,9 +368,11 @@ export const useStore = create(
           throw error;
         } finally {
           // CRITICAL: Always reset loading state, even on unhandled errors
+          invoiceInProgress = false; // Reset synchronous lock
           set({ isGeneratingInvoice: false });
         }
-      },
+      };
+      })(), // End of closure IIFE
 
       submitPaymentHash: async (hash) => {
         const { currentOrder, selectedCrypto, user } = get();

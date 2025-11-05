@@ -439,11 +439,14 @@ export default function PaymentMethodModal() {
                         <motion.button
                           key={crypto.id}
                           onClick={() => handleSelectCrypto(crypto.id)}
+                          disabled={isGeneratingInvoice} // ✅ Prevent double-clicks
                           className="relative overflow-hidden rounded-2xl p-5 text-left"
                           style={{
                             ...cardBaseStyle,
                             background: `linear-gradient(145deg, rgba(26, 26, 26, ${android ? '0.94' : '0.9'}) 0%, rgba(20, 20, 20, ${android ? '0.96' : '0.95'}) 100%)`,
-                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            opacity: isGeneratingInvoice ? 0.5 : 1, // ✅ Visual feedback
+                            cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer'
                           }}
                           whileHover={{ scale: android ? 1.015 : 1.02, y: android ? -1 : -2 }}
                           whileTap={{ scale: android ? 0.985 : 0.98 }}
