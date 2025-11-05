@@ -2,6 +2,7 @@ import express from 'express';
 import { productController } from '../controllers/productController.js';
 import { productValidation } from '../middleware/validation.js';
 import { verifyToken } from '../middleware/auth.js';
+import { productCreationLimiter } from '../middleware/rateLimiter.js';
 import { checkProductLimit, getProductLimitStatus } from '../middleware/productLimits.js';
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 router.post(
   '/',
   verifyToken,
+  productCreationLimiter,
   checkProductLimit,
   productValidation.create,
   productController.create

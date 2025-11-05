@@ -69,6 +69,24 @@ export const webhookLimiter = createRateLimiter(
 );
 
 /**
+ * Rate limiter for shop creation (prevent DoS via mass shop creation)
+ */
+export const shopCreationLimiter = createRateLimiter(
+  RATE_LIMITS.SHOP_CREATION.WINDOW_MS,
+  RATE_LIMITS.SHOP_CREATION.MAX_REQUESTS,
+  'Too many shop creation requests. Please try again in an hour.'
+);
+
+/**
+ * Rate limiter for product creation (prevent DoS via mass product creation)
+ */
+export const productCreationLimiter = createRateLimiter(
+  RATE_LIMITS.PRODUCT_CREATION.WINDOW_MS,
+  RATE_LIMITS.PRODUCT_CREATION.MAX_REQUESTS,
+  'Too many product creation requests. Please try again in an hour.'
+);
+
+/**
  * Custom rate limiter factory
  */
 export const customLimiter = (options = {}) => {
@@ -86,5 +104,7 @@ export default {
   apiLimiter,
   paymentLimiter,
   webhookLimiter,
+  shopCreationLimiter,
+  productCreationLimiter,
   customLimiter
 };

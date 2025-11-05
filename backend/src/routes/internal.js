@@ -5,7 +5,11 @@ import { config } from '../config/env.js';
 const router = express.Router();
 
 // Internal secret for protecting broadcast endpoint
-const INTERNAL_SECRET = process.env.INTERNAL_SECRET || 'change-me-in-production';
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
+
+if (!INTERNAL_SECRET) {
+  throw new Error('INTERNAL_SECRET environment variable is required');
+}
 
 /**
  * Middleware to verify internal requests

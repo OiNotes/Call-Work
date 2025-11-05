@@ -94,6 +94,14 @@ export const RATE_LIMITS = {
   WEBHOOK: {
     WINDOW_MS: 60 * 1000, // 1 minute
     MAX_REQUESTS: 100
+  },
+  SHOP_CREATION: {
+    WINDOW_MS: 60 * 60 * 1000, // 1 hour
+    MAX_REQUESTS: 5 // Max 5 shops per hour per user
+  },
+  PRODUCT_CREATION: {
+    WINDOW_MS: 60 * 60 * 1000, // 1 hour
+    MAX_REQUESTS: 50 // Max 50 products per hour per user
   }
 };
 
