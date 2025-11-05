@@ -248,12 +248,12 @@ export const shopQueries = {
 export const productQueries = {
   // Create new product
   create: async (productData) => {
-    const { shopId, name, description, price, currency, stockQuantity } = productData;
+    const { shopId, name, description, price, currency, stockQuantity, isPreorder } = productData;
     const result = await query(
-      `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity)
-       VALUES ($1, $2, $3, $4, $5, $6, 0)
-       RETURNING id, shop_id, name, description, price, currency, stock_quantity, reserved_quantity, is_active, created_at, updated_at`,
-      [shopId, name, description, price, currency, stockQuantity || 0]
+      `INSERT INTO products (shop_id, name, description, price, currency, stock_quantity, reserved_quantity, is_preorder)
+       VALUES ($1, $2, $3, $4, $5, $6, 0, COALESCE($7, false))
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, reserved_quantity, is_active, is_preorder, created_at, updated_at`,
+      [shopId, name, description, price, currency, stockQuantity || 0, isPreorder]
     );
     return result.rows[0];
   },
@@ -313,7 +313,8 @@ export const productQueries = {
       isActive,
       discountPercentage,
       discountExpiresAt,
-      originalPrice
+      originalPrice,
+      isPreorder
     } = productData;
 
     // Преобразовать undefined → null для корректной работы SQL
@@ -326,7 +327,8 @@ export const productQueries = {
       isActive ?? null,
       discountPercentage ?? null,
       originalPrice ?? null,
-      discountExpiresAt ?? null
+      discountExpiresAt ?? null,
+      isPreorder ?? null
     ];
 
     const result = await query(
@@ -353,9 +355,10 @@ export const productQueries = {
              WHEN $9::TIMESTAMP IS NOT NULL THEN $9
              ELSE discount_expires_at
            END,
+           is_preorder = COALESCE($10::BOOLEAN, is_preorder),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, created_at, updated_at`,
+       RETURNING id, shop_id, name, description, price, currency, stock_quantity, original_price, discount_percentage, discount_expires_at, is_active, is_preorder, created_at, updated_at`,
       params
     );
     return result.rows[0];
@@ -672,6 +675,29 @@ export const orderQueries = {
        WHERE id = $1
        RETURNING *`,
       [id, paymentAddress]
+    );
+    return result.rows[0];
+  },
+
+  // Optimized query for invoice generation - replaces 4 queries with 1
+  getInvoiceData: async (orderId) => {
+    const result = await query(
+      `SELECT 
+         o.id,
+         o.total_price,
+         o.buyer_id,
+         o.status,
+         s.id as shop_id,
+         s.name as shop_name,
+         s.wallet_btc,
+         s.wallet_eth,
+         s.wallet_usdt,
+         s.wallet_ltc
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN shops s ON p.shop_id = s.id
+       WHERE o.id = $1`,
+      [orderId]
     );
     return result.rows[0];
   }

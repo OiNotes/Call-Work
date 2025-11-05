@@ -241,7 +241,7 @@ export const useStore = create(
           const item = cart[0];
 
           const controller = new AbortController();
-          timeoutId = setTimeout(() => controller.abort(), 15000);
+          timeoutId = setTimeout(() => controller.abort(), 8000);
 
           const response = await axios.post(`${API_URL}/orders`, {
             productId: item.id,
@@ -304,7 +304,12 @@ export const useStore = create(
             isGeneratingInvoice: true
           });
 
+        let timeoutId; // ✅ Declare before try for finally access
+        const controller = new AbortController();
+
         try {
+          timeoutId = setTimeout(() => controller.abort(), 8000);
+
           // Create order if not exists
           let order = currentOrder;
           if (!order) {
@@ -324,7 +329,8 @@ export const useStore = create(
             {
               headers: {
                 'Content-Type': 'application/json'
-              }
+              },
+              signal: controller.signal // ✅ Add abort signal
             }
           );
 
@@ -346,6 +352,16 @@ export const useStore = create(
           });
         } catch (error) {
           console.error('Generate invoice error:', error);
+
+          // Handle timeout/abort
+          if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+            toast({ type: 'error', message: 'Timeout: проверьте соединение (15с)', duration: 3500 });
+            set({
+              paymentStep: 'method',
+              verifyError: 'Timeout generating invoice'
+            });
+            throw error;
+          }
 
           // Детальные toast сообщения
           const errorMsg = error.response?.data?.error || error.message;
@@ -370,6 +386,7 @@ export const useStore = create(
           // CRITICAL: Always reset loading state, even on unhandled errors
           invoiceInProgress = false; // Reset synchronous lock
           set({ isGeneratingInvoice: false });
+          if (timeoutId) clearTimeout(timeoutId); // Cleanup timeout
         }
       };
       })(), // End of closure IIFE
@@ -385,7 +402,12 @@ export const useStore = create(
 
         set({ isVerifying: true, verifyError: null });
 
+        let timeoutId; // Declare before try for finally access
+        const controller = new AbortController();
+
         try {
+          timeoutId = setTimeout(() => controller.abort(), 10000);
+
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
           const response = await axios.post(
             `${API_URL}/payments/verify`,
@@ -397,7 +419,8 @@ export const useStore = create(
             {
               headers: {
                 'Content-Type': 'application/json'
-              }
+              },
+              signal: controller.signal
             }
           );
 
@@ -424,6 +447,15 @@ export const useStore = create(
           }
         } catch (error) {
           console.error('Verify payment error:', error);
+
+          // Handle timeout/abort
+          if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+            toast({ type: 'error', message: 'Timeout: проверьте соединение (15с)', duration: 3500 });
+            set({
+              verifyError: 'Timeout verifying payment'
+            });
+            return; // Don't throw, just return
+          }
 
           // Детальные toast сообщения для разных ошибок
           const errorMsg = error.response?.data?.error || error.message;
@@ -453,6 +485,7 @@ export const useStore = create(
         } finally {
           // CRITICAL: Always reset loading state
           set({ isVerifying: false });
+          if (timeoutId) clearTimeout(timeoutId); // Cleanup timeout
         }
       },
 

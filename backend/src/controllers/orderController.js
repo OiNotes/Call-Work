@@ -550,10 +550,10 @@ export const orderController = {
         });
       }
 
-      // Get order
-      const order = await orderQueries.findById(orderId);
+      // Get order with shop and wallet data (optimized single query)
+      const invoiceData = await orderQueries.getInvoiceData(orderId);
 
-      if (!order) {
+      if (!invoiceData) {
         return res.status(404).json({
           success: false,
           error: 'Order not found'
@@ -561,34 +561,16 @@ export const orderController = {
       }
 
       // Check if user owns this order
-      if (order.buyer_id !== req.user.id) {
+      if (invoiceData.buyer_id !== req.user.id) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
         });
       }
 
-      // Get product to access shop_id
-      const product = await productQueries.findById(order.product_id);
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          error: 'Product not found'
-        });
-      }
-
-      // Get shop to access seller's wallets
-      const shop = await shopQueries.findById(product.shop_id);
-      if (!shop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
-      }
-
       // Get seller's wallet for selected currency
       const walletField = `wallet_${currency.toLowerCase()}`;
-      const address = shop[walletField];
+      const address = invoiceData[walletField];
 
       if (!address) {
         return res.status(400).json({
@@ -605,7 +587,7 @@ export const orderController = {
         ETH: 0.00042    // ~$2,400 per ETH
       };
 
-      const cryptoAmount = order.total_price * conversionRates[currency];
+      const cryptoAmount = invoiceData.total_price * conversionRates[currency];
 
       return res.status(200).json({
         success: true,
@@ -613,7 +595,7 @@ export const orderController = {
           address,
           cryptoAmount,
           currency: currency.toUpperCase(),
-          shopName: shop.name
+          shopName: invoiceData.shop_name
         }
       });
 
