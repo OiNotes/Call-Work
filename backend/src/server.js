@@ -21,6 +21,7 @@ import {
   requestLogger,
   sensitiveDataLogger
 } from './middleware/index.js';
+import { validateOrigin } from './middleware/csrfProtection.js';
 
 // Import logger
 import logger from './utils/logger.js';
@@ -69,9 +70,11 @@ app.use(helmet({
       connectSrc: ["'self'", "ws://localhost:3000", "wss://localhost:3000", "http://localhost:3000", "https://*.ngrok-free.app"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       frameAncestors: ["'self'", "https://web.telegram.org", "https://*.telegram.org", "https://telegram.org"],
+      formAction: ["'self'"], // Prevent forms from submitting to external domains (CSRF protection)
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow Telegram WebApp embed
   frameguard: false, // Disable X-Frame-Options to allow Telegram iframe
 }));
 
@@ -101,10 +104,19 @@ if (config.nodeEnv === 'production' && process.env.HTTPS_ENABLED === 'true') {
  */
 app.use(cors({
   origin: config.frontendUrl,
-  credentials: true,
+  credentials: true, // Allow cookies and credentials
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600 // Cache preflight requests for 10 minutes
 }));
+
+/**
+ * CSRF Protection
+ * Validates Origin/Referer headers to prevent cross-site request forgery
+ * Applied to all state-changing requests (POST, PUT, DELETE, PATCH)
+ */
+app.use(validateOrigin);
 
 /**
  * Compression middleware (GZIP for all responses)

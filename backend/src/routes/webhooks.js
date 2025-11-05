@@ -337,8 +337,7 @@ router.post('/blockcypher', async (req, res) => {
       // Check if payment already exists
       const existingPayment = await paymentQueries.findByTxHash(paymentData.txHash);
 
-      // Determine status based on confirmations
-      const chain = invoice.chain.toUpperCase();
+      // Determine status based on confirmations (chain already defined above)
       const confirmationThreshold = parseInt(process.env[`CONFIRMATIONS_${chain}`] || '3');
       const status = paymentData.confirmations >= confirmationThreshold ? 'confirmed' : 'pending';
 
