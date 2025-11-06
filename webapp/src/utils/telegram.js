@@ -14,8 +14,8 @@ export function initTelegramApp() {
     tg.ready();
     tg.expand();
 
-    // МАКСИМАЛЬНЫЙ fullscreen режим (Mini Apps 2.0)
-    if (tg.requestFullscreen) {
+    // ✅ Check platform before requesting fullscreen (not supported on web)
+    if (tg.requestFullscreen && tg.platform !== 'web') {
       console.log('🚀 Requesting FULL fullscreen mode...');
       try {
         tg.requestFullscreen();
@@ -24,7 +24,7 @@ export function initTelegramApp() {
         console.warn('⚠️ Fullscreen request failed:', err);
       }
     } else {
-      console.log('ℹ️ requestFullscreen() not available, using expand() only');
+      console.log('ℹ️ Fullscreen not available on this platform');
     }
 
     // Проверка fullscreen режима

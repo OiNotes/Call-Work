@@ -10,7 +10,8 @@ import FollowCard from '../components/Follows/FollowCard';
 
 export default function Follows() {
   const { get } = useApi();
-  const { setHasFollows, setFollowDetailId } = useStore();
+  const token = useStore((state) => state.token);
+  const myShop = useStore((state) => state.myShop);
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
 
@@ -18,44 +19,79 @@ export default function Follows() {
   const [error, setError] = useState(null);
   const [follows, setFollows] = useState([]);
 
-  const loadFollows = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data: shopsResponse } = await get('/shops/my');
-      const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+  const loadFollows = useCallback(async (signal) => {
+    const { data: shopsResponse, error: shopsError } = await get('/shops/my', { signal });
 
-      if (!shops.length) {
-        setFollows([]);
-        setHasFollows(false);
-        return;
-      }
+    if (signal?.aborted) return { status: 'aborted' };
 
-      const shop = shops[0];
-      const { data: followsResponse } = await get('/follows/my', {
-        params: { shopId: shop.id }
-      });
-
-      const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
-      setFollows(list);
-      setHasFollows(list.length > 0);
-    } catch (err) {
-      setError('Не удалось загрузить подписки');
-      setFollows([]);
-      setHasFollows(false);
-    } finally {
-      setIsLoading(false);
+    if (shopsError) {
+      console.error('[Follows] Error loading shops:', shopsError);
+      return { status: 'error', error: 'Не удалось загрузить подписки' };
     }
-  }, [get, setHasFollows]);
+
+    const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+
+    if (!shops.length) {
+      setFollows([]);
+      // ✅ FIX: Use getState() for stable reference
+      useStore.getState().setHasFollows(false);
+      return { status: 'success' };
+    }
+
+    const shop = shops[0];
+    const { data: followsResponse, error: followsError } = await get('/follows/my', {
+      params: { shopId: shop.id },
+      signal
+    });
+
+    if (signal?.aborted) return { status: 'aborted' };
+
+    if (followsError) {
+      console.error('[Follows] Error loading follows:', followsError);
+      return { status: 'error', error: 'Не удалось загрузить подписки' };
+    }
+
+    const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
+    setFollows(list);
+    // ✅ FIX: Use getState() for stable reference
+    useStore.getState().setHasFollows(list.length > 0);
+    return { status: 'success' };
+  }, [get]); // ✅ FIX: Removed setHasFollows from deps
 
   useEffect(() => {
-    loadFollows();
-  }, [loadFollows]);
+    if (!myShop?.id || !token) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+
+    loadFollows(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          setError(result.error);
+          setFollows([]);
+          // ✅ FIX: Use getState() for stable reference
+          useStore.getState().setHasFollows(false);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [myShop?.id, token, loadFollows]);
 
   const handleFollowClick = useCallback((followId) => {
     triggerHaptic('light');
-    setFollowDetailId(followId);
-  }, [triggerHaptic, setFollowDetailId]);
+    // ✅ FIX: Use getState() for stable reference
+    useStore.getState().setFollowDetailId(followId);
+  }, [triggerHaptic]);
 
   return (
     <div

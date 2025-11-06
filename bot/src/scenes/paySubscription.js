@@ -117,7 +117,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
       // Save shop info and subscription ID for next steps
       ctx.wizard.state.shopId = shopId;
       ctx.wizard.state.shopName = shopName;
-      ctx.wizard.state.subscriptionId = statusResponse.subscriptionId;
+      ctx.wizard.state.subscriptionId = statusResponse.currentSubscription?.id;
 
       if (!ctx.session.shopName) {
         ctx.session.shopName = shopName;

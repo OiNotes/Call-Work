@@ -114,11 +114,13 @@ export default function FollowsModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (signal) => {
     try {
       // 1. Get shop - simplified parsing
-      const shopsRes = await fetchApi('/shops/my');
+      const shopsRes = await fetchApi('/shops/my', { signal });
+
+      if (signal?.aborted) return { status: 'aborted' };
+
       console.log('[FollowsModal] Raw shops response:', shopsRes);
 
       let shopsList = [];
@@ -137,7 +139,7 @@ export default function FollowsModal({ isOpen, onClose }) {
         console.log('[FollowsModal] No shop - resetting state');
         setFollows([]);
         setLimitInfo(null);
-        return;
+        return { status: 'success' };
       }
 
       // 2. Check PRO tier
@@ -145,9 +147,11 @@ export default function FollowsModal({ isOpen, onClose }) {
 
       // 3. Load follows and limits in parallel
       const [followsRes, limitRes] = await Promise.all([
-        fetchApi(`/follows/my?shopId=${shop.id}`),
-        fetchApi(`/follows/check-limit?shopId=${shop.id}`)
+        fetchApi(`/follows/my?shopId=${shop.id}`, { signal }),
+        fetchApi(`/follows/check-limit?shopId=${shop.id}`, { signal })
       ]);
+
+      if (signal?.aborted) return { status: 'aborted' };
 
       console.log('[FollowsModal] Follows response:', followsRes);
       console.log('[FollowsModal] Limit response:', limitRes);
@@ -202,20 +206,39 @@ export default function FollowsModal({ isOpen, onClose }) {
           reached: false
         });
       }
+
+      return { status: 'success' };
     } catch (error) {
+      if (signal?.aborted) return { status: 'aborted' };
+
       console.error('[FollowsModal] Error loading data:', error);
       setFollows([]);
       setLimitInfo(null);
       setMyShop(null);
-    } finally {
-      setLoading(false);
+      return { status: 'error', error: error.message };
     }
   }, [fetchApi]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
+    if (!isOpen) return;
+
+    setLoading(true);
+
+    const controller = new AbortController();
+
+    loadData(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          console.error('Failed to load follows data:', result.error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [isOpen, loadData]);
 
   const handleModeSwitch = async (follow, newMode) => {

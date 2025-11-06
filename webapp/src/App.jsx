@@ -35,8 +35,8 @@ const PageLoader = () => (
 
 function App() {
   const { activeTab, followDetailId } = useStore();
+  const token = useStore((state) => state.token); // ✅ Fix: Get token for checkFollows dependency
   const hasFollows = useStore((state) => state.hasFollows);
-  const setHasFollows = useStore((state) => state.setHasFollows);
   const { user, isReady, isValidating, error } = useTelegram();
   const { isConnected } = useWebSocket();
   const platform = usePlatform();
@@ -75,8 +75,9 @@ function App() {
     }
   }, [isReady, user]);
 
+  // ✅ Fix: Wait for token before checking follows (prevents race condition)
   useEffect(() => {
-    if (!isReady || followsChecked || hasFollows) {
+    if (!isReady || !token || followsChecked || hasFollows) {
       return;
     }
 
@@ -86,7 +87,8 @@ function App() {
         const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
 
         if (!shops.length) {
-          setHasFollows(false);
+          // ✅ FIX: Use getState() for stable reference
+          useStore.getState().setHasFollows(false);
           return;
         }
 
@@ -96,7 +98,8 @@ function App() {
         });
 
         const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
-        setHasFollows(list.length > 0);
+        // ✅ FIX: Use getState() for stable reference
+        useStore.getState().setHasFollows(list.length > 0);
       } catch (fetchError) {
         // Silent failure – tab will appear once пользователь откроет раздел вручную
       } finally {
@@ -105,7 +108,7 @@ function App() {
     };
 
     checkFollows();
-  }, [isReady, followsChecked, hasFollows, setHasFollows]);
+  }, [isReady, token, followsChecked, hasFollows, get]); // ✅ FIX: Removed setHasFollows from deps
 
   // Page transition variants
   const pageVariants = {

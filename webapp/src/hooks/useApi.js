@@ -21,10 +21,6 @@ export function useApi() {
     
     // Create request function with token getter closure
     const createRequest = (tokenGetter) => async (method, endpoint, data = null, config = {}) => {
-      // Создаём AbortController для timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 секунд
-
       try {
         // Получаем initData из Telegram WebApp для авторизации
         const initData = window.Telegram?.WebApp?.initData || '';
@@ -40,7 +36,10 @@ export function useApi() {
             ...(currentToken && { 'Authorization': `Bearer ${currentToken}` }),
             ...config.headers,
           },
-          signal: controller.signal,  // Добавляем signal для timeout
+          // ✅ FIX: Используем native axios timeout вместо внутреннего AbortController
+          timeout: config.timeout || 15000, // 15 секунд по умолчанию
+          // ✅ FIX: Используем только внешний signal из config (из useEffect cleanup)
+          signal: config.signal,
           ...config,
         };
 
@@ -51,18 +50,19 @@ export function useApi() {
         }
 
         const response = await axios(axiosConfig);
-
-        clearTimeout(timeoutId);  // Очищаем timeout при успехе
         return { data: response.data, error: null };
-      } catch (err) {
-        clearTimeout(timeoutId);  // Очищаем timeout при ошибке
 
+      } catch (err) {
         console.error(`API ${method} ${endpoint} error:`, err);
 
-        // Обработка timeout ошибки
-        if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
-          const timeoutError = 'Request timeout - please check your connection';
-          return { data: null, error: timeoutError };
+        // ✅ FIX: Обработка axios native timeout
+        if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+          return { data: null, error: 'Request timeout - please check your connection' };
+        }
+
+        // ✅ FIX: Обработка внешнего AbortSignal (из useEffect cleanup)
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+          return { data: null, error: 'Request cancelled' };
         }
 
         // Обычные ошибки

@@ -108,19 +108,15 @@ export default function PaymentMethodModal() {
 
     const controller = new AbortController();
 
-    const loadWallets = async (attemptNum = 0) => {
+    const loadWallets = async (signal) => {
       try {
-        setLoading(true);
-        setError(null);
-
         const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`, {
-          signal: controller.signal
+          signal
         });
 
-        if (apiError) {
-          // API returned error
-          setError(apiError);
+        if (signal?.aborted) return { status: 'aborted' };
 
+        if (apiError) {
           // Детальные toast сообщения для разных ошибок
           if (apiError.includes('404')) {
             toast.error('Магазин не найден');
@@ -129,17 +125,13 @@ export default function PaymentMethodModal() {
           } else {
             toast.error('Не удалось загрузить способы оплаты');
           }
-          setAvailableWallets([]);
-          setLoading(false);
-          return;
+          return { status: 'error', error: apiError };
         }
 
         if (!data?.data) {
-          // No data in response
           console.warn('[PaymentMethodModal] No wallet data in response');
           setAvailableWallets([]);
-          setLoading(false);
-          return;
+          return { status: 'success' };
         }
 
         // Transform API response { wallet_btc: "...", wallet_eth: null, ... } to array ["BTC", "ETH"]
@@ -150,17 +142,17 @@ export default function PaymentMethodModal() {
           .map(([key]) => key.replace('wallet_', '').toUpperCase());
 
         setAvailableWallets(currencies);
-        setError(null);
-        setRetryCount(0); // Reset retry count on success
+        setRetryCount(0);
+        return { status: 'success' };
 
       } catch (err) {
-        if (err.name === 'AbortError') {
+        if (err.name === 'AbortError' || signal?.aborted) {
           console.log('[PaymentMethodModal] Request aborted');
-          return;
+          return { status: 'aborted' };
         }
+
         console.error('[PaymentMethodModal] Failed to load wallets:', err);
         const errorMsg = err.message || 'Unknown error';
-        setError(errorMsg);
 
         // Детальные toast сообщения
         if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
@@ -170,13 +162,26 @@ export default function PaymentMethodModal() {
         } else {
           toast.error('Ошибка загрузки способов оплаты');
         }
-        setAvailableWallets([]);
-      } finally {
-        setLoading(false);
+
+        return { status: 'error', error: errorMsg };
       }
     };
 
-    loadWallets();
+    setLoading(true);
+    setError(null);
+
+    loadWallets(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          setError(result.error);
+          setAvailableWallets([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
 
     return () => {
       controller.abort();

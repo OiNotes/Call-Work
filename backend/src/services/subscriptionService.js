@@ -703,25 +703,25 @@ async function getUserSubscriptions(userId) {
   try {
     const { rows } = await pool.query(
       `SELECT
-         sub.id,
-         s.id as shop_id,
+         ss.id,
+         ss.shop_id,
          s.name as shop_name,
-         s.tier,
-         s.logo as source_shop_logo,
-         u.username as seller_username,
-         u.first_name as seller_first_name,
-         sub.created_at as subscribed_at,
-         (
-           SELECT COUNT(*)
-           FROM products p
-           WHERE p.shop_id = s.id
-             AND p.is_active = true
-         ) as source_products_count
-       FROM subscriptions sub
-       JOIN shops s ON sub.shop_id = s.id
-       JOIN users u ON s.owner_id = u.id
-       WHERE sub.user_id = $1
-       ORDER BY sub.created_at DESC`,
+         ss.tier,
+         ss.status,
+         ss.period_start,
+         ss.period_end,
+         ss.amount,
+         ss.currency,
+         ss.verified_at,
+         s.is_active as shop_is_active,
+         s.logo as shop_logo,
+         s.next_payment_due,
+         ss.created_at
+       FROM shop_subscriptions ss
+       LEFT JOIN shops s ON ss.shop_id = s.id
+       WHERE ss.user_id = $1
+          OR s.owner_id = $1
+       ORDER BY ss.created_at DESC`,
       [userId]
     );
 
@@ -746,17 +746,22 @@ async function getMyShopSubscriptions(userId) {
          ss.id,
          ss.shop_id,
          s.name as shop_name,
-         ss.tier,
-         ss.amount,
-         ss.currency,
+         s.tier,
+         ss.tier as subscription_tier,
+         ss.status,
          ss.period_start,
          ss.period_end,
-         ss.status,
-         ss.created_at,
-         ss.verified_at
+         ss.amount,
+         ss.currency,
+         ss.verified_at,
+         s.is_active,
+         s.subscription_status as shop_subscription_status,
+         s.next_payment_due,
+         s.grace_period_until,
+         ss.created_at
        FROM shop_subscriptions ss
-       LEFT JOIN shops s ON ss.shop_id = s.id
-       WHERE ss.user_id = $1
+       INNER JOIN shops s ON ss.shop_id = s.id
+       WHERE s.owner_id = $1
        ORDER BY ss.created_at DESC`,
       [userId]
     );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
-import { useShopApi } from '../hooks/useApi';
+import { useApi } from '../hooks/useApi';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
@@ -10,73 +10,99 @@ export default function Subscriptions() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const api = useShopApi();
+  const { get } = useApi(); // ✅ FIX: Use stable useApi instead of useShopApi
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
+  const token = useStore((state) => state.token);
 
   const loadSubscriptions = useCallback(async (signal) => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('[Subscriptions] Loading shop subscriptions...');
+    console.log('[Subscriptions] 🔵 START loadSubscriptions', { signal: signal?.aborted });
 
-      // Use new endpoint for shop payment subscriptions
-      const { data, error: apiError } = await api.get('/subscriptions/my-shops');
+    const { data, error } = await get('/subscriptions/my-shops', { signal });
 
-      console.log('[Subscriptions] Response:', { data, apiError });
+    console.log('[Subscriptions] 🔵 API response:', { data, error, aborted: signal?.aborted });
 
-      // Check if component unmounted during request
-      if (signal?.aborted) {
-        console.log('[Subscriptions] Component unmounted, skipping state updates');
-        return;
-      }
-
-      if (apiError) {
-        console.error('[Subscriptions] API error:', apiError);
-        setError('Failed to load subscriptions');
-        return; // Early exit, loading will be reset in finally
-      }
-
-      // Normalize data for shop subscriptions (payment tier data)
-      const rawData = Array.isArray(data?.data) ? data.data :
-                     Array.isArray(data) ? data : [];
-
-      const normalized = rawData.map((item) => ({
-        id: item.id,
-        shopId: item.shop_id,
-        shopName: item.shop_name,
-        tier: item.tier,
-        amount: item.amount,
-        currency: item.currency,
-        periodStart: item.period_start,
-        periodEnd: item.period_end,
-        status: item.status,
-        createdAt: item.created_at,
-        verifiedAt: item.verified_at,
-      }));
-
-      setSubscriptions(normalized);
-    } catch (err) {
-      console.error('[Subscriptions] Exception:', err);
-      if (!signal?.aborted) {
-        setError('Failed to load subscriptions');
-      }
-    } finally {
-      console.log('[Subscriptions] Loading complete, setLoading(false)');
-      if (!signal?.aborted) {
-        setLoading(false); // ALWAYS resets loading state
-      }
+    if (signal?.aborted) {
+      console.log('[Subscriptions] 🟡 ABORTED');
+      return { status: 'aborted' };
     }
-  }, [api]);
+
+    if (error) {
+      console.error('[Subscriptions] 🔴 ERROR:', error);
+      return { status: 'error', error: 'Failed to load subscriptions' };
+    }
+
+    const subscriptionsList = data?.data || [];
+    console.log('[Subscriptions] 🔵 Subscriptions list:', subscriptionsList);
+
+    if (!Array.isArray(subscriptionsList)) {
+      console.error('[Subscriptions] 🔴 INVALID FORMAT:', data);
+      return { status: 'error', error: 'Invalid data format from server' };
+    }
+
+    const validSubscriptions = subscriptionsList.filter(sub =>
+      sub && sub.id && sub.shop_name
+    );
+    console.log('[Subscriptions] 🔵 Valid subscriptions count:', validSubscriptions.length);
+
+    // Normalize data for shop subscriptions (payment tier data)
+    const normalized = validSubscriptions.map((item) => ({
+      id: item.id,
+      shopId: item.shop_id,
+      shopName: item.shop_name,
+      tier: item.tier,
+      amount: item.amount,
+      currency: item.currency,
+      periodStart: item.period_start,
+      periodEnd: item.period_end,
+      status: item.status,
+      createdAt: item.created_at,
+      verifiedAt: item.verified_at,
+    }));
+
+    console.log('[Subscriptions] 🟢 SUCCESS - setting subscriptions:', normalized);
+    setSubscriptions(normalized);
+    return { status: 'success' };
+  }, [get]);
 
   useEffect(() => {
+    console.log('[Subscriptions] 🔵 useEffect triggered', { token: !!token });
+
+    // ✅ Wait for token before loading
+    if (!token) {
+      console.log('[Subscriptions] 🟡 NO TOKEN - skipping load');
+      setLoading(false);
+      return;
+    }
+
+    console.log('[Subscriptions] 🔵 Starting load with token');
+    setLoading(true);
+    setError(null);
+
     const controller = new AbortController();
-    loadSubscriptions(controller.signal);
+
+    loadSubscriptions(controller.signal)
+      .then(result => {
+        console.log('[Subscriptions] 🔵 Load result:', result);
+        if (!controller.signal.aborted && result?.status === 'error') {
+          console.log('[Subscriptions] 🔴 Setting error:', result.error);
+          setError(result.error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          console.log('[Subscriptions] 🟢 DONE - setLoading(false)');
+          setLoading(false);
+        } else {
+          console.log('[Subscriptions] 🟡 Aborted in finally');
+        }
+      });
 
     return () => {
+      console.log('[Subscriptions] 🔴 CLEANUP - aborting controller');
       controller.abort();
     };
-  }, [loadSubscriptions]);
+  }, [token, loadSubscriptions]);
 
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');

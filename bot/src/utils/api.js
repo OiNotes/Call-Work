@@ -636,6 +636,18 @@ export const subscriptionApi = {
     );
     // Unwrap response: return data.data instead of wrapper
     return data.data || data;
+  },
+
+  // Get subscription status for shop
+  async getStatus(shopId, token) {
+    const { data } = await api.get(
+      `/subscriptions/status/${shopId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    // Unwrap response: return data.data instead of wrapper
+    return data.data || data;
   }
 };
 

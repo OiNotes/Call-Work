@@ -628,6 +628,7 @@ export const useStore = create(
     {
       name: 'status-stock-storage',
       partialize: (state) => ({
+        token: state.token, // ✅ Fix: Persist token across page refresh
         pendingOrders: state.pendingOrders
       })
     }

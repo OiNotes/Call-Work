@@ -26,6 +26,14 @@ export const useWebSocket = () => {
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    
+    // ✅ Skip WebSocket on ngrok (free tier doesn't support WS)
+    if (API_URL.includes('ngrok')) {
+      console.log('⚠️ WebSocket disabled on ngrok (use localhost for real-time features)');
+      setIsConnected(false);
+      return;
+    }
+    
     const wsUrl = API_URL.replace(/^http/, 'ws').replace(/\/api$/, '');
 
     function connect() {

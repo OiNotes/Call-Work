@@ -2,17 +2,28 @@ import logger from '../utils/logger.js';
 import { config } from '../config/env.js';
 
 /**
+ * User agents exempt from CSRF protection
+ * These are trusted server-to-server requests from our bot
+ */
+const CSRF_EXEMPT_USER_AGENTS = [
+  'TelegramBot',
+  'axios/1.13',  // Bot client
+  'node-fetch'
+];
+
+/**
  * CSRF Protection Middleware
- * 
+ *
  * Security: P0-SEC-5
  * Prevents Cross-Site Request Forgery attacks by validating Origin/Referer headers
- * 
+ *
  * How it works:
  * - GET, HEAD, OPTIONS requests are allowed (safe methods)
  * - POST, PUT, DELETE, PATCH require valid Origin or Referer header
+ * - Bot requests (identified by User-Agent) are exempted
  * - Webhook endpoints are exempted (they don't send Origin headers)
  * - Origin must match one of the allowed origins (FRONTEND_URL, localhost)
- * 
+ *
  * Attack prevented:
  * ```html
  * <!-- Evil site cannot do this: -->
@@ -47,6 +58,17 @@ export const validateOrigin = (req, res, next) => {
 
   // Skip CSRF validation in test environment
   if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+
+  // Skip CSRF for bot requests (trusted server-to-server calls)
+  const userAgent = req.headers['user-agent'] || '';
+  if (CSRF_EXEMPT_USER_AGENTS.some(ua => userAgent.includes(ua))) {
+    logger.debug('CSRF check bypassed for bot user-agent:', {
+      userAgent,
+      path: req.path,
+      method: req.method
+    });
     return next();
   }
 

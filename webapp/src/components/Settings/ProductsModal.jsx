@@ -285,35 +285,69 @@ export default function ProductsModal({ isOpen, onClose }) {
     }
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Get user's shop
-      const shopsRes = await fetchApi('/shops/my');
-      if (shopsRes.data && shopsRes.data.length > 0) {
-        const shop = shopsRes.data[0];
-        setMyShop(shop);
-
-        // Get products
-        const productsRes = await fetchApi(`/products?shopId=${shop.id}`);
-        const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
-        setProducts(items.map(mapProduct));
-
-        // Get limit status
-        const limitRes = await fetchApi(`/products/limit-status/${shop.id}`);
-        setLimitStatus(limitRes);
-      }
-    } catch (error) {
-      // Error handled silently
-    } finally {
-      setLoading(false);
+  const loadData = useCallback(async (signal) => {
+    // 1. Load my shop
+    const shopsRes = await fetchApi('/shops/my', { signal });
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    if (!shopsRes.data || shopsRes.data.length === 0) {
+      return { status: 'error', error: 'Failed to load shop' };
     }
+    
+    const shop = shopsRes.data[0];
+    setMyShop(shop);
+    
+    // 2. Load products
+    const productsRes = await fetchApi(`/products?shopId=${shop.id}`, { signal });
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
+    setProducts(items.map(mapProduct));
+    
+    // 3. Load limit status
+    const limitRes = await fetchApi(`/products/limit-status/${shop.id}`, { signal });
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    setLimitStatus(limitRes);
+    return { status: 'success' };
   }, [fetchApi, mapProduct]);
 
   useEffect(() => {
     if (!isOpen) return;
-    loadData();
+    
+    setLoading(true);
+    
+    const controller = new AbortController();
+    
+    loadData(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          console.error(result.error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+    
+    return () => controller.abort();
   }, [isOpen, loadData]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setMyShop(null);
+      setProducts([]);
+      setShowForm(false);
+      setEditingProduct(null);
+      setShowAIChat(false);
+      setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
+    }
+  }, [isOpen]);
 
   const handleSubmitProduct = async () => {
     if (saving) return;

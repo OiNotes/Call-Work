@@ -29,6 +29,20 @@ const ProductGrid = memo(function ProductGrid({
   const { t } = useTranslation();
   const platform = usePlatform();
 
+  // ✅ ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
+  const parentRef = useRef(null);
+
+  // Determine if virtualization should be used
+  const useVirtualization = !loading && products && products.length > 100;
+
+  const virtualizer = useVirtualizer({
+    count: useVirtualization ? products.length : 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 220,
+    overscan: 5,
+    enabled: useVirtualization,
+  });
+
   const item = useMemo(() => {
     const springPreset = getSpringPreset('quick', platform);
     return {
@@ -41,6 +55,7 @@ const ProductGrid = memo(function ProductGrid({
     };
   }, [platform]);
 
+  // ✅ NOW SAFE TO USE CONDITIONAL RETURNS
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -68,18 +83,6 @@ const ProductGrid = memo(function ProductGrid({
       </div>
     );
   }
-
-  // Use virtualization only for large lists (100+ items) for performance
-  const useVirtualization = products.length > 100;
-  const parentRef = useRef(null);
-
-  const virtualizer = useVirtualizer({
-    count: useVirtualization ? products.length : 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 220, // Estimated row height (2 cards per row)
-    overscan: 5, // Render 5 extra rows for smooth scrolling
-    enabled: useVirtualization,
-  });
 
   // Non-virtualized render for small lists (better animation support)
   if (!useVirtualization) {

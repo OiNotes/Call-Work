@@ -37,10 +37,10 @@ export default function Catalog() {
   const [myShop, setMyShop] = useState(null);
 
   const products = useStore((state) => state.products);
-  const setStoreProducts = useStore((state) => state.setProducts);
   const currentShop = useStore((state) => state.currentShop);
   const setCurrentShop = useStore((state) => state.setCurrentShop);
   const setCartOpen = useStore((state) => state.setCartOpen);
+  const token = useStore((state) => state.token);
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const { get } = useApi();
@@ -55,60 +55,124 @@ export default function Catalog() {
   }, [myShop, currentShop]);
 
   // Загрузить свой магазин
-  const loadMyShop = useCallback(async () => {
-    try {
-      const { data, error: apiError } = await get('/shops/my');
+  const loadMyShop = useCallback(async (signal) => {
+    console.log('[Catalog] 🔵 START loadMyShop', { aborted: signal?.aborted });
 
-      if (!apiError && data?.data && data.data.length > 0) {
-        setMyShop(data.data[0]); // Берем первый магазин владельца
-      }
-    } catch (err) {
-      // Error handled silently
+    const { data, error: apiError } = await get('/shops/my', { signal });
+
+    console.log('[Catalog] 🔵 loadMyShop response:', { data, error: apiError, aborted: signal?.aborted });
+
+    if (signal?.aborted) {
+      console.log('[Catalog] 🟡 loadMyShop ABORTED');
+      return { status: 'aborted' };
     }
+
+    if (apiError) {
+      console.error('[Catalog] 🔴 loadMyShop ERROR:', apiError);
+      return { status: 'error', error: apiError };
+    }
+
+    if (data?.data && data.data.length > 0) {
+      console.log('[Catalog] 🟢 loadMyShop SUCCESS - shop:', data.data[0]);
+      setMyShop(data.data[0]);
+      return { status: 'success', shop: data.data[0] };
+    }
+
+    console.log('[Catalog] 🟡 loadMyShop - no shop found');
+    return { status: 'success', shop: null };
   }, [get]);
 
-  useEffect(() => {
-    loadMyShop();
-  }, [loadMyShop]);
+
 
   // Загрузить товары при изменении магазина
-  const loadProducts = useCallback(async (shopId) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const loadProducts = useCallback(async (shopId, signal) => {
+    console.log('[Catalog] 🔵 START loadProducts', { shopId, aborted: signal?.aborted });
 
-      // GET /api/products?shopId=<shopId>
-      const { data, error: apiError } = await get('/products', {
-        params: { shopId }
-      });
+    const { data, error: apiError } = await get('/products', {
+      params: { shopId },
+      signal
+    });
 
-      if (apiError) {
-        setError('Failed to load products');
-      } else {
-        const items = Array.isArray(data?.data) ? data.data : [];
-        setStoreProducts(items, shopId);
-      }
-    } catch (err) {
-      setError('Failed to load products');
-    } finally {
-      setLoading(false);
+    console.log('[Catalog] 🔵 loadProducts response:', { data, error: apiError, aborted: signal?.aborted });
+
+    if (signal?.aborted) {
+      console.log('[Catalog] 🟡 loadProducts ABORTED');
+      return { status: 'aborted' };
     }
-  }, [get, setStoreProducts]);
+
+    if (apiError) {
+      console.error('[Catalog] 🔴 loadProducts ERROR:', apiError);
+      return { status: 'error', error: 'Failed to load products' };
+    }
+
+    const items = Array.isArray(data?.data) ? data.data : [];
+    console.log('[Catalog] 🟢 loadProducts SUCCESS - count:', items.length);
+
+    // ✅ FIX: Use getState() for stable reference (no dependency on setProducts)
+    useStore.getState().setProducts(items, shopId);
+    return { status: 'success' };
+  }, [get]); // ✅ FIX: Only depend on stable 'get' from useApi
 
   useEffect(() => {
-    const shopToLoad = currentShop || myShop;
-    if (!shopToLoad) return;
+    console.log('[Catalog] 🔵 useEffect triggered', { token: !!token, currentShop });
 
-    loadProducts(shopToLoad.id);
-  }, [currentShop, myShop, loadProducts]);
+    // ✅ Wait for token
+    if (!token) {
+      console.log('[Catalog] 🟡 NO TOKEN - skipping load');
+      setLoading(false);
+      return;
+    }
+
+    console.log('[Catalog] 🔵 Starting load with token');
+    setLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Load my shop first, then load products
+    loadMyShop(signal)
+      .then(result => {
+        console.log('[Catalog] 🔵 loadMyShop result:', result);
+        if (signal.aborted || result?.status !== 'success') {
+          console.log('[Catalog] 🟡 Skipping loadProducts - aborted or failed');
+          return;
+        }
+
+        const shop = currentShop || result.shop;
+        console.log('[Catalog] 🔵 Using shop:', shop);
+        if (shop) return loadProducts(shop.id, signal);
+      })
+      .then(result => {
+        console.log('[Catalog] 🔵 loadProducts final result:', result);
+        if (!signal.aborted && result?.status === 'error') {
+          console.log('[Catalog] 🔴 Setting error:', result.error);
+          setError(result.error);
+        }
+      })
+      .finally(() => {
+        if (!signal.aborted) {
+          console.log('[Catalog] 🟢 DONE - setLoading(false)');
+          setLoading(false);
+        } else {
+          console.log('[Catalog] 🟡 Aborted in finally');
+        }
+      });
+
+    return () => {
+      console.log('[Catalog] 🔴 CLEANUP - aborting controller');
+      controller.abort();
+    };
+  }, [currentShop, token, loadMyShop, loadProducts]);
 
 
 
   const handleBack = useCallback(() => {
     triggerHaptic('light');
     setCurrentShop(null);
-    setStoreProducts([], null);
-  }, [triggerHaptic, setCurrentShop, setStoreProducts]);
+    // ✅ FIX: Use getState() for stable reference
+    useStore.getState().setProducts([], null);
+  }, [triggerHaptic, setCurrentShop]);
 
   const handleBackToMyShop = useCallback(() => {
     triggerHaptic('light');

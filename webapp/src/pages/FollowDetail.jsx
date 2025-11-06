@@ -14,7 +14,9 @@ import { useTelegram } from '../hooks/useTelegram';
 const FollowDetail = () => {
   const followsApi = useFollowsApi();
   const { triggerHaptic } = useTelegram();
-  const { followDetailId, setFollowDetailId, currentFollow, setCurrentFollow, followProducts, setFollowProducts } = useStore();
+  const followDetailId = useStore((state) => state.followDetailId);
+  const currentFollow = useStore((state) => state.currentFollow);
+  const followProducts = useStore((state) => state.followProducts);
 
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -29,54 +31,55 @@ const FollowDetail = () => {
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
   const loadData = useCallback(async (signal) => {
-    if (!followDetailId) return;
+    if (!followDetailId) return { status: 'skipped' };
 
-    try {
-      setLoading(true);
+    const [followData, productsData] = await Promise.all([
+      followsApi.getDetail(followDetailId, { signal }),
+      followsApi.getProducts(followDetailId, { limit: 100, signal })
+    ]);
 
-      // Загрузить детали + товары параллельно
-      const [followData, productsData] = await Promise.all([
-        followsApi.getDetail(followDetailId),
-        followsApi.getProducts(followDetailId, { limit: 100 })
-      ]);
+    if (signal?.aborted) return { status: 'aborted' };
 
-      // Check if component unmounted
-      if (signal?.aborted) {
-        return;
-      }
-
-      const follow = followData?.data || followData;
-      const productsPayload = productsData?.data || productsData;
-      const productsList = productsPayload.products || [];
-
-      setCurrentFollow(follow);
-      setFollowProducts(productsList);
-
-      // Проверяем есть ли еще товары
-      const total = productsPayload.pagination?.total || productsList.length;
-      setHasMore(productsList.length < total);
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('FollowDetail loadData aborted');
-        return;
-      }
-      console.error('Error loading follow detail:', error);
-      triggerHaptic('error');
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+    if (followData.error || productsData.error) {
+      return { status: 'error', error: 'Failed to load data' };
     }
-  }, [followDetailId, followsApi, setCurrentFollow, setFollowProducts, triggerHaptic]);
+
+    const follow = followData?.data || followData;
+    const productsPayload = productsData?.data || productsData;
+    const productsList = productsPayload.products || [];
+
+    // ✅ FIX: Use getState() for stable references
+    const { setCurrentFollow, setFollowProducts } = useStore.getState();
+    setCurrentFollow(follow);
+    setFollowProducts(productsList);
+
+    const total = productsPayload.pagination?.total || productsList.length;
+    setHasMore(productsList.length < total);
+
+    return { status: 'success' };
+  }, [followDetailId, followsApi]); // ✅ FIX: Removed store setters from deps
 
   useEffect(() => {
-    const controller = new AbortController();
-    loadData(controller.signal);
+    if (!followDetailId) return;
 
-    return () => {
-      controller.abort();
-    };
-  }, [loadData]);
+    setLoading(true);
+
+    const controller = new AbortController();
+
+    loadData(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          triggerHaptic('error');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [followDetailId, loadData, triggerHaptic]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -91,7 +94,9 @@ const FollowDetail = () => {
 
       const productsPayload = moreData?.data || moreData;
       const newProducts = productsPayload.products || [];
-      setFollowProducts([...followProducts, ...newProducts]);
+
+      // ✅ FIX: Use getState() for stable reference
+      useStore.getState().setFollowProducts([...followProducts, ...newProducts]);
 
       const total = productsPayload.pagination?.total || 0;
       setHasMore((currentLength + newProducts.length) < total);
@@ -151,7 +156,8 @@ const FollowDetail = () => {
     try {
       await followsApi.deleteFollow(followDetailId);
       triggerHaptic('success');
-      setFollowDetailId(null);
+      // ✅ FIX: Use getState() for stable reference
+      useStore.getState().setFollowDetailId(null);
     } catch (error) {
       console.error('Error deleting follow:', error);
       triggerHaptic('error');
@@ -160,7 +166,8 @@ const FollowDetail = () => {
 
   const handleBack = () => {
     triggerHaptic('light');
-    setFollowDetailId(null);
+    // ✅ FIX: Use getState() for stable reference
+    useStore.getState().setFollowDetailId(null);
   };
 
   const handleTabChange = (tabId) => {

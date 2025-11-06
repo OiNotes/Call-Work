@@ -239,57 +239,68 @@ export default function WalletsModal({ isOpen, onClose }) {
     });
   }, []);
 
-  const loadWallets = useCallback(async () => {
-    if (!isOpen) {
-      return;
+  const loadWallets = useCallback(async (signal) => {
+    const { data: shopsResponse, error: shopsError } = await get('/shops/my', { signal });
+
+    if (signal?.aborted) return { status: 'aborted' };
+
+    if (shopsError) {
+      return { status: 'error', error: 'Failed to load shops' };
     }
+
+    const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+    if (!shops.length) {
+      setShop(null);
+      syncWalletState(null);
+      return { status: 'success' };
+    }
+
+    const primaryShop = shops[0];
+    setShop(primaryShop);
+
+    const { data: walletsResponse, error: walletsError } = await get(`/shops/${primaryShop.id}/wallets`, { signal });
+
+    if (signal?.aborted) return { status: 'aborted' };
+
+    if (walletsError) {
+      return { status: 'error', error: 'Failed to load wallets' };
+    }
+
+    syncWalletState(walletsResponse);
+    return { status: 'success' };
+  }, [get, syncWalletState]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     setLoading(true);
     setErrorMessage(null);
 
-    try {
-      const { data: shopsResponse, error: shopsError } = await get('/shops/my');
-      if (shopsError) {
-        setErrorMessage(t('wallet.shopsLoadError'));
-        syncWalletState(null);
-        setShop(null);
-        return;
-      }
+    const controller = new AbortController();
 
-      const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
-      if (!shops.length) {
-        setShop(null);
-        syncWalletState(null);
-        setLoading(false);
-        return;
-      }
+    loadWallets(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          console.error('Failed to load wallets:', result.error);
+          setErrorMessage(t('wallet.loadError'));
+          syncWalletState(null);
+        }
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) {
+          console.error('Failed to load wallets', error);
+          setErrorMessage(t('wallet.loadError'));
+          syncWalletState(null);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
 
-      const primaryShop = shops[0];
-      setShop(primaryShop);
-
-      const { data: walletsResponse, error: walletsError } = await get(`/shops/${primaryShop.id}/wallets`);
-      if (walletsError) {
-        setErrorMessage(t('wallet.loadError'));
-        syncWalletState(null);
-        setLoading(false);
-        return;
-      }
-
-      syncWalletState(walletsResponse);
-    } catch (error) {
-      console.error('Failed to load wallets', error);
-      setErrorMessage(t('wallet.loadError'));
-      syncWalletState(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [get, isOpen, syncWalletState, t]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadWallets();
-    }
-  }, [isOpen, loadWallets]);
+    return () => controller.abort();
+  }, [isOpen, loadWallets, t, syncWalletState]);
 
   const handleClose = useCallback(() => {
     resetForm();

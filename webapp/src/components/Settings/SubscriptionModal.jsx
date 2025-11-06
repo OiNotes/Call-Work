@@ -175,38 +175,56 @@ export default function SubscriptionModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Get shop
-      const shopsRes = await fetchApi('/shops/my');
-      if (shopsRes.data && shopsRes.data.length > 0) {
-        const shop = shopsRes.data[0];
-        setMyShop(shop);
-
-        // Get subscription status
-        const statusRes = await fetchApi(`/subscriptions/status/${shop.id}`);
-        setStatus(statusRes);
-
-        // Get payment history
-        const historyRes = await fetchApi(`/subscriptions/history/${shop.id}?limit=10`);
-        setHistory(historyRes.data || []);
-      }
-
-      // Get pricing (always available)
-      const pricingRes = await fetchApi('/subscriptions/pricing');
-      setPricing(pricingRes);
-    } catch (error) {
-      console.error('Error loading subscription data:', error);
-    } finally {
-      setLoading(false);
+  const loadData = useCallback(async (signal) => {
+    // 1. Load shops
+    const shopsRes = await fetchApi('/shops/my', { signal });
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    if (!shopsRes.data || shopsRes.data.length === 0) {
+      console.error('No shop found');
+      return { status: 'error', error: 'Failed to load shops' };
     }
+    
+    const shop = shopsRes.data[0];
+    setMyShop(shop);
+    
+    // 2. Load subscription data in parallel
+    const [statusRes, historyRes] = await Promise.all([
+      fetchApi(`/subscriptions/status/${shop.id}`, { signal }),
+      fetchApi(`/subscriptions/history/${shop.id}?limit=10`, { signal })
+    ]);
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    setStatus(statusRes);
+    setHistory(historyRes.data || []);
+    
+    // 3. Load pricing
+    const pricingRes = await fetchApi('/subscriptions/pricing', { signal });
+    
+    if (signal?.aborted) return { status: 'aborted' };
+    
+    setPricing(pricingRes);
+    
+    return { status: 'success' };
   }, [fetchApi]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
+    if (!isOpen) return;
+    
+    setLoading(true);
+    
+    const controller = new AbortController();
+    
+    loadData(controller.signal)
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+    
+    return () => controller.abort();
   }, [isOpen, loadData]);
 
   const handleUpgrade = async () => {

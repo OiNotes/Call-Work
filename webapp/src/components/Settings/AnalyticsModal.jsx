@@ -59,53 +59,73 @@ export default function AnalyticsModal({ isOpen, onClose }) {
   }, [period, customRange]);
 
   // Fetch analytics data
-  const fetchAnalytics = useCallback(async () => {
+  const fetchAnalytics = useCallback(async (signal) => {
     const range = getDateRange();
     if (!range) {
       console.warn('[AnalyticsModal] Пропущен запрос — кастомный период без дат', {
         period,
         customRange,
       });
-      return;
+      return { status: 'skipped' };
     }
 
     const { from, to } = range;
 
     console.info('[AnalyticsModal] fetch start', { from, to, period });
 
-    setLoading(true);
-    setError(null);
-
     try {
-      const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`);
+      const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`, { signal });
+
+      if (signal?.aborted) return { status: 'aborted' };
 
       if (error) {
         console.error('Analytics fetch error:', error);
-        setError(error);
+        return { status: 'error', error };
       } else if (data?.success && data?.data) {
         console.info('[AnalyticsModal] fetch success', {
           totalOrders: data.data.summary?.totalOrders,
           topProducts: data.data.topProducts?.length,
         });
         setAnalytics(data.data);
+        return { status: 'success' };
       } else {
         console.error('Unexpected API response:', data);
-        setError('Не удалось загрузить статистику');
+        return { status: 'error', error: 'Не удалось загрузить статистику' };
       }
     } catch (err) {
+      if (signal?.aborted) return { status: 'aborted' };
+
       console.error('[AnalyticsModal] fetch exception', err);
-      setError(err.message || 'Ошибка загрузки данных');
-    } finally {
-      console.info('[AnalyticsModal] fetch finished');
-      setLoading(false);
+      return { status: 'error', error: err.message || 'Ошибка загрузки данных' };
     }
   }, [get, getDateRange, period, customRange]);
 
   // Fetch on mount and period change
   useEffect(() => {
-    if (isOpen) {
-      fetchAnalytics();
-    }
+    if (!isOpen) return;
+
+    setLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+
+    fetchAnalytics(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) {
+          if (result?.status === 'error') {
+            console.error('Failed to fetch analytics:', result.error);
+            setError(result.error);
+          }
+          console.info('[AnalyticsModal] fetch finished');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [isOpen, period, fetchAnalytics]);
 
   const handlePeriodChange = (newPeriod) => {
