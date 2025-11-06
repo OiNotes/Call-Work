@@ -26,8 +26,8 @@ CREATE TABLE users (
   first_name VARCHAR(255),
   last_name VARCHAR(255),
   selected_role VARCHAR(20) CHECK (selected_role IN ('buyer', 'seller')),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE users IS 'Stores all platform users';
@@ -47,18 +47,20 @@ CREATE TABLE shops (
   wallet_eth VARCHAR(255),
   wallet_usdt VARCHAR(255),
   wallet_ltc VARCHAR(255),
-  tier VARCHAR(20) DEFAULT 'basic' CHECK (tier IN ('basic', 'pro')),
-  is_active BOOLEAN DEFAULT true,
-  subscription_status VARCHAR(20) DEFAULT 'active' CHECK (subscription_status IN ('active', 'pending', 'grace_period', 'inactive')),
+  channel_url VARCHAR(255),
+  tier VARCHAR(20) NOT NULL DEFAULT 'basic' CHECK (tier IN ('basic', 'pro')),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  subscription_status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (subscription_status IN ('active', 'pending', 'grace_period', 'inactive')),
   next_payment_due TIMESTAMP,
   grace_period_until TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE shops IS 'Stores shops - any user with a shop becomes a seller';
 COMMENT ON COLUMN shops.owner_id IS 'Reference to shop owner (user becomes seller by creating shop)';
 COMMENT ON COLUMN shops.registration_paid IS 'Whether initial subscription payment was confirmed';
+COMMENT ON COLUMN shops.channel_url IS 'Telegram channel URL for shop notifications (format: @channel_name or https://t.me/channel_name)';
 COMMENT ON COLUMN shops.is_active IS 'Shop activation status (deactivated after grace period expires)';
 COMMENT ON COLUMN shops.tier IS 'Subscription tier: basic ($25/month, 4 products max) or pro ($35/month, unlimited)';
 COMMENT ON COLUMN shops.subscription_status IS 'active: paid, grace_period: 2 days after expiry, inactive: deactivated';
@@ -74,15 +76,16 @@ CREATE TABLE products (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   price DECIMAL(18, 8) NOT NULL CHECK (price > 0),
-  currency VARCHAR(10) DEFAULT 'USD',
-  stock_quantity INT DEFAULT 0 CHECK (stock_quantity >= 0),
-  reserved_quantity INT DEFAULT 0 CHECK (reserved_quantity >= 0),
-  discount_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
+  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+  stock_quantity INT NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+  reserved_quantity INT NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
+  discount_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
   original_price DECIMAL(18, 8),
   discount_expires_at TIMESTAMP,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
+  is_preorder BOOLEAN NOT NULL DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT check_available_stock CHECK (stock_quantity >= reserved_quantity)
 );
 
@@ -94,6 +97,7 @@ COMMENT ON COLUMN products.reserved_quantity IS 'Reserved stock for pending orde
 COMMENT ON COLUMN products.discount_percentage IS 'Discount percentage (0-100). 0 = no discount';
 COMMENT ON COLUMN products.original_price IS 'Original price before discount. NULL if no discount applied';
 COMMENT ON COLUMN products.discount_expires_at IS 'When discount expires. NULL = permanent discount';
+COMMENT ON COLUMN products.is_preorder IS 'Indicates if product is available for preorder only (not in stock yet)';
 
 -- ============================================
 -- Shop follows table
@@ -103,10 +107,10 @@ CREATE TABLE shop_follows (
   follower_shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   source_shop_id INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   mode VARCHAR(20) NOT NULL CHECK (mode IN ('monitor', 'resell')),
-  markup_percentage DECIMAL(5, 2) DEFAULT 0 CHECK (markup_percentage >= 0.1 AND markup_percentage <= 200),
-  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled')),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
+  markup_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0 CHECK (markup_percentage >= 0.1 AND markup_percentage <= 200),
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled')),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   UNIQUE(follower_shop_id, source_shop_id),
   CHECK (follower_shop_id != source_shop_id)
 );
@@ -123,9 +127,9 @@ CREATE TABLE synced_products (
   follow_id INT NOT NULL REFERENCES shop_follows(id) ON DELETE CASCADE,
   synced_product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   source_product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  conflict_status VARCHAR(20) DEFAULT 'synced' CHECK (conflict_status IN ('synced', 'conflict', 'manual_override')),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_synced_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  conflict_status VARCHAR(20) NOT NULL DEFAULT 'synced' CHECK (conflict_status IN ('synced', 'conflict', 'manual_override')),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(synced_product_id),
   UNIQUE(follow_id, source_product_id),
   CHECK (synced_product_id != source_product_id)
@@ -158,9 +162,9 @@ CREATE TABLE orders (
   delivery_address VARCHAR(255),
   payment_hash VARCHAR(255),
   payment_address VARCHAR(255),
-  status VARCHAR(20) CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   paid_at TIMESTAMP,
   completed_at TIMESTAMP
 );
@@ -177,10 +181,10 @@ CREATE TABLE order_items (
   order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   product_id INT REFERENCES products(id) ON DELETE SET NULL,
   product_name VARCHAR(255) NOT NULL,
-  quantity INT DEFAULT 1 CHECK (quantity > 0),
+  quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
   price DECIMAL(18, 8) NOT NULL CHECK (price > 0),
   currency VARCHAR(10) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE order_items IS 'Stores individual items in each order';
@@ -205,18 +209,25 @@ COMMENT ON TABLE subscriptions IS 'Stores user subscriptions to shops for notifi
 -- ============================================
 CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    subscription_id INTEGER REFERENCES shop_subscriptions(id) ON DELETE CASCADE,
     tx_hash VARCHAR(255) UNIQUE NOT NULL,
     amount DECIMAL(18, 8) NOT NULL,
     currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT', 'LTC')),
     status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'failed')),
-    confirmations INTEGER DEFAULT 0,
+    confirmations INTEGER NOT NULL DEFAULT 0,
     verified_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT check_payment_reference CHECK (
+        (order_id IS NOT NULL AND subscription_id IS NULL) OR
+        (order_id IS NULL AND subscription_id IS NOT NULL)
+    )
 );
 
 COMMENT ON TABLE payments IS 'Stores crypto payment verification records';
+COMMENT ON COLUMN payments.order_id IS 'Reference to order payment (mutually exclusive with subscription_id)';
+COMMENT ON COLUMN payments.subscription_id IS 'Reference to subscription payment (mutually exclusive with order_id)';
 COMMENT ON COLUMN payments.tx_hash IS 'Blockchain transaction hash';
 COMMENT ON COLUMN payments.confirmations IS 'Number of blockchain confirmations';
 
@@ -270,8 +281,8 @@ CREATE TABLE shop_subscriptions (
   currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT', 'LTC')),
   period_start TIMESTAMP NOT NULL,
   period_end TIMESTAMP NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'expired', 'cancelled')),
-  created_at TIMESTAMP DEFAULT NOW(),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'expired', 'cancelled')),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   verified_at TIMESTAMP
 );
 
@@ -317,10 +328,10 @@ CREATE TABLE invoices (
   usd_rate DECIMAL(20, 2),
   currency VARCHAR(10) NOT NULL,
   tatum_subscription_id VARCHAR(255),
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
   expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT check_invoice_reference CHECK (
     (order_id IS NOT NULL AND subscription_id IS NULL) OR
     (order_id IS NULL AND subscription_id IS NOT NULL)
@@ -426,6 +437,7 @@ CREATE INDEX IF NOT EXISTS idx_users_telegram_role ON users(telegram_id, selecte
 CREATE INDEX IF NOT EXISTS idx_users_selected_role ON users(selected_role);
 CREATE INDEX IF NOT EXISTS idx_shops_owner ON shops(owner_id);
 CREATE INDEX IF NOT EXISTS idx_shops_tier ON shops(tier);
+CREATE INDEX IF NOT EXISTS idx_shops_channel_url ON shops(channel_url);
 -- Shop name uniqueness: case-insensitive unique constraint via functional index
 CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_name_unique_lower ON shops(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
@@ -436,12 +448,15 @@ CREATE INDEX IF NOT EXISTS idx_products_shop_active_partial ON products(shop_id)
 CREATE INDEX IF NOT EXISTS idx_products_availability ON products(id, stock_quantity, reserved_quantity) WHERE is_active = true;
 -- Partial index for active discounts (filtering products with discounts)
 CREATE INDEX IF NOT EXISTS idx_products_discount_active ON products(shop_id, discount_percentage, discount_expires_at) WHERE discount_percentage > 0;
+-- Partial index for preorder products
+CREATE INDEX IF NOT EXISTS idx_products_preorder ON products(shop_id, is_preorder) WHERE is_preorder = true;
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_shop ON subscriptions(shop_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_telegram_id ON subscriptions(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_product ON orders(product_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order_status ON payments(order_id, status);
+CREATE INDEX IF NOT EXISTS idx_payments_subscription_id ON payments(subscription_id);
 -- Payment verification optimization: tx_hash lookup (40-60ms faster)
 CREATE INDEX IF NOT EXISTS idx_payments_tx_hash ON payments(tx_hash);
 CREATE INDEX IF NOT EXISTS idx_channel_migrations_shop ON channel_migrations(shop_id);
@@ -468,6 +483,7 @@ CREATE INDEX IF NOT EXISTS idx_promo_activations_code ON promo_activations(promo
 
 -- Invoices indexes
 CREATE INDEX IF NOT EXISTS idx_invoices_order ON invoices(order_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_subscription_id ON invoices(subscription_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_address ON invoices(address);
 -- Note: idx_invoices_status removed (redundant with idx_invoices_status_expires)
 CREATE INDEX IF NOT EXISTS idx_invoices_chain ON invoices(chain);
