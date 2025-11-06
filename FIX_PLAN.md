@@ -1,7 +1,7 @@
 # 🚀 STATUS STOCK 4.0 - COMPREHENSIVE FIX PLAN
 
 **Generated:** 2025-11-06
-**Status:** Phase 1-3 COMPLETE ✅ | Phase 4-5 PENDING
+**Status:** Phase 1-4 COMPLETE ✅ | Phase 5 PENDING
 
 ---
 
@@ -187,33 +187,58 @@
 
 ---
 
-## 🗄️ PHASE 4: DATABASE CLEANUP (PENDING)
+## ✅ PHASE 4: DATABASE CLEANUP (COMPLETED)
 
 **Goal:** Clean up migration conflicts and schema inconsistencies
+**Completed:** 2025-11-06 (4/4 tasks)
 
-### SEQUENTIAL (database operations):
+### ✅ Task 1: Remove Duplicate Migration Files
 
-1. **Remove duplicate migration files:**
-   - Delete: `008_add_preorder_support.sql` (duplicate)
-   - Delete: `008_optimize_database_performance.sql` (duplicate)
-   - Delete: `009_add_critical_performance_indexes.sql` (duplicate)
-   - Delete: `009_add_product_reservation.sql` (duplicate)
+**Deleted 9 duplicates/conflicts:**
+- 002_add_reserved_quantity.sql (renamed to 029)
+- 008_add_preorder_support.sql (renamed to 026)
+- 009_add_critical_performance_indexes.sql (renamed to 027)
+- 009_add_product_reservation.sql (removed - already in schema)
+- 010_wallet_unique_constraints.sql (renamed to 028)
+- 027_optimize_database_performance.sql (duplicate)
+- 028_add_critical_performance_indexes.sql (duplicate)
+- 029_add_product_reservation.sql (duplicate)
+- add_hd_wallet_payment_system.sql (renamed to 031_legacy)
 
-2. **Update schema.sql with missing columns:**
-   - Add: `invoices.subscription_id` (from migration 011)
-   - Add: `invoices.crypto_amount` (from migration 016)
-   - Add: `invoices.usd_rate` (from migration 016)
-   - Add: `payments.subscription_id` (from migration 012)
-   - Add: `shop_subscriptions.user_id` (from migration 017)
-   - Add: `shops.channel_url` (from migration 009)
+**Result:** Unique migration numbers 001-031, no conflicts
 
-3. **Add missing NOT NULL constraints:**
-   - From migration 025 (50+ columns)
-   - Update schema.sql to match current database state
+### ✅ Task 2: Update schema.sql with Missing Columns
 
-4. **Resolve currency constraint conflicts:**
-   - Migration 013 vs 018 both modify same CHECK constraint
-   - Standardize on final version
+**Added 3 columns:**
+- `payments.subscription_id` + index (from migration 012)
+- `shops.channel_url` + index (from migration 009)
+- `products.is_preorder` + partial index (from migration 026)
+
+**Added 4 indexes for performance**
+
+**Result:** schema.sql contains ALL columns from migrations
+
+### ✅ Task 3: Add Missing NOT NULL Constraints
+
+**Updated 11 tables, 50+ columns:**
+- products (8 constraints), orders (6), order_items (4)
+- invoices (6), shop_subscriptions (7), shops (6)
+- users (2), shop_follows (5), synced_products (3)
+- payments (5)
+
+**Result:** Data integrity enforced at database level
+
+### ✅ Task 4: Resolve Currency Constraint Conflicts
+
+**Analysis:** No conflict - migrations 013 & 018 are sequential evolution
+- Migration 013: adds USDT_TRC20 (temporary)
+- Migration 018: removes USDT_TRC20 (final decision)
+
+**Final constraints:**
+- payments.currency: BTC, ETH, USDT, LTC
+- invoices.chain: BTC, ETH, USDT_ERC20, USDT_TRC20, LTC
+
+**Result:** Correct constraints for each table, no conflicts
 
 ---
 
@@ -250,18 +275,18 @@
 
 ## 📈 PROGRESS TRACKING
 
-### Completed: 20/34 (59%)
+### Completed: 24/34 (71%)
 - ✅ Phase 1: 6/6 (100%)
 - ✅ Phase 2: 5/5 (100%)
 - ✅ Phase 3: 9/9 (100%)
-- ⏳ Phase 4: 0/4 (0%)
+- ✅ Phase 4: 4/4 (100%)
 - ⏳ Phase 5: 0/10 (0%)
 
 ### Next Steps:
-1. ✅ Phase 3 complete - all 9 tasks done
+1. ✅ Phase 1-4 complete - all critical & high priority tasks done
 2. Apply migration 030 (shops search index - optional performance boost)
-3. Start Phase 4 (database cleanup - 4 tasks)
-4. Proceed to Phase 5 (polish & edge cases - 10 tasks)
+3. Start Phase 5 (polish & edge cases - 10 tasks)
+4. Production-ready after Phase 5
 
 ---
 
@@ -289,10 +314,10 @@
 - ✅ Buyer subscription checks work (endpoint created)
 - ✅ Bot scenes validated (validateShopBeforeScene middleware)
 
-### Phase 4 (TARGET):
-- Database schema matches actual state
-- No migration conflicts
-- All constraints documented
+### Phase 4 (COMPLETED): ✅
+- ✅ Database schema matches actual state (3 columns added, 50+ NOT NULL)
+- ✅ No migration conflicts (unique numbers 001-031)
+- ✅ All constraints documented (currency, CHECK, NOT NULL)
 
 ### Phase 5 (TARGET):
 - Production-ready
