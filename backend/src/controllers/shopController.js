@@ -2,6 +2,7 @@ import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
 import { activatePromoSubscription } from '../services/subscriptionService.js';
+import { validateAddress } from '../services/walletService.js';
 import * as promoCodeQueries from '../../database/queries/promoCodeQueries.js';
 
 /**
@@ -568,6 +569,7 @@ export const shopController = {
   /**
    * Update shop wallets
    * P0-DB-1 FIX: Check for wallet duplicates before updating
+   * WALLET-VALIDATION: Validate all crypto addresses before database update
    */
   updateWallets: async (req, res) => {
     try {
@@ -589,6 +591,70 @@ export const shopController = {
           success: false,
           error: 'You can only update your own shop wallets'
         });
+      }
+
+      // WALLET-VALIDATION: Validate Bitcoin address
+      if (wallet_btc !== undefined && wallet_btc && wallet_btc.trim()) {
+        const isValid = validateAddress(wallet_btc.trim(), 'BTC');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid BTC address attempt`, {
+            userId: req.user.id,
+            shopId: id,
+            address: wallet_btc.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Bitcoin address format: ${wallet_btc}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate Ethereum address
+      if (wallet_eth !== undefined && wallet_eth && wallet_eth.trim()) {
+        const isValid = validateAddress(wallet_eth.trim(), 'ETH');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid ETH address attempt`, {
+            userId: req.user.id,
+            shopId: id,
+            address: wallet_eth.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Ethereum address format: ${wallet_eth}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate USDT address (ERC20 = Ethereum format)
+      if (wallet_usdt !== undefined && wallet_usdt && wallet_usdt.trim()) {
+        const isValid = validateAddress(wallet_usdt.trim(), 'ETH');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid USDT address attempt`, {
+            userId: req.user.id,
+            shopId: id,
+            address: wallet_usdt.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid USDT (ERC20) address format: ${wallet_usdt}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate Litecoin address
+      if (wallet_ltc !== undefined && wallet_ltc && wallet_ltc.trim()) {
+        const isValid = validateAddress(wallet_ltc.trim(), 'LTC');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid LTC address attempt`, {
+            userId: req.user.id,
+            shopId: id,
+            address: wallet_ltc.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Litecoin address format: ${wallet_ltc}`
+          });
+        }
       }
 
       // Build update object (only include provided fields)

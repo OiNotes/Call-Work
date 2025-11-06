@@ -164,6 +164,7 @@ export default function ProductsModal({ isOpen, onClose }) {
   const [aiHistory, setAiHistory] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [lastAIPrompt, setLastAIPrompt] = useState('');
 
   const handleOpenAIChat = () => {
     triggerHaptic('medium');
@@ -172,6 +173,8 @@ export default function ProductsModal({ isOpen, onClose }) {
 
   const handleCloseAIChat = useCallback(() => {
     setShowAIChat(false);
+    setAiError(null);
+    setLastAIPrompt('');
   }, []);
 
   const [myShop, setMyShop] = useState(null);
@@ -240,6 +243,7 @@ export default function ProductsModal({ isOpen, onClose }) {
     const value = text.trim();
     if (!value) return;
 
+    setLastAIPrompt(value); // Save for retry
     const optimisticHistory = [...aiHistory, { role: 'user', content: value }];
     setAiHistory(optimisticHistory);
     setAiLoading(true);
@@ -272,7 +276,8 @@ export default function ProductsModal({ isOpen, onClose }) {
         throw new Error('Пустой ответ AI-сервиса');
       }
     } catch (error) {
-      setAiError(error.message || 'Не удалось обработать запрос. Попробуйте позже.');
+      const errorMessage = error.message || 'Не удалось обработать запрос. Попробуйте позже.';
+      setAiError(errorMessage);
       setAiHistory((current) => [
         ...current,
         {
@@ -282,6 +287,13 @@ export default function ProductsModal({ isOpen, onClose }) {
       ]);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleRetryAIMessage = () => {
+    if (lastAIPrompt && !aiLoading) {
+      triggerHaptic('light');
+      handleSendAIMessage(lastAIPrompt);
     }
   };
 
@@ -348,6 +360,8 @@ export default function ProductsModal({ isOpen, onClose }) {
       setShowForm(false);
       setEditingProduct(null);
       setShowAIChat(false);
+      setAiError(null);
+      setLastAIPrompt('');
       setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
     }
   }, [isOpen]);
@@ -676,9 +690,23 @@ export default function ProductsModal({ isOpen, onClose }) {
               )}
 
               {aiError && (
-                <div className="text-xs text-red-400/80">
-                  {aiError}
-                </div>
+                <motion.div
+                  className="flex flex-col gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <p className="text-xs text-red-400">
+                    Ошибка: {aiError}
+                  </p>
+                  <motion.button
+                    onClick={handleRetryAIMessage}
+                    disabled={aiLoading}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-medium bg-red-500/20 text-red-300 hover:bg-red-500/30 disabled:opacity-50 transition-colors"
+                    whileTap={!aiLoading ? { scale: 0.98 } : {}}
+                  >
+                    {aiLoading ? 'Повторная попытка…' : '🔄 Повторить запрос'}
+                  </motion.button>
+                </motion.div>
               )}
             </div>
 

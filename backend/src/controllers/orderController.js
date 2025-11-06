@@ -5,6 +5,7 @@ import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
 import { generateAddress } from '../services/walletService.js';
 import { getCryptoPrice, convertUsdToCrypto, roundCryptoAmount } from '../services/cryptoPriceService.js';
+import { validateStatusTransition } from '../utils/orderStateValidator.js';
 
 /**
  * Order Controller
@@ -320,6 +321,30 @@ export const orderController = {
         });
       }
 
+      // Validate state transition (state machine check)
+      const transition = validateStatusTransition(existingOrder.status, status);
+
+      if (!transition.valid) {
+        logger.warn(`Invalid status transition: ${existingOrder.status} → ${status} for order ${id}`);
+        return res.status(422).json({
+          success: false,
+          error: transition.error,
+          code: 'INVALID_STATUS_TRANSITION'
+        });
+      }
+
+      // Handle idempotent update (same status requested)
+      if (transition.idempotent) {
+        logger.info(`Idempotent status update for order ${id}: already in status ${status}`);
+        return res.status(200).json({
+          success: true,
+          idempotent: true,
+          message: `Order is already in status ${status}`,
+          data: existingOrder
+        });
+      }
+
+      // Proceed with actual database update
       const order = await orderQueries.updateStatus(id, status);
 
       // Notify buyer about status update
@@ -464,16 +489,44 @@ export const orderController = {
         });
       }
 
-      // Bulk update status
+      // Validate state transitions for all orders before updating
+      const invalidTransitions = [];
+      for (const order of foundOrders) {
+        const transition = validateStatusTransition(order.current_status, status);
+        if (!transition.valid && !transition.idempotent) {
+          invalidTransitions.push({
+            order_id: order.id,
+            current_status: order.current_status,
+            requested_status: status,
+            error: transition.error
+          });
+        }
+      }
+
+      if (invalidTransitions.length > 0) {
+        await client.query('ROLLBACK');
+        logger.warn(`Bulk update rejected due to invalid transitions:`, invalidTransitions);
+        return res.status(422).json({
+          success: false,
+          error: 'One or more orders cannot transition to the requested status',
+          code: 'INVALID_STATUS_TRANSITIONS',
+          details: invalidTransitions
+        });
+      }
+
+      // Bulk update status - only for orders that are not already in that status
       const updateResult = await client.query(
         `UPDATE orders
          SET status = $1, updated_at = NOW()
-         WHERE id = ANY($2::int[])
+         WHERE id = ANY($2::int[]) AND status != $1
          RETURNING id, status, product_id, buyer_id, quantity, total_price, currency, created_at, updated_at`,
         [status, order_ids]
       );
 
       const updatedOrders = updateResult.rows;
+
+      // Count idempotent updates (orders already in target status)
+      const idempotentCount = foundOrders.length - updatedOrders.length;
 
       // Commit transaction
       await client.query('COMMIT');
@@ -515,6 +568,8 @@ export const orderController = {
         success: true,
         data: {
           updated_count: updatedOrders.length,
+          idempotent_count: idempotentCount,
+          total_processed: foundOrders.length,
           orders: ordersWithDetails
         }
       });

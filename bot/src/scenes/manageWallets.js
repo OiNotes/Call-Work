@@ -7,6 +7,7 @@ import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyPhoto as cleanReplyPhoto } from '../utils/cleanReply.js';
 import { messages, buttons as buttonText } from '../texts/messages.js';
 import { showSellerToolsMenu } from '../utils/sellerNavigation.js';
+import { generateQRWithTimeout, getQRErrorMessage } from '../utils/qrHelper.js';
 
 const { seller: sellerMessages, general: generalMessages } = messages;
 
@@ -58,12 +59,15 @@ async function showQRCode(ctx, crypto) {
       addressPrefix: address.substring(0, 10)
     });
 
-    // Generate QR via backend API
-    const response = await walletApi.generateQR({
-      address,
-      amount: 0,
-      currency: crypto
-    }, ctx.session.token);
+    // Generate QR via backend API with timeout protection
+    const response = await generateQRWithTimeout(
+      () => walletApi.generateQR({
+        address,
+        amount: 0,
+        currency: crypto
+      }, ctx.session.token),
+      10000 // 10 second timeout
+    );
 
     if (!response.success) {
       await cleanReply(ctx, sellerMessages.walletsQrError);
@@ -91,7 +95,10 @@ async function showQRCode(ctx, crypto) {
 
   } catch (error) {
     logger.error('Error showing QR code:', error);
-    await cleanReply(ctx, sellerMessages.walletsQrError);
+
+    // Provide user-friendly error message based on error type
+    const errorMessage = getQRErrorMessage(error, sellerMessages.walletsQrError);
+    await cleanReply(ctx, errorMessage);
   }
 }
 

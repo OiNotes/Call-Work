@@ -4,6 +4,7 @@ import * as etherscanService from './etherscanService.js';
 import * as tronService from './tronService.js';
 import telegramService from './telegram.js';
 import logger from '../utils/logger.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 /**
  * Polling Service - Payment monitoring for ETH and TRON chains
@@ -301,8 +302,7 @@ async function checkEthPayment(invoice) {
       // Find matching transfer
       const matchingTransfer = transfers.find(tx => {
         const amount = parseInt(tx.value) / 1e6; // USDT has 6 decimals
-        const tolerance = invoice.expected_amount * 0.01;
-        return Math.abs(amount - invoice.expected_amount) <= tolerance;
+        return amountsMatchWithTolerance(amount, invoice.expected_amount, undefined, 'USDT');
       });
 
       if (!matchingTransfer) {
@@ -355,10 +355,9 @@ async function checkTronPayment(invoice) {
     // Find matching transfer
     const matchingTransfer = transfers.find(tx => {
       const amount = parseFloat(tx.value) / Math.pow(10, tx.tokenInfo.decimals);
-      const tolerance = invoice.expected_amount * 0.01;
       return (
         tx.to === invoice.address &&
-        Math.abs(amount - invoice.expected_amount) <= tolerance
+        amountsMatchWithTolerance(amount, invoice.expected_amount, undefined, 'USDT_TRC20')
       );
     });
 

@@ -3,6 +3,7 @@ import { config } from '../config/env.js';
 import logger from '../utils/logger.js';
 import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
 import { amountsMatch } from '../utils/decimal.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 /**
  * Crypto payment verification service
@@ -87,9 +88,8 @@ class CryptoService {
       // Convert satoshis to BTC
       const amountBTC = output.value / 100000000;
 
-      // Check amount (allow 0.5% tolerance for fees) - Industry standard
-      // Use Decimal.js for precise comparison
-      if (!amountsMatch(amountBTC, expectedAmount, 0.5)) {
+      // Check amount with tolerance bounds - Industry standard with validation
+      if (!amountsMatchWithTolerance(amountBTC, expectedAmount, undefined, 'BTC')) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} BTC, Received: ${amountBTC} BTC`
@@ -188,9 +188,8 @@ class CryptoService {
       // Convert wei to ETH
       const amountETH = parseInt(tx.value, 16) / 1e18;
 
-      // Check amount (allow 0.5% tolerance) - Industry standard
-      // Use Decimal.js for precise comparison
-      if (!amountsMatch(amountETH, expectedAmount, 0.5)) {
+      // Check amount with tolerance bounds - Industry standard with validation
+      if (!amountsMatchWithTolerance(amountETH, expectedAmount, undefined, 'ETH')) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${amountETH} ETH`
@@ -343,9 +342,8 @@ class CryptoService {
       const amountHex = data.substring(72, 136);
       const amountUSDT = parseInt(amountHex, 16) / 1e6;
 
-      // Check amount (allow 0.5% tolerance) - Industry standard
-      // Use Decimal.js for precise comparison
-      if (!amountsMatch(amountUSDT, expectedAmount, 0.5)) {
+      // Check amount with tolerance bounds - Industry standard with validation
+      if (!amountsMatchWithTolerance(amountUSDT, expectedAmount, undefined, 'USDT_TRC20')) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${amountUSDT} USDT`
@@ -441,9 +439,8 @@ class CryptoService {
       // Convert litoshi to LTC (1 LTC = 100,000,000 litoshi)
       const amountLTC = output.value / 100000000;
 
-      // Check amount (allow 0.5% tolerance for fees) - Industry standard
-      // Use Decimal.js for precise comparison
-      if (!amountsMatch(amountLTC, expectedAmount, 0.5)) {
+      // Check amount with tolerance bounds - Industry standard with validation
+      if (!amountsMatchWithTolerance(amountLTC, expectedAmount, undefined, 'LTC')) {
         return {
           verified: false,
           error: `Amount mismatch. Expected: ${expectedAmount} LTC, Received: ${amountLTC} LTC`

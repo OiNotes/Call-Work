@@ -4,6 +4,7 @@ import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries, 
 import { getClient } from '../config/database.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 const router = express.Router();
 
@@ -312,13 +313,14 @@ router.post('/blockcypher', async (req, res) => {
         if (isOrderPayment) {
           const expectedAmount = parseFloat(invoice.amount);
           const receivedAmount = verifiedTx.total / 100000000; // Convert satoshis to BTC/LTC
-          const tolerance = expectedAmount * 0.005; // 0.5% tolerance
+          const chain = invoice.chain.toUpperCase();
 
-          if (Math.abs(receivedAmount - expectedAmount) > tolerance) {
+          if (!amountsMatchWithTolerance(receivedAmount, expectedAmount, undefined, chain)) {
             logger.error('[Webhook] Amount mismatch', {
               expected: expectedAmount,
               received: receivedAmount,
-              txHash: paymentData.txHash
+              txHash: paymentData.txHash,
+              chain
             });
             await client.query('COMMIT'); // Commit to mark webhook as processed
             return res.status(400).json({ error: 'Payment amount does not match invoice' });

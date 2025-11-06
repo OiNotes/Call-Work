@@ -1,6 +1,7 @@
 import axios from 'axios';
 import TronWeb from 'tronweb';
 import logger from '../utils/logger.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 /**
  * Tron Service - TRON blockchain API integration
@@ -429,16 +430,8 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
     const amountHex = data.substring(72, 136);
     const actualAmount = parseInt(amountHex, 16) / 1e6;
 
-    // Check amount with 0.5% tolerance - Industry standard
-    const tolerance = expectedAmount * 0.005;
-    const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
-
-    if (!amountMatches) {
-      logger.warn(`[TronService] Amount mismatch:`, {
-        expected: expectedAmount,
-        actual: actualAmount,
-        txId
-      });
+    // Check amount with tolerance bounds - Industry standard with validation
+    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, 'USDT_TRC20')) {
       return {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${actualAmount} USDT`,

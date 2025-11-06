@@ -18,6 +18,7 @@ import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
 import { messages, buttons as buttonText } from '../texts/messages.js';
 import { showSellerMainMenu } from '../utils/sellerNavigation.js';
+import { generateQRWithTimeout } from '../utils/qrHelper.js';
 
 const { general: generalMessages, subscription: subMessages } = messages;
 
@@ -255,12 +256,15 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const currencyDisplayName = subMessages.chainMappings[chain] || currency;
 
       // P0-BOT-8 FIX: Generate QR code via backend (non-blocking)
-      // Backend generates QR, bot just fetches it
-      const qrResponse = await walletApi.generateQR({
-        address: invoice.address,
-        amount: 0,
-        currency: currency
-      }, token);
+      // Backend generates QR, bot just fetches it with timeout protection
+      const qrResponse = await generateQRWithTimeout(
+        () => walletApi.generateQR({
+          address: invoice.address,
+          amount: 0,
+          currency: currency
+        }, token),
+        10000 // 10 second timeout
+      );
 
       if (!qrResponse || !qrResponse.success || !qrResponse.data?.qrCode) {
         throw new Error('Failed to generate QR code from backend');
@@ -307,7 +311,10 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const errorData = error.response?.data;
       let errorMessage = subMessages.invoiceError;
 
-      if (errorData?.error) {
+      // Check if error is QR generation timeout
+      if (error.message === 'QR_GENERATION_TIMEOUT') {
+        errorMessage = 'QR код генерируется слишком долго. Попробуйте выбрать другую криптовалюту или попробуйте позже.';
+      } else if (errorData?.error) {
         errorMessage += `\n\n${errorData.error}`;
       }
 

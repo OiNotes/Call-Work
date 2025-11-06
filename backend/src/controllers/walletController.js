@@ -1,6 +1,7 @@
 import { shopQueries } from '../models/db.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
+import { validateAddress } from '../services/walletService.js';
 
 /**
  * Wallet Controller
@@ -67,6 +68,7 @@ export const walletController = {
 
   /**
    * Update shop wallet addresses
+   * WALLET-VALIDATION: Validate all crypto addresses before database update
    */
   updateWallets: async (req, res) => {
     try {
@@ -96,6 +98,70 @@ export const walletController = {
         });
       }
 
+      // WALLET-VALIDATION: Validate Bitcoin address
+      if (walletBtc && walletBtc.trim()) {
+        const isValid = validateAddress(walletBtc.trim(), 'BTC');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid BTC address attempt`, {
+            userId: req.user.id,
+            shopId: shopId,
+            address: walletBtc.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Bitcoin address format: ${walletBtc}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate Ethereum address
+      if (walletEth && walletEth.trim()) {
+        const isValid = validateAddress(walletEth.trim(), 'ETH');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid ETH address attempt`, {
+            userId: req.user.id,
+            shopId: shopId,
+            address: walletEth.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Ethereum address format: ${walletEth}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate USDT address (ERC20 = Ethereum format)
+      if (walletUsdt && walletUsdt.trim()) {
+        const isValid = validateAddress(walletUsdt.trim(), 'ETH');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid USDT address attempt`, {
+            userId: req.user.id,
+            shopId: shopId,
+            address: walletUsdt.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid USDT (ERC20) address format: ${walletUsdt}`
+          });
+        }
+      }
+
+      // WALLET-VALIDATION: Validate Litecoin address
+      if (walletLtc && walletLtc.trim()) {
+        const isValid = validateAddress(walletLtc.trim(), 'LTC');
+        if (!isValid) {
+          logger.warn(`[Wallet Validation] Invalid LTC address attempt`, {
+            userId: req.user.id,
+            shopId: shopId,
+            address: walletLtc.substring(0, 8) + '...'
+          });
+          return res.status(400).json({
+            success: false,
+            error: `Invalid Litecoin address format: ${walletLtc}`
+          });
+        }
+      }
+
       // Check for duplicate wallet addresses BEFORE updating
       const { query } = await import('../config/database.js');
 
@@ -105,7 +171,7 @@ export const walletController = {
           [walletBtc, shopId]
         );
         if (duplicateBtc.rows.length > 0) {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: `Bitcoin address already used by shop "${duplicateBtc.rows[0].name}"`
           });
@@ -118,7 +184,7 @@ export const walletController = {
           [walletEth, shopId]
         );
         if (duplicateEth.rows.length > 0) {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: `Ethereum address already used by shop "${duplicateEth.rows[0].name}"`
           });
@@ -131,7 +197,7 @@ export const walletController = {
           [walletUsdt, shopId]
         );
         if (duplicateUsdt.rows.length > 0) {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: `USDT address already used by shop "${duplicateUsdt.rows[0].name}"`
           });
@@ -144,7 +210,7 @@ export const walletController = {
           [walletLtc, shopId]
         );
         if (duplicateLtc.rows.length > 0) {
-          return res.status(400).json({
+          return res.status(409).json({
             success: false,
             error: `Litecoin address already used by shop "${duplicateLtc.rows[0].name}"`
           });

@@ -53,17 +53,54 @@ async function cancelUnpaidOrders() {
   }
 }
 
-// Run every 5 minutes
-const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+/**
+ * Expire unfulfilled orders after 7 days without fulfillment
+ * Sets orders with status 'pending' or 'confirmed' to 'expired'
+ */
+async function expireOldOrders() {
+  try {
+    const result = await query(
+      `UPDATE orders
+       SET status = $1, updated_at = NOW()
+       WHERE status = ANY($2)
+         AND created_at < NOW() - INTERVAL '7 days'
+       RETURNING id, status`,
+      ['expired', ['pending', 'confirmed']]
+    );
 
-export function startOrderCleanup() {
-  logger.info('Starting order cleanup service (runs every 5 minutes)');
+    if (result.rowCount > 0) {
+      const orderIds = result.rows.map(r => r.id);
+      logger.info(`[expireOldOrders] Expired ${result.rowCount} old orders`, {
+        orderIds,
+        totalExpired: result.rowCount
+      });
+    }
 
-  // Run immediately on startup
-  cancelUnpaidOrders();
+    return result.rows;
 
-  // Then run every 5 minutes
-  setInterval(cancelUnpaidOrders, CLEANUP_INTERVAL);
+  } catch (error) {
+    logger.error('[expireOldOrders] Error:', error);
+    throw error;
+  }
 }
 
-export default { startOrderCleanup };
+// Cleanup intervals
+const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes for unpaid orders
+const EXPIRATION_INTERVAL = 60 * 60 * 1000; // 1 hour for old orders
+
+export function startOrderCleanup() {
+  logger.info('Starting order cleanup service');
+  logger.info('  - Unpaid orders cleanup: runs every 5 minutes');
+  logger.info('  - Order expiration: runs every 1 hour');
+
+  // Cancel unpaid orders - run immediately on startup
+  cancelUnpaidOrders();
+  setInterval(cancelUnpaidOrders, CLEANUP_INTERVAL);
+
+  // Expire old orders - run immediately on startup
+  expireOldOrders();
+  setInterval(expireOldOrders, EXPIRATION_INTERVAL);
+}
+
+export { expireOldOrders, cancelUnpaidOrders };
+export default { startOrderCleanup, expireOldOrders, cancelUnpaidOrders };

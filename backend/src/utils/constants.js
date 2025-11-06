@@ -8,7 +8,8 @@ export const ORDER_STATUS = {
   CONFIRMED: 'confirmed',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  EXPIRED: 'expired'
 };
 
 // Payment statuses (align with database constraint)

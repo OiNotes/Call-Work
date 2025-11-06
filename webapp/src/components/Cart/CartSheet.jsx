@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, LazyMotion } from 'framer-motion';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useTelegram } from '../../hooks/useTelegram';
@@ -52,6 +52,17 @@ export default function CartSheet() {
     [platform]
   );
 
+  const checkoutTimeoutRef = useRef(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (checkoutTimeoutRef.current) {
+        clearTimeout(checkoutTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const checkoutShadow = useMemo(
     () => (
       android
@@ -103,7 +114,14 @@ export default function CartSheet() {
 
     // Close cart first, then open payment modal after animation
     setCartOpen(false);
-    setTimeout(() => startCheckout(), 200);
+
+    // Clear previous timeout before setting new one
+    if (checkoutTimeoutRef.current) {
+      clearTimeout(checkoutTimeoutRef.current);
+    }
+
+    // Set new timeout with proper cleanup
+    checkoutTimeoutRef.current = setTimeout(() => startCheckout(), 200);
   };
 
   const handleClearCart = async () => {

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo, useState, lazy, Suspense } from 'react';
+import { useMemo, useState, lazy, Suspense, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -32,6 +32,20 @@ export default function PaymentDetailsModal() {
   const ios = isIOS(platform);
   const [copied, setCopied] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const copiedTimeoutRef = useRef(null);
+  const copiedAmountTimeoutRef = useRef(null);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+      if (copiedAmountTimeoutRef.current) {
+        clearTimeout(copiedAmountTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const overlayStyle = useMemo(
     () => getSurfaceStyle('overlay', platform),
@@ -101,7 +115,14 @@ export default function PaymentDetailsModal() {
       setCopied(true);
       triggerHaptic('success');
       toast.success('Адрес скопирован');
-      setTimeout(() => setCopied(false), 2000);
+
+      // Clear previous timeout before setting new one
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+
+      // Set new timeout with proper cleanup
+      copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
       toast.error('Не удалось скопировать адрес');
@@ -115,7 +136,14 @@ export default function PaymentDetailsModal() {
       setCopiedAmount(true);
       triggerHaptic('success');
       toast.success('Сумма скопирована');
-      setTimeout(() => setCopiedAmount(false), 2000);
+
+      // Clear previous timeout before setting new one
+      if (copiedAmountTimeoutRef.current) {
+        clearTimeout(copiedAmountTimeoutRef.current);
+      }
+
+      // Set new timeout with proper cleanup
+      copiedAmountTimeoutRef.current = setTimeout(() => setCopiedAmount(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
       toast.error('Не удалось скопировать сумму');

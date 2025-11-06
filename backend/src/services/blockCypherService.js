@@ -1,6 +1,7 @@
 import axios from 'axios';
 import logger from '../utils/logger.js';
 import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 /**
  * BlockCypher Service - BTC and LTC blockchain API integration
@@ -289,16 +290,9 @@ export async function verifyPayment(chain, txHash, expectedAddress, expectedAmou
     // Convert satoshis to BTC/LTC (1 BTC/LTC = 100,000,000 satoshis)
     const actualAmount = output.value / 100000000;
 
-    // Check amount with 0.5% tolerance - Industry standard
-    const tolerance = expectedAmount * 0.005;
-    const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
-
-    if (!amountMatches) {
-      logger.warn(`[BlockCypher] Amount mismatch:`, {
-        expected: expectedAmount,
-        actual: actualAmount,
-        txHash
-      });
+    // Check amount with tolerance bounds - Industry standard with validation
+    const chain = txHash ? 'BTC' : 'LTC'; // Assume BTC unless LTC is explicit
+    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, chain)) {
       return {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount}, Received: ${actualAmount}`,

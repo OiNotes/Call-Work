@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, memo, useMemo, useCallback } from 'react';
+import { useState, memo, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useStore } from '../../store/useStore';
 import { useToast } from '../../hooks/useToast';
@@ -31,6 +31,16 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
 
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const addedTimeoutRef = useRef(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (addedTimeoutRef.current) {
+        clearTimeout(addedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const isAvailable = product.isAvailable ?? product.is_available ?? true;
   const stock = product.stock ?? product.stock_quantity ?? 0;
@@ -67,7 +77,14 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
     triggerHaptic('success');
     addToCart(product);
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
+
+    // Clear previous timeout before setting new one
+    if (addedTimeoutRef.current) {
+      clearTimeout(addedTimeoutRef.current);
+    }
+
+    // Set new timeout with proper cleanup
+    addedTimeoutRef.current = setTimeout(() => setJustAdded(false), 1500);
   }, [isDisabled, toast, triggerHaptic, addToCart, product]);
 
   const handlePreorderClick = useCallback((event) => {

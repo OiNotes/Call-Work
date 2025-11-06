@@ -1,6 +1,7 @@
 import axios from 'axios';
 import logger from '../utils/logger.js';
 import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 /**
  * Etherscan Service - Ethereum blockchain API integration
@@ -406,16 +407,8 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
     // Convert wei to ETH
     const actualAmount = parseInt(tx.value, 16) / 1e18;
 
-    // Check amount with 0.5% tolerance - Industry standard
-    const tolerance = expectedAmount * 0.005;
-    const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
-
-    if (!amountMatches) {
-      logger.warn(`[Etherscan] Amount mismatch:`, {
-        expected: expectedAmount,
-        actual: actualAmount,
-        txHash
-      });
+    // Check amount with tolerance bounds - Industry standard with validation
+    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, 'ETH')) {
       return {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${actualAmount} ETH`,
@@ -525,16 +518,8 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
     // Decode amount (USDT has 6 decimals)
     const actualAmount = parseInt(transferLog.data, 16) / 1e6;
 
-    // Check amount with 0.5% tolerance - Industry standard
-    const tolerance = expectedAmount * 0.005;
-    const amountMatches = Math.abs(actualAmount - expectedAmount) <= tolerance;
-
-    if (!amountMatches) {
-      logger.warn(`[Etherscan] USDT amount mismatch:`, {
-        expected: expectedAmount,
-        actual: actualAmount,
-        txHash
-      });
+    // Check amount with tolerance bounds - Industry standard with validation
+    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, 'USDT')) {
       return {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${actualAmount} USDT`,

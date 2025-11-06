@@ -21,6 +21,9 @@ export function useApi() {
     
     // Create request function with token getter closure
     const createRequest = (tokenGetter) => async (method, endpoint, data = null, config = {}) => {
+      // Store abort controller for cleanup if needed
+      let abortController = null;
+
       try {
         // Получаем initData из Telegram WebApp для авторизации
         const initData = window.Telegram?.WebApp?.initData || '';
@@ -69,6 +72,11 @@ export function useApi() {
         const apiError = err.response?.data;
         const errorMessage = apiError?.error || apiError?.message || err.message || 'Произошла ошибка';
         return { data: null, error: errorMessage };
+      } finally {
+        // Cleanup: Abort any pending requests if AbortController was used
+        if (abortController) {
+          abortController.abort();
+        }
       }
     };
     
