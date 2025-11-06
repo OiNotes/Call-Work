@@ -23,7 +23,35 @@ const enterShopId = async (ctx) => {
   try {
     logger.info('follow_create_step:shop_id', { userId: ctx.from.id });
 
+    // Check token first
+    if (!ctx.session.token) {
+      await smartMessage.send(ctx, { text: generalMessages.authorizationRequired, keyboard: successButtons });
+      return ctx.scene.leave();
+    }
+
+    // FIX P1-BOT-018: Check follow limit EARLY before user enters shop ID
+    // This provides better UX - show limit error immediately instead of after user fills in details
+    try {
+      const limit = await followApi.checkFollowLimit(ctx.session.shopId, ctx.session.token);
+      if (limit.reached) {
         await smartMessage.send(ctx, {
+          text: followMessages.createLimitReached(limit.count, limit.limit),
+          keyboard: successButtons
+        });
+        logger.warn('follow_create_limit_reached_early', {
+          userId: ctx.from.id,
+          shopId: ctx.session.shopId,
+          count: limit.count,
+          limit: limit.limit
+        });
+        return ctx.scene.leave();
+      }
+    } catch (error) {
+      logger.error('Error checking follow limit at start:', error);
+      // Continue anyway - backend will catch it during creation
+    }
+
+    await smartMessage.send(ctx, {
       text: followMessages.createEnterId,
       keyboard: cancelButton
     });
@@ -100,15 +128,8 @@ const selectMode = async (ctx) => {
       logger.error('Error validating circular dependency:', error);
     }
 
-    try {
-      const limit = await followApi.checkFollowLimit(ctx.session.shopId, ctx.session.token);
-      if (limit.reached) {
-        await smartMessage.send(ctx, { text: followMessages.createLimitReached(limit.count, limit.limit), keyboard: successButtons });
-        return ctx.scene.leave();
-      }
-    } catch (error) {
-      logger.error('Error checking follow limit:', error);
-    }
+    // NOTE: Follow limit is now checked early in enterShopId step (P1-BOT-018)
+    // No need to check again here
 
     ctx.wizard.state.sourceShopId = sourceShopId;
 
