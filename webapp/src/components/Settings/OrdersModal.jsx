@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
-import { useShopApi } from '../../hooks/useApi';
+import { useApi } from '../../hooks/useApi';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useBackButton } from '../../hooks/useBackButton';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -114,10 +114,11 @@ function OrderCard({ order }) {
 
 // Основной компонент модалки
 export default function OrdersModal({ isOpen, onClose }) {
-  const { getMyOrders, loading } = useShopApi();
+  const { get } = useApi();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Используем Telegram BackButton API для закрытия модалки
@@ -127,12 +128,17 @@ export default function OrdersModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (signal) => {
     triggerHaptic('light');
-    const { data, error } = await getMyOrders();
+
+    // ✅ FIX: Use api.get directly to support signal parameter
+    const { data, error } = await get('/orders/my', { signal });
+
+    if (signal?.aborted) return { status: 'aborted' };
 
     if (error) {
       setError(error);
+      return { status: 'error' };
     } else {
       // Backend возвращает { success: true, data: [...orders] }
       // useApi оборачивает в { data: response.data, error: null }
@@ -142,16 +148,34 @@ export default function OrdersModal({ isOpen, onClose }) {
         console.error('[OrdersModal] Invalid data format:', data);
         setError('Неверный формат данных заказов');
         setOrders([]);
-        return;
+        return { status: 'error' };
       }
       setOrders(ordersList);
+      return { status: 'success' };
     }
-  }, [getMyOrders, triggerHaptic]);
+  }, [get, triggerHaptic]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadOrders();
-    }
+    if (!isOpen) return;
+
+    setLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+
+    loadOrders(controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted && result?.status === 'error') {
+          console.error('[OrdersModal] Failed to load orders');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [isOpen, loadOrders]);
 
   return (

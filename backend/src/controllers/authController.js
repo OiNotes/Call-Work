@@ -46,7 +46,7 @@ export const authController = {
       const token = jwt.sign(
         {
           id: user.id,
-          telegramId: user.telegram_id,
+          telegram_id: user.telegram_id,
           username: user.username,
           jti: crypto.randomBytes(16).toString('hex')
         },
@@ -60,11 +60,12 @@ export const authController = {
           token,
           user: {
             id: user.id,
-            telegramId: user.telegram_id,
+            telegram_id: user.telegram_id,
             username: user.username,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            createdAt: user.created_at
+            first_name: user.first_name,
+            last_name: user.last_name,
+            selected_role: user.selected_role,
+            created_at: user.created_at
           }
         }
       });
@@ -125,7 +126,7 @@ export const authController = {
           username: user.username,
           first_name: user.first_name,
           last_name: user.last_name,
-          selected_role: user.selected_role,  // ✅ Добавлено для восстановления роли
+          selected_role: user.selected_role,
           created_at: user.created_at
         }
       });
@@ -199,11 +200,12 @@ export const authController = {
         success: true,
         data: {
           id: user.id,
-          telegramId: user.telegram_id,
+          telegram_id: user.telegram_id,
           username: user.username,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          updatedAt: user.updated_at
+          first_name: user.first_name,
+          last_name: user.last_name,
+          selected_role: user.selected_role,
+          updated_at: user.updated_at
         }
       });
 

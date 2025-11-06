@@ -38,8 +38,13 @@ export const userQueries = {
   },
 
   // Create new user
+  // BACKWARD COMPATIBLE: accepts both camelCase and snake_case
   create: async (userData) => {
-    const { telegramId, username, firstName, lastName } = userData;
+    const telegramId = userData.telegram_id || userData.telegramId;
+    const username = userData.username;
+    const firstName = userData.first_name || userData.firstName;
+    const lastName = userData.last_name || userData.lastName;
+
     const result = await query(
       `INSERT INTO users (telegram_id, username, first_name, last_name)
        VALUES ($1, $2, $3, $4)
@@ -50,8 +55,12 @@ export const userQueries = {
   },
 
   // Update user
+  // BACKWARD COMPATIBLE: accepts both camelCase and snake_case
   update: async (id, userData) => {
-    const { username, firstName, lastName } = userData;
+    const username = userData.username;
+    const firstName = userData.first_name || userData.firstName;
+    const lastName = userData.last_name || userData.lastName;
+
     const result = await query(
       `UPDATE users
        SET username = COALESCE($2, username),

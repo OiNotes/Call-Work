@@ -406,62 +406,63 @@ export default function WalletsModal({ isOpen, onClose }) {
   }, [alert, put, shop, syncWalletState, t]);
 
   const handleSaveWallets = useCallback(async () => {
-    // Prevent double-click with synchronous check
-    if (saving) {
+    // Closure-based lock (не React state чтобы не было re-render)
+    if (handleSaveWallets.isProcessing) {
       console.log('[WalletsModal] Already saving, ignoring duplicate request');
       return;
     }
-    setSaving(true);
-    
+    handleSaveWallets.isProcessing = true;
+
     try {
+      setSaving(true);
+
       if (!shop) {
         await alert(t('wallet.shopRequired'));
         return;
       }
 
-    if (!hasValidAddress) {
-      await alert(t('wallet.invalidAll'));
-      return;
-    }
+      if (!hasValidAddress) {
+        await alert(t('wallet.invalidAll'));
+        return;
+      }
 
-    const payload = {};
-    if (isValidBTC) {
-      payload.wallet_btc = btcAddress.trim();
-    }
-    if (isValidETH) {
-      payload.wallet_eth = ethAddress.trim();
-    }
-    if (isValidUSDT) {
-      payload.wallet_usdt = usdtAddress.trim();
-    }
-    if (isValidLTC) {
-      payload.wallet_ltc = ltcAddress.trim();
-    }
+      const payload = {};
+      if (isValidBTC) {
+        payload.wallet_btc = btcAddress.trim();
+      }
+      if (isValidETH) {
+        payload.wallet_eth = ethAddress.trim();
+      }
+      if (isValidUSDT) {
+        payload.wallet_usdt = usdtAddress.trim();
+      }
+      if (isValidLTC) {
+        payload.wallet_ltc = ltcAddress.trim();
+      }
 
-    if (!Object.keys(payload).length) {
-      await alert(t('wallet.invalidAddresses'));
-      return;
-    }
+      if (!Object.keys(payload).length) {
+        await alert(t('wallet.invalidAddresses'));
+        return;
+      }
 
-    setSaving(true);
-    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, payload);
+      const { data: response, error } = await put(`/shops/${shop.id}/wallets`, payload);
 
-    if (error) {
-      await alert(t('wallet.saveError'));
-      setSaving(false);
-      return;
-    }
+      if (error) {
+        await alert(t('wallet.saveError'));
+        return;
+      }
 
-    triggerHaptic('success');
-    syncWalletState(response);
-    resetForm();
+      triggerHaptic('success');
+      syncWalletState(response);
+      resetForm();
     } catch (err) {
       console.error('[WalletsModal] Error saving wallets:', err);
       await alert(t('wallet.saveError'));
     } finally {
       setSaving(false);
+      handleSaveWallets.isProcessing = false; // Unlock в finally block
     }
-  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress, saving]);
+  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress]);
 
   return (
     <AnimatePresence>

@@ -47,14 +47,10 @@ export default function Catalog() {
   const [activeSection, setActiveSection] = useState('stock');
   const [preorderProduct, setPreorderProduct] = useState(null);
 
-  // Автоматически установить myShop как displayShop при первой загрузке
-  useEffect(() => {
-    if (myShop && !currentShop) {
-      // Товары автоматически загрузятся через предыдущий useEffect
-    }
-  }, [myShop, currentShop]);
+  // ✅ REMOVED: Unnecessary empty useEffect - logic handled in main useEffect
 
-  // Загрузить свой магазин
+  // ✅ FIX: Stable callback with only 'get' dependency (from useApi hook)
+  // Accepts AbortSignal for cleanup on unmount/re-render
   const loadMyShop = useCallback(async (signal) => {
     console.log('[Catalog] 🔵 START loadMyShop', { aborted: signal?.aborted });
 
@@ -62,6 +58,7 @@ export default function Catalog() {
 
     console.log('[Catalog] 🔵 loadMyShop response:', { data, error: apiError, aborted: signal?.aborted });
 
+    // ✅ Check abort signal to prevent race conditions
     if (signal?.aborted) {
       console.log('[Catalog] 🟡 loadMyShop ABORTED');
       return { status: 'aborted' };
@@ -84,7 +81,8 @@ export default function Catalog() {
 
 
 
-  // Загрузить товары при изменении магазина
+  // ✅ FIX: Stable callback with only 'get' dependency
+  // Uses getState() to avoid setProducts in dependencies (prevents unnecessary re-renders)
   const loadProducts = useCallback(async (shopId, signal) => {
     console.log('[Catalog] 🔵 START loadProducts', { shopId, aborted: signal?.aborted });
 
@@ -95,6 +93,7 @@ export default function Catalog() {
 
     console.log('[Catalog] 🔵 loadProducts response:', { data, error: apiError, aborted: signal?.aborted });
 
+    // ✅ Check abort signal to prevent race conditions
     if (signal?.aborted) {
       console.log('[Catalog] 🟡 loadProducts ABORTED');
       return { status: 'aborted' };
@@ -113,6 +112,7 @@ export default function Catalog() {
     return { status: 'success' };
   }, [get]); // ✅ FIX: Only depend on stable 'get' from useApi
 
+  // ✅ FIX: Main data loading effect with stable dependencies
   useEffect(() => {
     console.log('[Catalog] 🔵 useEffect triggered', { token: !!token, currentShop });
 
@@ -159,11 +159,13 @@ export default function Catalog() {
         }
       });
 
+    // ✅ FIX: Cleanup function aborts pending requests on unmount or deps change
+    // Prevents race conditions when component unmounts or re-renders
     return () => {
       console.log('[Catalog] 🔴 CLEANUP - aborting controller');
       controller.abort();
     };
-  }, [currentShop, token, loadMyShop, loadProducts]);
+  }, [currentShop, token, loadMyShop, loadProducts]); // ✅ Dependencies are stable (useCallback wrapped)
 
 
 
@@ -373,7 +375,11 @@ export default function Catalog() {
           </svg>
           <h3 className="text-lg font-semibold text-gray-400 mb-2">{error}</h3>
           <motion.button
-            onClick={() => loadProducts(displayShop.id)}
+            onClick={() => {
+              // ✅ FIX: Trigger reload through currentShop change to use proper AbortController
+              setError(null);
+              setCurrentShop(displayShop);
+            }}
             className="bg-orange-primary hover:bg-orange-light text-white font-semibold px-6 py-3 rounded-xl transition-colors mt-4"
             whileTap={{ scale: 0.95 }}
           >

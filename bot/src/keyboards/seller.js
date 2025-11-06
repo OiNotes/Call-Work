@@ -14,9 +14,9 @@ export const sellerMenu = (activeOrdersCount = 0, options = {}) => {
     )]
   ];
 
-  if (hasFollows) {
-    buttons.push([Markup.button.callback(buttonText.manageFollows, 'seller:follows')]);
-  }
+  // P2-7 FIX: Always show "Manage Follows" button regardless of hasFollows
+  // This ensures sellers can always add their FIRST follow
+  buttons.push([Markup.button.callback(buttonText.manageFollows, 'seller:follows')]);
 
   buttons.push([Markup.button.callback(buttonText.orderHistory, 'seller:order_history')]);
   buttons.push([Markup.button.callback(buttonText.tools, 'seller:tools')]);

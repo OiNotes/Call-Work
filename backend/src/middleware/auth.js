@@ -32,7 +32,7 @@ export const verifyToken = async (req, res, next) => {
     // Attach user data to request
     req.user = {
       id: decoded.id,
-      telegramId: decoded.telegramId,
+      telegram_id: decoded.telegram_id,
       username: decoded.username
     };
 
@@ -82,7 +82,7 @@ export const optionalAuth = async (req, res, next) => {
     // Attach user data to request
     req.user = {
       id: decoded.id,
-      telegramId: decoded.telegramId,
+      telegram_id: decoded.telegram_id,
       username: decoded.username
     };
 
