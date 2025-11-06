@@ -19,6 +19,7 @@ import {
   handleOrderHistoryJump
 } from './orders.js';
 import { showSellerToolsMenu } from '../../utils/sellerNavigation.js';
+import { validateShopBeforeScene } from '../../utils/sceneValidation.js';
 
 const { seller: sellerMessages, general: generalMessages } = messages;
 
@@ -314,16 +315,15 @@ const handleCreateShop = async (ctx) => {
 
 /**
  * Handle add product action
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 const handleAddProduct = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Check if user has shop
-    if (!ctx.session.shopId) {
-      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
-      return;
-    }
+    // P2-9 FIX: Validate shop exists in database
+    const isValid = await validateShopBeforeScene(ctx, 'addProduct');
+    if (!isValid) return;
 
     // Enter addProduct scene
     await ctx.scene.enter('addProduct');
@@ -341,16 +341,15 @@ const handleAddProduct = async (ctx) => {
 
 /**
  * Handle manage wallets action
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 const handleWallets = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Check if user has shop
-    if (!ctx.session.shopId) {
-      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
-      return;
-    }
+    // P2-9 FIX: Validate shop exists in database
+    const isValid = await validateShopBeforeScene(ctx, 'manageWallets');
+    if (!isValid) return;
 
     // Enter manageWallets scene
     await ctx.scene.enter('manageWallets');
@@ -381,13 +380,19 @@ export const setupSellerHandlers = (bot) => {
 
   // Active orders management
   bot.action('seller:active_orders', handleActiveOrders);
+  // P2-9 FIX: Validate shop before entering markOrdersShipped scene
   bot.action('seller:mark_shipped', async (ctx) => {
     try {
-      await ctx.scene.enter('markOrdersShipped');
       await ctx.answerCbQuery();
+
+      // P2-9 FIX: Validate shop exists in database
+      const isValid = await validateShopBeforeScene(ctx, 'markOrdersShipped');
+      if (!isValid) return;
+
+      await ctx.scene.enter('markOrdersShipped');
     } catch (error) {
       logger.error('Error entering markOrdersShipped scene:', error);
-      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
+      await ctx.reply(generalMessages.actionFailed, await getSellerMenu(ctx));
     }
   });
   bot.action(/^order:ship:(\d+)$/, handleMarkShipped);
@@ -416,20 +421,16 @@ export const setupSellerHandlers = (bot) => {
   bot.action(/^workers:remove:(\d+)$/, handleWorkerRemove);
   bot.action(/^workers:remove:confirm:(\d+)$/, handleWorkerRemoveConfirm);
 
+  // P2-9 FIX: Validate shop before entering migrate_channel scene
   bot.action('seller:migrate_channel', async (ctx) => {
     try {
       await ctx.answerCbQuery();
 
-      if (!ctx.session.shopId) {
-        await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
-        return;
-      }
+      // P2-9 FIX: Validate shop exists in database
+      const isValid = await validateShopBeforeScene(ctx, 'migrate_channel');
+      if (!isValid) return;
 
-      if (!ctx.session.token) {
-        await ctx.reply(generalMessages.authorizationRequired, sellerMenu(0, { hasFollows: ctx.session?.hasFollows }));
-        return;
-      }
-
+      // Check ownership (only owner can migrate channel)
       let isOwner = ctx.session.isShopOwner;
       if (typeof isOwner !== 'boolean') {
         try {
@@ -459,23 +460,35 @@ export const setupSellerHandlers = (bot) => {
 
   // Channel migration (PRO feature)
   // Subscription management
+  // P2-9 FIX: Validate shop before entering pay_subscription scene
   bot.action('subscription:pay', async (ctx) => {
     try {
-      await ctx.scene.enter('pay_subscription');
       await ctx.answerCbQuery();
+
+      // P2-9 FIX: Validate shop exists in database
+      const isValid = await validateShopBeforeScene(ctx, 'pay_subscription');
+      if (!isValid) return;
+
+      await ctx.scene.enter('pay_subscription');
     } catch (error) {
       logger.error('Error entering pay_subscription scene:', error);
-      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
+      await ctx.reply(generalMessages.actionFailed, await getSellerMenu(ctx));
     }
   });
 
+  // P2-9 FIX: Validate shop before entering upgrade_shop scene
   bot.action('subscription:upgrade', async (ctx) => {
     try {
-      await ctx.scene.enter('upgrade_shop');
       await ctx.answerCbQuery();
+
+      // P2-9 FIX: Validate shop exists in database
+      const isValid = await validateShopBeforeScene(ctx, 'upgrade_shop');
+      if (!isValid) return;
+
+      await ctx.scene.enter('upgrade_shop');
     } catch (error) {
       logger.error('Error entering upgrade_shop scene:', error);
-      await ctx.answerCbQuery(generalMessages.actionFailed, { show_alert: true });
+      await ctx.reply(generalMessages.actionFailed, await getSellerMenu(ctx));
     }
   });
 
@@ -679,15 +692,15 @@ const handleWorkers = async (ctx) => {
 
 /**
  * Handle add worker action
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 const handleWorkersAdd = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    if (!ctx.session.shopId) {
-      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
-      return;
-    }
+    // P2-9 FIX: Validate shop exists in database
+    const isValid = await validateShopBeforeScene(ctx, 'manageWorkers');
+    if (!isValid) return;
 
     // Enter manageWorkers scene
     await ctx.scene.enter('manageWorkers');

@@ -318,6 +318,53 @@ async function verifyShopOwnership(shopId, userId) {
 }
 
 /**
+ * Check if user has active subscription to shop (buyer view)
+ * GET /api/subscriptions/check/:shopId
+ *
+ * Response: { data: { subscribed: boolean, subscription: object|null } }
+ */
+async function checkSubscription(req, res) {
+  try {
+    const shopId = parseInt(req.params.shopId, 10);
+    const userId = req.user.id;
+
+    // Validate shopId
+    if (!shopId || isNaN(shopId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid shop ID'
+      });
+    }
+
+    // Import subscriptionQueries
+    const { subscriptionQueries } = await import('../models/db.js');
+
+    // Check if user has active subscription to this shop
+    const subscription = await subscriptionQueries.findByUserAndShop(userId, shopId);
+
+    return res.json({
+      success: true,
+      data: {
+        subscribed: Boolean(subscription),
+        subscription: subscription || null
+      }
+    });
+  } catch (error) {
+    logger.error('[SubscriptionController] Error checking subscription:', {
+      error: error.message,
+      stack: error.stack,
+      shopId: req.params.shopId,
+      userId: req.user?.id
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check subscription status'
+    });
+  }
+}
+
+/**
  * Get user subscriptions (buyer view)
  * GET /api/subscriptions
  */
@@ -683,6 +730,7 @@ export {
   getStatus,
   getHistory,
   getPricing,
+  checkSubscription,
   getUserSubscriptions,
   getMyShopSubscriptions,
   generatePaymentInvoice,

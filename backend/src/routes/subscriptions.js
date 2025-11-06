@@ -33,6 +33,14 @@ router.post(
 );
 
 /**
+ * GET /api/subscriptions/check/:shopId
+ * Check if user has active subscription to shop (buyer view)
+ *
+ * Returns: { data: { subscribed: boolean, subscription: object|null } }
+ */
+router.get('/check/:shopId', subscriptionController.checkSubscription);
+
+/**
  * GET /api/subscriptions
  * Get user subscriptions (buyer view)
  *

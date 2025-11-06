@@ -2,6 +2,7 @@ import { productQueries } from '../models/db.js';
 import { shopFollowQueries } from '../models/shopFollowQueries.js';
 import { syncedProductQueries } from '../models/syncedProductQueries.js';
 import logger from '../utils/logger.js';
+import { getClient } from '../config/database.js';
 
 /**
  * Product Sync Service
@@ -254,29 +255,65 @@ export async function syncAllProductsForFollow(followId) {
  * @returns {Promise<number>} Number of products updated
  */
 export async function updateMarkupForFollow(followId, newMarkupPercentage) {
+  const client = await getClient();
+
   try {
     const syncedProducts = await syncedProductQueries.findByFollowId(followId);
-    
+
     // Filter synced products only
     const productsToUpdate = syncedProducts.filter(sync => sync.conflict_status === 'synced');
-    
-    // OPTIMIZED: Batch update with Promise.all (parallel execution)
-    await Promise.all(
-      productsToUpdate.map(async (sync) => {
-        const newPrice = calculatePriceWithMarkup(sync.source_product_price, newMarkupPercentage);
-        await Promise.all([
-          productQueries.update(sync.synced_product_id, { price: newPrice }),
-          syncedProductQueries.updateLastSynced(sync.id)
-        ]);
-      })
-    );
-    
+
+    if (productsToUpdate.length === 0) {
+      logger.info(`No products to update for follow ${followId}`);
+      return 0;
+    }
+
+    // Begin transaction with row-level locks to prevent race conditions
+    await client.query('BEGIN');
+    logger.info(`updateMarkupForFollow: Transaction started for follow ${followId}`, { productsCount: productsToUpdate.length });
+
+    // Sequential update with FOR UPDATE locks (not parallel to avoid deadlocks)
+    for (const sync of productsToUpdate) {
+      // Lock product row
+      await client.query(
+        'SELECT id FROM products WHERE id = $1 FOR UPDATE',
+        [sync.synced_product_id]
+      );
+
+      // Update product price
+      const newPrice = calculatePriceWithMarkup(sync.source_product_price, newMarkupPercentage);
+      await client.query(
+        'UPDATE products SET price = $1, updated_at = NOW() WHERE id = $2',
+        [newPrice, sync.synced_product_id]
+      );
+
+      // Update last synced timestamp
+      await client.query(
+        'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
+        [sync.id]
+      );
+    }
+
+    // Commit transaction
+    await client.query('COMMIT');
     const count = productsToUpdate.length;
-    logger.info(`Updated markup for follow ${followId}: ${count} products updated`);
+    logger.info(`updateMarkupForFollow: Transaction committed for follow ${followId}`, { productsUpdated: count });
     return count;
   } catch (error) {
+    // Rollback on error
+    try {
+      await client.query('ROLLBACK');
+      logger.warn(`updateMarkupForFollow: Transaction rolled back for follow ${followId}`, { error: error.message });
+    } catch (rollbackError) {
+      logger.error(`updateMarkupForFollow: Rollback failed for follow ${followId}`, { error: rollbackError.message });
+    }
+
     logger.error(`Error updating markup for follow ${followId}:`, error);
     throw error;
+  } finally {
+    // Always release client
+    client.release();
+    logger.debug(`updateMarkupForFollow: Client released for follow ${followId}`);
   }
 }
 
@@ -288,41 +325,86 @@ export async function updateMarkupForFollow(followId, newMarkupPercentage) {
 export async function runPeriodicSync() {
   try {
     const stats = { updated: 0, conflicts: 0, errors: 0, skipped: 0 };
-    
+
     // Find products that haven't been synced in last 5 minutes
     const staleProducts = await syncedProductQueries.findStaleProducts(5);
-    
+
     logger.info(`Periodic sync: found ${staleProducts.length} stale products`);
-    
+
+    // Process each product in its own transaction with row-level locks
     for (const sync of staleProducts) {
+      const client = await getClient();
+
       try {
+        // Begin transaction for this product sync
+        await client.query('BEGIN');
+
+        // Lock the synced product row to prevent concurrent updates
+        await client.query(
+          'SELECT id FROM products WHERE id = $1 FOR UPDATE',
+          [sync.synced_product_id]
+        );
+
         // Check if source differs from synced
         const sourcePrice = parseFloat(sync.source_price);
         const syncedPrice = parseFloat(sync.synced_price);
         const expectedPrice = calculatePriceWithMarkup(sourcePrice, sync.markup_percentage);
-        
+
         const priceChanged = Math.abs(syncedPrice - expectedPrice) > 0.01;
         const stockChanged = sync.source_stock !== sync.synced_stock;
         const activeChanged = sync.source_active !== sync.synced_active;
-        
+
         if (priceChanged || stockChanged || activeChanged) {
-          await updateSyncedProduct(sync.id);
+          // Update synced product with direct SQL (within transaction)
+          await client.query(
+            `UPDATE products
+             SET price = $1,
+                 stock_quantity = $2,
+                 is_active = $3,
+                 updated_at = NOW()
+             WHERE id = $4`,
+            [expectedPrice, sync.source_stock, sync.source_active, sync.synced_product_id]
+          );
+
+          // Update last synced timestamp
+          await client.query(
+            'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
+            [sync.id]
+          );
+
           stats.updated++;
+          logger.debug(`Synced product ${sync.synced_product_id} updated from source ${sync.source_product_id}`);
         } else {
           // Just update timestamp
-          await syncedProductQueries.updateLastSynced(sync.id);
+          await client.query(
+            'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
+            [sync.id]
+          );
           stats.skipped++;
         }
+
+        // Commit transaction
+        await client.query('COMMIT');
       } catch (error) {
+        // Rollback on error
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          logger.error(`Rollback failed for synced product ${sync.id}:`, rollbackError);
+        }
+
         if (error.message && error.message.includes('conflict')) {
           stats.conflicts++;
         } else {
           stats.errors++;
           logger.error(`Error syncing product ${sync.id}:`, error);
         }
+      } finally {
+        // Always release client
+        client.release();
       }
     }
-    
+
     logger.info(`Periodic sync completed:`, stats);
     return stats;
   } catch (error) {

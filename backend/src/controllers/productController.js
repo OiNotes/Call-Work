@@ -475,6 +475,8 @@ export const productController = {
    * Apply bulk discount to all products in a shop
    */
   applyBulkDiscount: async (req, res) => {
+    const client = await getClient();
+
     try {
       const { percentage, type, duration, excluded_product_ids = [] } = req.body;
       const shopId = req.body.shopId || req.user?.shopId;
@@ -486,7 +488,7 @@ export const productController = {
           error: 'Shop ID required'
         });
       }
-      
+
       // Validate excluded_product_ids is array
       if (!Array.isArray(excluded_product_ids)) {
         return res.status(400).json({
@@ -525,15 +527,21 @@ export const productController = {
         });
       }
 
-      // Apply discount
+      // Begin transaction for bulk discount with row-level locks
+      await client.query('BEGIN');
+      logger.info('applyBulkDiscount: Transaction started', { shopId, percentage, type });
+
+      // Apply discount with transaction client
       const result = await productQueries.applyBulkDiscount(shopId, {
         percentage,
         type,
         duration: duration || null,
         excludedProductIds: excluded_product_ids
-      });
+      }, client);
 
-      logger.info('Bulk discount applied', {
+      // Commit transaction
+      await client.query('COMMIT');
+      logger.info('applyBulkDiscount: Transaction committed', {
         shopId,
         percentage,
         type,
@@ -551,6 +559,14 @@ export const productController = {
       });
 
     } catch (error) {
+      // Rollback on error
+      try {
+        await client.query('ROLLBACK');
+        logger.warn('applyBulkDiscount: Transaction rolled back', { error: error.message });
+      } catch (rollbackError) {
+        logger.error('applyBulkDiscount: Rollback failed', { error: rollbackError.message });
+      }
+
       logger.error('Apply bulk discount error', {
         error: error.message,
         stack: error.stack
@@ -568,6 +584,10 @@ export const productController = {
         success: false,
         error: 'Failed to apply bulk discount'
       });
+    } finally {
+      // Always release client
+      client.release();
+      logger.debug('applyBulkDiscount: Client released');
     }
   },
 
@@ -575,6 +595,8 @@ export const productController = {
    * Remove bulk discount from all products in a shop
    */
   removeBulkDiscount: async (req, res) => {
+    const client = await getClient();
+
     try {
       const shopId = req.body.shopId || req.user?.shopId;
 
@@ -594,9 +616,15 @@ export const productController = {
         });
       }
 
-      const products = await productQueries.removeBulkDiscount(shopId);
+      // Begin transaction for bulk discount removal with row-level locks
+      await client.query('BEGIN');
+      logger.info('removeBulkDiscount: Transaction started', { shopId });
 
-      logger.info('Bulk discount removed', {
+      const products = await productQueries.removeBulkDiscount(shopId, client);
+
+      // Commit transaction
+      await client.query('COMMIT');
+      logger.info('removeBulkDiscount: Transaction committed', {
         shopId,
         productsCount: products.length
       });
@@ -610,6 +638,14 @@ export const productController = {
       });
 
     } catch (error) {
+      // Rollback on error
+      try {
+        await client.query('ROLLBACK');
+        logger.warn('removeBulkDiscount: Transaction rolled back', { error: error.message });
+      } catch (rollbackError) {
+        logger.error('removeBulkDiscount: Rollback failed', { error: rollbackError.message });
+      }
+
       logger.error('Remove bulk discount error', {
         error: error.message
       });
@@ -618,6 +654,10 @@ export const productController = {
         success: false,
         error: 'Failed to remove bulk discount'
       });
+    } finally {
+      // Always release client
+      client.release();
+      logger.debug('removeBulkDiscount: Client released');
     }
   },
 
@@ -685,8 +725,12 @@ export const productController = {
             throw new Error(error);
           }
 
-          // Check that product belongs to shop
-          const product = await productQueries.findById(productId);
+          // Check that product belongs to shop (with row-level lock to prevent race conditions)
+          const productResult = await client.query(
+            'SELECT id, shop_id FROM products WHERE id = $1 FOR UPDATE',
+            [productId]
+          );
+          const product = productResult.rows[0];
           if (!product) {
             const error = `Product not found: ${productId}`;
             logger.warn('bulkUpdateProducts: product not found', { productId, userId });

@@ -251,8 +251,12 @@ export const shopApi = {
   },
 
   // Get shop by ID
-  async getShop(shopId) {
-    const { data } = await api.get(`/shops/${shopId}`);
+  async getShop(shopId, token = null) {
+    const config = {};
+    if (token) {
+      config.headers = { Authorization: `Bearer ${token}` };
+    }
+    const { data } = await api.get(`/shops/${shopId}`, config);
     // Unwrap response: return data.data (shop object) instead of wrapper
     return data.data || data;
   },

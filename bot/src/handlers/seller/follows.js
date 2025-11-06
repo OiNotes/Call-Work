@@ -4,6 +4,7 @@ import { followApi } from '../../utils/api.js';
 import { formatFollowDetail } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
 import { messages } from '../../texts/messages.js';
+import { validateShopBeforeScene } from '../../utils/sceneValidation.js';
 
 const { general: generalMessages, follows: followMessages } = messages;
 
@@ -129,18 +130,15 @@ export const handleViewFollows = async (ctx) => {
 
 /**
  * Start creating a follow
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 export const handleCreateFollow = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    if (!ctx.session.shopId) {
-      await ctx.reply(
-        generalMessages.shopRequired,
-        sellerMenuNoShop
-      );
-      return;
-    }
+    // P2-9 FIX: Validate shop exists in database
+    const isValid = await validateShopBeforeScene(ctx, 'createFollow');
+    if (!isValid) return;
 
     await ctx.scene.enter('createFollow');
   } catch (error) {
@@ -282,6 +280,7 @@ export const handleDeleteFollow = async (ctx) => {
 /**
  * Switch follow mode (Monitor ↔ Resell)
  * P1-BOT-003 FIX: Use scene for markup input to prevent race conditions
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 export const handleSwitchMode = async (ctx) => {
   try {
@@ -300,6 +299,10 @@ export const handleSwitchMode = async (ctx) => {
 
     // If switching to resell, need markup percentage - use scene
     if (newMode === 'resell') {
+      // P2-9 FIX: Validate shop exists before entering scene
+      const isValid = await validateShopBeforeScene(ctx, 'editFollowMarkup');
+      if (!isValid) return;
+
       await ctx.scene.enter('editFollowMarkup', {
         followId,
         pendingModeSwitch: 'resell'
@@ -334,6 +337,7 @@ export const handleSwitchMode = async (ctx) => {
 /**
  * Handle edit markup button click
  * P1-BOT-003 FIX: Use scene instead of inline handler to prevent race conditions
+ * P2-9 FIX: Validate shop existence before entering scene
  */
 export const handleEditMarkup = async (ctx) => {
   try {
@@ -345,6 +349,10 @@ export const handleEditMarkup = async (ctx) => {
       await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
+
+    // P2-9 FIX: Validate shop exists before entering scene
+    const isValid = await validateShopBeforeScene(ctx, 'editFollowMarkup');
+    if (!isValid) return;
 
     // Enter scene with followId in state
     await ctx.scene.enter('editFollowMarkup', { followId });

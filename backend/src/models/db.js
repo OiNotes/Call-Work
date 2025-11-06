@@ -454,7 +454,8 @@ export const productQueries = {
   },
 
   // Apply bulk discount to all active products in a shop
-  applyBulkDiscount: async (shopId, discountData) => {
+  // Optional client parameter for transaction support with row-level locks
+  applyBulkDiscount: async (shopId, discountData, client = null) => {
     const { percentage, type, duration, excludedProductIds = [] } = discountData;
 
     try {
@@ -476,8 +477,19 @@ export const productQueries = {
         params.push(...excludedProductIds);
       }
 
+      // Use client.query if transaction client provided, otherwise use pool query
+      const queryFn = client ? client.query.bind(client) : query;
+
+      // SELECT FOR UPDATE to lock rows before update (only when using transaction)
+      if (client) {
+        await queryFn(
+          `SELECT id FROM products WHERE ${whereClause} FOR UPDATE`,
+          params.slice(2) // Skip percentage and expiresAt params
+        );
+      }
+
       // Apply discount to matching products
-      const result = await query(
+      const result = await queryFn(
         `UPDATE products
          SET
            discount_percentage = $1::DECIMAL,
@@ -516,9 +528,21 @@ export const productQueries = {
   },
 
   // Remove bulk discount from all products in a shop
-  removeBulkDiscount: async (shopId) => {
+  // Optional client parameter for transaction support with row-level locks
+  removeBulkDiscount: async (shopId, client = null) => {
+    // Use client.query if transaction client provided, otherwise use pool query
+    const queryFn = client ? client.query.bind(client) : query;
+
+    // SELECT FOR UPDATE to lock rows before update (only when using transaction)
+    if (client) {
+      await queryFn(
+        `SELECT id FROM products WHERE shop_id = $1 AND discount_percentage > 0 FOR UPDATE`,
+        [shopId]
+      );
+    }
+
     // Remove discount and restore original_price
-    const result = await query(
+    const result = await queryFn(
       `UPDATE products
        SET
          discount_percentage = 0,
@@ -916,6 +940,21 @@ export const subscriptionQueries = {
       [userId, shopId]
     );
     return result.rows[0].exists;
+  },
+
+  // Find subscription by user and shop (for check endpoint)
+  findByUserAndShop: async (userId, shopId) => {
+    const result = await query(
+      `SELECT s.*, sh.name as shop_name, sh.description as shop_description,
+              u.username as shop_owner_username
+       FROM subscriptions s
+       JOIN shops sh ON s.shop_id = sh.id
+       JOIN users u ON sh.owner_id = u.id
+       WHERE s.user_id = $1 AND s.shop_id = $2 AND sh.is_active = true
+       LIMIT 1`,
+      [userId, shopId]
+    );
+    return result.rows[0] || null;
   },
 
   // Delete subscription
