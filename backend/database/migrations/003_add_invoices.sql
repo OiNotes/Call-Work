@@ -17,7 +17,7 @@ CREATE TABLE invoices (
   address_index INT NOT NULL,
   expected_amount DECIMAL(18, 8) NOT NULL CHECK (expected_amount > 0),
   currency VARCHAR(10) NOT NULL,
-  webhook_subscription_id VARCHAR(255),
+  tatum_subscription_id VARCHAR(255),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -29,7 +29,7 @@ COMMENT ON COLUMN invoices.chain IS 'Blockchain: BTC, ETH, USDT_ERC20, USDT_TRC2
 COMMENT ON COLUMN invoices.address IS 'Unique payment address generated from HD wallet';
 COMMENT ON COLUMN invoices.address_index IS 'Derivation index for HD wallet (m/44''/0''/0''/0/{index})';
 COMMENT ON COLUMN invoices.expected_amount IS 'Expected payment amount in crypto units';
-COMMENT ON COLUMN invoices.webhook_subscription_id IS 'Webhook subscription ID for payment monitoring (BlockCypher for BTC/LTC)';
+COMMENT ON COLUMN invoices.tatum_subscription_id IS 'Webhook subscription ID for payment monitoring (BlockCypher for BTC/LTC)';
 COMMENT ON COLUMN invoices.expires_at IS 'Invoice expiration time (typically 1 hour)';
 
 -- Indexes

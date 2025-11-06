@@ -136,8 +136,15 @@ export default function OrdersModal({ isOpen, onClose }) {
     } else {
       // Backend возвращает { success: true, data: [...orders] }
       // useApi оборачивает в { data: response.data, error: null }
-      // Поэтому нужно извлечь data.data
-      setOrders(data?.data || []);
+      // ✅ FIX: Safe array extraction with validation
+      const ordersList = Array.isArray(data?.data) ? data.data : [];
+      if (!Array.isArray(ordersList)) {
+        console.error('[OrdersModal] Invalid data format:', data);
+        setError('Неверный формат данных заказов');
+        setOrders([]);
+        return;
+      }
+      setOrders(ordersList);
     }
   }, [getMyOrders, triggerHaptic]);
 

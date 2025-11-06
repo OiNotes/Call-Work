@@ -288,29 +288,32 @@ export default function ProductsModal({ isOpen, onClose }) {
   const loadData = useCallback(async (signal) => {
     // 1. Load my shop
     const shopsRes = await fetchApi('/shops/my', { signal });
-    
+
     if (signal?.aborted) return { status: 'aborted' };
-    
-    if (!shopsRes.data || shopsRes.data.length === 0) {
+
+    // ✅ FIX: Safe array extraction with validation
+    const shops = Array.isArray(shopsRes?.data) ? shopsRes.data : [];
+    if (shops.length === 0) {
       return { status: 'error', error: 'Failed to load shop' };
     }
-    
-    const shop = shopsRes.data[0];
+
+    const shop = shops[0];
     setMyShop(shop);
-    
+
     // 2. Load products
     const productsRes = await fetchApi(`/products?shopId=${shop.id}`, { signal });
-    
+
     if (signal?.aborted) return { status: 'aborted' };
-    
+
+    // ✅ FIX: Already safe - keeping as is
     const items = Array.isArray(productsRes?.data) ? productsRes.data : [];
     setProducts(items.map(mapProduct));
-    
+
     // 3. Load limit status
     const limitRes = await fetchApi(`/products/limit-status/${shop.id}`, { signal });
-    
+
     if (signal?.aborted) return { status: 'aborted' };
-    
+
     setLimitStatus(limitRes);
     return { status: 'success' };
   }, [fetchApi, mapProduct]);

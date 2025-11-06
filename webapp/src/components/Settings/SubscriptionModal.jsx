@@ -178,27 +178,31 @@ export default function SubscriptionModal({ isOpen, onClose }) {
   const loadData = useCallback(async (signal) => {
     // 1. Load shops
     const shopsRes = await fetchApi('/shops/my', { signal });
-    
+
     if (signal?.aborted) return { status: 'aborted' };
-    
-    if (!shopsRes.data || shopsRes.data.length === 0) {
+
+    // ✅ FIX: Safe array extraction with validation
+    const shops = Array.isArray(shopsRes?.data) ? shopsRes.data : [];
+    if (shops.length === 0) {
       console.error('No shop found');
       return { status: 'error', error: 'Failed to load shops' };
     }
-    
-    const shop = shopsRes.data[0];
+
+    const shop = shops[0];
     setMyShop(shop);
-    
+
     // 2. Load subscription data in parallel
     const [statusRes, historyRes] = await Promise.all([
       fetchApi(`/subscriptions/status/${shop.id}`, { signal }),
       fetchApi(`/subscriptions/history/${shop.id}?limit=10`, { signal })
     ]);
-    
+
     if (signal?.aborted) return { status: 'aborted' };
-    
+
     setStatus(statusRes);
-    setHistory(historyRes.data || []);
+    // ✅ FIX: Safe array extraction
+    const historyList = Array.isArray(historyRes?.data) ? historyRes.data : [];
+    setHistory(historyList);
     
     // 3. Load pricing
     const pricingRes = await fetchApi('/subscriptions/pricing', { signal });

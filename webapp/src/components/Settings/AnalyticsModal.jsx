@@ -82,11 +82,17 @@ export default function AnalyticsModal({ isOpen, onClose }) {
         console.error('Analytics fetch error:', error);
         return { status: 'error', error };
       } else if (data?.success && data?.data) {
+        // ✅ FIX: Validate analytics data structure
+        const analyticsData = data.data;
+        if (!analyticsData || typeof analyticsData !== 'object') {
+          console.error('Invalid analytics data format:', analyticsData);
+          return { status: 'error', error: 'Неверный формат данных статистики' };
+        }
         console.info('[AnalyticsModal] fetch success', {
-          totalOrders: data.data.summary?.totalOrders,
-          topProducts: data.data.topProducts?.length,
+          totalOrders: analyticsData.summary?.totalOrders,
+          topProducts: analyticsData.topProducts?.length,
         });
-        setAnalytics(data.data);
+        setAnalytics(analyticsData);
         return { status: 'success' };
       } else {
         console.error('Unexpected API response:', data);

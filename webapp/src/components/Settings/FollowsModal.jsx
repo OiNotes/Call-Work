@@ -123,12 +123,8 @@ export default function FollowsModal({ isOpen, onClose }) {
 
       console.log('[FollowsModal] Raw shops response:', shopsRes);
 
-      let shopsList = [];
-      if (Array.isArray(shopsRes)) {
-        shopsList = shopsRes;
-      } else if (shopsRes && Array.isArray(shopsRes.data)) {
-        shopsList = shopsRes.data;
-      }
+      // ✅ FIX: Standardized safe array extraction
+      const shopsList = Array.isArray(shopsRes?.data) ? shopsRes.data : (Array.isArray(shopsRes) ? shopsRes : []);
 
       const shop = shopsList.length > 0 ? shopsList[0] : null;
       console.log('[FollowsModal] Parsed shop:', shop);
@@ -156,13 +152,8 @@ export default function FollowsModal({ isOpen, onClose }) {
       console.log('[FollowsModal] Follows response:', followsRes);
       console.log('[FollowsModal] Limit response:', limitRes);
 
-      // 4. Parse follows - simplified
-      let followsList = [];
-      if (Array.isArray(followsRes)) {
-        followsList = followsRes;
-      } else if (followsRes && Array.isArray(followsRes.data)) {
-        followsList = followsRes.data;
-      }
+      // 4. Parse follows - standardized safe extraction
+      const followsList = Array.isArray(followsRes?.data) ? followsRes.data : (Array.isArray(followsRes) ? followsRes : []);
       console.log('[FollowsModal] Parsed follows:', followsList.length);
       setFollows(followsList);
 

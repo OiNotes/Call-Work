@@ -248,7 +248,7 @@ export const createTestInvoice = async (orderId, invoiceData = {}) => {
     `INSERT INTO invoices (order_id, currency, chain, expected_amount, address, status, address_index, expires_at)
      VALUES ($1, $2, $3, $4, $5, $6, 0, NOW() + INTERVAL '30 minutes')
      RETURNING id, order_id, chain, address, address_index, expected_amount,
-               currency, webhook_subscription_id, status, expires_at,
+               currency, tatum_subscription_id, status, expires_at,
                created_at, updated_at`,
     [invoice.order_id, invoice.currency, invoice.chain, invoice.expected_amount, invoice.address, invoice.status]
   );

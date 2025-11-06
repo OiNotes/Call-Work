@@ -18,19 +18,6 @@ router.post(
 );
 
 /**
- * @route   GET /api/orders
- * @desc    Get current user's orders (as buyer)
- * @access  Private (WebApp)
- */
-router.get('/', verifyToken, (req, res, next) => {
-  // Default to buyer orders only when no explicit shop context provided
-  if (!req.query.type && !req.query.shop_id) {
-    req.query.type = 'buyer';
-  }
-  return orderController.getMyOrders(req, res, next);
-});
-
-/**
  * @route   GET /api/orders/my
  * @desc    Get current user's orders
  * @access  Private (WebApp)
@@ -62,6 +49,19 @@ router.get('/active/count', verifyToken, orderController.getActiveCount);
  * @query   from (YYYY-MM-DD), to (YYYY-MM-DD)
  */
 router.get('/analytics', verifyToken, orderController.getAnalytics);
+
+/**
+ * @route   GET /api/orders
+ * @desc    Get current user's orders (as buyer)
+ * @access  Private (WebApp)
+ */
+router.get('/', verifyToken, (req, res, next) => {
+  // Default to buyer orders only when no explicit shop context provided
+  if (!req.query.type && !req.query.shop_id) {
+    req.query.type = 'buyer';
+  }
+  return orderController.getMyOrders(req, res, next);
+});
 
 /**
  * @route   POST /api/orders/:id/invoice

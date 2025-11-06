@@ -248,8 +248,9 @@ export default function WalletsModal({ isOpen, onClose }) {
       return { status: 'error', error: 'Failed to load shops' };
     }
 
+    // ✅ FIX: Already correct - but adding validation
     const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
-    if (!shops.length) {
+    if (!Array.isArray(shops) || shops.length === 0) {
       setShop(null);
       syncWalletState(null);
       return { status: 'success' };
