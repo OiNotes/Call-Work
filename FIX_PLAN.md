@@ -1,7 +1,7 @@
 # 🚀 STATUS STOCK 4.0 - COMPREHENSIVE FIX PLAN
 
 **Generated:** 2025-11-06
-**Status:** Phase 1-2 COMPLETE ✅ | Phase 3 PARTIAL (6/9) | Phase 4-5 PENDING
+**Status:** Phase 1-3 COMPLETE ✅ | Phase 4-5 PENDING
 
 ---
 
@@ -98,10 +98,10 @@
 
 ---
 
-## 🎯 PHASE 3: P2 HIGH PRIORITY (PARTIAL - 6/9)
+## ✅ PHASE 3: P2 HIGH PRIORITY (COMPLETED)
 
 **Goal:** Fix UX issues, race conditions, performance
-**Completed:** 2025-11-06 (6/9 tasks)
+**Completed:** 2025-11-06 (9/9 tasks)
 
 ### ✅ Frontend Fixes (3/3 completed):
 
@@ -123,14 +123,21 @@
 - **Fix:** OrdersModal fixed, 4 others already had proper cleanup
 - **Result:** No memory leaks, no unmounted component warnings
 
-### ⚠️ Backend Fixes (2/3 completed):
+### ✅ Backend Fixes (3/3 completed):
 
-#### ⏳ P2-4: Products Bulk-Update Race Conditions
-- **Status:** Analysis complete, implementation pending
-- **Finding:** 7 functions without `SELECT ... FOR UPDATE` locks
-- **Files:** productController.js, productQueries (db.js), productSyncService.js
-- **Impact:** HIGH - race conditions in parallel bulk operations
-- **Next:** Add row-level locks to all bulk operations
+#### ✅ P2-4: Products Bulk-Update Race Conditions
+- **Files:** productController.js (3 functions), db.js (2 queries), productSyncService.js (2 functions)
+- **Problem:** 7 functions without `SELECT ... FOR UPDATE` locks causing race conditions
+- **Fix:** Added row-level locks with FOR UPDATE, wrapped in transactions with BEGIN/COMMIT
+- **Changes:**
+  - bulkUpdateProducts: Added FOR UPDATE inside transaction
+  - applyBulkDiscount (controller): Wrapped in transaction
+  - removeBulkDiscount (controller): Wrapped in transaction
+  - applyBulkDiscount (queries): Optional client + FOR UPDATE
+  - removeBulkDiscount (queries): Optional client + FOR UPDATE
+  - updateMarkupForFollow: Changed Promise.all to sequential with locks
+  - runPeriodicSync: Each sync in isolated transaction with locks
+- **Result:** No race conditions, transaction safety, backward compatible
 
 #### ✅ P2-5: Auth Profile Field Naming Standardization
 - **Files:** `authController.js`, `auth.js` middleware, `db.js`
@@ -146,7 +153,7 @@
 - **Expected Speedup:** 20-100x on large datasets
 - **Result:** Migration ready to apply, safe for production (CONCURRENTLY)
 
-### ⚠️ Bot Fixes (1/3 completed):
+### ✅ Bot Fixes (3/3 completed):
 
 #### ✅ P2-7: Seller Follows - Always Show Button
 - **File:** `bot/src/keyboards/seller.js`
@@ -155,17 +162,28 @@
 - **Tests:** 84/84 bot unit tests passed ✅
 - **Result:** Consistent UX, sellers can add first follow
 
-#### ⏳ P2-8: Buyer checkSubscription Response Format
-- **Status:** CRITICAL - endpoint does NOT exist!
-- **Finding:** Bot calls `/api/subscriptions/check/:shopId` which returns 404
-- **Impact:** HIGH - buyer subscription checks always fail
-- **Next:** Create missing backend endpoint OR refactor bot to use `/api/subscriptions`
+#### ✅ P2-8: Buyer checkSubscription Endpoint (CRITICAL FIX)
+- **Files:** Backend: routes/subscriptions.js, controllers/subscriptionController.js, models/db.js
+- **Problem:** Bot called `/api/subscriptions/check/:shopId` which did NOT exist (404 errors)
+- **Fix:** Created missing endpoint with proper authentication and response format
+- **Created:**
+  - Route: `GET /api/subscriptions/check/:shopId` with verifyToken middleware
+  - Controller: checkSubscription() function
+  - Query: subscriptionQueries.findByUserAndShop()
+- **Response:** `{ subscribed: boolean, subscription: object|null }`
+- **Result:** Bot subscription checks now work, no more 404 errors
 
-#### ⏳ P2-9: AddProduct Scene shopId Validation
-- **Status:** Analysis complete, implementation pending
-- **Finding:** 8 scenes enter without validating shop existence in database
-- **Impact:** MEDIUM - crashes inside scenes if shopId invalid/outdated
-- **Next:** Create `validateShopBeforeScene()` middleware
+#### ✅ P2-9: AddProduct & Scenes shopId Validation
+- **Files:** bot/src/utils/sceneValidation.js (new), api.js, seller/index.js (7 handlers), seller/follows.js (3 handlers)
+- **Problem:** 8 scenes entered without validating shop existence, causing crashes
+- **Fix:** Created validateShopBeforeScene() middleware
+- **Middleware checks:**
+  - shopId exists in session
+  - token exists in session
+  - shop EXISTS in database (API call)
+  - user owns shop (authorization)
+- **Protected scenes:** addProduct, manageWallets, markOrdersShipped, migrate_channel, pay_subscription, upgrade_shop, manageWorkers, createFollow, editFollowMarkup (x2)
+- **Result:** No crashes inside scenes, user-friendly errors, session cleanup on failure
 
 ---
 
@@ -232,23 +250,18 @@
 
 ## 📈 PROGRESS TRACKING
 
-### Completed: 17/34 (50%)
+### Completed: 20/34 (59%)
 - ✅ Phase 1: 6/6 (100%)
 - ✅ Phase 2: 5/5 (100%)
-- ⚠️ Phase 3: 6/9 (67%) - 3 pending
+- ✅ Phase 3: 9/9 (100%)
 - ⏳ Phase 4: 0/4 (0%)
 - ⏳ Phase 5: 0/10 (0%)
 
-### Phase 3 Pending Tasks (3/9):
-1. **P2-4:** Products bulk-update locks (analysis done, needs implementation)
-2. **P2-8:** Buyer checkSubscription endpoint (CRITICAL - endpoint missing!)
-3. **P2-9:** AddProduct shopId validation (analysis done, needs middleware)
-
 ### Next Steps:
-1. Complete Phase 3 remaining tasks (P2-4, P2-8, P2-9)
-2. Test all Phase 3 fixes together
-3. Apply migration 030 (shops search index)
-4. Proceed to Phase 4 (database cleanup)
+1. ✅ Phase 3 complete - all 9 tasks done
+2. Apply migration 030 (shops search index - optional performance boost)
+3. Start Phase 4 (database cleanup - 4 tasks)
+4. Proceed to Phase 5 (polish & edge cases - 10 tasks)
 
 ---
 
@@ -266,15 +279,15 @@
 - ✅ All API responses consistently formatted (6 files standardized)
 - ✅ Database columns match code expectations (tatum_subscription_id unified)
 
-### Phase 3 (PARTIAL - 67%): ⚠️
+### Phase 3 (COMPLETED): ✅
 - ✅ No UX race conditions (Catalog fixed, WalletsModal fixed)
 - ✅ All modals handle state correctly (AbortController cleanup added)
 - ✅ Performance optimized (shops search index migration ready)
 - ✅ Auth endpoints consistent (snake_case standardized)
 - ✅ Seller flows fixed ("Add Follow" always visible)
-- ⏳ Products bulk operations need locks (P2-4 pending)
-- ⏳ Buyer subscription checks broken (P2-8 CRITICAL)
-- ⏳ Bot scenes need validation (P2-9 pending)
+- ✅ Products bulk operations locked (SELECT FOR UPDATE added)
+- ✅ Buyer subscription checks work (endpoint created)
+- ✅ Bot scenes validated (validateShopBeforeScene middleware)
 
 ### Phase 4 (TARGET):
 - Database schema matches actual state
