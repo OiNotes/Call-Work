@@ -219,9 +219,52 @@ app.use(requestIdMiddleware);
 
 /**
  * Body parser middleware
+ * ✅ FIX P0-CRITICAL: Save raw body for debugging malformed JSON errors
  */
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
+    if (buf && buf.length) {
+      // Save raw body to req.rawBody for error logging
+      req.rawBody = buf.toString(encoding || 'utf8');
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * ✅ FIX P0-CRITICAL: Body Parser error handler
+ * Catches SyntaxError from express.json() when client sends malformed JSON
+ * This happens BEFORE validation middleware, so validation logs won't appear
+ *
+ * Common causes:
+ * - Truncated JSON due to unstable network (ngrok tunnel, mobile internet)
+ * - Race condition sending incomplete data
+ * - Network packet corruption
+ */
+app.use((error, req, res, next) => {
+  // Check if this is a JSON parsing error
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    // ✅ This is the "missing" 400 error that doesn't reach validation middleware!
+    logger.error('❌ [BodyParser] Malformed JSON received', {
+      path: req.path,
+      method: req.method,
+      errorMessage: error.message,
+      rawBody: req.rawBody || '(empty)',
+      contentLength: req.headers['content-length'],
+      contentType: req.headers['content-type']
+    });
+
+    return res.status(400).json({
+      success: false,
+      error: 'Malformed JSON payload',
+      details: 'Request body contains invalid JSON syntax'
+    });
+  }
+
+  // Not a JSON parsing error, pass to next error handler
+  next(error);
+});
 
 /**
  * Serve static files from webapp/dist (for production-like testing with single ngrok tunnel)

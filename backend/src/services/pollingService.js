@@ -424,7 +424,7 @@ async function handleConfirmedPayment(invoice, payment) {
     try {
       await client.query('BEGIN');
 
-      // Get order first (need product_id and quantity for stock update)
+      // Get order
       const orderResult = await client.query(
         'SELECT * FROM orders WHERE id = $1',
         [invoice.order_id]
@@ -440,15 +440,254 @@ async function handleConfirmedPayment(invoice, payment) {
         return;
       }
 
-      // Update order status
+      // ✅ БАГ #4 FIX: Check invoice expiry
+      const invoiceCheckResult = await client.query(
+        'SELECT id, expires_at FROM invoices WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [invoice.order_id]
+      );
+      
+      if (invoiceCheckResult.rows.length > 0) {
+        const invoiceData = invoiceCheckResult.rows[0];
+        const now = new Date();
+        const expiresAt = new Date(invoiceData.expires_at);
+        
+        if (now > expiresAt) {
+          await client.query(
+            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+            ['cancelled', invoice.order_id]
+          );
+          await client.query('COMMIT');
+          client.release();
+          
+          logger.warn('[PollingService] Invoice expired - order cancelled', {
+            orderId: invoice.order_id,
+            invoiceId: invoiceData.id,
+            expiresAt: invoiceData.expires_at,
+            expiredAgo: Math.round((now - expiresAt) / 1000 / 60)
+          });
+          
+          // Notify user
+          try {
+            await telegramService.notifyOrderCancelled(order.buyer_telegram_id, {
+              orderId: order.id,
+              reason: 'Payment window expired'
+            });
+          } catch (err) {
+            logger.error('[PollingService] Failed to notify user', { error: err.message });
+          }
+          
+          return;
+        }
+      }
+      
+      // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+      const orderItems = await orderItemQueries.findByOrderIdWithStock(invoice.order_id, client);
+      
+      if (orderItems.length === 0) {
+        // Fallback: legacy single-item order
+        logger.warn('[PollingService] No order_items found - assuming legacy single-item order', {
+          orderId: invoice.order_id
+        });
+        
+        // Get order with product and shop validation (LEFT JOIN to detect deletions)
+        const legacyOrderResult = await client.query(
+          `SELECT o.*, p.id as product_id_check, p.stock_quantity, p.is_preorder, p.name as product_name,
+                  s.id as shop_id, s.name as shop_name
+           FROM orders o
+           LEFT JOIN products p ON o.product_id = p.id
+           LEFT JOIN shops s ON p.shop_id = s.id
+           WHERE o.id = $1`,
+          [invoice.order_id]
+        );
+        const legacyOrder = legacyOrderResult.rows[0];
+        
+        // Check if product or shop were deleted
+        if (!legacyOrder.product_id_check || !legacyOrder.shop_id) {
+          await client.query(
+            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+            ['cancelled', invoice.order_id]
+          );
+          await client.query('COMMIT');
+          client.release();
+          
+          logger.warn('[PollingService] Product/shop deleted - order cancelled', {
+            orderId: invoice.order_id,
+            productDeleted: !legacyOrder.product_id_check,
+            shopDeleted: !legacyOrder.shop_id
+          });
+          
+          // Notify user
+          try {
+            await telegramService.notifyOrderCancelled(order.buyer_telegram_id, {
+              orderId: order.id,
+              reason: 'Product no longer available'
+            });
+          } catch (err) {
+            logger.error('[PollingService] Failed to notify user', { error: err.message });
+          }
+          
+          return;
+        }
+        
+        // Skip stock check for preorder products
+        if (legacyOrder.is_preorder) {
+          logger.info('[PollingService] Preorder product - skipping stock check', {
+            orderId: invoice.order_id,
+            productId: order.product_id
+          });
+        } else if (legacyOrder.stock_quantity < order.quantity) {
+          // Stock insufficient - cancel order
+          await client.query(
+            'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+            ['cancelled', invoice.order_id]
+          );
+          await client.query('COMMIT');
+          client.release();
+          
+          logger.warn('[PollingService] Payment confirmed but stock insufficient - order cancelled', {
+            orderId: invoice.order_id,
+            productId: order.product_id,
+            stockAvailable: legacyOrder.stock_quantity,
+            quantityNeeded: order.quantity
+          });
+          
+          // Notify user about sold out
+          try {
+            await telegramService.notifyOrderCancelled(order.buyer_telegram_id, {
+              orderId: order.id,
+              reason: 'Product sold out - refund will be processed'
+            });
+          } catch (notifError) {
+            logger.error('[PollingService] Failed to notify buyer about stock shortage', {
+              error: notifError.message
+            });
+          }
+          
+          return;
+        }
+      } else {
+        // Multi-item order - validate ALL products
+        logger.info('[PollingService] Validating multi-item order', {
+          orderId: invoice.order_id,
+          itemCount: orderItems.length
+        });
+        
+        for (const item of orderItems) {
+          // Check if product/shop deleted
+          if (!item.product_id || !item.shop_id) {
+            await client.query(
+              'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+              ['cancelled', invoice.order_id]
+            );
+            await client.query('COMMIT');
+            client.release();
+            
+            logger.warn('[PollingService] Product/shop deleted in multi-item order - cancelled', {
+              orderId: invoice.order_id,
+              itemId: item.item_id,
+              productDeleted: !item.product_id,
+              shopDeleted: !item.shop_id
+            });
+            
+            // Notify user
+            try {
+              await telegramService.notifyOrderCancelled(order.buyer_telegram_id, {
+                orderId: order.id,
+                reason: `"${item.product_name || 'Product'}" no longer available`
+              });
+            } catch (notifError) {
+              logger.error('[PollingService] Failed to notify buyer', {
+                error: notifError.message
+              });
+            }
+            
+            return;
+          }
+          
+          // Skip stock check for preorder products
+          if (item.is_preorder) {
+            logger.info('[PollingService] Preorder item - skipping stock check', {
+              orderId: invoice.order_id,
+              productId: item.product_id,
+              productName: item.product_name
+            });
+            continue;
+          }
+          
+          // Check stock availability
+          if (item.stock_quantity < item.ordered_quantity) {
+            await client.query(
+              'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+              ['cancelled', invoice.order_id]
+            );
+            await client.query('COMMIT');
+            client.release();
+            
+            logger.warn('[PollingService] Insufficient stock in multi-item order - cancelled', {
+              orderId: invoice.order_id,
+              productId: item.product_id,
+              productName: item.product_name,
+              available: item.stock_quantity,
+              requested: item.ordered_quantity
+            });
+            
+            // Notify user about sold out
+            try {
+              await telegramService.notifyOrderCancelled(order.buyer_telegram_id, {
+                orderId: order.id,
+                reason: `"${item.product_name}" sold out - refund will be processed`
+              });
+            } catch (notifError) {
+              logger.error('[PollingService] Failed to notify buyer', {
+                error: notifError.message
+              });
+            }
+            
+            return;
+          }
+        }
+        
+        logger.info('[PollingService] All items in stock - confirming order', {
+          orderId: invoice.order_id,
+          itemCount: orderItems.length
+        });
+      }
+
+      // Update order status to confirmed
       await client.query(
         'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
         ['confirmed', invoice.order_id]
       );
 
-      // Update stock atomically
-      await productQueries.updateStock(order.product_id, -order.quantity, client);
-      await productQueries.unreserveStock(order.product_id, order.quantity, client);
+      // Deduct stock for ALL items
+      if (orderItems.length === 0) {
+        // Legacy single-item: deduct from orders.product_id
+        const productPreorderCheck = await client.query(
+          'SELECT is_preorder FROM products WHERE id = $1',
+          [order.product_id]
+        );
+        if (productPreorderCheck.rows.length > 0 && !productPreorderCheck.rows[0].is_preorder) {
+          await productQueries.updateStock(order.product_id, -order.quantity, client);
+          logger.info('[PollingService] Stock deducted for legacy single-item order', {
+            orderId: invoice.order_id,
+            productId: order.product_id,
+            quantity: order.quantity
+          });
+        }
+      } else {
+        // Multi-item: deduct each item
+        for (const item of orderItems) {
+          if (!item.is_preorder) {
+            await productQueries.updateStock(item.product_id, -item.ordered_quantity, client);
+            
+            logger.info('[PollingService] Stock deducted for item', {
+              orderId: invoice.order_id,
+              productId: item.product_id,
+              quantity: item.ordered_quantity
+            });
+          }
+        }
+      }
 
       await client.query('COMMIT');
     } catch (txError) {

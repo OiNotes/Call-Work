@@ -1,4 +1,4 @@
-import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
+import { paymentQueries, orderQueries, productQueries, shopQueries, userQueries, orderItemQueries, invoiceQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import cryptoService from '../services/crypto.js';
 import telegramService from '../services/telegram.js';
@@ -166,15 +166,220 @@ export const paymentController = {
             );
           }
 
-          // Update order status
+          // ✅ БАГ #4 FIX: Check invoice expiry
+          const invoiceResult = await client.query(
+            'SELECT id, expires_at FROM invoices WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [orderId]
+          );
+          
+          if (invoiceResult.rows.length > 0) {
+            const invoice = invoiceResult.rows[0];
+            const now = new Date();
+            const expiresAt = new Date(invoice.expires_at);
+            
+            if (now > expiresAt) {
+              await client.query(
+                'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                ['cancelled', orderId]
+              );
+              await client.query('COMMIT');
+              
+              logger.warn('Invoice expired - order cancelled', {
+                orderId,
+                invoiceId: invoice.id,
+                expiresAt: invoice.expires_at,
+                currentTime: now.toISOString(),
+                expiredAgo: Math.round((now - expiresAt) / 1000 / 60)
+              });
+              
+              return res.status(400).json({
+                success: false,
+                error: 'Payment window expired. Please create a new order.',
+                code: 'INVOICE_EXPIRED'
+              });
+            }
+            
+            logger.info('Invoice valid - within expiry window', {
+              orderId,
+              expiresAt: invoice.expires_at,
+              remainingMinutes: Math.round((expiresAt - now) / 1000 / 60)
+            });
+          }
+
+          // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+          const orderItems = await orderItemQueries.findByOrderIdWithStock(orderId, client);
+          
+          if (orderItems.length === 0) {
+            // Fallback: legacy single-item order (backward compatibility)
+            logger.warn('No order_items found - assuming legacy single-item order', {
+              orderId
+            });
+            
+            // Check if product and shop still exist (legacy check)
+            const productShopCheck = await client.query(
+              `SELECT p.stock_quantity, p.is_preorder, p.name as product_name,
+                      s.id as shop_id, s.name as shop_name
+               FROM products p
+               LEFT JOIN shops s ON p.shop_id = s.id
+               WHERE p.id = $1`,
+              [order.product_id]
+            );
+            
+            if (productShopCheck.rows.length === 0 || !productShopCheck.rows[0].shop_id) {
+              // Product or shop deleted - cancel order
+              await client.query(
+                'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                ['cancelled', orderId]
+              );
+              await client.query('COMMIT');
+              
+              logger.warn('Payment confirmed but product/shop deleted - order cancelled', {
+                orderId,
+                productDeleted: productShopCheck.rows.length === 0,
+                shopDeleted: productShopCheck.rows.length > 0 && !productShopCheck.rows[0].shop_id
+              });
+              
+              return res.status(400).json({
+                success: false,
+                error: 'This product is no longer available. Order cancelled.',
+                code: 'PRODUCT_UNAVAILABLE'
+              });
+            }
+            
+            const currentProduct = productShopCheck.rows[0];
+            
+            // Skip stock check for preorder products
+            if (currentProduct.is_preorder) {
+              logger.info('Preorder product - skipping stock check', {
+                orderId,
+                productId: order.product_id
+              });
+            } else if (currentProduct.stock_quantity < order.quantity) {
+              // Stock insufficient - cancel order
+              await client.query(
+                'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                ['cancelled', orderId]
+              );
+              await client.query('COMMIT');
+              
+              logger.warn('Payment confirmed but stock insufficient - order cancelled', {
+                orderId,
+                productId: order.product_id,
+                stockAvailable: currentProduct.stock_quantity,
+                quantityNeeded: order.quantity
+              });
+              
+              return res.status(400).json({
+                success: false,
+                error: 'Sorry, this product is sold out. Your payment will be refunded.',
+                code: 'STOCK_INSUFFICIENT'
+              });
+            }
+          } else {
+            // Multi-item order - validate ALL products
+            logger.info('Validating multi-item order', {
+              orderId,
+              itemCount: orderItems.length
+            });
+            
+            for (const item of orderItems) {
+              // Check if product/shop deleted
+              if (!item.product_id || !item.shop_id) {
+                await client.query(
+                  'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                  ['cancelled', orderId]
+                );
+                await client.query('COMMIT');
+                
+                logger.warn('Product/shop deleted in multi-item order - cancelled', {
+                  orderId,
+                  itemId: item.item_id,
+                  productDeleted: !item.product_id,
+                  shopDeleted: !item.shop_id
+                });
+                
+                return res.status(400).json({
+                  success: false,
+                  error: 'One or more products are no longer available. Order cancelled.',
+                  code: 'PRODUCT_UNAVAILABLE'
+                });
+              }
+              
+              // Skip stock check for preorder products
+              if (item.is_preorder) {
+                logger.info('Preorder item - skipping stock check', {
+                  orderId,
+                  productId: item.product_id,
+                  productName: item.product_name
+                });
+                continue;
+              }
+              
+              // Check stock availability
+              if (item.stock_quantity < item.ordered_quantity) {
+                await client.query(
+                  'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                  ['cancelled', orderId]
+                );
+                await client.query('COMMIT');
+                
+                logger.warn('Insufficient stock in multi-item order - cancelled', {
+                  orderId,
+                  productId: item.product_id,
+                  productName: item.product_name,
+                  available: item.stock_quantity,
+                  requested: item.ordered_quantity
+                });
+                
+                return res.status(400).json({
+                  success: false,
+                  error: `Sorry, "${item.product_name}" is sold out. Your payment will be refunded.`,
+                  code: 'STOCK_INSUFFICIENT'
+                });
+              }
+            }
+            
+            logger.info('All items in stock - confirming order', {
+              orderId,
+              itemCount: orderItems.length
+            });
+          }
+
+          // Update order status to confirmed
           await client.query(
             'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
             ['confirmed', orderId]
           );
 
-          // Update stock atomically
-          await productQueries.updateStock(order.product_id, -order.quantity, client);
-          await productQueries.unreserveStock(order.product_id, order.quantity, client);
+          // Deduct stock for ALL items
+          if (orderItems.length === 0) {
+            // Legacy single-item: deduct from orders.product_id
+            const productShopCheck = await client.query(
+              'SELECT is_preorder FROM products WHERE id = $1',
+              [order.product_id]
+            );
+            if (productShopCheck.rows.length > 0 && !productShopCheck.rows[0].is_preorder) {
+              await productQueries.updateStock(order.product_id, -order.quantity, client);
+              logger.info('Stock deducted for legacy single-item order', {
+                orderId,
+                productId: order.product_id,
+                quantity: order.quantity
+              });
+            }
+          } else {
+            // Multi-item: deduct each item
+            for (const item of orderItems) {
+              if (!item.is_preorder) {
+                await productQueries.updateStock(item.product_id, -item.ordered_quantity, client);
+                
+                logger.info('Stock deducted for item', {
+                  orderId,
+                  productId: item.product_id,
+                  quantity: item.ordered_quantity
+                });
+              }
+            }
+          }
 
           await client.query('COMMIT');
         } catch (txError) {
@@ -404,15 +609,242 @@ export const paymentController = {
               ['confirmed', verification.confirmations, payment.id]
             );
 
-            // Update order status
+            // ✅ БАГ #4 FIX: Check invoice expiry
+            const invoiceResult = await client.query(
+              'SELECT id, expires_at FROM invoices WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+              [order.id]
+            );
+            
+            if (invoiceResult.rows.length > 0) {
+              const invoice = invoiceResult.rows[0];
+              const now = new Date();
+              const expiresAt = new Date(invoice.expires_at);
+              
+              if (now > expiresAt) {
+                await client.query(
+                  'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                  ['cancelled', order.id]
+                );
+                await client.query('COMMIT');
+                
+                logger.warn('Invoice expired - order cancelled (checkStatus)', {
+                  orderId: order.id,
+                  invoiceId: invoice.id,
+                  expiresAt: invoice.expires_at,
+                  currentTime: now.toISOString(),
+                  expiredAgo: Math.round((now - expiresAt) / 1000 / 60)
+                });
+                
+                // Update in-memory payment object
+                payment.status = 'confirmed';
+                payment.confirmations = verification.confirmations;
+                
+                return res.status(400).json({
+                  success: false,
+                  error: 'Payment window expired. Please create a new order.',
+                  code: 'INVOICE_EXPIRED'
+                });
+              }
+              
+              logger.info('Invoice valid - within expiry window (checkStatus)', {
+                orderId: order.id,
+                expiresAt: invoice.expires_at,
+                remainingMinutes: Math.round((expiresAt - now) / 1000 / 60)
+              });
+            }
+
+            // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+            const orderItems = await orderItemQueries.findByOrderIdWithStock(order.id, client);
+            
+            if (orderItems.length === 0) {
+              // Fallback: legacy single-item order (backward compatibility)
+              logger.warn('No order_items found - assuming legacy single-item order (checkStatus)', {
+                orderId: order.id
+              });
+              
+              // Check if product and shop still exist (legacy check)
+              const productShopCheck = await client.query(
+                `SELECT p.stock_quantity, p.is_preorder, p.name as product_name,
+                        s.id as shop_id, s.name as shop_name
+                 FROM products p
+                 LEFT JOIN shops s ON p.shop_id = s.id
+                 WHERE p.id = $1`,
+                [order.product_id]
+              );
+              
+              if (productShopCheck.rows.length === 0 || !productShopCheck.rows[0].shop_id) {
+                // Product or shop deleted - cancel order
+                await client.query(
+                  'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                  ['cancelled', order.id]
+                );
+                await client.query('COMMIT');
+                
+                logger.warn('Payment confirmed but product/shop deleted - order cancelled (checkStatus)', {
+                  orderId: order.id,
+                  productDeleted: productShopCheck.rows.length === 0,
+                  shopDeleted: productShopCheck.rows.length > 0 && !productShopCheck.rows[0].shop_id
+                });
+                
+                // Update in-memory payment object
+                payment.status = 'confirmed';
+                payment.confirmations = verification.confirmations;
+                
+                // Return with error
+                return res.status(400).json({
+                  success: false,
+                  error: 'This product is no longer available. Order cancelled.',
+                  code: 'PRODUCT_UNAVAILABLE'
+                });
+              }
+              
+              const currentProduct = productShopCheck.rows[0];
+              
+              // Skip stock check for preorder products
+              if (currentProduct.is_preorder) {
+                logger.info('Preorder product - skipping stock check in checkStatus', {
+                  orderId: order.id,
+                  productId: order.product_id
+                });
+              } else if (currentProduct.stock_quantity < order.quantity) {
+                // Stock insufficient - cancel order
+                await client.query(
+                  'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                  ['cancelled', order.id]
+                );
+                await client.query('COMMIT');
+                
+                logger.warn('Payment confirmed but stock insufficient - order cancelled (checkStatus)', {
+                  orderId: order.id,
+                  productId: order.product_id,
+                  stockAvailable: currentProduct.stock_quantity,
+                  quantityNeeded: order.quantity
+                });
+                
+                // Update in-memory payment object
+                payment.status = 'confirmed';
+                payment.confirmations = verification.confirmations;
+                
+                // Return with warning
+                return res.status(200).json({
+                  success: true,
+                  data: payment,
+                  warning: 'Product sold out - order cancelled, refund will be processed'
+                });
+              }
+            } else {
+              // Multi-item order - validate ALL products
+              logger.info('Validating multi-item order (checkStatus)', {
+                orderId: order.id,
+                itemCount: orderItems.length
+              });
+              
+              for (const item of orderItems) {
+                // Check if product/shop deleted
+                if (!item.product_id || !item.shop_id) {
+                  await client.query(
+                    'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                    ['cancelled', order.id]
+                  );
+                  await client.query('COMMIT');
+                  
+                  logger.warn('Product/shop deleted in multi-item order - cancelled (checkStatus)', {
+                    orderId: order.id,
+                    itemId: item.item_id,
+                    productDeleted: !item.product_id,
+                    shopDeleted: !item.shop_id
+                  });
+                  
+                  // Update in-memory payment object
+                  payment.status = 'confirmed';
+                  payment.confirmations = verification.confirmations;
+                  
+                  return res.status(400).json({
+                    success: false,
+                    error: 'One or more products are no longer available. Order cancelled.',
+                    code: 'PRODUCT_UNAVAILABLE'
+                  });
+                }
+                
+                // Skip stock check for preorder products
+                if (item.is_preorder) {
+                  logger.info('Preorder item - skipping stock check (checkStatus)', {
+                    orderId: order.id,
+                    productId: item.product_id,
+                    productName: item.product_name
+                  });
+                  continue;
+                }
+                
+                // Check stock availability
+                if (item.stock_quantity < item.ordered_quantity) {
+                  await client.query(
+                    'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+                    ['cancelled', order.id]
+                  );
+                  await client.query('COMMIT');
+                  
+                  logger.warn('Insufficient stock in multi-item order - cancelled (checkStatus)', {
+                    orderId: order.id,
+                    productId: item.product_id,
+                    productName: item.product_name,
+                    available: item.stock_quantity,
+                    requested: item.ordered_quantity
+                  });
+                  
+                  // Update in-memory payment object
+                  payment.status = 'confirmed';
+                  payment.confirmations = verification.confirmations;
+                  
+                  return res.status(200).json({
+                    success: true,
+                    data: payment,
+                    warning: `"${item.product_name}" sold out - order cancelled, refund will be processed`
+                  });
+                }
+              }
+              
+              logger.info('All items in stock - confirming order (checkStatus)', {
+                orderId: order.id,
+                itemCount: orderItems.length
+              });
+            }
+
+            // Update order status to confirmed
             await client.query(
               'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
               ['confirmed', order.id]
             );
 
-            // Update stock atomically
-            await productQueries.updateStock(order.product_id, -order.quantity, client);
-            await productQueries.unreserveStock(order.product_id, order.quantity, client);
+            // Deduct stock for ALL items
+            if (orderItems.length === 0) {
+              // Legacy single-item: deduct from orders.product_id
+              const productPreorderCheck = await client.query(
+                'SELECT is_preorder FROM products WHERE id = $1',
+                [order.product_id]
+              );
+              if (productPreorderCheck.rows.length > 0 && !productPreorderCheck.rows[0].is_preorder) {
+                await productQueries.updateStock(order.product_id, -order.quantity, client);
+                logger.info('Stock deducted for legacy single-item order (checkStatus)', {
+                  orderId: order.id,
+                  productId: order.product_id,
+                  quantity: order.quantity
+                });
+              }
+            } else {
+              // Multi-item: deduct each item
+              for (const item of orderItems) {
+                if (!item.is_preorder) {
+                  await productQueries.updateStock(item.product_id, -item.ordered_quantity, client);
+                  
+                  logger.info('Stock deducted for item (checkStatus)', {
+                    orderId: order.id,
+                    productId: item.product_id,
+                    quantity: item.ordered_quantity
+                  });
+                }
+              }
+            }
 
             await client.query('COMMIT');
 

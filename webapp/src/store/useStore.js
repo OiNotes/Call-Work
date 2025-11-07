@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
-import { mockShops, mockSubscriptions, mockUser } from '../utils/mockData';
+import { mockSubscriptions, mockUser } from '../utils/mockData';
 import { useToastStore } from '../hooks/useToast';
 
 export const normalizeProduct = (product) => {
@@ -203,7 +203,7 @@ export const useStore = create(
       },
 
       // Shops
-      shops: mockShops,
+      shops: [], // ✅ FIX: No hardcoded mock data, load from API
       setShops: (shops) => set({ shops }),
 
       // Products
@@ -272,6 +272,25 @@ export const useStore = create(
           return;
         }
 
+        // ✅ FIX: Validate all products from same shop (multi-shop orders not allowed)
+        const cartShopIds = cart.map(item => item.shopId).filter(Boolean);
+        const uniqueShops = new Set(cartShopIds);
+        
+        if (uniqueShops.size > 1) {
+          console.error('[startCheckout] ❌ Multi-shop order attempt!', {
+            shops: Array.from(uniqueShops),
+            items: cart.map(i => ({ id: i.id, name: i.name, shopId: i.shopId }))
+          });
+          
+          toast({
+            type: 'error',
+            message: 'Нельзя заказать товары из разных магазинов в одном заказе. Оформите заказы отдельно.',
+            duration: 4500
+          });
+          
+          return;
+        }
+
         // Получить shopId из первого товара в корзине
         const shopId = cart[0]?.shopId;
 
@@ -290,13 +309,9 @@ export const useStore = create(
           return;
         }
 
-        // Найти shop в shops list или создать минимальный объект
-        let shop = shops?.find(s => s.id === shopId);
-
-        if (!shop) {
-          console.warn(`[startCheckout] Shop ${shopId} not found in shops list, creating minimal shop object`);
-          shop = { id: shopId, name: 'Shop' };
-        }
+        // ✅ FIX: Always create minimal shop object - currentShop loaded correctly via /shops/my
+        // Don't use shops.find() which could return stale mock data
+        const shop = { id: shopId, name: 'Loading...' };
 
         console.log('[startCheckout] Setting currentShop:', shop);
 
@@ -317,7 +332,13 @@ export const useStore = create(
       },
 
       createOrder: async () => {
-        const { cart, user } = get();
+        const { cart, user, isCreatingOrder } = get();
+
+        // ✅ FIX: Prevent race condition from double-click
+        if (isCreatingOrder) {
+          console.warn('[createOrder] Already creating order, ignoring duplicate call');
+          return null;
+        }
 
         if (cart.length === 0) return null;
 
@@ -334,17 +355,43 @@ export const useStore = create(
           const controller = new AbortController();
           timeoutId = setTimeout(() => controller.abort(), 8000);
 
-          // ✅ Send ALL cart items to backend
-          const response = await axios.post(`${API_URL}/orders`, {
+          // ✅ Prepare payload
+          const payload = {
             items: cart.map(item => ({
               productId: item.id,
               quantity: item.quantity
             })),
             deliveryAddress: null
-          }, {
+          };
+
+          // 🐞 DEBUG: Validate payload before sending (catch corrupt data early)
+          const invalidItems = payload.items.filter(item =>
+            typeof item.productId !== 'number' ||
+            item.productId <= 0 ||
+            typeof item.quantity !== 'number' ||
+            item.quantity <= 0
+          );
+
+          if (invalidItems.length > 0) {
+            console.error('❌ [createOrder] Invalid items in cart!', invalidItems);
+            console.error('Full cart state:', cart);
+            const toast = useToastStore.getState().addToast;
+            toast({ type: 'error', message: 'Ошибка: некорректные данные в корзине', duration: 3500 });
+            return null;
+          }
+
+          // ✅ Log payload for debugging intermittent issues
+          console.log('[createOrder] Sending payload:', JSON.stringify(payload));
+
+          // ✅ Get current token from store
+          const { token } = get();
+
+          // ✅ Send ALL cart items to backend
+          const response = await axios.post(`${API_URL}/orders`, payload, {
             headers: {
               'Content-Type': 'application/json',
-              'X-Telegram-Init-Data': initData
+              'X-Telegram-Init-Data': initData,
+              ...(token && { 'Authorization': `Bearer ${token}` })  // ✅ FIX: Add auth token!
             },
             signal: controller.signal
           });
@@ -357,14 +404,35 @@ export const useStore = create(
 
           return order;
         } catch (error) {
-          console.error('Create order error:', error);
-          
+          console.error('❌ [createOrder] Error:', error);
+
+          // ✅ Enhanced error logging for debugging 400 errors
+          if (error.response) {
+            console.error('Server Response Status:', error.response.status);
+            console.error('Server Response Data:', error.response.data);
+          }
+
           const toast = useToastStore.getState().addToast;
-          
+
           if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
             toast({ type: 'error', message: 'Timeout: проверьте соединение', duration: 3500 });
           } else if (error.response?.status === 401) {
             toast({ type: 'error', message: 'Ошибка авторизации', duration: 3000 });
+          } else if (error.response?.status === 400) {
+            // ✅ FIX: Parse specific 400 error messages from backend
+            const errorData = error.response.data;
+
+            if (errorData?.error === 'Malformed JSON payload') {
+              toast({ type: 'error', message: 'Ошибка сети: повреждённые данные (попробуйте ещё раз)', duration: 4000 });
+            } else if (errorData?.error?.includes('Insufficient stock')) {
+              // Extract product name and show specific error
+              toast({ type: 'error', message: errorData.error, duration: 4500 });
+            } else if (errorData?.error) {
+              // Show backend error message if available
+              toast({ type: 'error', message: errorData.error, duration: 3500 });
+            } else {
+              toast({ type: 'error', message: 'Ошибка запроса (400)', duration: 3000 });
+            }
           } else {
             toast({ type: 'error', message: 'Не удалось создать заказ', duration: 3000 });
           }

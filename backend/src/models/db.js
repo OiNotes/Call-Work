@@ -808,6 +808,33 @@ export const orderItemQueries = {
       [orderId]
     );
     return result.rows;
+  },
+
+  // Get order items with product stock info (for payment verification)
+  findByOrderIdWithStock: async (orderId, client = null) => {
+    const queryFn = client ? client.query.bind(client) : query;
+    
+    const result = await queryFn(
+      `SELECT 
+         oi.id as item_id,
+         oi.product_id,
+         oi.quantity as ordered_quantity,
+         oi.price as price_at_purchase,
+         p.name as product_name,
+         p.stock_quantity,
+         p.is_preorder,
+         p.is_active,
+         s.id as shop_id,
+         s.name as shop_name
+       FROM order_items oi
+       LEFT JOIN products p ON oi.product_id = p.id
+       LEFT JOIN shops s ON p.shop_id = s.id
+       WHERE oi.order_id = $1
+       ORDER BY oi.id ASC`,
+      [orderId]
+    );
+    
+    return result.rows;
   }
 };
 

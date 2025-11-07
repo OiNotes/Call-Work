@@ -2,6 +2,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import { validateCryptoAddress, getCryptoValidationError } from '../utils/validation.js';
 import { isValidPublicUrl } from '../utils/urlValidator.js';
 import { PAGINATION } from '../utils/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Validate request and return errors if any
@@ -10,6 +11,14 @@ export const validate = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
+    // ✅ FIX: Log validation errors for debugging intermittent issues
+    logger.warn('Validation failed', {
+      path: req.path,
+      method: req.method,
+      body: req.body,
+      errors: errors.array()
+    });
+    
     return res.status(400).json({
       success: false,
       error: 'Validation failed',

@@ -78,6 +78,16 @@ export const orderController = {
         });
       }
 
+      // ✅ FIX: Log incoming cart for debugging intermittent issues
+      logger.debug('Creating order with cart', {
+        userId: req.user.id,
+        itemCount: cartItems.length,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }))
+      });
+
       // Start transaction
       await client.query('BEGIN');
 
@@ -98,6 +108,7 @@ export const orderController = {
       const validatedItems = [];
       let totalPrice = 0;
       let currency = null;
+      let shopId = null; // Track shop_id for multi-shop validation
 
       for (const item of cartItems) {
         const product = productsMap.get(item.productId);
@@ -124,12 +135,44 @@ export const orderController = {
         if (!product.is_preorder) {
           const available = product.stock_quantity - (product.reserved_quantity || 0);
           if (available < item.quantity) {
+            // ✅ FIX: Log stock validation failures for debugging
+            logger.warn('❌ Insufficient stock for order', {
+              userId: req.user.id,
+              productId: product.id,
+              productName: product.name,
+              stockTotal: product.stock_quantity,
+              stockReserved: product.reserved_quantity || 0,
+              stockAvailable: available,
+              requestedQuantity: item.quantity,
+              shortfall: item.quantity - available
+            });
+
             await client.query('ROLLBACK');
             return res.status(400).json({
               success: false,
               error: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${item.quantity}`
             });
           }
+        }
+
+        // Validate shop_id consistency (all items must be from same shop)
+        if (shopId === null) {
+          shopId = product.shop_id;
+        } else if (shopId !== product.shop_id) {
+          await client.query('ROLLBACK');
+          
+          logger.warn('❌ Multi-shop order attempt blocked', {
+            userId: req.user.id,
+            productIds: cartItems.map(c => c.productId),
+            shopIds: [shopId, product.shop_id],
+            itemCount: cartItems.length
+          });
+          
+          return res.status(400).json({
+            success: false,
+            error: 'Cannot order products from multiple shops in one order. Please complete orders separately.',
+            code: 'MULTI_SHOP_ORDER'
+          });
         }
 
         // Validate currency consistency (all items must have same currency)
@@ -157,6 +200,14 @@ export const orderController = {
         });
       }
 
+      // Step 2.5: Log validation success
+      logger.info('✅ All products from same shop', {
+        shopId,
+        productCount: validatedItems.length,
+        totalPrice,
+        currency
+      });
+
       // Step 3: Create order with total price
       // Note: For multi-item orders, product_id stores first item's ID for backward compatibility
       const order = await orderQueries.create({
@@ -171,10 +222,8 @@ export const orderController = {
       // Step 4: Create order items records
       await orderItemQueries.createBatch(order.id, validatedItems, client);
 
-      // Step 5: Reserve stock for all items
-      for (const item of validatedItems) {
-        await productQueries.reserveStock(item.productId, item.quantity, client);
-      }
+      // Step 5: Stock will be deducted only after payment confirmation
+      // No reservation at order creation - first come, first served on payment
 
       // Commit transaction
       await client.query('COMMIT');
@@ -372,16 +421,22 @@ export const orderController = {
 
   /**
    * Update order status
+   * ✅ БАГ #6 FIX: Returns stock when cancelling confirmed orders
    */
   updateStatus: async (req, res) => {
+    const client = await getClient();
+
     try {
       const { id } = req.params;
       const { status } = req.body;
 
-      // Get order
+      await client.query('BEGIN');
+
+      // Get order with current status
       const existingOrder = await orderQueries.findById(id);
 
       if (!existingOrder) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           error: 'Order not found'
@@ -390,14 +445,16 @@ export const orderController = {
 
       // Only seller can update order status (except cancellation)
       if (status !== 'cancelled' && existingOrder.owner_id !== req.user.id) {
+        await client.query('ROLLBACK');
         return res.status(403).json({
           success: false,
           error: 'Only seller can update order status'
         });
       }
 
-      // Buyer can cancel their own pending orders
-      if (status === 'cancelled' && existingOrder.buyer_id !== req.user.id) {
+      // Buyer can cancel their own orders
+      if (status === 'cancelled' && existingOrder.buyer_id !== req.user.id && existingOrder.owner_id !== req.user.id) {
+        await client.query('ROLLBACK');
         return res.status(403).json({
           success: false,
           error: 'You can only cancel your own orders'
@@ -408,6 +465,7 @@ export const orderController = {
       const transition = validateStatusTransition(existingOrder.status, status);
 
       if (!transition.valid) {
+        await client.query('ROLLBACK');
         logger.warn(`Invalid status transition: ${existingOrder.status} → ${status} for order ${id}`);
         return res.status(422).json({
           success: false,
@@ -418,6 +476,7 @@ export const orderController = {
 
       // Handle idempotent update (same status requested)
       if (transition.idempotent) {
+        await client.query('ROLLBACK');
         logger.info(`Idempotent status update for order ${id}: already in status ${status}`);
         return res.status(200).json({
           success: true,
@@ -427,8 +486,86 @@ export const orderController = {
         });
       }
 
-      // Proceed with actual database update
-      const order = await orderQueries.updateStatus(id, status);
+      // ✅ БАГ #6 FIX: Return stock if cancelling a confirmed order
+      if (status === 'cancelled' && existingOrder.status === 'confirmed') {
+        logger.info('Cancelling confirmed order - returning stock', {
+          orderId: id,
+          userId: req.user.id,
+          previousStatus: existingOrder.status
+        });
+
+        // Get all order items
+        const orderItems = await orderItemQueries.findByOrderIdWithStock(id, client);
+
+        // Return stock for each non-preorder item
+        for (const item of orderItems) {
+          if (!item.is_preorder && item.product_id) {
+            await productQueries.updateStock(
+              item.product_id,
+              item.ordered_quantity, // Positive value = add back
+              client
+            );
+
+            logger.info('Stock returned for cancelled item', {
+              orderId: id,
+              productId: item.product_id,
+              productName: item.product_name,
+              quantityReturned: item.ordered_quantity
+            });
+          }
+        }
+
+        // Fallback: Check legacy single-item order format
+        if (orderItems.length === 0 && existingOrder.product_id && existingOrder.quantity) {
+          logger.warn('No order_items found - checking legacy product_id', {
+            orderId: id,
+            productId: existingOrder.product_id
+          });
+
+          // Get product to check is_preorder
+          const productResult = await client.query(
+            'SELECT is_preorder FROM products WHERE id = $1',
+            [existingOrder.product_id]
+          );
+
+          if (productResult.rows.length > 0 && !productResult.rows[0].is_preorder) {
+            await productQueries.updateStock(
+              existingOrder.product_id,
+              existingOrder.quantity,
+              client
+            );
+
+            logger.info('Stock returned for legacy order', {
+              orderId: id,
+              productId: existingOrder.product_id,
+              quantity: existingOrder.quantity
+            });
+          }
+        }
+      } else if (status === 'cancelled') {
+        logger.info('Cancelling non-confirmed order - no stock to return', {
+          orderId: id,
+          currentStatus: existingOrder.status
+        });
+      }
+
+      // Update order status
+      await client.query(
+        'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2',
+        [status, id]
+      );
+
+      await client.query('COMMIT');
+
+      // Fetch updated order
+      const order = await orderQueries.findById(id);
+
+      logger.info('Order status updated successfully', {
+        orderId: id,
+        previousStatus: existingOrder.status,
+        newStatus: status,
+        userId: req.user.id
+      });
 
       // Notify buyer about status update
       try {
@@ -447,6 +584,13 @@ export const orderController = {
       });
 
     } catch (error) {
+      // Rollback transaction on error
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Rollback error', { error: rollbackError.message });
+      }
+
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
@@ -461,6 +605,8 @@ export const orderController = {
         success: false,
         error: 'Failed to update order status'
       });
+    } finally {
+      client.release();
     }
   },
 
