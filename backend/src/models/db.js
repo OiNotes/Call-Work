@@ -914,7 +914,8 @@ export const invoiceQueries = {
         `SELECT nextval($1::regclass) as next_index`,
         [sequenceName]
       );
-      return result.rows[0].next_index;
+      // Convert to integer (PostgreSQL returns bigint as string)
+      return parseInt(result.rows[0].next_index, 10);
     } catch (error) {
       console.error(`[DB] getNextIndex error for chain ${chain}:`, error);
       throw new Error(`Failed to get next index for ${chain}: ${error.message}`);

@@ -277,17 +277,49 @@ export const productValidation = {
  */
 export const orderValidation = {
   create: [
+    // Support new multi-item format
+    body('items')
+      .optional()
+      .isArray({ min: 1 })
+      .withMessage('items must be a non-empty array'),
+    body('items.*.productId')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Each item must have a valid productId'),
+    body('items.*.quantity')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Each item must have quantity >= 1'),
+    
+    // Support legacy single-item format (backward compatible)
     body('productId')
+      .optional()
       .isInt({ min: 1 })
       .withMessage('Valid product ID is required'),
     body('quantity')
+      .optional()
       .isInt({ min: 1 })
       .withMessage('Quantity must be at least 1'),
+    
+    // Common fields
     body('deliveryAddress')
       .optional()
       .trim()
       .isLength({ max: 500 })
       .withMessage('Delivery address must not exceed 500 characters'),
+    
+    // Custom validator: ensure either items or productId+quantity provided
+    body()
+      .custom((body) => {
+        const hasItems = body.items && Array.isArray(body.items) && body.items.length > 0;
+        const hasLegacy = body.productId && body.quantity;
+        
+        if (!hasItems && !hasLegacy) {
+          throw new Error('Either items array or productId+quantity required');
+        }
+        return true;
+      }),
+    
     validate
   ],
 
