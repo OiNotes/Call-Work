@@ -1,4 +1,4 @@
-import { orderQueries, productQueries, shopQueries, invoiceQueries } from '../models/db.js';
+import { orderQueries, orderItemQueries, productQueries, shopQueries, invoiceQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import { dbErrorHandler } from '../middleware/errorHandler.js';
 import telegramService from '../services/telegram.js';
@@ -41,78 +41,158 @@ const parseStatusFilter = (statusParam) => {
 export const orderController = {
   /**
    * Create new order
+   * ✅ MULTI-ITEM SUPPORT: Now accepts either single item or multiple items
+   * 
+   * Request body formats:
+   * 1. Legacy (backward compatible):
+   *    { productId: 1, quantity: 5, deliveryAddress: null }
+   * 
+   * 2. Multi-item (new):
+   *    { items: [{ productId: 1, quantity: 5 }, { productId: 2, quantity: 3 }], deliveryAddress: null }
    */
   create: async (req, res) => {
     const client = await getClient();
 
     try {
-      const { productId, quantity, deliveryAddress } = req.body;
+      const { productId, quantity, items, deliveryAddress } = req.body;
+
+      // ✅ BACKWARD COMPATIBLE: Convert legacy format to items array
+      let cartItems = [];
+      if (items && Array.isArray(items) && items.length > 0) {
+        // New multi-item format
+        cartItems = items;
+      } else if (productId && quantity) {
+        // Legacy single-item format
+        cartItems = [{ productId, quantity }];
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Either items array or productId+quantity required'
+        });
+      }
+
+      if (cartItems.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cart is empty'
+        });
+      }
 
       // Start transaction
       await client.query('BEGIN');
 
-      // Lock product row for update (prevents race condition)
+      // Step 1: Fetch and lock all products
+      const productIds = cartItems.map(item => item.productId);
       const productResult = await client.query(
         `SELECT id, shop_id, name, description, price, currency,
                 stock_quantity, reserved_quantity, is_active, is_preorder,
                 created_at, updated_at
-         FROM products WHERE id = $1 FOR UPDATE`,
-        [productId]
+         FROM products WHERE id = ANY($1::int[]) FOR UPDATE`,
+        [productIds]
       );
 
-      const product = productResult.rows[0];
+      const productsMap = new Map();
+      productResult.rows.forEach(p => productsMap.set(p.id, p));
 
-      if (!product) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          error: 'Product not found'
-        });
-      }
+      // Step 2: Validate all items
+      const validatedItems = [];
+      let totalPrice = 0;
+      let currency = null;
 
-      if (!product.is_active) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          error: 'Product is not available'
-        });
-      }
+      for (const item of cartItems) {
+        const product = productsMap.get(item.productId);
 
-      // Check available stock ONLY for non-preorder products
-      // Preorder products (is_preorder = true) can be ordered even with stock = 0
-      if (!product.is_preorder) {
-        const available = product.stock_quantity - (product.reserved_quantity || 0);
-        if (available < quantity) {
+        // Check product exists
+        if (!product) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            error: `Product ID ${item.productId} not found`
+          });
+        }
+
+        // Check product is active
+        if (!product.is_active) {
           await client.query('ROLLBACK');
           return res.status(400).json({
             success: false,
-            error: `Insufficient stock. Available: ${available}`
+            error: `Product "${product.name}" is not available`
           });
         }
+
+        // Check stock availability (skip for preorders)
+        if (!product.is_preorder) {
+          const available = product.stock_quantity - (product.reserved_quantity || 0);
+          if (available < item.quantity) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              error: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${item.quantity}`
+            });
+          }
+        }
+
+        // Validate currency consistency (all items must have same currency)
+        if (currency === null) {
+          currency = product.currency;
+        } else if (currency !== product.currency) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            error: `Mixed currencies not allowed. Expected ${currency}, got ${product.currency} for "${product.name}"`
+          });
+        }
+
+        // Calculate item total
+        const itemTotal = product.price * item.quantity;
+        totalPrice += itemTotal;
+
+        validatedItems.push({
+          productId: product.id,
+          productName: product.name,
+          quantity: item.quantity,
+          price: product.price,
+          currency: product.currency,
+          shopId: product.shop_id
+        });
       }
 
-      // Calculate total price
-      const totalPrice = product.price * quantity;
-
-      // Create order (pass client for transaction)
+      // Step 3: Create order with total price
+      // Note: For multi-item orders, product_id stores first item's ID for backward compatibility
       const order = await orderQueries.create({
         buyerId: req.user.id,
-        productId,
-        quantity,
+        productId: validatedItems[0].productId,
+        quantity: validatedItems.reduce((sum, item) => sum + item.quantity, 0), // Total quantity
         totalPrice,
-        currency: product.currency,
+        currency,
         deliveryAddress
       }, client);
 
-      // Reserve product stock (pass client for transaction)
-      await productQueries.reserveStock(productId, quantity, client);
+      // Step 4: Create order items records
+      await orderItemQueries.createBatch(order.id, validatedItems, client);
+
+      // Step 5: Reserve stock for all items
+      for (const item of validatedItems) {
+        await productQueries.reserveStock(item.productId, item.quantity, client);
+      }
 
       // Commit transaction
       await client.query('COMMIT');
 
+      logger.info('Order created successfully', {
+        orderId: order.id,
+        buyerId: req.user.id,
+        itemCount: validatedItems.length,
+        totalPrice,
+        currency
+      });
+
       return res.status(201).json({
         success: true,
-        data: order
+        data: {
+          ...order,
+          items: validatedItems // Include items in response
+        }
       });
 
     } catch (error) {

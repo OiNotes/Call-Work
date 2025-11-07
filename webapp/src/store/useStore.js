@@ -321,20 +321,8 @@ export const useStore = create(
 
         if (cart.length === 0) return null;
 
-        // ⚠️ WARNING: Multi-item cart limitation
-        if (cart.length > 1) {
-          console.warn('⚠️ [createOrder] Multi-item orders not supported by backend!');
-          console.warn('⚠️ [createOrder] Cart has', cart.length, 'items, but only FIRST item will be ordered:');
-          console.warn('⚠️ [createOrder] Ordering:', cart[0]);
-          console.warn('⚠️ [createOrder] Ignoring:', cart.slice(1));
-          
-          const toast = useToastStore.getState().addToast;
-          toast({ 
-            type: 'warning', 
-            message: `Внимание: заказ только для ${cart[0].name}. Остальные товары игнорируются.`, 
-            duration: 5000 
-          });
-        }
+        // ✅ Multi-item cart now fully supported!
+        console.log(`[createOrder] Creating order for ${cart.length} item(s):`, cart.map(i => `${i.name} x${i.quantity}`));
 
         set({ isCreatingOrder: true });
 
@@ -342,14 +330,16 @@ export const useStore = create(
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
           const initData = window.Telegram?.WebApp?.initData || '';
-          const item = cart[0];  // ⚠️ Only first item (backend limitation)
 
           const controller = new AbortController();
           timeoutId = setTimeout(() => controller.abort(), 8000);
 
+          // ✅ Send ALL cart items to backend
           const response = await axios.post(`${API_URL}/orders`, {
-            productId: item.id,
-            quantity: item.quantity,
+            items: cart.map(item => ({
+              productId: item.id,
+              quantity: item.quantity
+            })),
             deliveryAddress: null
           }, {
             headers: {
