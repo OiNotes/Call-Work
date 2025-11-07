@@ -93,8 +93,11 @@ export default function PaymentHashModal() {
 
           {/* Modal - Compact */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
-            style={{ maxHeight: getSheetMaxHeight(platform, ios ? -20 : 32) }}
+            className="fixed inset-x-0 z-50 flex flex-col"
+            style={{
+              bottom: 'var(--tabbar-total)',  // ✅ FIX: Position ABOVE TabBar
+              maxHeight: getSheetMaxHeight(platform, ios ? -20 : 32)
+            }}
             initial={{ y: '100%', scale: 0.95 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: '100%', scale: 0.95 }}
@@ -293,7 +296,7 @@ export default function PaymentHashModal() {
               </div>
 
               {/* Footer - Compact */}
-              <div className="p-4 border-t border-white/10" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
+              <div className="p-4 border-t border-white/10">
                 <motion.button
                   onClick={handleSubmit}
                   disabled={!isValidTxHash}

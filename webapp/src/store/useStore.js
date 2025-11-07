@@ -85,15 +85,34 @@ export const useStore = create(
       cart: [],
       addToCart: (product) => {
         const { cart: currentCart, currentShop, productsShopId } = get();
+        const toast = useToastStore.getState().addToast;
         const existingItem = currentCart.find(item => item.id === product.id);
 
         if (existingItem) {
+          // ✅ STOCK VALIDATION: Check if can increase quantity
+          const newQuantity = existingItem.quantity + 1;
+          const stock = existingItem.stock_quantity || existingItem.stock || 0;
+          const isPreorder = existingItem.isPreorder || existingItem.availability === 'preorder';
+          
+          // Allow unlimited quantity for preorders
+          if (!isPreorder && newQuantity > stock) {
+            console.warn('[addToCart] Cannot add more - stock limit reached:', { product: existingItem.name, stock, requested: newQuantity });
+            toast({ 
+              type: 'warning', 
+              message: `Максимум ${stock} шт. в наличии`, 
+              duration: 2500 
+            });
+            return; // Don't add
+          }
+          
           set({
             cart: currentCart.map(item =>
               item.id === product.id
-                ? { ...item, quantity: item.quantity + 1 }
+                ? { ...item, quantity: newQuantity }
                 : item
-            )
+            ),
+            // ✅ FIX: Clear stale order when cart changes
+            currentOrder: null
           });
         } else {
           // Сохраняем shopId вместе с товаром для восстановления currentShop при checkout
@@ -106,12 +125,24 @@ export const useStore = create(
             return;
           }
 
-          set({ cart: [...currentCart, { ...product, quantity: 1, shopId }] });
+          set({ 
+            cart: [...currentCart, { ...product, quantity: 1, shopId }],
+            // ✅ FIX: Clear stale order when cart changes
+            currentOrder: null
+          });
         }
+        
+        console.log('[addToCart] Product added, currentOrder cleared');
       },
 
       removeFromCart: (productId) => {
-        set({ cart: get().cart.filter(item => item.id !== productId) });
+        set({ 
+          cart: get().cart.filter(item => item.id !== productId),
+          // ✅ FIX: Clear stale order when cart changes
+          currentOrder: null
+        });
+        
+        console.log('[removeFromCart] Product removed, currentOrder cleared');
       },
 
       updateCartQuantity: (productId, quantity) => {
@@ -120,16 +151,48 @@ export const useStore = create(
           return;
         }
 
+        const toast = useToastStore.getState().addToast;
+        const { cart } = get();
+        const item = cart.find(i => i.id === productId);
+        
+        if (item) {
+          // ✅ STOCK VALIDATION: Check if quantity exceeds stock
+          const stock = item.stock_quantity || item.stock || 0;
+          const isPreorder = item.isPreorder || item.availability === 'preorder';
+          
+          // Allow unlimited quantity for preorders
+          if (!isPreorder && quantity > stock) {
+            console.warn('[updateCartQuantity] Quantity exceeds stock:', { product: item.name, stock, requested: quantity });
+            toast({ 
+              type: 'warning', 
+              message: `Максимум ${stock} шт. в наличии. Установлено ${stock}.`, 
+              duration: 3000 
+            });
+            // Set to max available stock instead
+            quantity = stock;
+          }
+        }
+
         set({
           cart: get().cart.map(item =>
             item.id === productId
               ? { ...item, quantity }
               : item
-          )
+          ),
+          // ✅ FIX: Clear stale order when cart changes
+          // Forces order re-creation with updated quantity on next checkout
+          currentOrder: null
         });
+
+        console.log('[updateCartQuantity] Cart updated, currentOrder cleared');
       },
 
-      clearCart: () => set({ cart: [] }),
+      clearCart: () => {
+        set({ cart: [] });
+        // ✅ FIX: Clear payment state to avoid orphan orders
+        get().resetPaymentFlow({ clearCart: false, reason: 'cart_cleared' });
+        console.log('[clearCart] Cart and payment state cleared');
+      },
 
       getCartTotal: () => {
         return get().cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -193,6 +256,22 @@ export const useStore = create(
           return;
         }
 
+        // ✅ FIX: Validate cart items
+        const invalidItems = cart.filter(item => item.price <= 0 || item.quantity <= 0);
+        if (invalidItems.length > 0) {
+          console.error('[startCheckout] Invalid cart items:', invalidItems);
+          toast({ type: 'error', message: 'Ошибка в корзине. Обновите страницу.', duration: 3000 });
+          return;
+        }
+
+        // ✅ FIX: Validate cart total
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        if (total <= 0) {
+          console.error('[startCheckout] Invalid cart total:', total);
+          toast({ type: 'error', message: 'Сумма заказа должна быть больше 0', duration: 3000 });
+          return;
+        }
+
         // Получить shopId из первого товара в корзине
         const shopId = cart[0]?.shopId;
 
@@ -221,10 +300,20 @@ export const useStore = create(
 
         console.log('[startCheckout] Setting currentShop:', shop);
 
+        // ✅ FIX: ALWAYS clear currentOrder to force fresh creation
+        // This prevents stale order reuse after cart quantity changes
         set({
           currentShop: shop,
+          currentOrder: null,      // Force re-create order with current cart totals
+          selectedCrypto: null,
+          paymentWallet: null,
+          cryptoAmount: 0,
+          invoiceExpiresAt: null,
+          verifyError: null,
           paymentStep: 'method'
         });
+
+        console.log('[startCheckout] ✅ Payment state cleared, cart total:', total.toFixed(2));
       },
 
       createOrder: async () => {
@@ -232,13 +321,28 @@ export const useStore = create(
 
         if (cart.length === 0) return null;
 
+        // ⚠️ WARNING: Multi-item cart limitation
+        if (cart.length > 1) {
+          console.warn('⚠️ [createOrder] Multi-item orders not supported by backend!');
+          console.warn('⚠️ [createOrder] Cart has', cart.length, 'items, but only FIRST item will be ordered:');
+          console.warn('⚠️ [createOrder] Ordering:', cart[0]);
+          console.warn('⚠️ [createOrder] Ignoring:', cart.slice(1));
+          
+          const toast = useToastStore.getState().addToast;
+          toast({ 
+            type: 'warning', 
+            message: `Внимание: заказ только для ${cart[0].name}. Остальные товары игнорируются.`, 
+            duration: 5000 
+          });
+        }
+
         set({ isCreatingOrder: true });
 
         let timeoutId; // ✅ Moved BEFORE try block for finally access
         try {
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
           const initData = window.Telegram?.WebApp?.initData || '';
-          const item = cart[0];
+          const item = cart[0];  // ⚠️ Only first item (backend limitation)
 
           const controller = new AbortController();
           timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -288,19 +392,27 @@ export const useStore = create(
         let invoiceInProgress = false; // Synchronous lock
 
         return async (crypto) => {
+          console.log('🔵 [selectCrypto] START', { crypto, rawInput: crypto });
+          
+          // ✅ Normalize to UPPERCASE before everything (fix ID case mismatch)
+          const normalizedCrypto = crypto.toUpperCase();
+          console.log('🔵 [selectCrypto] Normalized:', normalizedCrypto);
+
           const { currentOrder, user, isGeneratingInvoice } = get();
           const toast = useToastStore.getState().addToast;
+          
+          console.log('🔵 [selectCrypto] Current order:', currentOrder);
 
           // Check BOTH store state AND closure variable
           if (isGeneratingInvoice || invoiceInProgress) {
-            console.warn('[selectCrypto] Already generating invoice, ignoring');
+            console.warn('🔴 [selectCrypto] Already generating invoice, ignoring');
             return;
           }
 
           // Set BOTH locks IMMEDIATELY (synchronous)
           invoiceInProgress = true;
           set({
-            selectedCrypto: crypto,
+            selectedCrypto: normalizedCrypto,
             isGeneratingInvoice: true
           });
 
@@ -310,22 +422,63 @@ export const useStore = create(
         try {
           timeoutId = setTimeout(() => controller.abort(), 8000);
 
+          // ✅ FIX: Calculate current cart total for validation
+          const cart = get().cart;
+          const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          console.log('🔵 [selectCrypto] Current cart total:', cartTotal.toFixed(2));
+
           // Create order if not exists
           let order = currentOrder;
           if (!order) {
+            console.log('🔵 [selectCrypto] No current order, creating new...');
             order = await get().createOrder();
             if (!order) {
               const errorMsg = 'Не удалось создать заказ';
+              console.error('🔴 [selectCrypto] ERROR: Failed to create order');
               toast({ type: 'error', message: errorMsg, duration: 3000 });
               throw new Error('Failed to create order');
+            }
+            console.log('🟢 [selectCrypto] Order created:', order);
+          } else {
+            console.log('🔵 [selectCrypto] Using existing order:', order.id);
+            
+            // ✅ FIX: Validate order total matches cart total
+            const orderTotal = parseFloat(order.total_price) || 0;
+            const diff = Math.abs(orderTotal - cartTotal);
+            
+            if (diff > 0.01) {
+              console.warn('🟡 [selectCrypto] ⚠️ STALE ORDER DETECTED!');
+              console.warn('🟡 [selectCrypto] Order total:', orderTotal.toFixed(2));
+              console.warn('🟡 [selectCrypto] Cart total:', cartTotal.toFixed(2));
+              console.warn('🟡 [selectCrypto] Difference:', diff.toFixed(2));
+              console.warn('🟡 [selectCrypto] Re-creating order with fresh data...');
+              
+              // Re-create order with current cart data
+              order = await get().createOrder();
+              if (!order) {
+                const errorMsg = 'Не удалось обновить заказ';
+                console.error('🔴 [selectCrypto] ERROR: Failed to re-create order');
+                toast({ type: 'error', message: errorMsg, duration: 3000 });
+                throw new Error('Failed to re-create order');
+              }
+              
+              console.log('🟢 [selectCrypto] Order re-created with correct total:', order.total_price);
+            } else {
+              console.log('🟢 [selectCrypto] Order total valid:', orderTotal.toFixed(2));
             }
           }
 
           // Generate invoice
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+          
+          console.log('🔵 [selectCrypto] Sending API request:', {
+            url: `${API_URL}/orders/${order.id}/invoice`,
+            currency: normalizedCrypto
+          });
+          
           const response = await axios.post(
             `${API_URL}/orders/${order.id}/invoice`,
-            { currency: crypto },
+            { chain: normalizedCrypto },
             {
               headers: {
                 'Content-Type': 'application/json'
@@ -333,13 +486,21 @@ export const useStore = create(
               signal: controller.signal // ✅ Add abort signal
             }
           );
+          
+          console.log('🟢 [selectCrypto] API SUCCESS:', response.data);
 
           const invoice = response.data.data;
+          
+          console.log('🔵 [selectCrypto] Invoice received:', invoice);
 
           // Ensure cryptoAmount is NUMBER (backend might return string from PostgreSQL)
           const cryptoAmount = parseFloat(invoice.cryptoAmount);
+          
+          console.log('🔵 [selectCrypto] Parsed cryptoAmount:', cryptoAmount);
+          
           if (!isFinite(cryptoAmount) || cryptoAmount <= 0) {
             const errorMsg = 'Некорректная сумма от сервера';
+            console.error('🔴 [selectCrypto] Invalid cryptoAmount:', { invoice, cryptoAmount });
             toast({ type: 'error', message: errorMsg, duration: 3000 });
             throw new Error('Invalid cryptoAmount from API');
           }
@@ -350,8 +511,15 @@ export const useStore = create(
             invoiceExpiresAt: invoice.expiresAt,
             paymentStep: 'details'
           });
+          
+          console.log('🟢 [selectCrypto] SUCCESS - State updated, showing payment details');
         } catch (error) {
-          console.error('Generate invoice error:', error);
+          console.error('🔴 [selectCrypto] API ERROR:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            fullError: error
+          });
 
           // Handle timeout/abort
           if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {

@@ -166,45 +166,79 @@ export async function generateLtcAddress(xpub, index) {
  * @returns {Promise<object>} { address: string, derivationPath: string }
  */
 export async function generateEthAddress(xpub, index) {
+  console.log('🔵 [generateEthAddress] START', {
+    xpubExists: !!xpub,
+    xpubLength: xpub?.length,
+    index,
+    xpubPreview: xpub ? xpub.substring(0, 20) + '...' : 'undefined'
+  });
+  
   try {
     // Validate inputs
     if (!validateXpub(xpub, 'ETH')) {
+      console.error('🔴 [generateEthAddress] Invalid xpub!', {
+        xpub: xpub?.substring(0, 30),
+        validation: 'failed'
+      });
       throw new Error('Invalid Ethereum xpub');
     }
 
     if (!Number.isInteger(index) || index < 0 || index >= Math.pow(2, 31)) {
+      console.error('🔴 [generateEthAddress] Invalid index:', index);
       throw new Error(`Invalid derivation index: ${index}. Must be 0 to 2^31-1`);
     }
+    
+    console.log('🔵 [generateEthAddress] Validation passed, deriving address...');
 
     // ETH uses standard BIP32 derivation
+    console.log('🔵 [generateEthAddress] Parsing xpub...');
     const node = bip32.fromBase58(xpub);
+    console.log('🔵 [generateEthAddress] Xpub parsed successfully');
 
     // Derive child: m/0/{index} (external chain)
+    console.log('🔵 [generateEthAddress] Deriving child at index:', index);
     const child = node.derive(0).derive(index);
+    console.log('🔵 [generateEthAddress] Child derived');
 
     // Create Ethereum address from public key
     // BIP32 returns compressed public key (33 bytes), need to pass as hex string with '0x' prefix for ethers
     const publicKey = child.publicKey;
 
     if (!publicKey) {
+      console.error('🔴 [generateEthAddress] Failed to derive public key');
       throw new Error('Failed to derive public key from xpub');
     }
+    
+    console.log('🔵 [generateEthAddress] Public key extracted, length:', publicKey.length);
 
     // Convert Buffer to hex string with '0x' prefix for ethers
     const publicKeyHex = '0x' + publicKey.toString('hex');
+    console.log('🔵 [generateEthAddress] Public key hex:', publicKeyHex.substring(0, 20) + '...');
 
     // Compute Ethereum address using ethers (accepts compressed or uncompressed)
+    console.log('🔵 [generateEthAddress] Computing Ethereum address...');
     const address = ethers.computeAddress(publicKeyHex);
 
     const derivationPath = `m/44'/60'/0'/0/${index}`;
 
     logger.info(`[WalletService] Generated ETH address at ${derivationPath}: ${address}`);
+    
+    console.log('🟢 [generateEthAddress] SUCCESS:', {
+      address,
+      derivationPath
+    });
 
     return {
       address,
       derivationPath
     };
   } catch (error) {
+    console.error('🔴 [generateEthAddress] CATCH ERROR:', {
+      message: error.message,
+      stack: error.stack,
+      index
+    });
+    
     logger.error('[WalletService] ETH address generation failed:', {
       error: error.message,
       index

@@ -34,6 +34,17 @@ export default function PaymentDetailsModal() {
   const [copiedAmount, setCopiedAmount] = useState(false);
   const copiedTimeoutRef = useRef(null);
   const copiedAmountTimeoutRef = useRef(null);
+  
+  // Log render state
+  console.log('🔵 [PaymentDetailsModal] RENDER', {
+    isOpen: paymentStep === 'details',
+    paymentStep,
+    selectedCrypto,
+    currentOrder: currentOrder?.id,
+    paymentWallet,
+    cryptoAmount,
+    isGeneratingInvoice
+  });
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -79,6 +90,8 @@ export default function PaymentDetailsModal() {
 
   const isOpen = paymentStep === 'details';
   const isLoading = isOpen && isGeneratingInvoice;
+  
+  console.log('🔵 [PaymentDetailsModal] Modal state:', { isOpen, isLoading });
 
   // Show loading state if still generating invoice
   if (isLoading) {
@@ -103,50 +116,92 @@ export default function PaymentDetailsModal() {
   }
 
   const cryptoInfo = CRYPTO_OPTIONS.find(c => c.id === selectedCrypto);
+  
+  console.log('🔵 [PaymentDetailsModal] CryptoInfo lookup:', {
+    selectedCrypto,
+    cryptoInfo: cryptoInfo?.id || 'NOT FOUND',
+    availableOptions: CRYPTO_OPTIONS.map(c => c.id)
+  });
 
   const handleClose = () => {
     triggerHaptic('light');
     setPaymentStep('method');
   };
 
-  const handleCopyWallet = async () => {
+  // Universal copy with fallback for Telegram WebApp iframe
+  const copyToClipboard = async (text) => {
+    // Try modern Clipboard API first
     try {
-      await navigator.clipboard.writeText(paymentWallet);
-      setCopied(true);
-      triggerHaptic('success');
-      toast.success('Адрес скопирован');
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.log('[PaymentDetailsModal] Clipboard API failed, using fallback...', err);
+      
+      // Fallback: Legacy execCommand (works in iframe)
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          console.log('[PaymentDetailsModal] Fallback copy successful');
+          return true;
+        }
+        
+        throw new Error('execCommand returned false');
+      } catch (fallbackErr) {
+        console.error('[PaymentDetailsModal] All copy methods failed:', fallbackErr);
+        return false;
+      }
+    }
+  };
 
+  const handleCopyWallet = async () => {
+    const success = await copyToClipboard(paymentWallet);
+    
+    if (success) {
+      setCopied(true);
+      toast.success(t('payment.addressCopied') || 'Адрес скопирован');
+      triggerHaptic('success');
+      
       // Clear previous timeout before setting new one
       if (copiedTimeoutRef.current) {
         clearTimeout(copiedTimeoutRef.current);
       }
-
+      
       // Set new timeout with proper cleanup
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      toast.error('Не удалось скопировать адрес');
+    } else {
+      toast.error('Скопируйте адрес вручную (выделите и Ctrl+C)');
       triggerHaptic('error');
     }
   };
 
   const handleCopyAmount = async () => {
-    try {
-      await navigator.clipboard.writeText(`${cryptoAmount} ${selectedCrypto}`);
+    const success = await copyToClipboard(`${cryptoAmount} ${selectedCrypto}`);
+    
+    if (success) {
       setCopiedAmount(true);
+      toast.success(t('payment.amountCopied') || 'Сумма скопирована');
       triggerHaptic('success');
-      toast.success('Сумма скопирована');
-
+      
       // Clear previous timeout before setting new one
       if (copiedAmountTimeoutRef.current) {
         clearTimeout(copiedAmountTimeoutRef.current);
       }
-
+      
       // Set new timeout with proper cleanup
       copiedAmountTimeoutRef.current = setTimeout(() => setCopiedAmount(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      toast.error('Не удалось скопировать сумму');
+    } else {
+      toast.error('Скопируйте сумму вручную');
       triggerHaptic('error');
     }
   };
@@ -158,10 +213,67 @@ export default function PaymentDetailsModal() {
 
   useBackButton(isOpen ? handleClose : null);
 
-  // Валидация данных
-  if (!cryptoInfo || !currentOrder) return null;
+  // Defensive error handling for unknown crypto
+  if (!cryptoInfo) {
+    console.error('🔴 [PaymentDetailsModal] Unknown cryptocurrency:', selectedCrypto);
+    console.error('🔴 [PaymentDetailsModal] Available currencies:', CRYPTO_OPTIONS.map(c => c.id));
+    
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[60]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              style={getSurfaceStyle('overlay', platform)}
+            />
+            <motion.div
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="glass-card rounded-3xl p-6 text-center max-w-sm">
+                <div className="text-red-500 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Неизвестная криптовалюта
+                </h3>
+                <p className="text-gray-400 mb-4">
+                  Выбранная криптовалюта ({selectedCrypto}) не поддерживается
+                </p>
+                <motion.button
+                  onClick={handleClose}
+                  className="px-6 py-3 bg-orange-primary hover:bg-orange-light text-white font-semibold rounded-xl transition-colors"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Закрыть
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // Валидация остальных данных
+  if (!currentOrder) {
+    console.warn('🟡 [PaymentDetailsModal] No currentOrder, modal hidden');
+    return null;
+  }
 
   if (!paymentWallet || !cryptoAmount || cryptoAmount <= 0) {
+    console.error('🔴 [PaymentDetailsModal] Invalid payment data:', {
+      paymentWallet,
+      cryptoAmount
+    });
     // Если данных нет - показываем error state
     return (
       <AnimatePresence>
@@ -211,7 +323,7 @@ export default function PaymentDetailsModal() {
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-[60]"
+            className="fixed inset-0 z-[1000]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -222,8 +334,11 @@ export default function PaymentDetailsModal() {
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[60] flex flex-col"
-            style={{ maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32) }}
+            className="fixed inset-x-0 z-[1001] flex flex-col"
+            style={{
+              bottom: 'var(--tabbar-total)',  // ✅ FIX: Position ABOVE TabBar
+              maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32)
+            }}
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
@@ -233,37 +348,40 @@ export default function PaymentDetailsModal() {
               className="rounded-t-[32px] flex flex-col"
               style={sheetStyle}
             >
-              {/* Header - Compact */}
-              <div className="flex items-center justify-between p-4 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    onClick={handleClose}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
-                    style={{
-                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}
-                    whileTap={{ scale: android ? 0.94 : 0.9 }}
-                    transition={controlSpring}
+              {/* Header - Centered */}
+              <div className="relative flex items-center justify-center p-4 border-b border-white/10">
+                {/* Back Button - Absolute Left */}
+                <motion.button
+                  onClick={handleClose}
+                  className="absolute left-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
+                  style={{
+                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}
+                  whileTap={{ scale: android ? 0.94 : 0.9 }}
+                  transition={controlSpring}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </motion.button>
+                
+                {/* Title - Centered */}
+                <div className="text-center">
+                  <h2
+                    className="text-lg font-bold text-white"
+                    style={{ letterSpacing: '-0.01em' }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </motion.button>
-                  <div>
-                    <h2
-                      className="text-lg font-bold text-white"
-                      style={{ letterSpacing: '-0.01em' }}
-                    >
-                      {t('payment.payWith', { crypto: cryptoInfo.name })}
-                    </h2>
-                    <p className="text-xs text-gray-400">
-                      {cryptoInfo.network}
-                    </p>
-                  </div>
+                    {t('payment.payWith', { crypto: cryptoInfo.name })}
+                  </h2>
+                  <p className="text-xs text-gray-400">
+                    {cryptoInfo.network}
+                  </p>
                 </div>
+                
+                {/* Crypto Icon - Absolute Right */}
                 <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold"
+                  className="absolute right-4 w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold"
                   style={{
                     background: `linear-gradient(135deg, ${cryptoInfo.gradient})`,
                     boxShadow: `0 4px 12px ${cryptoInfo.color}40`
@@ -274,7 +392,7 @@ export default function PaymentDetailsModal() {
               </div>
 
               {/* Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ paddingBottom: 'calc(var(--tabbar-total) + 16px)' }}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ paddingBottom: 'calc(var(--tabbar-total) + 32px)' }}>
                 {/* QR Code - Compact */}
                 <div className="flex justify-center">
                   <motion.div

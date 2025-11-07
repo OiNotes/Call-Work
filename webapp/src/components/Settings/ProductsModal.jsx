@@ -137,6 +137,44 @@ function ProductForm({ product, formData, setFormData, onSubmit, saving, editing
         </div>
       </div>
 
+      {/* Availability Type Toggle */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-400 mb-2">
+          Тип доступности
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <motion.button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, is_preorder: false }))}
+            whileTap={{ scale: 0.98 }}
+            className={`py-3 px-4 rounded-xl font-medium transition-all ${
+              !formData.is_preorder 
+                ? 'bg-gradient-to-r from-orange-primary to-orange-light text-white shadow-lg' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            ✅ В наличии
+          </motion.button>
+          <motion.button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, is_preorder: true }))}
+            whileTap={{ scale: 0.98 }}
+            className={`py-3 px-4 rounded-xl font-medium transition-all ${
+              formData.is_preorder 
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            🕒 Предзаказ
+          </motion.button>
+        </div>
+        {formData.is_preorder && (
+          <p className="text-xs text-blue-400 mt-2">
+            Товар будет доступен для предзаказа независимо от количества
+          </p>
+        )}
+      </div>
+
       {/* Inline Save Button */}
       <motion.button
         onClick={onSubmit}
@@ -189,14 +227,21 @@ export default function ProductsModal({ isOpen, onClose }) {
     description: '',
     price: '',
     stock: '',
-    is_available: true
+    is_available: true,
+    is_preorder: false
   });
 
   const mapProduct = useCallback((product) => {
     const stock = product.stock_quantity ?? product.stock ?? 0;
     const isAvailable = product.is_available ?? product.isActive ?? true;
-    const availability = !isAvailable ? 'unavailable' : stock > 0 ? 'stock' : 'preorder';
-
+    const isPreorder = product.is_preorder ?? false;
+    
+    const availability = !isAvailable 
+      ? 'unavailable' 
+      : isPreorder
+        ? 'preorder'
+        : 'stock';
+    
     return {
       ...product,
       price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
@@ -204,7 +249,7 @@ export default function ProductsModal({ isOpen, onClose }) {
       stock_quantity: stock,
       is_available: isAvailable,
       isAvailable,
-      isPreorder: availability === 'preorder',
+      isPreorder,
       availability,
     };
   }, []);
@@ -362,7 +407,7 @@ export default function ProductsModal({ isOpen, onClose }) {
       setShowAIChat(false);
       setAiError(null);
       setLastAIPrompt('');
-      setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
+      setFormData({ name: '', description: '', price: '', stock: '', is_available: true, is_preorder: false });
     }
   }, [isOpen]);
 
@@ -385,6 +430,7 @@ export default function ProductsModal({ isOpen, onClose }) {
         price: Number.isFinite(price) ? price : formData.price,
         stock: stockValue,
         stockQuantity: stockValue,
+        is_preorder: formData.is_preorder
       };
 
       if (editingProduct) {
@@ -530,7 +576,7 @@ export default function ProductsModal({ isOpen, onClose }) {
                 triggerHaptic('light');
                 setShowForm(true);
                 setEditingProduct(null);
-                setFormData({ name: '', description: '', price: '', stock: '', is_available: true });
+                setFormData({ name: '', description: '', price: '', stock: '', is_available: true, is_preorder: false });
               } else {
                 alert(`Лимит достигнут! Доступно: ${limitStatus?.tier}`);
               }
@@ -586,7 +632,8 @@ export default function ProductsModal({ isOpen, onClose }) {
                       description: mapped.description || '',
                       price: mapped.price || '',
                       stock: mapped.stock ?? mapped.stock_quantity ?? '',
-                      is_available: mapped.is_available ?? true
+                      is_available: mapped.is_available ?? true,
+                      is_preorder: mapped.is_preorder ?? false
                     });
                     setShowForm(true);
                   }}

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import Header from '../components/Layout/Header';
 import ProductGrid from '../components/Product/ProductGrid';
 import CartButton from '../components/Cart/CartButton';
-import PreorderSheet from '../components/Catalog/PreorderSheet';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTranslation } from '../i18n/useTranslation';
@@ -45,7 +44,6 @@ export default function Catalog() {
   const { t } = useTranslation();
   const { get } = useApi();
   const [activeSection, setActiveSection] = useState('stock');
-  const [preorderProduct, setPreorderProduct] = useState(null);
 
   // ✅ REMOVED: Unnecessary empty useEffect - logic handled in main useEffect
 
@@ -217,12 +215,6 @@ export default function Catalog() {
     triggerHaptic('light');
     setActiveSection(sectionId);
   }, [activeSection, triggerHaptic]);
-
-  const openPreorder = useCallback((product) => {
-    setPreorderProduct(product);
-  }, []);
-
-  const closePreorder = useCallback(() => setPreorderProduct(null), []);
 
   // Если нет магазина - показываем loading или пустой экран
   if (!displayShop) {
@@ -399,19 +391,11 @@ export default function Catalog() {
             : t('catalog.emptyDesc')
           }
           emptyIcon={activeSection === 'preorder' ? '🕒' : '📦'}
-          onPreorder={openPreorder}
         />
       )}
 
       {/* Floating Cart Button */}
       <CartButton onClick={() => setCartOpen(true)} />
-
-      <PreorderSheet
-        product={preorderProduct}
-        shop={displayShop}
-        isOpen={Boolean(preorderProduct)}
-        onClose={closePreorder}
-      />
     </div>
   );
 }

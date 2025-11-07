@@ -54,7 +54,7 @@ export const orderController = {
       // Lock product row for update (prevents race condition)
       const productResult = await client.query(
         `SELECT id, shop_id, name, description, price, currency,
-                stock_quantity, reserved_quantity, is_active,
+                stock_quantity, reserved_quantity, is_active, is_preorder,
                 created_at, updated_at
          FROM products WHERE id = $1 FOR UPDATE`,
         [productId]
@@ -78,14 +78,17 @@ export const orderController = {
         });
       }
 
-      // Check available stock (stock - reserved)
-      const available = product.stock_quantity - (product.reserved_quantity || 0);
-      if (available < quantity) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          error: `Insufficient stock. Available: ${available}`
-        });
+      // Check available stock ONLY for non-preorder products
+      // Preorder products (is_preorder = true) can be ordered even with stock = 0
+      if (!product.is_preorder) {
+        const available = product.stock_quantity - (product.reserved_quantity || 0);
+        if (available < quantity) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            error: `Insufficient stock. Available: ${available}`
+          });
+        }
       }
 
       // Calculate total price
@@ -605,6 +608,13 @@ export const orderController = {
    * Generate invoice for order with HD wallet address generation
    */
   generateInvoice: async (req, res) => {
+    console.log('🔵 [createInvoice] START', {
+      orderId: req.params.id,
+      chain: req.body.chain,
+      currency: req.body.currency,
+      userId: req.user?.id
+    });
+    
     try {
       const { id: orderId } = req.params;
       const { chain } = req.body;
@@ -622,8 +632,16 @@ export const orderController = {
       // Validate chain
       const normalizedChain = chain ? chainMapping[chain.toUpperCase()] : null;
       const supportedChains = ['BTC', 'ETH', 'LTC', 'USDT_ERC20', 'USDT_TRC20'];
+      
+      console.log('🔵 [createInvoice] Validation:', {
+        orderId,
+        chain,
+        normalizedChain,
+        supportedChains
+      });
 
       if (!normalizedChain || !supportedChains.includes(normalizedChain)) {
+        console.error('🔴 [createInvoice] ERROR: Invalid chain');
         return res.status(400).json({
           success: false,
           error: `Invalid chain. Supported: ${supportedChains.join(', ')}`
@@ -631,17 +649,26 @@ export const orderController = {
       }
 
       // Get order
+      console.log('🔵 [createInvoice] Fetching order:', orderId);
       const order = await orderQueries.findById(orderId);
 
       if (!order) {
+        console.error('🔴 [createInvoice] ERROR: Order not found');
         return res.status(404).json({
           success: false,
           error: 'Order not found'
         });
       }
+      
+      console.log('🟢 [createInvoice] Order found:', {
+        id: order.id,
+        buyer_id: order.buyer_id,
+        total_price: order.total_price
+      });
 
       // Check ownership
       if (order.buyer_id !== req.user.id) {
+        console.error('🔴 [createInvoice] ERROR: Access denied');
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -649,8 +676,11 @@ export const orderController = {
       }
 
       // Check if invoice already exists for this order
+      console.log('🔵 [createInvoice] Checking for existing invoice...');
       const existingInvoice = await invoiceQueries.findByOrderId(orderId);
+      
       if (existingInvoice && existingInvoice.status === 'pending') {
+        console.log('🟢 [createInvoice] Existing invoice found, returning:', existingInvoice.id);
         // Return existing pending invoice
         return res.status(200).json({
           success: true,
@@ -665,16 +695,23 @@ export const orderController = {
           }
         });
       }
+      
+      console.log('🔵 [createInvoice] No existing invoice, creating new...');
 
       // Get next address index for this chain
+      console.log('🔵 [createInvoice] Getting next address index for:', normalizedChain);
       const addressIndex = await invoiceQueries.getNextIndex(normalizedChain);
+      console.log('🔵 [createInvoice] Address index:', addressIndex);
 
       // Get xpub from environment
       const xpubKey = `HD_XPUB_${normalizedChain.split('_')[0]}`; // BTC, ETH, LTC, USDT
       const xpub = process.env[xpubKey];
+      
+      console.log('🔵 [createInvoice] Xpub key:', xpubKey, 'exists:', !!xpub);
 
       if (!xpub) {
         logger.error(`[Invoice] Missing xpub for ${normalizedChain}: ${xpubKey}`);
+        console.error('🔴 [createInvoice] ERROR: Missing xpub');
         return res.status(500).json({
           success: false,
           error: `Payment system not configured for ${normalizedChain}. Please contact support.`
@@ -682,17 +719,22 @@ export const orderController = {
       }
 
       // Generate unique HD wallet address
+      console.log('🔵 [createInvoice] Calling wallet service...');
       const { address, derivationPath } = await generateAddress(
         normalizedChain.split('_')[0], // Remove _ERC20/_TRC20 suffix
         xpub,
         addressIndex
       );
+      console.log('🟢 [createInvoice] Wallet generated:', address);
 
       // Get real-time crypto price
       const priceChain = normalizedChain.startsWith('USDT') ? 'USDT_ERC20' : normalizedChain;
+      console.log('🔵 [createInvoice] Fetching crypto price for:', priceChain);
       const cryptoPrice = await getCryptoPrice(priceChain);
+      console.log('🔵 [createInvoice] Crypto price:', cryptoPrice);
 
       if (!cryptoPrice) {
+        console.error('🔴 [createInvoice] ERROR: Unable to fetch crypto price');
         return res.status(500).json({
           success: false,
           error: `Unable to fetch ${normalizedChain} price. Please try again later.`
@@ -702,11 +744,19 @@ export const orderController = {
       // Convert USD to crypto amount with proper precision
       const rawCryptoAmount = convertUsdToCrypto(parseFloat(order.total_price), cryptoPrice);
       const cryptoAmount = roundCryptoAmount(rawCryptoAmount, priceChain);
+      
+      console.log('🔵 [createInvoice] Crypto amount calculation:', {
+        usdAmount: order.total_price,
+        cryptoPrice,
+        rawCryptoAmount,
+        roundedCryptoAmount: cryptoAmount
+      });
 
       // Calculate expiration (1 hour from now)
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
       // Create invoice in database
+      console.log('🔵 [createInvoice] Creating invoice in database...');
       const invoice = await invoiceQueries.create({
         orderId: parseInt(orderId),
         chain: normalizedChain,
@@ -717,6 +767,8 @@ export const orderController = {
         webhookSubscriptionId: null, // Will be set by webhook service
         expiresAt
       });
+      
+      console.log('🟢 [createInvoice] Invoice created in DB:', invoice.id);
 
       logger.info('[Invoice] Generated', {
         orderId,
@@ -728,8 +780,8 @@ export const orderController = {
         usdAmount: order.total_price,
         cryptoPrice
       });
-
-      return res.status(200).json({
+      
+      const responseData = {
         success: true,
         data: {
           id: invoice.id,
@@ -742,9 +794,20 @@ export const orderController = {
           expiresAt: invoice.expires_at,
           status: invoice.status
         }
-      });
+      };
+      
+      console.log('🟢 [createInvoice] SUCCESS - Returning invoice:', responseData);
+
+      return res.status(200).json(responseData);
 
     } catch (error) {
+      console.error('🔴 [createInvoice] CATCH ERROR:', {
+        message: error.message,
+        stack: error.stack,
+        orderId: req.params.id,
+        chain: req.body.chain
+      });
+      
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({

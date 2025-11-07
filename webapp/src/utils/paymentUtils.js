@@ -23,24 +23,8 @@ export const CRYPTO_OPTIONS = [
     name: 'Bitcoin',
     network: 'Bitcoin Network',
     icon: '₿',
-    gradient: 'from-[#F7931A] to-[#FFA500]',
+    gradient: 'from-[#F7931A] to-[#FFB74D]',
     color: '#F7931A'
-  },
-  {
-    id: 'USDT',
-    name: 'Tether',
-    network: 'TRC20',
-    icon: '₮',
-    gradient: 'from-[#26A17B] to-[#3DD598]',
-    color: '#26A17B'
-  },
-  {
-    id: 'LTC',
-    name: 'Litecoin',
-    network: 'Litecoin Network',
-    icon: 'Ł',
-    gradient: 'from-[#345D9D] to-[#5B8FD8]',
-    color: '#345D9D'
   },
   {
     id: 'ETH',
@@ -49,6 +33,22 @@ export const CRYPTO_OPTIONS = [
     icon: 'Ξ',
     gradient: 'from-[#627EEA] to-[#8FA5F0]',
     color: '#627EEA'
+  },
+  {
+    id: 'USDT',
+    name: 'Tether',
+    network: 'TRC20/ERC20',
+    icon: '₮',
+    gradient: 'from-[#26A17B] to-[#50AF95]',
+    color: '#26A17B'
+  },
+  {
+    id: 'LTC',
+    name: 'Litecoin',
+    network: 'Litecoin Network',
+    icon: 'Ł',
+    gradient: 'from-[#345D9D] to-[#5A7FB8]',
+    color: '#345D9D'
   }
 ];
 

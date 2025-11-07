@@ -87,15 +87,6 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
     addedTimeoutRef.current = setTimeout(() => setJustAdded(false), 1500);
   }, [isDisabled, toast, triggerHaptic, addToCart, product]);
 
-  const handlePreorderClick = useCallback((event) => {
-    event.stopPropagation();
-    triggerHaptic('light');
-    if (onPreorder) {
-      onPreorder(product);
-    } else {
-      toast.info('Предзаказ оформляется напрямую с продавцом. Напишите продавцу, чтобы закрепить товар.', 2600);
-    }
-  }, [triggerHaptic, onPreorder, product, toast]);
 
   return (
     <motion.div
@@ -141,9 +132,17 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
 
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 items-end">
         {isPreorder ? (
-          <div className="px-3 py-1 rounded-full border border-blue-400/60 bg-blue-500/20 text-[10px] font-semibold text-blue-200 uppercase tracking-[0.16em] shadow-[0_10px_30px_rgba(59,130,246,0.3)] flex items-center gap-1">
-            <span>🔖</span>
-            <span>Предзаказ</span>
+          <div className="w-9 h-9 rounded-full border border-orange-400/50 bg-orange-500/15 flex items-center justify-center shadow-[0_4px_12px_rgba(255,107,0,0.25)]">
+            <svg
+              className="w-5 h-5 text-orange-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2.2}
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" />
+            </svg>
           </div>
         ) : stock > 0 && (
           <div
@@ -258,19 +257,17 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
               </div>
             ) : (
               <span
-                className={`mt-1 text-xs uppercase font-medium ${
-                  isPreorder ? 'text-orange-200' : 'text-gray-500'
-                }`}
+                className="mt-1 text-xs uppercase font-medium text-gray-500"
                 style={{ letterSpacing: '0.05em' }}
               >
-                {isPreorder ? 'Предзаказ' : product.currency || 'USD'}
+                {product.currency || 'USD'}
               </span>
             )}
           </div>
 
           <motion.button
-            onClick={isPreorder ? handlePreorderClick : handleAddToCart}
-            disabled={!isPreorder && isDisabled}
+            onClick={handleAddToCart}
+            disabled={isDisabled}
             whileHover={{
               y: android ? -1 : -2,
               scale: android ? 1.03 : 1.05,
@@ -292,23 +289,19 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
             }}
             className="relative w-[2.75rem] h-[2.75rem] min-w-[2.75rem] min-h-[2.75rem] flex-shrink-0 rounded-xl text-white overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
             style={{
-              background: isPreorder
-                ? 'linear-gradient(135deg, rgba(255, 163, 63, 0.38) 0%, rgba(255, 107, 0, 0.58) 100%)'
-                : isDisabled
-                  ? 'rgba(74, 74, 74, 0.5)'
-                  : 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)',
-              boxShadow: isPreorder
-                ? '0 4px 14px rgba(255, 140, 66, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                : isDisabled
-                  ? 'none'
-                  : `
-                    0 2px 4px rgba(255, 107, 0, 0.25),
-                    0 4px 12px rgba(255, 107, 0, 0.2),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.25)
-                  `
+              background: isDisabled
+                ? 'rgba(74, 74, 74, 0.5)'
+                : 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)',
+              boxShadow: isDisabled
+                ? 'none'
+                : `
+                  0 2px 4px rgba(255, 107, 0, 0.25),
+                  0 4px 12px rgba(255, 107, 0, 0.2),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.25)
+                `
             }}
           >
-            {!isDisabled && !isPreorder && !android && (
+            {!isDisabled && !android && (
               <motion.div
                 className="absolute inset-0"
                 initial={{ x: '-100%', opacity: 0 }}
@@ -319,28 +312,15 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
                 }}
               />
             )}
-            {isPreorder ? (
-              <svg
-                className="relative w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.2}
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" />
-              </svg>
-            ) : (
-              <svg
-                className="relative w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-            )}
+            <svg
+              className="relative w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
           </motion.button>
         </div>
       </div>

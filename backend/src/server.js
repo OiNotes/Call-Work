@@ -57,6 +57,66 @@ import orderCleanupService from './services/orderCleanupService.js';
 import { startInvoiceCleanup } from './services/invoiceCleanupService.js';
 
 /**
+ * ENV Validation - check critical crypto xpubs
+ * Validates required environment variables before server startup
+ * to catch configuration issues early (fail-fast approach)
+ * 
+ * Supports both naming schemes:
+ * - New: BTC_XPUB, ETH_XPUB, LTC_XPUB
+ * - Legacy: HD_XPUB_BTC, HD_XPUB_ETH, HD_XPUB_LTC
+ */
+function validateEnvironment() {
+  const required = [
+    { name: 'BTC', new: 'BTC_XPUB', legacy: 'HD_XPUB_BTC' },
+    { name: 'ETH', new: 'ETH_XPUB', legacy: 'HD_XPUB_ETH' },
+    { name: 'LTC', new: 'LTC_XPUB', legacy: 'HD_XPUB_LTC' },
+    // USDT uses same as ETH (ERC20 and TRC20)
+  ];
+
+  const missing = [];
+  const configured = [];
+  
+  for (const { name, new: newKey, legacy } of required) {
+    const newValue = process.env[newKey];
+    const legacyValue = process.env[legacy];
+    
+    // Check if at least one format is configured
+    if ((!newValue || newValue === 'undefined') && (!legacyValue || legacyValue === 'undefined')) {
+      missing.push({ name, newKey, legacy });
+    } else {
+      // Track which key is actually used
+      const usedKey = newValue && newValue !== 'undefined' ? newKey : legacy;
+      configured.push(usedKey);
+    }
+  }
+
+  if (missing.length > 0) {
+    logger.error('❌ CRITICAL: Missing required environment variables!');
+    logger.error('');
+    logger.error('Missing crypto xpubs:');
+    missing.forEach(({ name, newKey, legacy }) => {
+      logger.error(`  ${name}: ${newKey} or ${legacy}`);
+    });
+    logger.error('');
+    logger.error('Please configure these variables in backend/.env:');
+    missing.forEach(({ newKey, legacy }) => {
+      logger.error(`  ${newKey}=xpub...   (or ${legacy}=xpub...)`);
+    });
+    logger.error('');
+    logger.error('Example: Generate using HD wallet (BIP32/BIP44)');
+    logger.error('Exiting...');
+    
+    process.exit(1);  // Stop server startup
+  }
+
+  logger.info('✓ Environment validation passed');
+  logger.info(`✓ Crypto xpubs configured: ${configured.join(', ')}`);
+}
+
+// Call validation BEFORE starting server
+validateEnvironment();
+
+/**
  * Initialize Express app
  */
 const app = express();
