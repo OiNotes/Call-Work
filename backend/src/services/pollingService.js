@@ -1,4 +1,4 @@
-import { paymentQueries, invoiceQueries, orderQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
+import { paymentQueries, invoiceQueries, orderQueries, orderItemQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
 import { getClient } from '../config/database.js';
 import * as etherscanService from './etherscanService.js';
 import * as tronService from './tronService.js';
@@ -480,9 +480,26 @@ async function handleConfirmedPayment(invoice, payment) {
         }
       }
       
-      // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+      // ✅ FIX #4: Lock products BEFORE checking stock
       const orderItems = await orderItemQueries.findByOrderIdWithStock(invoice.order_id, client);
       
+      const productIds = orderItems.map(item => item.product_id).filter(Boolean);
+      
+      if (productIds.length > 0) {
+        await client.query(
+          `SELECT id FROM products 
+           WHERE id = ANY($1::int[])
+           FOR UPDATE`,
+          [productIds]
+        );
+        
+        logger.info('[PollingService] Products locked for stock check', {
+          orderId: invoice.order_id,
+          productIds
+        });
+      }
+      
+      // Re-check stock AFTER lock (fresh data)
       if (orderItems.length === 0) {
         // Fallback: legacy single-item order
         logger.warn('[PollingService] No order_items found - assuming legacy single-item order', {

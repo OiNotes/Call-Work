@@ -13,13 +13,23 @@ export const paymentController = {
    * Verify crypto payment
    */
   verify: async (req, res) => {
+    const client = await getClient();
+    
     try {
       const { orderId, txHash, currency } = req.body;
 
-      // Get order
-      const order = await orderQueries.findById(orderId);
+      // ✅ FIX #1: BEGIN transaction FIRST with SERIALIZABLE isolation
+      await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
+
+      // Get order with lock
+      const orderResult = await client.query(
+        'SELECT * FROM orders WHERE id = $1 FOR UPDATE',
+        [orderId]
+      );
+      const order = orderResult.rows[0];
 
       if (!order) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           error: 'Order not found'
@@ -28,6 +38,7 @@ export const paymentController = {
 
       // Check if order belongs to user
       if (order.buyer_id !== req.user.id) {
+        await client.query('ROLLBACK');
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -36,61 +47,76 @@ export const paymentController = {
 
       // Check order status - only pending orders can be paid
       if (order.status !== 'pending') {
+        await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
           error: `Cannot pay for order with status: ${order.status}. Only pending orders can be paid.`
         });
       }
 
-      // Check if order already has a verified payment
-      const existingPayments = await paymentQueries.findByOrderId(orderId);
-      const verifiedPayment = existingPayments.find(p => p.status === 'confirmed');
+      // ✅ FIX #1: Check tx_hash INSIDE transaction with FOR UPDATE lock
+      const existingTx = await client.query(
+        'SELECT * FROM payments WHERE tx_hash = $1 FOR UPDATE',
+        [txHash]
+      );
 
-      if (verifiedPayment) {
-        return res.status(400).json({
-          success: false,
-          error: 'Order already paid'
-        });
-      }
-
-      // Check if this transaction was already submitted
-      const existingTx = await paymentQueries.findByTxHash(txHash);
-
-      if (existingTx) {
-        // CRITICAL: Check if tx_hash used for DIFFERENT order (double-spending attack)
-        if (existingTx.order_id && existingTx.order_id !== orderId) {
-          logger.warn('Double-spending attempt detected', {
+      if (existingTx.rows.length > 0) {
+        const existingPayment = existingTx.rows[0];
+        
+        // Check if TX used for DIFFERENT order (double-spending)
+        if (existingPayment.order_id && existingPayment.order_id !== orderId) {
+          await client.query('ROLLBACK');
+          logger.error('TX reuse attempt detected', {
             txHash,
-            existingOrderId: existingTx.order_id,
-            attemptedOrderId: orderId,
-            userId: req.user.id
+            existingOrderId: existingPayment.order_id,
+            attemptedOrderId: orderId
           });
+          
           return res.status(400).json({
             success: false,
-            error: 'This transaction is already used for another order'
+            error: 'This transaction was already used for a different order',
+            code: 'TX_ALREADY_USED'
           });
         }
-
+        
         // If same order, allow (idempotency)
-        if (existingTx.order_id === orderId) {
+        if (existingPayment.order_id === orderId) {
+          await client.query('ROLLBACK');
           logger.info('Idempotent payment verification request', { txHash, orderId });
           return res.json({
             success: true,
             message: 'Payment already processed',
             data: {
-              payment: existingTx,
+              payment: existingPayment,
               verification: {
                 verified: true,
-                status: existingTx.status
+                status: existingPayment.status
               }
             }
           });
         }
       }
 
+      // ✅ FIX #1: Check if order already paid with FOR UPDATE lock
+      const orderPayments = await client.query(
+        `SELECT id FROM payments 
+         WHERE order_id = $1 AND status = 'confirmed'
+         FOR UPDATE`,
+        [orderId]
+      );
+
+      if (orderPayments.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          error: 'Order already paid'
+        });
+      }
+
       // Get product and shop to retrieve seller's wallet address
       const product = await productQueries.findById(order.product_id);
       if (!product) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           error: 'Product not found'
@@ -99,6 +125,7 @@ export const paymentController = {
 
       const shop = await shopQueries.findById(product.shop_id);
       if (!shop) {
+        await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           error: 'Shop not found'
@@ -116,6 +143,30 @@ export const paymentController = {
         });
       }
 
+      // ✅ FIX #6: Check invoice not reused for different order
+      const invoiceCheck = await client.query(
+        `SELECT id, order_id FROM invoices 
+         WHERE address = $1 AND order_id != $2`,
+        [sellerAddress, orderId]
+      );
+
+      if (invoiceCheck.rows.length > 0) {
+        await client.query('ROLLBACK');
+        
+        logger.error('Invoice address reuse detected', {
+          txHash,
+          orderId,
+          conflictingOrderId: invoiceCheck.rows[0].order_id,
+          address: sellerAddress
+        });
+        
+        return res.status(400).json({
+          success: false,
+          error: 'This payment address is already associated with another order',
+          code: 'INVOICE_REUSE'
+        });
+      }
+
       // Verify payment with blockchain using seller's address
       const verification = await cryptoService.verifyTransaction(
         txHash,
@@ -125,7 +176,9 @@ export const paymentController = {
       );
 
       if (!verification.verified) {
-        // Create failed payment record
+        await client.query('ROLLBACK');
+        
+        // Create failed payment record (outside transaction)
         await paymentQueries.create({
           orderId,
           txHash,
@@ -140,31 +193,45 @@ export const paymentController = {
         });
       }
 
+      // ✅ FIX #3: Verify amount matches order total
+      if (verification.amount < parseFloat(order.total_price)) {
+        await client.query('ROLLBACK');
+        
+        logger.error('Payment amount mismatch', {
+          orderId,
+          txHash,
+          expected: order.total_price,
+          received: verification.amount,
+          shortage: parseFloat(order.total_price) - verification.amount
+        });
+        
+        return res.status(400).json({
+          success: false,
+          error: `Payment amount insufficient. Expected ${order.total_price}, received ${verification.amount}`,
+          code: 'AMOUNT_MISMATCH'
+        });
+      }
+
       let payment;
 
       // If payment is confirmed, use transaction for atomicity
       if (verification.status === 'confirmed') {
-        // CRITICAL: Use transaction for atomicity (payment + order status + stock updates)
-        const client = await getClient();
-        try {
-          await client.query('BEGIN');
+        // Create payment record inside transaction (use existing client)
+        payment = await paymentQueries.create({
+          orderId,
+          txHash,
+          amount: order.total_price,  // ✅ FIX #3: Use order.total_price, NOT verification.amount
+          currency,
+          status: verification.status
+        }, client);
 
-          // Create payment record inside transaction
-          payment = await paymentQueries.create({
-            orderId,
-            txHash,
-            amount: verification.amount,
-            currency,
-            status: verification.status
-          }, client);
-
-          // Update payment with confirmations if available
-          if (verification.confirmations) {
-            await client.query(
-              `UPDATE payments SET confirmations = $1, updated_at = NOW() WHERE id = $2`,
-              [verification.confirmations, payment.id]
-            );
-          }
+        // Update payment with confirmations if available
+        if (verification.confirmations) {
+          await client.query(
+            `UPDATE payments SET confirmations = $1, updated_at = NOW() WHERE id = $2`,
+            [verification.confirmations, payment.id]
+          );
+        }
 
           // ✅ БАГ #4 FIX: Check invoice expiry
           const invoiceResult = await client.query(
@@ -206,9 +273,26 @@ export const paymentController = {
             });
           }
 
-          // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+          // ✅ FIX #4: Lock products BEFORE checking stock
           const orderItems = await orderItemQueries.findByOrderIdWithStock(orderId, client);
           
+          const productIds = orderItems.map(item => item.product_id).filter(Boolean);
+          
+          if (productIds.length > 0) {
+            await client.query(
+              `SELECT id FROM products 
+               WHERE id = ANY($1::int[])
+               FOR UPDATE`,
+              [productIds]
+            );
+            
+            logger.info('Products locked for stock check', {
+              orderId,
+              productIds
+            });
+          }
+          
+          // Re-check stock AFTER lock (fresh data)
           if (orderItems.length === 0) {
             // Fallback: legacy single-item order (backward compatibility)
             logger.warn('No order_items found - assuming legacy single-item order', {
@@ -381,14 +465,8 @@ export const paymentController = {
             }
           }
 
-          await client.query('COMMIT');
-        } catch (txError) {
-          await client.query('ROLLBACK');
-          logger.error('Transaction error in payment confirmation', { error: txError.message, stack: txError.stack });
-          throw txError;
-        } finally {
-          client.release();
-        }
+        // Commit transaction
+        await client.query('COMMIT');
 
         // Read operations (outside transaction - read-only)
         const [product, buyer] = await Promise.all([
@@ -430,23 +508,25 @@ export const paymentController = {
           logger.error('Buyer notification error', { error: notifError.message, stack: notifError.stack });
         }
       } else {
-        // Payment not confirmed yet - create payment record without transaction
+        // Payment not confirmed yet - create pending payment and commit
         payment = await paymentQueries.create({
           orderId,
           txHash,
-          amount: verification.amount,
+          amount: order.total_price,  // ✅ FIX #3: Use order.total_price
           currency,
           status: verification.status
-        });
+        }, client);
 
         // Update payment with confirmations
         if (verification.confirmations) {
-          await paymentQueries.updateStatus(
-            payment.id,
-            verification.status,
-            verification.confirmations
+          await client.query(
+            `UPDATE payments SET confirmations = $1, updated_at = NOW() WHERE id = $2`,
+            [verification.confirmations, payment.id]
           );
         }
+        
+        // Commit transaction
+        await client.query('COMMIT');
       }
 
       return res.status(200).json({
@@ -462,11 +542,20 @@ export const paymentController = {
       });
 
     } catch (error) {
+      // Rollback on any error
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        logger.error('Rollback error in verify', { error: rollbackError.message });
+      }
+      
       logger.error('Verify payment error', { error: error.message, stack: error.stack });
       return res.status(500).json({
         success: false,
         error: 'Failed to verify payment'
       });
+    } finally {
+      client.release();
     }
   },
 
@@ -596,8 +685,32 @@ export const paymentController = {
           order.total_price,
           payment.currency
         );
+        
+        if (!verification.verified) {
+          return res.status(400).json({
+            success: false,
+            error: verification.error || 'Payment verification failed'
+          });
+        }
+        
+        // ✅ FIX #3: Verify amount matches order total (checkStatus)
+        if (verification.amount < parseFloat(order.total_price)) {
+          logger.error('Payment amount mismatch (checkStatus)', {
+            orderId: order.id,
+            txHash: payment.tx_hash,
+            expected: order.total_price,
+            received: verification.amount,
+            shortage: parseFloat(order.total_price) - verification.amount
+          });
+          
+          return res.status(400).json({
+            success: false,
+            error: `Payment amount insufficient. Expected ${order.total_price}, received ${verification.amount}`,
+            code: 'AMOUNT_MISMATCH'
+          });
+        }
 
-        if (verification.verified && verification.status === 'confirmed') {
+        if (verification.status === 'confirmed') {
           // CRITICAL: Use transaction for atomicity (payment + order status updates)
           const client = await getClient();
           try {
@@ -653,9 +766,26 @@ export const paymentController = {
               });
             }
 
-            // ✅ БАГ #3 FIX: Check ALL order items (multi-item support)
+            // ✅ FIX #4: Lock products BEFORE checking stock (checkStatus)
             const orderItems = await orderItemQueries.findByOrderIdWithStock(order.id, client);
             
+            const productIds = orderItems.map(item => item.product_id).filter(Boolean);
+            
+            if (productIds.length > 0) {
+              await client.query(
+                `SELECT id FROM products 
+                 WHERE id = ANY($1::int[])
+                 FOR UPDATE`,
+                [productIds]
+              );
+              
+              logger.info('Products locked for stock check (checkStatus)', {
+                orderId: order.id,
+                productIds
+              });
+            }
+            
+            // Re-check stock AFTER lock
             if (orderItems.length === 0) {
               // Fallback: legacy single-item order (backward compatibility)
               logger.warn('No order_items found - assuming legacy single-item order (checkStatus)', {

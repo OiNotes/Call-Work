@@ -91,6 +91,35 @@ export const orderController = {
       // Start transaction
       await client.query('BEGIN');
 
+      // ✅ FIX #2: Validate positive quantities
+      for (const item of cartItems) {
+        if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+          await client.query('ROLLBACK');
+          
+          logger.warn('Invalid quantity in cart', {
+            userId: req.user.id,
+            productId: item.productId,
+            quantity: item.quantity
+          });
+          
+          return res.status(400).json({
+            success: false,
+            error: `Invalid quantity: ${item.quantity}. Must be a positive integer`,
+            code: 'INVALID_QUANTITY'
+          });
+        }
+        
+        // DoS protection - max quantity per item
+        if (item.quantity > 10000) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            error: 'Quantity too large. Maximum 10000 items per product',
+            code: 'QUANTITY_TOO_LARGE'
+          });
+        }
+      }
+
       // Step 1: Fetch and lock all products
       const productIds = cartItems.map(item => item.productId);
       const productResult = await client.query(
@@ -288,8 +317,18 @@ export const orderController = {
         });
       }
 
-      // Check if user has access to this order
-      if (order.buyer_id !== req.user.id && order.owner_id !== req.user.id) {
+      // ✅ FIX #8: Handle NULL owner_id correctly
+      const isBuyer = order.buyer_id === req.user.id;
+      const isOwner = order.owner_id && order.owner_id === req.user.id;
+
+      if (!isBuyer && !isOwner) {
+        logger.warn('Unauthorized order access attempt', {
+          userId: req.user.id,
+          orderId: id,
+          buyerId: order.buyer_id,
+          ownerId: order.owner_id || 'NULL'
+        });
+        
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -443,22 +482,41 @@ export const orderController = {
         });
       }
 
-      // Only seller can update order status (except cancellation)
-      if (status !== 'cancelled' && existingOrder.owner_id !== req.user.id) {
-        await client.query('ROLLBACK');
-        return res.status(403).json({
-          success: false,
-          error: 'Only seller can update order status'
-        });
+      // ✅ FIX #8: Only seller can update order status (except cancellation) - handle NULL owner_id
+      if (status !== 'cancelled') {
+        const isOwner = existingOrder.owner_id && existingOrder.owner_id === req.user.id;
+        if (!isOwner) {
+          await client.query('ROLLBACK');
+          logger.warn('Unauthorized status update attempt', {
+            userId: req.user.id,
+            orderId: id,
+            ownerId: existingOrder.owner_id || 'NULL'
+          });
+          return res.status(403).json({
+            success: false,
+            error: 'Only seller can update order status'
+          });
+        }
       }
 
-      // Buyer can cancel their own orders
-      if (status === 'cancelled' && existingOrder.buyer_id !== req.user.id && existingOrder.owner_id !== req.user.id) {
-        await client.query('ROLLBACK');
-        return res.status(403).json({
-          success: false,
-          error: 'You can only cancel your own orders'
-        });
+      // ✅ FIX #8: Buyer can cancel their own orders - handle NULL owner_id
+      if (status === 'cancelled') {
+        const isBuyer = existingOrder.buyer_id === req.user.id;
+        const isOwner = existingOrder.owner_id && existingOrder.owner_id === req.user.id;
+        
+        if (!isBuyer && !isOwner) {
+          await client.query('ROLLBACK');
+          logger.warn('Unauthorized cancellation attempt', {
+            userId: req.user.id,
+            orderId: id,
+            buyerId: existingOrder.buyer_id,
+            ownerId: existingOrder.owner_id || 'NULL'
+          });
+          return res.status(403).json({
+            success: false,
+            error: 'You can only cancel your own orders'
+          });
+        }
       }
 
       // Validate state transition (state machine check)
@@ -500,6 +558,22 @@ export const orderController = {
         // Return stock for each non-preorder item
         for (const item of orderItems) {
           if (!item.is_preorder && item.product_id) {
+            // ✅ FIX #7: Check product still exists before returning stock
+            const productExists = await client.query(
+              'SELECT id, stock_quantity FROM products WHERE id = $1 FOR UPDATE',
+              [item.product_id]
+            );
+            
+            if (productExists.rows.length === 0) {
+              logger.warn('Product deleted, skipping stock return', {
+                orderId: id,
+                productId: item.product_id,
+                productName: item.product_name
+              });
+              continue;  // Skip this item
+            }
+            
+            // Return stock
             await productQueries.updateStock(
               item.product_id,
               item.ordered_quantity, // Positive value = add back
@@ -510,7 +584,8 @@ export const orderController = {
               orderId: id,
               productId: item.product_id,
               productName: item.product_name,
-              quantityReturned: item.ordered_quantity
+              quantityReturned: item.ordered_quantity,
+              newStock: productExists.rows[0].stock_quantity + item.ordered_quantity
             });
           }
         }

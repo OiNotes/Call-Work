@@ -524,7 +524,8 @@ export const shopController = {
   },
 
   /**
-   * Get shop wallets (accessible by any authenticated user for payments)
+   * Get shop wallets
+   * SECURITY FIX (#5): Only shop owner can view wallet addresses
    */
   getWallets: async (req, res) => {
     try {
@@ -545,7 +546,22 @@ export const shopController = {
         });
       }
 
-      // Return wallet data (available to any authenticated user for payment purposes)
+      // FIX #5: Check ownership - only shop owner can view wallet addresses
+      if (shop.owner_id !== req.user.id) {
+        logger.warn('[getWallets] Unauthorized wallet access attempt', {
+          userId: req.user.id,
+          shopId: id,
+          shopOwnerId: shop.owner_id
+        });
+        
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. Only shop owner can view wallet addresses.',
+          code: 'FORBIDDEN'
+        });
+      }
+
+      // Return wallet data (only for owner)
       return res.status(200).json({
         success: true,
         data: {
@@ -670,7 +686,7 @@ export const shopController = {
       
       for (const [field, value] of Object.entries(walletUpdates)) {
         // Skip empty/null values (allowed)
-        if (!value || value.trim() === '') continue;
+        if (!value || value.trim() === '') { continue; }
         
         const normalizedValue = value.trim();
         
