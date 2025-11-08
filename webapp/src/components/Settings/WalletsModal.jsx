@@ -282,6 +282,7 @@ export default function WalletsModal({ isOpen, onClose }) {
 
     setLoading(true);
     setErrorMessage(null);
+    syncWalletState(null); // Clear stale wallet data before loading fresh data
 
     const controller = new AbortController();
 
@@ -311,8 +312,9 @@ export default function WalletsModal({ isOpen, onClose }) {
 
   const handleClose = useCallback(() => {
     resetForm();
+    syncWalletState(null); // Clear wallet data to prevent stale state
     onClose();
-  }, [onClose, resetForm]);
+  }, [onClose, resetForm, syncWalletState]);
 
   useBackButton(isOpen ? handleClose : null);
 

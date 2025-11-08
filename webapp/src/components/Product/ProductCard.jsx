@@ -97,9 +97,9 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
       whileHover={!android ? { y: -4 } : undefined}
       whileTap={{ scale: android ? 0.99 : 0.98 }}
       transition={quickSpring}
-      className={`relative h-[200px] rounded-3xl overflow-hidden group ${
-        hasDiscount 
-          ? 'ring-2 ring-red-500/50 shadow-[0_0_20px_rgba(255,71,87,0.25)]' 
+      className={`relative ${hasDiscount ? 'min-h-[240px]' : 'min-h-[200px]'} rounded-3xl overflow-hidden group ${
+        hasDiscount
+          ? 'ring-2 ring-red-500/50 shadow-[0_0_20px_rgba(255,71,87,0.25)]'
           : ''
       }`}
       style={{
