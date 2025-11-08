@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBackButton } from '../../hooks/useBackButton';
 
 const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) => {
   const [markup, setMarkup] = useState(currentMarkup);
   const examplePrice = 100; // Пример цены для предпросмотра
   const calculatedPrice = (examplePrice * (1 + markup / 100)).toFixed(2);
+
+  // BackButton integration
+  useBackButton(isOpen ? onClose : null);
 
   useEffect(() => {
     if (isOpen) {

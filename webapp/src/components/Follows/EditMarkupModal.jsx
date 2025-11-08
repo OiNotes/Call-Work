@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelegram } from '../../hooks/useTelegram';
+import { useBackButton } from '../../hooks/useBackButton';
 
 const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
   const [markup, setMarkup] = useState(currentMarkup || '');
   const [error, setError] = useState('');
   const lastHapticRef = useRef(0);
   const { triggerHaptic } = useTelegram();
+
+  // Telegram BackButton integration
+  useBackButton(isOpen ? onClose : null);
 
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };

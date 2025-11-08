@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useBackButton } from '../../hooks/useBackButton';
 
 const ConfirmDialog = ({
   isOpen,
@@ -14,6 +15,9 @@ const ConfirmDialog = ({
 }) => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
+
+  // Telegram BackButton integration
+  useBackButton(isOpen ? onClose : null);
 
   if (!isOpen) return null;
 

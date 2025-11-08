@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '../common/PageHeader';
 import { useTelegram } from '../../hooks/useTelegram';
@@ -22,10 +22,9 @@ const walletFieldMap = {
 
 const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'LTC'];
 
-function WalletCard({ wallet, onRemove, onEdit }) {
+function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancelEdit }) {
   const { triggerHaptic, confirm } = useTelegram();
   const { t } = useTranslation();
-  const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(wallet.address);
   const [saving, setSaving] = useState(false);
 
@@ -40,13 +39,13 @@ function WalletCard({ wallet, onRemove, onEdit }) {
 
   const handleEdit = () => {
     triggerHaptic('medium');
-    setIsEditing(true);
+    onStartEdit(wallet.type);
     setEditValue(wallet.address);
   };
 
   const handleCancel = () => {
     triggerHaptic('light');
-    setIsEditing(false);
+    onCancelEdit();
     setEditValue(wallet.address);
   };
 
@@ -60,7 +59,7 @@ function WalletCard({ wallet, onRemove, onEdit }) {
 
     try {
       await onEdit(wallet.type, editValue.trim());
-      setIsEditing(false);
+      onCancelEdit();
       triggerHaptic('success');
     } catch (error) {
       console.error('Failed to save wallet edit:', error);
@@ -204,6 +203,10 @@ export default function WalletsModal({ isOpen, onClose }) {
   const [ethAddress, setEthAddress] = useState('');
   const [usdtAddress, setUsdtAddress] = useState('');
   const [ltcAddress, setLtcAddress] = useState('');
+  const [editingWalletType, setEditingWalletType] = useState(null);
+
+  // useRef-based lock для предотвращения race condition
+  const savingLockRef = useRef(false);
 
   const isValidBTC = btcAddress ? WALLET_PATTERNS.BTC.test(btcAddress.trim()) : false;
   const isValidETH = ethAddress ? WALLET_PATTERNS.ETH.test(ethAddress.trim()) : false;
@@ -282,7 +285,6 @@ export default function WalletsModal({ isOpen, onClose }) {
 
     setLoading(true);
     setErrorMessage(null);
-    syncWalletState(null); // Clear stale wallet data before loading fresh data
 
     const controller = new AbortController();
 
@@ -308,15 +310,28 @@ export default function WalletsModal({ isOpen, onClose }) {
       });
 
     return () => controller.abort();
-  }, [isOpen, loadWallets, t, syncWalletState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // ✅ FIX: Only isOpen in deps to prevent infinite loop
 
   const handleClose = useCallback(() => {
     resetForm();
-    syncWalletState(null); // Clear wallet data to prevent stale state
+    setErrorMessage(null); // Clear error on close
+    setEditingWalletType(null); // Reset edit state
     onClose();
-  }, [onClose, resetForm, syncWalletState]);
+  }, [onClose, resetForm]);
 
-  useBackButton(isOpen ? handleClose : null);
+  const handleBackButton = useCallback(() => {
+    if (editingWalletType) {
+      // Cancel edit mode
+      triggerHaptic('light');
+      setEditingWalletType(null);
+    } else {
+      // Close modal
+      handleClose();
+    }
+  }, [editingWalletType, handleClose, triggerHaptic]);
+
+  useBackButton(isOpen ? handleBackButton : null);
 
   // Disable vertical swipes when modal is open (Telegram Mini App)
   useEffect(() => {
@@ -414,12 +429,12 @@ export default function WalletsModal({ isOpen, onClose }) {
   }, [alert, put, shop, syncWalletState, t]);
 
   const handleSaveWallets = useCallback(async () => {
-    // Closure-based lock (не React state чтобы не было re-render)
-    if (handleSaveWallets.isProcessing) {
+    // ✅ useRef-based lock для предотвращения race condition при двойном клике
+    if (savingLockRef.current) {
       console.log('[WalletsModal] Already saving, ignoring duplicate request');
       return;
     }
-    handleSaveWallets.isProcessing = true;
+    savingLockRef.current = true;
 
     try {
       setSaving(true);
@@ -468,7 +483,7 @@ export default function WalletsModal({ isOpen, onClose }) {
       await alert(t('wallet.saveError'));
     } finally {
       setSaving(false);
-      handleSaveWallets.isProcessing = false; // Unlock в finally block
+      savingLockRef.current = false; // ✅ Всегда сбрасывается в finally
     }
   }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress]);
 
@@ -548,6 +563,9 @@ export default function WalletsModal({ isOpen, onClose }) {
                           wallet={wallet}
                           onRemove={handleRemoveWallet}
                           onEdit={handleEditWallet}
+                          isEditing={editingWalletType === wallet.type}
+                          onStartEdit={setEditingWalletType}
+                          onCancelEdit={() => setEditingWalletType(null)}
                         />
                       ))
                     ) : (

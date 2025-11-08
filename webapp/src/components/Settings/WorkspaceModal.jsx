@@ -81,7 +81,13 @@ export default function WorkspaceModal({ isOpen, onClose }) {
     onClose();
   }, [onClose]);
 
-  useBackButton(isOpen ? handleClose : null);
+  useBackButton(
+    isOpen 
+      ? showForm 
+        ? () => setShowForm(false) 
+        : handleClose
+      : null
+  );
 
   // Disable vertical swipes when modal is open (Telegram Mini App)
   useEffect(() => {
