@@ -117,7 +117,10 @@ export default function FollowsModal({ isOpen, onClose }) {
   const loadData = useCallback(async (signal) => {
     try {
       // 1. Get shop - simplified parsing
-      const shopsRes = await fetchApi('/shops/my', { signal });
+      const shopsRes = await fetchApi('/shops/my', {
+        signal,
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      });
 
       if (signal?.aborted) return { status: 'aborted' };
 
@@ -143,8 +146,14 @@ export default function FollowsModal({ isOpen, onClose }) {
 
       // 3. Load follows and limits in parallel
       const [followsRes, limitRes] = await Promise.all([
-        fetchApi(`/follows/my?shopId=${shop.id}`, { signal }),
-        fetchApi(`/follows/check-limit?shopId=${shop.id}`, { signal })
+        fetchApi(`/follows/my?shopId=${shop.id}`, {
+          signal,
+          timeout: 10000  // 10 second timeout to prevent infinite loading
+        }),
+        fetchApi(`/follows/check-limit?shopId=${shop.id}`, {
+          signal,
+          timeout: 10000  // 10 second timeout to prevent infinite loading
+        })
       ]);
 
       if (signal?.aborted) return { status: 'aborted' };
@@ -224,9 +233,9 @@ export default function FollowsModal({ isOpen, onClose }) {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        // ✅ FIX: Always reset loading, even on abort
+        // This prevents infinite spinner when modal is reopened after quick close
+        setLoading(false);
       });
 
     return () => controller.abort();

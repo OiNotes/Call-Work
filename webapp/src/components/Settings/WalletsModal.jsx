@@ -240,7 +240,10 @@ export default function WalletsModal({ isOpen, onClose }) {
   }, []);
 
   const loadWallets = useCallback(async (signal) => {
-    const { data: shopsResponse, error: shopsError } = await get('/shops/my', { signal });
+    const { data: shopsResponse, error: shopsError } = await get('/shops/my', {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -259,7 +262,10 @@ export default function WalletsModal({ isOpen, onClose }) {
     const primaryShop = shops[0];
     setShop(primaryShop);
 
-    const { data: walletsResponse, error: walletsError } = await get(`/shops/${primaryShop.id}/wallets`, { signal });
+    const { data: walletsResponse, error: walletsError} = await get(`/shops/${primaryShop.id}/wallets`, {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -295,9 +301,9 @@ export default function WalletsModal({ isOpen, onClose }) {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        // ✅ FIX: Always reset loading, even on abort
+        // This prevents infinite spinner when modal is reopened after quick close
+        setLoading(false);
       });
 
     return () => controller.abort();

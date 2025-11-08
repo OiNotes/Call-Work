@@ -32,10 +32,10 @@ class DeepSeekClient {
 
   /**
    * Call DeepSeek API with function calling (tool use)
-   * 
+   *
    * Supports two call styles:
    * 1. Positional arguments (legacy): chat(systemPrompt, userMessage, tools, history, maxRetries)
-   * 2. Options object (new): chat({ system, messages, tools, temperature, stream, maxRetries })
+   * 2. Options object (new): chat({ system, messages, tools, temperature, toolChoice, stream, maxRetries })
    *
    * @param {string|Object} systemPromptOrOptions - System prompt OR options object
    * @param {string} userMessage - User command (if using positional args)
@@ -54,6 +54,7 @@ class DeepSeekClient {
     let messages;
     let apiTools;
     let temperature;
+    let toolChoice;
     let retries;
 
     if (typeof systemPromptOrOptions === 'object' && systemPromptOrOptions !== null && !Array.isArray(systemPromptOrOptions)) {
@@ -63,6 +64,7 @@ class DeepSeekClient {
       messages = options.messages || [];
       apiTools = options.tools || [];
       temperature = options.temperature;
+      toolChoice = options.toolChoice;  // Support custom tool_choice
       retries = options.maxRetries || 3;
 
       // If system prompt provided, ensure it's at the start of messages
@@ -96,15 +98,20 @@ class DeepSeekClient {
         const startTime = Date.now();
 
         // Determine temperature: explicit > auto-detect based on tools > default
-        const finalTemperature = temperature !== undefined 
-          ? temperature 
+        const finalTemperature = temperature !== undefined
+          ? temperature
           : (apiTools.length > 0 ? 0.2 : 0.7);
+
+        // Determine tool_choice: explicit > 'auto' (default when tools present) > undefined
+        const finalToolChoice = apiTools.length > 0
+          ? (toolChoice || 'auto')
+          : undefined;
 
         const response = await this.client.chat.completions.create({
           model: 'deepseek-chat',
           messages,
           tools: apiTools.length > 0 ? apiTools : undefined,
-          tool_choice: apiTools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
+          tool_choice: finalToolChoice,  // Support explicit tool_choice: 'auto', 'none', 'required'
           temperature: finalTemperature,  // Support explicit temperature override
           max_tokens: 500
         });

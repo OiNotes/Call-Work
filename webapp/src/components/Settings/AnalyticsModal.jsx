@@ -74,7 +74,10 @@ export default function AnalyticsModal({ isOpen, onClose }) {
     console.info('[AnalyticsModal] fetch start', { from, to, period });
 
     try {
-      const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`, { signal });
+      const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`, {
+        signal,
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      });
 
       if (signal?.aborted) return { status: 'aborted' };
 
@@ -126,9 +129,9 @@ export default function AnalyticsModal({ isOpen, onClose }) {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        // ✅ FIX: Always reset loading, even on abort
+        // This prevents infinite spinner when modal is reopened after quick close
+        setLoading(false);
       });
 
     return () => controller.abort();

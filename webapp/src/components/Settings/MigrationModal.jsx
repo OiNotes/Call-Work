@@ -114,7 +114,9 @@ export default function MigrationModal({ isOpen, onClose }) {
 
     try {
       // Get user's shop
-      const { data: shopsResponse, error: shopsError } = await get('/shops/my');
+      const { data: shopsResponse, error: shopsError } = await get('/shops/my', {
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      });
 
       if (shopsError) {
         setErrorMessage('Ошибка загрузки магазина. Попробуйте позже.');
@@ -134,7 +136,9 @@ export default function MigrationModal({ isOpen, onClose }) {
       setShop(primaryShop);
 
       // Check migration eligibility
-      const { data: eligibilityData, error: eligibilityError } = await get(`/shops/${primaryShop.id}/migration/check`);
+      const { data: eligibilityData, error: eligibilityError } = await get(`/shops/${primaryShop.id}/migration/check`, {
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      });
 
       if (eligibilityError) {
         setErrorMessage('Ошибка проверки прав на миграцию. Попробуйте позже.');

@@ -26,6 +26,37 @@ function formatDiscount(percentage, originalPrice, newPrice) {
 }
 
 /**
+ * Очистить error message от технических деталей
+ */
+function cleanErrorMessage(errorMsg) {
+  if (!errorMsg) return '';
+
+  // Удаляем технические префиксы
+  let cleaned = errorMsg
+    .replace(/^Error:\s*/i, '')
+    .replace(/^ValidationError:\s*/i, '')
+    .replace(/^Database error:\s*/i, '')
+    .replace(/^\[.*?\]\s*/, '') // [ERROR] prefix
+    .trim();
+
+  // Ограничиваем длину
+  if (cleaned.length > 150) {
+    cleaned = cleaned.substring(0, 147) + '...';
+  }
+
+  return cleaned;
+}
+
+/**
+ * Получить variation error message для разнообразия
+ */
+function getErrorVariation(baseMessage, variations) {
+  if (!variations || variations.length === 0) return baseMessage;
+  const randomIndex = Math.floor(Math.random() * variations.length);
+  return variations[randomIndex];
+}
+
+/**
  * Генерирует естественный ответ на основе результата операции
  * 
  * @param {Object} result - Результат выполнения функции
@@ -38,31 +69,44 @@ function formatDiscount(percentage, originalPrice, newPrice) {
 export function generateDeterministicResponse(result) {
   // ОШИБКА - честно сообщаем
   if (!result.success) {
-    const errorMessage = result.message || result.data?.error?.message || 'Произошла неизвестная ошибка';
-    
-    // Специальные случаи ошибок
+    const rawError = result.message || result.data?.error?.message || 'Произошла неизвестная ошибка';
+    const errorMessage = cleanErrorMessage(rawError);
+
+    // Специальные случаи ошибок с variations
     if (errorMessage.includes('не найден') || errorMessage.includes('not found')) {
-      return `❌ Не нашёл такой товар. Проверь название или покажи список товаров.`;
+      return getErrorVariation('', [
+        'Не нашёл такой товар. Проверь название или покажи список товаров.',
+        'Такого товара нет в каталоге. Хочешь посмотреть весь список?',
+        'Товар не найден. Может быть, другое название?'
+      ]);
     }
-    
+
     if (errorMessage.includes('уже существует') || errorMessage.includes('already exists')) {
-      return `❌ Товар с таким названием уже есть в каталоге. Используй другое имя.`;
+      return getErrorVariation('', [
+        'Товар с таким названием уже есть. Используй другое имя.',
+        'Такой товар уже в каталоге. Придумай уникальное название.',
+        'Это название уже занято. Попробуй другое.'
+      ]);
     }
-    
+
     if (errorMessage.includes('валидации') || errorMessage.includes('validation')) {
-      return `❌ Ошибка в данных: ${errorMessage}`;
+      return `Проверь данные: ${errorMessage}`;
     }
-    
+
     if (errorMessage.includes('авторизации') || errorMessage.includes('authorization')) {
-      return `❌ Ошибка доступа. Попробуй перезапустить бота командой /start`;
+      return getErrorVariation('', [
+        'Ошибка доступа. Попробуй перезапустить бота: /start',
+        'Проблема с авторизацией. Перезапусти бота командой /start',
+        'Сессия устарела. Нажми /start чтобы обновить.'
+      ]);
     }
-    
+
     if (errorMessage.includes('сервер') || errorMessage.includes('server')) {
-      return `❌ Проблемы с сервером: ${errorMessage}. Попробуй через минуту.`;
+      return `Сервер временно недоступен: ${errorMessage}. Попробуй через минуту.`;
     }
-    
+
     // Общая ошибка
-    return `❌ Не получилось выполнить операцию. Причина: ${errorMessage}`;
+    return `Не получилось выполнить: ${errorMessage}`;
   }
 
   const data = result.data;

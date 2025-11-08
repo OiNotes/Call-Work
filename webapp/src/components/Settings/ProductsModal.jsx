@@ -344,7 +344,10 @@ export default function ProductsModal({ isOpen, onClose }) {
 
   const loadData = useCallback(async (signal) => {
     // 1. Load my shop
-    const shopsRes = await fetchApi('/shops/my', { signal });
+    const shopsRes = await fetchApi('/shops/my', {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -358,7 +361,10 @@ export default function ProductsModal({ isOpen, onClose }) {
     setMyShop(shop);
 
     // 2. Load products
-    const productsRes = await fetchApi(`/products?shopId=${shop.id}`, { signal });
+    const productsRes = await fetchApi(`/products?shopId=${shop.id}`, {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -367,7 +373,10 @@ export default function ProductsModal({ isOpen, onClose }) {
     setProducts(items.map(mapProduct));
 
     // 3. Load limit status
-    const limitRes = await fetchApi(`/products/limit-status/${shop.id}`, { signal });
+    const limitRes = await fetchApi(`/products/limit-status/${shop.id}`, {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -389,9 +398,9 @@ export default function ProductsModal({ isOpen, onClose }) {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        // ✅ FIX: Always reset loading, even on abort
+        // This prevents infinite spinner when modal is reopened after quick close
+        setLoading(false);
       });
     
     return () => controller.abort();

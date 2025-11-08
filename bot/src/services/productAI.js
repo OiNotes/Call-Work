@@ -14,7 +14,7 @@ import { generateDeterministicResponse } from '../utils/responseGenerator.js';
  */
 function cleanDeepSeekTokens(text) {
   if (!text || typeof text !== 'string') return text;
-  
+
   return text
     .replace(/<｜tool▁calls▁begin｜>/g, '')
     .replace(/<｜tool▁calls▁end｜>/g, '')
@@ -23,6 +23,26 @@ function cleanDeepSeekTokens(text) {
     .replace(/<｜tool▁result▁end｜>/g, '')
     .replace(/<｜end▁of▁sentence｜>/g, '')
     .trim();
+}
+
+/**
+ * Определить содержит ли текст JSON patterns (технические данные)
+ * Используется для защиты от показа raw JSON пользователю
+ */
+function detectJSONInMessage(text) {
+  if (!text || typeof text !== 'string') return false;
+
+  const jsonPatterns = [
+    /\{[\s\S]*"success"[\s\S]*:/i,       // {"success": true}
+    /\{[\s\S]*"error"[\s\S]*:/i,         // {"error": ...}
+    /\{[\s\S]*"data"[\s\S]*:/i,          // {"data": ...}
+    /\{[\s\S]*"product_id"[\s\S]*:/i,    // {"product_id": 123}
+    /\{[\s\S]*"message"[\s\S]*:/i,       // {"message": "..."}
+    /^\s*\{[\s\S]*\}\s*$/,               // Весь ответ - JSON object
+    /^\s*\[[\s\S]*\]\s*$/                // Весь ответ - JSON array
+  ];
+
+  return jsonPatterns.some(pattern => pattern.test(text));
 }
 
 /**
@@ -916,9 +936,21 @@ export async function processProductCommand(userCommand, context) {
             temperature: 0.7,  // Выше для естественной генерации текста
             maxRetries: 2
           });
-          
+
           if (aiResponse.choices[0].message.content) {
-            finalMessage = cleanDeepSeekTokens(aiResponse.choices[0].message.content);
+            const aiGeneratedMessage = cleanDeepSeekTokens(aiResponse.choices[0].message.content);
+
+            // ✅ ANTI-JSON PROTECTION: Проверить на JSON patterns в ответе AI
+            if (detectJSONInMessage(aiGeneratedMessage)) {
+              logger.warn('Detected JSON in AI response, reverting to deterministic fallback', {
+                aiResponse: aiGeneratedMessage.substring(0, 100)
+              });
+              // Возвращаемся к deterministic fallback (уже установлен на line 901)
+              // finalMessage остаётся = generateDeterministicResponse(result)
+            } else {
+              // AI ответ безопасный - используем его
+              finalMessage = aiGeneratedMessage;
+            }
           }
         } catch (err) {
           logger.warn('AI response generation failed, using deterministic fallback:', err.message);

@@ -64,7 +64,14 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
 ✅ "новинки: красная кружка $10, зелёная $12" → CALL bulkAddProducts
 ❌ "добавь iPhone за 999" → use addProduct (single item)
 
-КРИТИЧНО:
+КРИТИЧНО - ANTI-HALLUCINATION:
+- НИКОГДА не придумывай товары которые пользователь НЕ просил
+- Если пользователь сказал "2 товара" → добавь РОВНО 2 товара
+- Если пользователь сказал "iPhone и Samsung" → добавь РОВНО эти 2 товара
+- ЗАПРЕЩЕНО добавлять "похожие", "дополнительные" или "рекомендованные" товары
+- Только ТЕ товары что пользователь ЯВНО перечислил
+
+КРИТИЧНО - EXECUTION:
 - NEVER respond with text when user lists multiple products
 - ALWAYS call this function immediately when 2+ products detected
 - Extract all product data from user message and call function

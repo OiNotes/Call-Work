@@ -177,7 +177,10 @@ export default function SubscriptionModal({ isOpen, onClose }) {
 
   const loadData = useCallback(async (signal) => {
     // 1. Load shops
-    const shopsRes = await fetchApi('/shops/my', { signal });
+    const shopsRes = await fetchApi('/shops/my', {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
 
     if (signal?.aborted) return { status: 'aborted' };
 
@@ -193,8 +196,14 @@ export default function SubscriptionModal({ isOpen, onClose }) {
 
     // 2. Load subscription data in parallel
     const [statusRes, historyRes] = await Promise.all([
-      fetchApi(`/subscriptions/status/${shop.id}`, { signal }),
-      fetchApi(`/subscriptions/history/${shop.id}?limit=10`, { signal })
+      fetchApi(`/subscriptions/status/${shop.id}`, {
+        signal,
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      }),
+      fetchApi(`/subscriptions/history/${shop.id}?limit=10`, {
+        signal,
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      })
     ]);
 
     if (signal?.aborted) return { status: 'aborted' };
@@ -205,7 +214,10 @@ export default function SubscriptionModal({ isOpen, onClose }) {
     setHistory(historyList);
     
     // 3. Load pricing
-    const pricingRes = await fetchApi('/subscriptions/pricing', { signal });
+    const pricingRes = await fetchApi('/subscriptions/pricing', {
+      signal,
+      timeout: 10000  // 10 second timeout to prevent infinite loading
+    });
     
     if (signal?.aborted) return { status: 'aborted' };
     
@@ -223,9 +235,9 @@ export default function SubscriptionModal({ isOpen, onClose }) {
     
     loadData(controller.signal)
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        // ✅ FIX: Always reset loading, even on abort
+        // This prevents infinite spinner when modal is reopened after quick close
+        setLoading(false);
       });
     
     return () => controller.abort();

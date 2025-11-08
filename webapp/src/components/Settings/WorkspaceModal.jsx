@@ -97,7 +97,9 @@ export default function WorkspaceModal({ isOpen, onClose }) {
     setLoading(true);
     try {
       // Get shop - simplified parsing
-      const shopsRes = await fetchApi('/shops/my');
+      const shopsRes = await fetchApi('/shops/my', {
+        timeout: 10000  // 10 second timeout to prevent infinite loading
+      });
 
       // Extract shop data - handle both {data: [...]} and [...] responses
       let shopsList = [];
@@ -124,7 +126,9 @@ export default function WorkspaceModal({ isOpen, onClose }) {
 
       if (proTier) {
         // Load workers for PRO shops
-        const workersRes = await fetchApi(`/shops/${shop.id}/workers`);
+        const workersRes = await fetchApi(`/shops/${shop.id}/workers`, {
+          timeout: 10000  // 10 second timeout to prevent infinite loading
+        });
         const workersList = Array.isArray(workersRes?.data) ? workersRes.data : [];
         setWorkers(workersList);
       } else {
