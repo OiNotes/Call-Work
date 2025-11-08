@@ -75,7 +75,6 @@ export default function PaymentMethodModal() {
       // Вызываем selectCrypto из store - создаёт order + invoice + переход к details
       await selectCrypto(cryptoId);
       // Store автоматически выставит paymentStep = 'details'
-      toast.success('Платёжный метод выбран');
     } catch (error) {
       console.error('[PaymentMethodModal] Failed to select crypto:', error);
       triggerHaptic('error');
@@ -279,7 +278,6 @@ export default function PaymentMethodModal() {
       setAvailableWallets(currencies);
       setError(null);
       setRetryCount(0); // Reset on success
-      toast.success('Способы оплаты загружены');
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log('[PaymentMethodModal] Retry aborted');

@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/Follows/ConfirmDialog';
 import Tabs from '../components/Follows/Tabs';
 import ActionsList from '../components/Follows/ActionsList';
 import { useTelegram } from '../hooks/useTelegram';
+import { useBackButton } from '../hooks/useBackButton';
 
 const FollowDetail = () => {
   const followsApi = useFollowsApi();
@@ -169,6 +170,9 @@ const FollowDetail = () => {
     // ✅ FIX: Use getState() for stable reference
     useStore.getState().setFollowDetailId(null);
   };
+
+  // Telegram BackButton support
+  useBackButton(handleBack);
 
   const handleTabChange = (tabId) => {
     triggerHaptic('light');

@@ -169,7 +169,6 @@ export default function PaymentDetailsModal() {
     
     if (success) {
       setCopied(true);
-      toast.success(t('payment.addressCopied') || 'Адрес скопирован');
       triggerHaptic('success');
       
       // Clear previous timeout before setting new one
@@ -180,7 +179,6 @@ export default function PaymentDetailsModal() {
       // Set new timeout with proper cleanup
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } else {
-      toast.error('Скопируйте адрес вручную (выделите и Ctrl+C)');
       triggerHaptic('error');
     }
   };
@@ -190,7 +188,6 @@ export default function PaymentDetailsModal() {
     
     if (success) {
       setCopiedAmount(true);
-      toast.success(t('payment.amountCopied') || 'Сумма скопирована');
       triggerHaptic('success');
       
       // Clear previous timeout before setting new one
@@ -201,7 +198,6 @@ export default function PaymentDetailsModal() {
       // Set new timeout with proper cleanup
       copiedAmountTimeoutRef.current = setTimeout(() => setCopiedAmount(false), 2000);
     } else {
-      toast.error('Скопируйте сумму вручную');
       triggerHaptic('error');
     }
   };

@@ -667,9 +667,6 @@ export const useStore = create(
 
             // Clear cart
             get().clearCart();
-
-            // Success toast
-            toast({ type: 'success', message: 'Платёж подтверждён!', duration: 3500 });
           }
         } catch (error) {
           console.error('Verify payment error:', error);

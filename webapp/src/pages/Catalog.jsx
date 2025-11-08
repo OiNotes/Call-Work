@@ -5,6 +5,7 @@ import ProductGrid from '../components/Product/ProductGrid';
 import CartButton from '../components/Cart/CartButton';
 import { useStore } from '../store/useStore';
 import { useTelegram } from '../hooks/useTelegram';
+import { useBackButton } from '../hooks/useBackButton';
 import { useTranslation } from '../i18n/useTranslation';
 import { useApi } from '../hooks/useApi';
 
@@ -185,6 +186,15 @@ export default function Catalog() {
   const displayShopLogo = displayShop?.logo || displayShop?.image || null;
   const isViewingOwnShop = !currentShop && myShop;
   const isViewingSubscription = currentShop && myShop && currentShop.id !== myShop.id;
+
+  // Telegram BackButton support - показывать только когда есть куда вернуться
+  const backHandler = useMemo(() => {
+    if (isViewingSubscription) return handleBackToMyShop;
+    if (currentShop) return handleBack;
+    return null; // Скрыть BackButton когда на главной
+  }, [isViewingSubscription, currentShop, handleBackToMyShop, handleBack]);
+
+  useBackButton(backHandler);
 
   const productSections = useMemo(() => {
     const byStock = [];
