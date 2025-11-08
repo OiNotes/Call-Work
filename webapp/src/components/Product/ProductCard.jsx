@@ -97,14 +97,15 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
       whileHover={!android ? { y: -4 } : undefined}
       whileTap={{ scale: android ? 0.99 : 0.98 }}
       transition={quickSpring}
-      className={`relative ${hasDiscount ? 'min-h-[240px]' : 'min-h-[200px]'} rounded-3xl overflow-hidden group ${
-        hasDiscount
-          ? 'ring-2 ring-red-500/50 shadow-[0_0_20px_rgba(255,71,87,0.25)]'
+      className={`relative min-h-[200px] rounded-3xl overflow-hidden group ${
+        hasDiscount 
+          ? 'ring-2 ring-red-500/50 shadow-[0_0_20px_rgba(255,71,87,0.25)]' 
           : ''
       }`}
       style={{
         ...gpuAccelStyle,
         ...cardSurface,
+        isolation: 'isolate',
         background: hasDiscount
           ? 'linear-gradient(145deg, rgba(255, 71, 87, 0.08) 0%, rgba(255, 107, 53, 0.06) 50%, rgba(26, 26, 26, 0.9) 100%)'
           : 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)'
@@ -182,7 +183,7 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
         )}
       </AnimatePresence>
 
-      <div className={`relative ${isWide ? 'p-6' : 'p-5'} h-full flex ${
+      <div className={`relative h-full ${isWide ? 'p-6' : 'p-5'} flex ${
   isWide
     ? 'flex-row items-center gap-5'
     : 'flex-col gap-3'
@@ -213,15 +214,15 @@ const ProductCard = memo(function ProductCard({ product, onPreorder, isWide = fa
           <div className="flex flex-col min-w-fit max-w-[calc(100%-60px)]">
             {/* Price with discount logic */}
             {hasDiscount ? (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {/* Старая цена + процент скидки */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-xs text-gray-400 line-through font-medium">
                     ${Math.round(originalPrice)}
                   </span>
                   {/* Процент скидки - компактный badge */}
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500 text-white">
-                    -{discountPercentage}%
+                    -{Math.round(discountPercentage)}%
                   </span>
                 </div>
                 
