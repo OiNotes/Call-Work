@@ -19,7 +19,7 @@ import {
   notFoundHandler,
   apiLimiter,
   requestLogger,
-  sensitiveDataLogger
+  sensitiveDataLogger,
 } from './middleware/index.js';
 import { validateOrigin } from './middleware/csrfProtection.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -57,10 +57,79 @@ import orderCleanupService from './services/orderCleanupService.js';
 import { startInvoiceCleanup } from './services/invoiceCleanupService.js';
 
 /**
+ * Database Sequences Validation
+ * Validates that all required wallet address sequences exist in database
+ * Prevents crypto payment failures due to missing sequences (migration 033)
+ * 
+ * Required sequences (created by migration 033):
+ * - wallet_address_index_btc
+ * - wallet_address_index_eth
+ * - wallet_address_index_ltc
+ * - wallet_address_index_usdt_erc20
+ * - wallet_address_index_usdt_trc20
+ */
+async function validateDatabaseSequences() {
+  try {
+    const { pool } = await import('./config/database.js');
+    
+    const requiredSequences = [
+      'wallet_address_index_btc',
+      'wallet_address_index_eth',
+      'wallet_address_index_ltc',
+      'wallet_address_index_usdt_erc20',
+      'wallet_address_index_usdt_trc20',
+    ];
+    
+    // Query to check if all sequences exist
+    const query = `
+      SELECT 
+        sequence_name
+      FROM 
+        information_schema.sequences
+      WHERE 
+        sequence_name = ANY($1::text[])
+    `;
+    
+    const result = await pool.query(query, [requiredSequences]);
+    const foundSequences = result.rows.map(row => row.sequence_name);
+    const missing = requiredSequences.filter(seq => !foundSequences.includes(seq));
+    
+    if (missing.length > 0) {
+      logger.error('❌ CRITICAL: Missing required database sequences!');
+      logger.error('');
+      logger.error('Missing sequences:');
+      missing.forEach(seq => {
+        logger.error(`  - ${seq}`);
+      });
+      logger.error('');
+      logger.error('These sequences are required for crypto payment invoice generation.');
+      logger.error('Please apply migration 033:');
+      logger.error('  psql $DATABASE_URL -f backend/database/migrations/033_add_wallet_address_sequences.sql');
+      logger.error('');
+      logger.error('Exiting...');
+      
+      process.exit(1); // Stop server startup
+    }
+    
+    logger.info('✓ Database sequences validation passed');
+    logger.info(`✓ Found all ${requiredSequences.length} wallet address sequences`);
+  } catch (error) {
+    logger.error('❌ Failed to validate database sequences', {
+      error: error.message,
+      stack: error.stack,
+    });
+    logger.error('');
+    logger.error('Cannot verify required sequences. Check database connection.');
+    logger.error('Exiting...');
+    process.exit(1);
+  }
+}
+
+/**
  * ENV Validation - check critical crypto xpubs
  * Validates required environment variables before server startup
  * to catch configuration issues early (fail-fast approach)
- * 
+ *
  * Supports both naming schemes:
  * - New: BTC_XPUB, ETH_XPUB, LTC_XPUB
  * - Legacy: HD_XPUB_BTC, HD_XPUB_ETH, HD_XPUB_LTC
@@ -75,11 +144,11 @@ function validateEnvironment() {
 
   const missing = [];
   const configured = [];
-  
+
   for (const { name, new: newKey, legacy } of required) {
     const newValue = process.env[newKey];
     const legacyValue = process.env[legacy];
-    
+
     // Check if at least one format is configured
     if ((!newValue || newValue === 'undefined') && (!legacyValue || legacyValue === 'undefined')) {
       missing.push({ name, newKey, legacy });
@@ -105,8 +174,8 @@ function validateEnvironment() {
     logger.error('');
     logger.error('Example: Generate using HD wallet (BIP32/BIP44)');
     logger.error('Exiting...');
-    
-    process.exit(1);  // Stop server startup
+
+    process.exit(1); // Stop server startup
   }
 
   logger.info('✓ Environment validation passed');
@@ -124,23 +193,36 @@ const app = express();
 /**
  * Security middleware
  */
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "https://telegram.org"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws://localhost:3000", "wss://localhost:3000", "http://localhost:3000", "https://*.ngrok-free.app"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      frameAncestors: ["'self'", "https://web.telegram.org", "https://*.telegram.org", "https://telegram.org"],
-      formAction: ["'self'"], // Prevent forms from submitting to external domains (CSRF protection)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        scriptSrc: ["'self'", 'https://telegram.org'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: [
+          "'self'",
+          'ws://localhost:3000',
+          'wss://localhost:3000',
+          'http://localhost:3000',
+          'https://*.ngrok-free.app',
+        ],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        frameAncestors: [
+          "'self'",
+          'https://web.telegram.org',
+          'https://*.telegram.org',
+          'https://telegram.org',
+        ],
+        formAction: ["'self'"], // Prevent forms from submitting to external domains (CSRF protection)
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow Telegram WebApp embed
-  frameguard: false, // Disable X-Frame-Options to allow Telegram iframe
-}));
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow Telegram WebApp embed
+    frameguard: false, // Disable X-Frame-Options to allow Telegram iframe
+  })
+);
 
 /**
  * HTTPS enforcement in production
@@ -166,14 +248,16 @@ if (config.nodeEnv === 'production' && process.env.HTTPS_ENABLED === 'true') {
 /**
  * CORS configuration (API-6: Preflight cache added)
  */
-app.use(cors({
-  origin: config.frontendUrl,
-  credentials: true, // Allow cookies and credentials
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400 // API-6: Cache preflight requests for 24 hours (86400 seconds)
-}));
+app.use(
+  cors({
+    origin: config.frontendUrl,
+    credentials: true, // Allow cookies and credentials
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400, // API-6: Cache preflight requests for 24 hours (86400 seconds)
+  })
+);
 
 /**
  * CSRF Protection
@@ -186,17 +270,19 @@ app.use(validateOrigin);
  * Compression middleware (GZIP for all responses)
  * Reduces API response size by ~60-70% for JSON
  */
-app.use(compression({
-  filter: (req, res) => {
-    // Compress all responses except already compressed formats
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  },
-  threshold: 1024, // Only compress responses > 1KB
-  level: 6 // Compression level (0-9, 6 is optimal balance)
-}));
+app.use(
+  compression({
+    filter: (req, res) => {
+      // Compress all responses except already compressed formats
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+    threshold: 1024, // Only compress responses > 1KB
+    level: 6, // Compression level (0-9, 6 is optimal balance)
+  })
+);
 
 /**
  * Request logging
@@ -221,15 +307,17 @@ app.use(requestIdMiddleware);
  * Body parser middleware
  * ✅ FIX P0-CRITICAL: Save raw body for debugging malformed JSON errors
  */
-app.use(express.json({
-  limit: '10mb',
-  verify: (req, res, buf, encoding) => {
-    if (buf && buf.length) {
-      // Save raw body to req.rawBody for error logging
-      req.rawBody = buf.toString(encoding || 'utf8');
-    }
-  }
-}));
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, res, buf, encoding) => {
+      if (buf && buf.length) {
+        // Save raw body to req.rawBody for error logging
+        req.rawBody = buf.toString(encoding || 'utf8');
+      }
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 /**
@@ -252,13 +340,13 @@ app.use((error, req, res, next) => {
       errorMessage: error.message,
       rawBody: req.rawBody || '(empty)',
       contentLength: req.headers['content-length'],
-      contentType: req.headers['content-type']
+      contentType: req.headers['content-type'],
     });
 
     return res.status(400).json({
       success: false,
       error: 'Malformed JSON payload',
-      details: 'Request body contains invalid JSON syntax'
+      details: 'Request body contains invalid JSON syntax',
     });
   }
 
@@ -291,8 +379,8 @@ app.get('/health', async (req, res) => {
     memory: {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      unit: 'MB'
-    }
+      unit: 'MB',
+    },
   };
 
   // Check database connection
@@ -333,10 +421,12 @@ app.use('/api/internal', internalRoutes); // Internal API for bot-backend commun
  */
 app.get('*', (req, res, next) => {
   // Skip API routes, webhooks, and file requests (with extensions)
-  if (req.path.startsWith('/api') ||
-      req.path.startsWith('/webhooks') ||
-      req.path.includes('.') ||
-      req.path === '/health') {
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/webhooks') ||
+    req.path.includes('.') ||
+    req.path === '/health'
+  ) {
     return next();
   }
 
@@ -365,13 +455,16 @@ const startServer = async () => {
   try {
     // Test database connection
     await testConnection();
+    
+    // ✅ REGRESSION PREVENTION: Validate database sequences before starting
+    await validateDatabaseSequences();
 
     // Start HTTP server
     const server = app.listen(config.port, () => {
       logger.info('Server started successfully', {
         environment: config.nodeEnv,
         port: config.port,
-        database: 'Connected'
+        database: 'Connected',
       });
 
       console.log(`
@@ -416,7 +509,7 @@ const startServer = async () => {
 
     wss.on('connection', (ws, req) => {
       logger.info('WebSocket client connected', {
-        ip: req.socket.remoteAddress
+        ip: req.socket.remoteAddress,
       });
 
       ws.on('message', (message) => {
@@ -433,16 +526,18 @@ const startServer = async () => {
           logger.error('WebSocket message error', {
             error: error.message,
             stack: error.stack,
-            rawMessage: message?.toString().substring(0, 100) // Log first 100 chars
+            rawMessage: message?.toString().substring(0, 100), // Log first 100 chars
           });
 
           // Send error response to client
           try {
-            ws.send(JSON.stringify({
-              type: 'error',
-              error: 'Invalid message format',
-              timestamp: Date.now()
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                error: 'Invalid message format',
+                timestamp: Date.now(),
+              })
+            );
           } catch (sendError) {
             logger.error('Failed to send error response', { error: sendError.message });
           }
@@ -452,7 +547,7 @@ const startServer = async () => {
       ws.on('close', (code, reason) => {
         logger.info('WebSocket client disconnected', {
           code,
-          reason: reason?.toString() || 'No reason provided'
+          reason: reason?.toString() || 'No reason provided',
         });
       });
 
@@ -462,20 +557,22 @@ const startServer = async () => {
           error: error.message,
           stack: error.stack,
           code: error.code,
-          errno: error.errno
+          errno: error.errno,
         });
       });
 
       // Send welcome message with error handling
       try {
-        ws.send(JSON.stringify({
-          type: 'connected',
-          message: 'Connected to Telegram Shop WebSocket',
-          timestamp: Date.now()
-        }));
+        ws.send(
+          JSON.stringify({
+            type: 'connected',
+            message: 'Connected to Telegram Shop WebSocket',
+            timestamp: Date.now(),
+          })
+        );
       } catch (error) {
         logger.error('Failed to send welcome message', {
-          error: error.message
+          error: error.message,
         });
       }
     });
@@ -484,14 +581,15 @@ const startServer = async () => {
     wss.on('error', (error) => {
       logger.error('WebSocket server error', {
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     });
 
     // Broadcast function for real-time updates
     global.broadcastUpdate = (data) => {
       wss.clients.forEach((client) => {
-        if (client.readyState === 1) { // WebSocket.OPEN
+        if (client.readyState === 1) {
+          // WebSocket.OPEN
           client.send(JSON.stringify(data));
         }
       });
@@ -548,11 +646,10 @@ const startServer = async () => {
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
-
   } catch (error) {
     logger.error('Failed to start server', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     process.exit(1);
   }

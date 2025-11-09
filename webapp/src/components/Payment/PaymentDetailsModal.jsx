@@ -6,12 +6,18 @@ import { useTranslation } from '../../i18n/useTranslation';
 import { useToast } from '../../hooks/useToast';
 import { CRYPTO_OPTIONS, formatCryptoAmount } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
+import {
+  getSpringPreset,
+  getSurfaceStyle,
+  getSheetMaxHeight,
+  isAndroid,
+  isIOS,
+} from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
 
 // Lazy load QR code library (14KB gzipped)
 const QRCodeSVG = lazy(() =>
-  import('qrcode.react').then(module => ({ default: module.QRCodeSVG }))
+  import('qrcode.react').then((module) => ({ default: module.QRCodeSVG }))
 );
 
 export default function PaymentDetailsModal() {
@@ -22,7 +28,7 @@ export default function PaymentDetailsModal() {
     currentOrder,
     cryptoAmount,
     setPaymentStep,
-    isGeneratingInvoice
+    isGeneratingInvoice,
   } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
@@ -34,17 +40,8 @@ export default function PaymentDetailsModal() {
   const [copiedAmount, setCopiedAmount] = useState(false);
   const copiedTimeoutRef = useRef(null);
   const copiedAmountTimeoutRef = useRef(null);
-  
+
   // Log render state
-  console.log('🔵 [PaymentDetailsModal] RENDER', {
-    isOpen: paymentStep === 'details',
-    paymentStep,
-    selectedCrypto,
-    currentOrder: currentOrder?.id,
-    paymentWallet,
-    cryptoAmount,
-    isGeneratingInvoice
-  });
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -58,40 +55,105 @@ export default function PaymentDetailsModal() {
     };
   }, []);
 
-  const overlayStyle = useMemo(
-    () => getSurfaceStyle('overlay', platform),
-    [platform]
-  );
+  const overlayStyle = useMemo(() => getSurfaceStyle('overlay', platform), [platform]);
 
-  const sheetStyle = useMemo(
-    () => getSurfaceStyle('surfacePanel', platform),
-    [platform]
-  );
+  const sheetStyle = useMemo(() => getSurfaceStyle('surfacePanel', platform), [platform]);
 
-  const cardStyle = useMemo(
-    () => getSurfaceStyle('glassCard', platform),
-    [platform]
-  );
+  const cardStyle = useMemo(() => getSurfaceStyle('glassCard', platform), [platform]);
 
-  const sheetSpring = useMemo(
-    () => getSpringPreset('sheet', platform),
-    [platform]
-  );
+  const sheetSpring = useMemo(() => getSpringPreset('sheet', platform), [platform]);
 
-  const controlSpring = useMemo(
-    () => getSpringPreset('press', platform),
-    [platform]
-  );
+  const controlSpring = useMemo(() => getSpringPreset('press', platform), [platform]);
 
-  const quickSpring = useMemo(
-    () => getSpringPreset('quick', platform),
-    [platform]
-  );
+  const quickSpring = useMemo(() => getSpringPreset('quick', platform), [platform]);
 
   const isOpen = paymentStep === 'details';
   const isLoading = isOpen && isGeneratingInvoice;
-  
-  console.log('🔵 [PaymentDetailsModal] Modal state:', { isOpen, isLoading });
+
+  // ✅ CRITICAL: useBackButton must be called BEFORE any early returns!
+  const handleClose = () => {
+    triggerHaptic('light');
+    setPaymentStep('method');
+  };
+
+  useBackButton(isOpen ? handleClose : null);
+
+  // Universal copy with fallback for Telegram WebApp iframe
+  const copyToClipboard = async (text) => {
+    // Try modern Clipboard API first
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      // Fallback: Legacy execCommand (works in iframe)
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          return true;
+        }
+
+        throw new Error('execCommand returned false');
+      } catch (fallbackErr) {
+        return false;
+      }
+    }
+  };
+
+  const handleCopyWallet = async () => {
+    const success = await copyToClipboard(paymentWallet);
+
+    if (success) {
+      setCopied(true);
+      triggerHaptic('success');
+
+      // Clear previous timeout before setting new one
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+
+      // Set new timeout with proper cleanup
+      copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } else {
+      triggerHaptic('error');
+    }
+  };
+
+  const handleCopyAmount = async () => {
+    const success = await copyToClipboard(`${cryptoAmount} ${selectedCrypto}`);
+
+    if (success) {
+      setCopiedAmount(true);
+      triggerHaptic('success');
+
+      // Clear previous timeout before setting new one
+      if (copiedAmountTimeoutRef.current) {
+        clearTimeout(copiedAmountTimeoutRef.current);
+      }
+
+      // Set new timeout with proper cleanup
+      copiedAmountTimeoutRef.current = setTimeout(() => setCopiedAmount(false), 2000);
+    } else {
+      triggerHaptic('error');
+    }
+  };
+
+  const handlePaid = () => {
+    triggerHaptic('medium');
+    setPaymentStep('hash');
+  };
+
+  const cryptoInfo = CRYPTO_OPTIONS.find((c) => c.id === selectedCrypto);
 
   // Show loading state if still generating invoice
   if (isLoading) {
@@ -115,105 +177,16 @@ export default function PaymentDetailsModal() {
     );
   }
 
-  const cryptoInfo = CRYPTO_OPTIONS.find(c => c.id === selectedCrypto);
-  
-  console.log('🔵 [PaymentDetailsModal] CryptoInfo lookup:', {
-    selectedCrypto,
-    cryptoInfo: cryptoInfo?.id || 'NOT FOUND',
-    availableOptions: CRYPTO_OPTIONS.map(c => c.id)
-  });
 
-  const handleClose = () => {
-    triggerHaptic('light');
-    setPaymentStep('method');
-  };
-
-  // Universal copy with fallback for Telegram WebApp iframe
-  const copyToClipboard = async (text) => {
-    // Try modern Clipboard API first
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (err) {
-      console.log('[PaymentDetailsModal] Clipboard API failed, using fallback...', err);
-      
-      // Fallback: Legacy execCommand (works in iframe)
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '0';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        if (successful) {
-          console.log('[PaymentDetailsModal] Fallback copy successful');
-          return true;
-        }
-        
-        throw new Error('execCommand returned false');
-      } catch (fallbackErr) {
-        console.error('[PaymentDetailsModal] All copy methods failed:', fallbackErr);
-        return false;
-      }
-    }
-  };
-
-  const handleCopyWallet = async () => {
-    const success = await copyToClipboard(paymentWallet);
-    
-    if (success) {
-      setCopied(true);
-      triggerHaptic('success');
-      
-      // Clear previous timeout before setting new one
-      if (copiedTimeoutRef.current) {
-        clearTimeout(copiedTimeoutRef.current);
-      }
-      
-      // Set new timeout with proper cleanup
-      copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
-    } else {
-      triggerHaptic('error');
-    }
-  };
-
-  const handleCopyAmount = async () => {
-    const success = await copyToClipboard(`${cryptoAmount} ${selectedCrypto}`);
-    
-    if (success) {
-      setCopiedAmount(true);
-      triggerHaptic('success');
-      
-      // Clear previous timeout before setting new one
-      if (copiedAmountTimeoutRef.current) {
-        clearTimeout(copiedAmountTimeoutRef.current);
-      }
-      
-      // Set new timeout with proper cleanup
-      copiedAmountTimeoutRef.current = setTimeout(() => setCopiedAmount(false), 2000);
-    } else {
-      triggerHaptic('error');
-    }
-  };
-
-  const handlePaid = () => {
-    triggerHaptic('medium');
-    setPaymentStep('hash');
-  };
-
-  useBackButton(isOpen ? handleClose : null);
 
   // Defensive error handling for unknown crypto
   if (!cryptoInfo) {
     console.error('🔴 [PaymentDetailsModal] Unknown cryptocurrency:', selectedCrypto);
-    console.error('🔴 [PaymentDetailsModal] Available currencies:', CRYPTO_OPTIONS.map(c => c.id));
-    
+    console.error(
+      '🔴 [PaymentDetailsModal] Available currencies:',
+      CRYPTO_OPTIONS.map((c) => c.id)
+    );
+
     return (
       <AnimatePresence>
         {isOpen && (
@@ -234,13 +207,21 @@ export default function PaymentDetailsModal() {
             >
               <div className="glass-card rounded-3xl p-6 text-center max-w-sm">
                 <div className="text-red-500 mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-16 h-16 mx-auto"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Неизвестная криптовалюта
-                </h3>
+                <h3 className="text-xl font-bold text-white mb-2">Неизвестная криптовалюта</h3>
                 <p className="text-gray-400 mb-4">
                   Выбранная криптовалюта ({selectedCrypto}) не поддерживается
                 </p>
@@ -261,14 +242,13 @@ export default function PaymentDetailsModal() {
 
   // Валидация остальных данных
   if (!currentOrder) {
-    console.warn('🟡 [PaymentDetailsModal] No currentOrder, modal hidden');
     return null;
   }
 
   if (!paymentWallet || !cryptoAmount || cryptoAmount <= 0) {
     console.error('🔴 [PaymentDetailsModal] Invalid payment data:', {
       paymentWallet,
-      cryptoAmount
+      cryptoAmount,
     });
     // Если данных нет - показываем error state
     return (
@@ -290,8 +270,18 @@ export default function PaymentDetailsModal() {
               exit={{ scale: 0.9, opacity: 0 }}
             >
               <div className="bg-gray-900 rounded-2xl p-6 max-w-sm text-center">
-                <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-16 h-16 text-red-500 mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 <h3 className="text-lg font-semibold text-white mb-2">Ошибка загрузки</h3>
                 <p className="text-sm text-gray-400 mb-4">Не удалось получить данные платежа</p>
@@ -319,7 +309,7 @@ export default function PaymentDetailsModal() {
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-[1000]"
+            className="fixed inset-0 z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -330,20 +320,17 @@ export default function PaymentDetailsModal() {
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-x-0 z-[1001] flex flex-col"
+            className="fixed inset-x-0 z-50 flex flex-col"
             style={{
-              bottom: 'var(--tabbar-total)',  // ✅ FIX: Position ABOVE TabBar
-              maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32)
+              bottom: 'var(--tabbar-total)', // ✅ FIX: Position ABOVE TabBar
+              maxHeight: getSheetMaxHeight(platform, ios ? -24 : 32),
             }}
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={sheetSpring}
           >
-            <div
-              className="rounded-t-[32px] flex flex-col"
-              style={sheetStyle}
-            >
+            <div className="rounded-t-[32px] flex flex-col" style={sheetStyle}>
               {/* Header - Centered */}
               <div className="relative flex items-center justify-center p-4 border-b border-white/10">
                 {/* Back Button - Absolute Left */}
@@ -352,35 +339,35 @@ export default function PaymentDetailsModal() {
                   className="absolute left-4 w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
                   style={{
                     background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
                   }}
                   whileTap={{ scale: android ? 0.94 : 0.9 }}
                   transition={controlSpring}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
                   </svg>
                 </motion.button>
-                
+
                 {/* Title - Centered */}
                 <div className="text-center">
-                  <h2
-                    className="text-lg font-bold text-white"
-                    style={{ letterSpacing: '-0.01em' }}
-                  >
+                  <h2 className="text-lg font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
                     {t('payment.payWith', { crypto: cryptoInfo.name })}
                   </h2>
-                  <p className="text-xs text-gray-400">
-                    {cryptoInfo.network}
-                  </p>
+                  <p className="text-xs text-gray-400">{cryptoInfo.network}</p>
                 </div>
-                
+
                 {/* Crypto Icon - Absolute Right */}
                 <div
                   className="absolute right-4 w-9 h-9 rounded-lg flex items-center justify-center text-lg font-bold"
                   style={{
                     background: `linear-gradient(135deg, ${cryptoInfo.gradient})`,
-                    boxShadow: `0 4px 12px ${cryptoInfo.color}40`
+                    boxShadow: `0 4px 12px ${cryptoInfo.color}40`,
                   }}
                 >
                   {cryptoInfo.icon}
@@ -388,7 +375,10 @@ export default function PaymentDetailsModal() {
               </div>
 
               {/* Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ paddingBottom: 'calc(var(--tabbar-total) + 32px)' }}>
+              <div
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+                style={{ paddingBottom: 'calc(var(--tabbar-total) + 32px)' }}
+              >
                 {/* QR Code - Compact */}
                 <div className="flex justify-center">
                   <motion.div
@@ -398,14 +388,19 @@ export default function PaymentDetailsModal() {
                     className="p-3 rounded-xl"
                     style={{
                       background: 'white',
-                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
+                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
                     }}
                   >
-                    <Suspense fallback={
-                      <div className="flex items-center justify-center" style={{ width: qrSize, height: qrSize }}>
-                        <div className="w-8 h-8 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    }>
+                    <Suspense
+                      fallback={
+                        <div
+                          className="flex items-center justify-center"
+                          style={{ width: qrSize, height: qrSize }}
+                        >
+                          <div className="w-8 h-8 border-4 border-orange-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      }
+                    >
                       <QRCodeSVG
                         value={paymentWallet}
                         size={qrSize}
@@ -424,7 +419,7 @@ export default function PaymentDetailsModal() {
                   className="flex items-center gap-2 rounded-lg p-2"
                   style={{
                     ...cardStyle,
-                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)'
+                    background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                   }}
                 >
                   <div className="flex-1 break-all text-white font-mono text-xs tabular-nums">
@@ -435,18 +430,40 @@ export default function PaymentDetailsModal() {
                     className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center"
                     style={{
                       background: copied ? 'rgba(34, 197, 94, 0.24)' : 'rgba(255, 107, 0, 0.22)',
-                      border: copied ? '1px solid rgba(34, 197, 94, 0.36)' : '1px solid rgba(255, 107, 0, 0.32)'
+                      border: copied
+                        ? '1px solid rgba(34, 197, 94, 0.36)'
+                        : '1px solid rgba(255, 107, 0, 0.32)',
                     }}
                     whileTap={{ scale: android ? 0.95 : 0.9 }}
                     transition={controlSpring}
                   >
                     {copied ? (
-                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4 text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4 text-orange-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <svg
+                        className="w-4 h-4 text-orange-primary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                     )}
                   </motion.button>
@@ -460,21 +477,30 @@ export default function PaymentDetailsModal() {
                   className="w-full rounded-xl p-4 text-center space-y-2 cursor-pointer"
                   style={{
                     ...cardStyle,
-                    background: 'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
+                    background:
+                      'linear-gradient(145deg, rgba(26, 26, 26, 0.9) 0%, rgba(20, 20, 20, 0.95) 100%)',
                     border: copiedAmount
                       ? '1px solid rgba(34, 197, 94, 0.36)'
-                      : '1px solid rgba(255, 255, 255, 0.1)'
+                      : '1px solid rgba(255, 255, 255, 0.1)',
                   }}
                   whileTap={{ scale: android ? 0.985 : 0.98 }}
                   transition={{ ...quickSpring, delay: 0.3 }}
                 >
                   <div className="flex items-center justify-center gap-2">
-                    <p className="text-gray-400 text-xs">
-                      {t('cart.items', { count: itemCount })}
-                    </p>
+                    <p className="text-gray-400 text-xs">{t('cart.items', { count: itemCount })}</p>
                     {copiedAmount && (
-                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4 text-green-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     )}
                   </div>
@@ -507,7 +533,7 @@ export default function PaymentDetailsModal() {
                           0 8px 24px rgba(255, 107, 0, 0.15),
                           inset 0 1px 0 rgba(255, 255, 255, 0.2)
                         `,
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
                   }}
                   whileTap={{ scale: android ? 0.985 : 0.98 }}
                   transition={controlSpring}
