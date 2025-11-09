@@ -9,6 +9,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
 import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
+import { mockShopValidation } from '../helpers/commonMocks.js';
 
 describe('Manage Wallets Scene (P0)', () => {
   let testBot;
@@ -21,20 +22,23 @@ describe('Manage Wallets Scene (P0)', () => {
         token: 'test-jwt-token',
         user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
         shopId: 1,
-        shopName: 'Test Shop'
-      }
+        shopName: 'Test Shop',
+      },
     });
     mock = new MockAdapter(api);
 
+    // Mock shop validation (required by validateShopBeforeScene middleware)
+    mockShopValidation(mock, 1);
+
     // Default mock для refresh вызовов (чтобы избежать 404 от setTimeout)
     mock.onGet('/shops/1/wallets').reply(200, {
-      data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+      data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
     });
   });
 
   afterEach(async () => {
     // Wait for any pending timeouts (scene refresh timers)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     testBot.reset();
     mock.reset();
   });
@@ -47,8 +51,8 @@ describe('Manage Wallets Scene (P0)', () => {
           wallet_btc: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
           wallet_eth: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
           wallet_usdt: null,
-          wallet_ltc: null
-        }
+          wallet_ltc: null,
+        },
       });
 
       // Enter scene
@@ -69,22 +73,23 @@ describe('Manage Wallets Scene (P0)', () => {
       const buttons = keyboard.flat();
 
       // Проверяем что есть кнопки BTC, ETH, USDT, LTC
-      expect(buttons.some(btn => btn.text.includes('BTC'))).toBe(true);
-      expect(buttons.some(btn => btn.text.includes('ETH'))).toBe(true);
-      expect(buttons.some(btn => btn.text.includes('USDT'))).toBe(true);
-      expect(buttons.some(btn => btn.text.includes('LTC'))).toBe(true);
+      expect(buttons.some((btn) => btn.text.includes('BTC'))).toBe(true);
+      expect(buttons.some((btn) => btn.text.includes('ETH'))).toBe(true);
+      expect(buttons.some((btn) => btn.text.includes('USDT'))).toBe(true);
+      expect(buttons.some((btn) => btn.text.includes('LTC'))).toBe(true);
 
       // Проверяем форматирование адресов (BTC должен быть отформатирован)
-      const btcButton = buttons.find(btn => btn.text.includes('BTC'));
+      const btcButton = buttons.find((btn) => btn.text.includes('BTC'));
       expect(btcButton.text).toContain('bc1qxy2k'); // Formatted address
 
       // Проверяем статус "Не указан" для пустых кошельков
-      const usdtButton = buttons.find(btn => btn.text.includes('USDT'));
+      const usdtButton = buttons.find((btn) => btn.text.includes('USDT'));
       expect(usdtButton.text).toContain('Не указан');
 
-      // Проверяем что API был вызван один раз
-      expect(mock.history.get.length).toBe(1);
-      expect(mock.history.get[0].url).toBe('/shops/1/wallets');
+      // Проверяем что wallets API был вызван (может быть + shop validation)
+      const walletGets = mock.history.get.filter((r) => r.url.includes('/wallets'));
+      expect(walletGets.length).toBe(1);
+      expect(walletGets[0].url).toBe('/shops/1/wallets');
     });
 
     it('должен показать статус "Не указан" для всех кошельков если они пустые', async () => {
@@ -94,8 +99,8 @@ describe('Manage Wallets Scene (P0)', () => {
           wallet_btc: null,
           wallet_eth: null,
           wallet_usdt: null,
-          wallet_ltc: null
-        }
+          wallet_ltc: null,
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -104,9 +109,13 @@ describe('Manage Wallets Scene (P0)', () => {
       const buttons = keyboard.flat();
 
       // Все кошельки должны иметь статус "Не указан"
-      buttons.forEach(btn => {
-        if (btn.text.includes('BTC') || btn.text.includes('ETH') ||
-            btn.text.includes('USDT') || btn.text.includes('LTC')) {
+      buttons.forEach((btn) => {
+        if (
+          btn.text.includes('BTC') ||
+          btn.text.includes('ETH') ||
+          btn.text.includes('USDT') ||
+          btn.text.includes('LTC')
+        ) {
           expect(btn.text).toContain('Не указан');
         }
       });
@@ -117,7 +126,7 @@ describe('Manage Wallets Scene (P0)', () => {
     it('BTC Bech32 address (bc1...) → success', async () => {
       // Step 1: Show wallets list
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -136,7 +145,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const btcAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress }
+        data: { wallet_btc: btcAddress },
       });
 
       await testBot.handleUpdate(textUpdate(btcAddress));
@@ -155,7 +164,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('BTC P2PKH address (1...) → success', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -167,7 +176,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const btcAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress }
+        data: { wallet_btc: btcAddress },
       });
 
       await testBot.handleUpdate(textUpdate(btcAddress));
@@ -184,7 +193,7 @@ describe('Manage Wallets Scene (P0)', () => {
   describe('Add Wallet - ETH', () => {
     it('ETH 0x address → success', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -197,7 +206,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const ethAddress = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_eth: ethAddress }
+        data: { wallet_eth: ethAddress },
       });
 
       await testBot.handleUpdate(textUpdate(ethAddress));
@@ -216,7 +225,7 @@ describe('Manage Wallets Scene (P0)', () => {
   describe('Add Wallet - USDT (TRC-20)', () => {
     it('USDT TRC-20 address (TR...) → success', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -229,7 +238,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const usdtAddress = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_usdt: usdtAddress }
+        data: { wallet_usdt: usdtAddress },
       });
 
       await testBot.handleUpdate(textUpdate(usdtAddress));
@@ -248,7 +257,7 @@ describe('Manage Wallets Scene (P0)', () => {
   describe('Add Wallet - LTC', () => {
     it('LTC address → success', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -261,7 +270,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const ltcAddress = 'LaMT348PWRnrqeeWArpwQPbuanpXDZGEUz';
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_ltc: ltcAddress }
+        data: { wallet_ltc: ltcAddress },
       });
 
       await testBot.handleUpdate(textUpdate(ltcAddress));
@@ -279,7 +288,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 1: Show wallets with existing BTC address
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: oldAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: oldAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -306,7 +315,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 4: Send new address
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: newAddress }
+        data: { wallet_btc: newAddress },
       });
 
       await testBot.handleUpdate(textUpdate(newAddress));
@@ -329,7 +338,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 1: Show wallets with existing BTC address
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -351,7 +360,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 4: Confirm deletion
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null }
+        data: { wallet_btc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('wallet:delete_confirm:BTC'));
@@ -374,7 +383,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 1: Show wallets
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -386,14 +395,15 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Step 3: Click "Show QR"
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       mock.onPost('/payments/qr').reply(200, {
         success: true,
         data: {
-          qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-        }
+          qrCode:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('wallet:qr:BTC'));
@@ -411,7 +421,7 @@ describe('Manage Wallets Scene (P0)', () => {
     it('QR для несуществующего кошелька → ошибка', async () => {
       // Step 1: Show wallets (no BTC wallet)
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -432,7 +442,7 @@ describe('Manage Wallets Scene (P0)', () => {
   describe('Validation Edge Cases', () => {
     it('invalid BTC address → error message', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -454,7 +464,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('empty input → error', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -476,7 +486,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('auto-detect crypto when user clicks specific wallet type', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -490,7 +500,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
       // Mock PUT - scene will override detectCryptoType with editingWallet state
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: ethAddress } // Scene uses editingWallet = 'BTC'
+        data: { wallet_btc: ethAddress }, // Scene uses editingWallet = 'BTC'
       });
 
       await testBot.handleUpdate(textUpdate(ethAddress));
@@ -513,7 +523,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('whitespace around address should be trimmed', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -526,7 +536,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const paddedAddress = `  ${btcAddress}  `;
 
       mock.onPut('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress }
+        data: { wallet_btc: btcAddress },
       });
 
       await testBot.handleUpdate(textUpdate(paddedAddress));
@@ -543,7 +553,7 @@ describe('Manage Wallets Scene (P0)', () => {
       const btcAddress = 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh';
 
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: btcAddress, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -566,7 +576,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('cancel button → exit scene and return to seller tools', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -585,7 +595,7 @@ describe('Manage Wallets Scene (P0)', () => {
     it('API error при загрузке кошельков → показать ошибку', async () => {
       // Mock API error
       mock.onGet('/shops/1/wallets').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -597,7 +607,7 @@ describe('Manage Wallets Scene (P0)', () => {
 
     it('API error при сохранении кошелька → показать ошибку', async () => {
       mock.onGet('/shops/1/wallets').reply(200, {
-        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null }
+        data: { wallet_btc: null, wallet_eth: null, wallet_usdt: null, wallet_ltc: null },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -609,7 +619,7 @@ describe('Manage Wallets Scene (P0)', () => {
       // Mock API error on save
       const btcAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
       mock.onPut('/shops/1/wallets').reply(500, {
-        error: 'Failed to save wallet'
+        error: 'Failed to save wallet',
       });
 
       await testBot.handleUpdate(textUpdate(btcAddress));
@@ -626,8 +636,8 @@ describe('Manage Wallets Scene (P0)', () => {
         mockSession: {
           token: 'test-jwt-token',
           user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
-          shopId: null // No shop
-        }
+          shopId: null, // No shop
+        },
       });
 
       await noShopBot.handleUpdate(callbackUpdate('seller:wallets'));
@@ -649,8 +659,8 @@ describe('Manage Wallets Scene (P0)', () => {
         mockSession: {
           token: null, // No token
           user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
-          shopId: 1
-        }
+          shopId: 1,
+        },
       });
 
       await noTokenBot.handleUpdate(callbackUpdate('seller:wallets'));

@@ -6,7 +6,7 @@ import logger from '../../utils/logger.js';
 const { general: generalMessages } = messages;
 
 const backToMenuKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
+  [Markup.button.callback(buttonText.backToMenu, 'seller:menu')],
 ]);
 
 const formatPrice = (value) => {
@@ -58,13 +58,17 @@ export const handleActiveOrders = async (ctx) => {
       return;
     }
 
-    const ordersList = activeOrders.map((order, index) => {
-      const buyer = order.buyer_username ? `@${order.buyer_username}` : (order.buyer_first_name || 'Покупатель');
-      const productName = order.product_name || order.productName || 'Товар';
-      const quantity = order.quantity ?? 1;
-      const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
-      return `${index + 1}. ${buyer} • ${productName} (${quantity} шт) • $${totalPrice}`;
-    }).join('\n');
+    const ordersList = activeOrders
+      .map((order, index) => {
+        const buyer = order.buyer_username
+          ? `@${order.buyer_username}`
+          : order.buyer_first_name || 'Покупатель';
+        const productName = order.product_name || order.productName || 'Товар';
+        const quantity = order.quantity ?? 1;
+        const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
+        return `${index + 1}. ${buyer} • ${productName} (${quantity} шт) • $${totalPrice}`;
+      })
+      .join('\n');
 
     const total = activeOrders.reduce((sum, order) => {
       const price = Number(order.total_price ?? order.totalPrice ?? 0);
@@ -82,13 +86,14 @@ ${ordersList}
     const buttons = Markup.inlineKeyboard([
       [Markup.button.callback('Отметить выдачу', 'seller:mark_shipped')],
       [Markup.button.callback('Обновить', 'seller:active_orders')],
-      [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
+      [Markup.button.callback(buttonText.backToMenu, 'seller:menu')],
     ]);
 
     await ctx.reply(message, buttons);
 
-    logger.info(`User ${ctx.from.id} viewed ${activeOrders.length} active orders for shop ${shopId}`);
-
+    logger.info(
+      `User ${ctx.from.id} viewed ${activeOrders.length} active orders for shop ${shopId}`
+    );
   } catch (error) {
     logger.error('Error in handleActiveOrders:', {
       error: error.message,
@@ -96,19 +101,24 @@ ${ordersList}
       data: error.response?.data,
       shopId: ctx.session?.currentShopId ?? ctx.session?.shopId,
       hasToken: !!ctx.session?.token,
-      stack: error.stack
+      stack: error.stack,
     });
 
+    // ✅ P1-3 FIX: No second answerCbQuery, just show error message
+    const errorMsg = 'Не удалось загрузить активные заказы. Попробуйте позже.';
     try {
-      await ctx.answerCbQuery('Не удалось загрузить заказы', { show_alert: true });
-    } catch (cbError) {
-      logger.debug('Failed to answer callback query after active orders error', cbError);
-    }
-
-    try {
-      await ctx.reply('Не удалось загрузить активные заказы. Попробуйте позже.', backToMenuKeyboard);
-    } catch (replyError) {
-      logger.debug('Failed to send fallback message after active orders error', replyError);
+      if (ctx.callbackQuery) {
+        await ctx.editMessageText(errorMsg, backToMenuKeyboard);
+      } else {
+        await ctx.reply(errorMsg, backToMenuKeyboard);
+      }
+    } catch (msgError) {
+      // Fallback to reply if edit fails
+      try {
+        await ctx.reply(errorMsg, backToMenuKeyboard);
+      } catch (replyError) {
+        logger.error('Failed to send error message:', replyError);
+      }
     }
   }
 };
@@ -136,13 +146,13 @@ function createOrderHistoryKeyboard(page, totalPages) {
   buttons.push([
     Markup.button.callback('📊 Статистика', 'seller:order_stats'),
     Markup.button.callback('🔍 Поиск', 'seller:order_search'),
-    Markup.button.callback('📥 Экспорт', 'seller:order_export')
+    Markup.button.callback('📥 Экспорт', 'seller:order_export'),
   ]);
 
   // Row 3: Utilities
   buttons.push([
     Markup.button.callback('Обновить', `seller:order_history:${page}`),
-    Markup.button.callback(buttonText.backToMenu, 'seller:menu')
+    Markup.button.callback(buttonText.backToMenu, 'seller:menu'),
   ]);
 
   return Markup.inlineKeyboard(buttons);
@@ -176,11 +186,11 @@ export const handleOrderHistory = async (ctx, page = 1) => {
     const result = await orderApi.getShopOrders(shopId, token, {
       status: 'delivered,completed',
       page: page,
-      limit: PER_PAGE
+      limit: PER_PAGE,
     });
 
     // Check response format - backend might return { data: { orders: [...], total: N } }
-    const deliveredOrders = Array.isArray(result) ? result : (result.data || result);
+    const deliveredOrders = Array.isArray(result) ? result : result.data || result;
 
     // Get total count from response metadata
     const totalOrders = result.data?.total || deliveredOrders.length;
@@ -201,16 +211,21 @@ export const handleOrderHistory = async (ctx, page = 1) => {
     const startNum = (page - 1) * PER_PAGE + 1;
     const endNum = Math.min(startNum + deliveredOrders.length - 1, totalOrders);
 
-    const ordersList = deliveredOrders.map((order, index) => {
-      const globalNum = startNum + index;
-      const buyer = order.buyer_username ? `@${order.buyer_username}` : (order.buyer_first_name || 'Покупатель');
-      const productName = order.product_name || order.productName || 'Товар';
-      const quantity = order.quantity ?? 1;
-      const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
-      const deliveredAt = order.updated_at || order.delivered_at || order.completed_at || order.paid_at;
-      const dateLabel = deliveredAt ? new Date(deliveredAt).toLocaleDateString('ru-RU') : '';
-      return `${globalNum}. ${buyer} • ${productName} (${quantity} шт) • $${totalPrice} • ${dateLabel}`;
-    }).join('\n');
+    const ordersList = deliveredOrders
+      .map((order, index) => {
+        const globalNum = startNum + index;
+        const buyer = order.buyer_username
+          ? `@${order.buyer_username}`
+          : order.buyer_first_name || 'Покупатель';
+        const productName = order.product_name || order.productName || 'Товар';
+        const quantity = order.quantity ?? 1;
+        const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
+        const deliveredAt =
+          order.updated_at || order.delivered_at || order.completed_at || order.paid_at;
+        const dateLabel = deliveredAt ? new Date(deliveredAt).toLocaleDateString('ru-RU') : '';
+        return `${globalNum}. ${buyer} • ${productName} (${quantity} шт) • $${totalPrice} • ${dateLabel}`;
+      })
+      .join('\n');
 
     // Calculate revenue for current page
     const pageRevenue = deliveredOrders.reduce((sum, order) => {
@@ -237,8 +252,9 @@ ${ordersList}
       await ctx.reply(historyMessage, keyboard);
     }
 
-    logger.info(`User ${ctx.from.id} viewed order history page ${page}/${totalPages} for shop ${shopId}`);
-
+    logger.info(
+      `User ${ctx.from.id} viewed order history page ${page}/${totalPages} for shop ${shopId}`
+    );
   } catch (error) {
     logger.error('Error in handleOrderHistory:', {
       error: error.message,
@@ -247,19 +263,24 @@ ${ordersList}
       shopId: ctx.session?.currentShopId ?? ctx.session?.shopId,
       hasToken: !!ctx.session?.token,
       page,
-      stack: error.stack
+      stack: error.stack,
     });
 
+    // ✅ P1-3 FIX: No second answerCbQuery, just show error message
+    const errorMsg = 'Не удалось загрузить историю заказов. Попробуйте позже.';
     try {
-      await ctx.answerCbQuery('Не удалось загрузить историю заказов', { show_alert: true });
-    } catch (cbError) {
-      logger.debug('Failed to answer callback query after order history error', cbError);
-    }
-
-    try {
-      await ctx.reply('Не удалось загрузить историю заказов. Попробуйте позже.', backToMenuKeyboard);
-    } catch (replyError) {
-      logger.debug('Failed to send fallback message after order history error', replyError);
+      if (ctx.callbackQuery) {
+        await ctx.editMessageText(errorMsg, backToMenuKeyboard);
+      } else {
+        await ctx.reply(errorMsg, backToMenuKeyboard);
+      }
+    } catch (msgError) {
+      // Fallback to reply if edit fails
+      try {
+        await ctx.reply(errorMsg, backToMenuKeyboard);
+      } catch (replyError) {
+        logger.error('Failed to send error message:', replyError);
+      }
     }
   }
 };
@@ -280,13 +301,10 @@ export const handleMarkShipped = async (ctx) => {
     const newMessage = ctx.callbackQuery.message.text + '\n\n✅ Отправлено';
     await ctx.editMessageText(
       newMessage,
-      Markup.inlineKeyboard([[
-        Markup.button.callback('✓ Доставлено', `order:deliver:${orderId}`)
-      ]])
+      Markup.inlineKeyboard([[Markup.button.callback('✓ Доставлено', `order:deliver:${orderId}`)]])
     );
 
     logger.info(`Order ${orderId} marked as shipped by user ${ctx.from.id}`);
-
   } catch (error) {
     logger.error('Error marking order as shipped:', error);
     await ctx.answerCbQuery('Не удалось обновить статус');
@@ -306,11 +324,11 @@ export const handleMarkDelivered = async (ctx) => {
     await ctx.answerCbQuery('✅ Заказ завершён');
 
     // Final message - no more buttons
-    const newMessage = ctx.callbackQuery.message.text.replace('\n\n✅ Отправлено', '') + '\n\n✅ Доставлено';
+    const newMessage =
+      ctx.callbackQuery.message.text.replace('\n\n✅ Отправлено', '') + '\n\n✅ Доставлено';
     await ctx.editMessageText(newMessage);
 
     logger.info(`Order ${orderId} marked as delivered by user ${ctx.from.id}`);
-
   } catch (error) {
     logger.error('Error marking order as delivered:', error);
     await ctx.answerCbQuery('Не удалось обновить статус');
@@ -333,7 +351,6 @@ export const handleCancelOrder = async (ctx) => {
     await ctx.editMessageText(newMessage);
 
     logger.info(`Order ${orderId} cancelled by user ${ctx.from.id}`);
-
   } catch (error) {
     logger.error('Error cancelling order:', error);
     await ctx.answerCbQuery('Не удалось отменить заказ');
@@ -366,7 +383,6 @@ export const handleOrderHistoryPage = async (ctx) => {
 
     // Reuse main handler
     return handleOrderHistory(ctx, page);
-
   } catch (error) {
     logger.error('Error in handleOrderHistoryPage:', error);
     await ctx.answerCbQuery('❌ Ошибка загрузки страницы');

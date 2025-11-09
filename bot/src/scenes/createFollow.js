@@ -25,7 +25,7 @@ const enterShopId = async (ctx) => {
 
     // Check token first
     if (!ctx.session.token) {
-      await smartMessage.send(ctx, { text: generalMessages.authorizationRequired, keyboard: successButtons });
+      await ctx.reply(generalMessages.authorizationRequired, successButtons);
       return ctx.scene.leave();
     }
 
@@ -36,13 +36,13 @@ const enterShopId = async (ctx) => {
       if (limit.reached) {
         await smartMessage.send(ctx, {
           text: followMessages.createLimitReached(limit.count, limit.limit),
-          keyboard: successButtons
+          keyboard: successButtons,
         });
         logger.warn('follow_create_limit_reached_early', {
           userId: ctx.from.id,
           shopId: ctx.session.shopId,
           count: limit.count,
-          limit: limit.limit
+          limit: limit.limit,
         });
         return ctx.scene.leave();
       }
@@ -53,7 +53,7 @@ const enterShopId = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: followMessages.createEnterId,
-      keyboard: cancelButton
+      keyboard: cancelButton,
     });
 
     return ctx.wizard.next();
@@ -74,7 +74,7 @@ const selectMode = async (ctx) => {
 
     // Check token first
     if (!ctx.session.token) {
-      await smartMessage.send(ctx, { text: generalMessages.authorizationRequired, keyboard: successButtons });
+      await ctx.reply(generalMessages.authorizationRequired, successButtons);
       return ctx.scene.leave();
     }
 
@@ -87,7 +87,10 @@ const selectMode = async (ctx) => {
     const sourceShopId = parseInt(ctx.message.text.trim(), 10);
 
     if (Number.isNaN(sourceShopId) || sourceShopId <= 0) {
-      await smartMessage.send(ctx, { text: followMessages.createIdInvalid, keyboard: cancelButton });
+      await smartMessage.send(ctx, {
+        text: followMessages.createIdInvalid,
+        keyboard: cancelButton,
+      });
       return;
     }
 
@@ -95,31 +98,44 @@ const selectMode = async (ctx) => {
       await shopApi.getShop(sourceShopId);
     } catch (error) {
       if (error.response?.status === 404) {
-        await smartMessage.send(ctx, { text: followMessages.createShopNotFound, keyboard: cancelButton });
+        await smartMessage.send(ctx, {
+          text: followMessages.createShopNotFound,
+          keyboard: cancelButton,
+        });
       } else {
         logger.error('Error checking shop existence:', error);
-        await smartMessage.send(ctx, { text: followMessages.createCheckError, keyboard: cancelButton });
+        await smartMessage.send(ctx, {
+          text: followMessages.createCheckError,
+          keyboard: cancelButton,
+        });
       }
       return;
     }
 
     if (sourceShopId === ctx.session.shopId) {
-      await smartMessage.send(ctx, { text: followMessages.createSelfFollow, keyboard: successButtons });
+      await smartMessage.send(ctx, {
+        text: followMessages.createSelfFollow,
+        keyboard: successButtons,
+      });
       return ctx.scene.leave();
     }
 
     // P1-BOT-004 FIX: Check circular dependency BEFORE creating follow
     try {
-      const validation = await followApi.validateCircular(ctx.session.shopId, sourceShopId, ctx.session.token);
+      const validation = await followApi.validateCircular(
+        ctx.session.shopId,
+        sourceShopId,
+        ctx.session.token
+      );
       if (!validation.valid) {
         logger.warn('Circular dependency detected', {
           userId: ctx.from.id,
           followerShopId: ctx.session.shopId,
-          sourceShopId
+          sourceShopId,
         });
         await smartMessage.send(ctx, {
           text: followMessages.createCircularDetailed,
-          keyboard: successButtons
+          keyboard: successButtons,
         });
         return ctx.scene.leave();
       }
@@ -135,7 +151,7 @@ const selectMode = async (ctx) => {
 
     logger.info('follow_create_step:mode', {
       userId: ctx.from.id,
-      sourceShopId: sourceShopId
+      sourceShopId: sourceShopId,
     });
 
     // Get source shop name
@@ -148,11 +164,13 @@ const selectMode = async (ctx) => {
     }
 
     const message = followMessages.createModePromptDetailed(sourceShopName);
-    await cleanReply(ctx, message,
+    await cleanReply(
+      ctx,
+      message,
       Markup.inlineKeyboard([
         [Markup.button.callback('🔍 Мониторинг', 'mode:monitor')],
         [Markup.button.callback('💰 Перепродажа', 'mode:resell')],
-        [Markup.button.callback('❌ Отмена', 'cancel_scene')]
+        [Markup.button.callback('❌ Отмена', 'cancel_scene')],
       ])
     );
 
@@ -178,7 +196,7 @@ const handleModeSelection = async (ctx) => {
 
     logger.info('follow_create_step:mode_selected', {
       userId: ctx.from.id,
-      mode: mode
+      mode: mode,
     });
 
     if (mode === 'monitor') {
@@ -186,16 +204,19 @@ const handleModeSelection = async (ctx) => {
       try {
         await ctx.editMessageText(followMessages.createSaving);
 
-        await followApi.createFollow({
-          followerShopId: ctx.session.shopId,
-          sourceShopId: ctx.wizard.state.sourceShopId,
-          mode: 'monitor'
-        }, ctx.session.token);
+        await followApi.createFollow(
+          {
+            followerShopId: ctx.session.shopId,
+            sourceShopId: ctx.wizard.state.sourceShopId,
+            mode: 'monitor',
+          },
+          ctx.session.token
+        );
 
         logger.info('follow_created', {
           userId: ctx.from.id,
           mode: 'monitor',
-          sourceShopId: ctx.wizard.state.sourceShopId
+          sourceShopId: ctx.wizard.state.sourceShopId,
         });
 
         await ctx.editMessageText(followMessages.createMonitorSuccess, successButtons);
@@ -204,10 +225,7 @@ const handleModeSelection = async (ctx) => {
         logger.error('Error creating follow:', error);
 
         if (error.response?.status === 402) {
-          await ctx.editMessageText(
-            followMessages.limitReachedBasicToPro,
-            successButtons
-          );
+          await ctx.editMessageText(followMessages.limitReachedBasicToPro, successButtons);
         } else if (error.response?.status === 400) {
           const errorMsg = error.response?.data?.error || '';
           const errorLower = errorMsg.toLowerCase();
@@ -259,18 +277,18 @@ const handleMarkup = async (ctx) => {
 
     logger.info('follow_create_step:markup', {
       userId: ctx.from.id,
-      markup: markup
+      markup: markup,
     });
 
     // Validate session
     if (!ctx.session.shopId) {
       logger.error('No shopId in session when creating follow', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
       await smartMessage.send(ctx, {
         text: generalMessages.shopRequired,
-        keyboard: successButtons
+        keyboard: successButtons,
       });
       return await ctx.scene.leave();
     }
@@ -278,12 +296,9 @@ const handleMarkup = async (ctx) => {
     if (!ctx.session.token) {
       logger.error('Missing auth token when creating follow', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
-      await smartMessage.send(ctx, {
-        text: generalMessages.authorizationRequired,
-        keyboard: successButtons
-      });
+      await ctx.reply(generalMessages.authorizationRequired, successButtons);
       return await ctx.scene.leave();
     }
 
@@ -291,42 +306,60 @@ const handleMarkup = async (ctx) => {
     try {
       await smartMessage.send(ctx, { text: followMessages.createSaving });
 
-      await followApi.createFollow({
-        followerShopId: ctx.session.shopId,
-        sourceShopId: ctx.wizard.state.sourceShopId,
-        mode: 'resell',
-        markupPercentage: markup
-      }, ctx.session.token);
+      await followApi.createFollow(
+        {
+          followerShopId: ctx.session.shopId,
+          sourceShopId: ctx.wizard.state.sourceShopId,
+          mode: 'resell',
+          markupPercentage: markup,
+        },
+        ctx.session.token
+      );
 
       logger.info('follow_created', {
         userId: ctx.from.id,
         mode: 'resell',
         sourceShopId: ctx.wizard.state.sourceShopId,
-        markup: markup
+        markup: markup,
       });
 
       await smartMessage.send(ctx, {
         text: `✅ Подписка создана (Resell)\n\nНаценка: +${markup}%`,
-        keyboard: successButtons
+        keyboard: successButtons,
       });
       return ctx.scene.leave();
     } catch (error) {
       logger.error('Error creating follow:', error);
 
       if (error.response?.status === 402) {
-        await smartMessage.send(ctx, { text: followMessages.limitReachedBasicToPro, keyboard: successButtons });
+        await smartMessage.send(ctx, {
+          text: followMessages.limitReachedBasicToPro,
+          keyboard: successButtons,
+        });
       } else if (error.response?.status === 400) {
         const errorMsg = error.response?.data?.error || '';
         const errorLower = errorMsg.toLowerCase();
         if (errorLower.includes('circular')) {
-          await smartMessage.send(ctx, { text: followMessages.createCircularDetailed, keyboard: successButtons });
+          await smartMessage.send(ctx, {
+            text: followMessages.createCircularDetailed,
+            keyboard: successButtons,
+          });
         } else if (errorLower.includes('already exists')) {
-          await smartMessage.send(ctx, { text: followMessages.createExists, keyboard: successButtons });
+          await smartMessage.send(ctx, {
+            text: followMessages.createExists,
+            keyboard: successButtons,
+          });
         } else {
-          await smartMessage.send(ctx, { text: followMessages.createError, keyboard: successButtons });
+          await smartMessage.send(ctx, {
+            text: followMessages.createError,
+            keyboard: successButtons,
+          });
         }
       } else {
-        await smartMessage.send(ctx, { text: followMessages.createError, keyboard: successButtons });
+        await smartMessage.send(ctx, {
+          text: followMessages.createError,
+          keyboard: successButtons,
+        });
       }
 
       return ctx.scene.leave();
@@ -335,7 +368,7 @@ const handleMarkup = async (ctx) => {
     logger.error('Error in handleMarkup step:', error);
     await smartMessage.send(ctx, {
       text: followMessages.createError,
-      keyboard: successButtons
+      keyboard: successButtons,
     });
     return ctx.scene.leave();
   }
@@ -353,7 +386,7 @@ const createFollowScene = new Scenes.WizardScene(
 // Handle scene leave
 createFollowScene.leave(async (ctx) => {
   // FIX BUG #1 & #4: Delete user messages (shop ID, markup inputs)
-  const userMsgIds = ctx.wizard.state.userMessageIds || [];
+  const userMsgIds = ctx.wizard?.state?.userMessageIds || [];
   for (const msgId of userMsgIds) {
     try {
       await ctx.deleteMessage(msgId);
@@ -363,7 +396,11 @@ createFollowScene.leave(async (ctx) => {
     }
   }
 
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left createFollow scene`);
 });
 
@@ -373,12 +410,18 @@ createFollowScene.command('cancel', async (ctx) => {
     logger.info('follow_create_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
     // Silent transition - show menu without "Отменено" text
-    await smartMessage.send(ctx, { text: followMessages.createCancelled, keyboard: successButtons });
+    await smartMessage.send(ctx, {
+      text: followMessages.createCancelled,
+      keyboard: successButtons,
+    });
   } catch (error) {
     logger.error('Error in cancel command handler:', error);
     // Local error handling
     try {
-      await smartMessage.send(ctx, { text: followMessages.cancelOperationError, keyboard: successButtons });
+      await smartMessage.send(ctx, {
+        text: followMessages.cancelOperationError,
+        keyboard: successButtons,
+      });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -396,10 +439,7 @@ createFollowScene.action('cancel_scene', async (ctx) => {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      await ctx.editMessageText(
-        followMessages.cancelOperationError,
-        successButtons
-      );
+      await ctx.editMessageText(followMessages.cancelOperationError, successButtons);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
