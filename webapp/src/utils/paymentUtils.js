@@ -10,7 +10,7 @@ export const generateWalletAddress = (crypto) => {
     BTC: `bc1q${randomSuffix()}${randomSuffix()}`,
     USDT: `0x${randomSuffix()}${randomSuffix()}`.toUpperCase(),
     LTC: `ltc1q${randomSuffix()}${randomSuffix()}`,
-    ETH: `0x${randomSuffix()}${randomSuffix()}`.toUpperCase()
+    ETH: `0x${randomSuffix()}${randomSuffix()}`.toUpperCase(),
   };
 
   return addresses[crypto] || addresses.BTC;
@@ -24,23 +24,23 @@ export const CRYPTO_OPTIONS = [
     network: 'Bitcoin Network',
     icon: '₿',
     gradient: 'from-[#F7931A] to-[#FFB74D]',
-    color: '#F7931A'
+    color: '#F7931A',
   },
   {
     id: 'ETH',
     name: 'Ethereum',
-    network: 'ERC20',
+    network: 'Ethereum',
     icon: 'Ξ',
     gradient: 'from-[#627EEA] to-[#8FA5F0]',
-    color: '#627EEA'
+    color: '#627EEA',
   },
   {
     id: 'USDT',
     name: 'Tether',
-    network: 'TRC20/ERC20',
+    network: 'TRC20',
     icon: '₮',
     gradient: 'from-[#26A17B] to-[#50AF95]',
-    color: '#26A17B'
+    color: '#26A17B',
   },
   {
     id: 'LTC',
@@ -48,8 +48,8 @@ export const CRYPTO_OPTIONS = [
     network: 'Litecoin Network',
     icon: 'Ł',
     gradient: 'from-[#345D9D] to-[#5A7FB8]',
-    color: '#345D9D'
-  }
+    color: '#345D9D',
+  },
 ];
 
 // Validate transaction hash
@@ -85,10 +85,10 @@ export const generateOrderId = () => {
 export const calculateCryptoAmount = (usdAmount, crypto) => {
   // Mock conversion rates (for demo only)
   const rates = {
-    BTC: 0.000024,  // ~$42,000 per BTC
-    USDT: 1.0,      // 1:1 with USD
-    LTC: 0.011,     // ~$90 per LTC
-    ETH: 0.00042    // ~$2,400 per ETH
+    BTC: 0.000024, // ~$42,000 per BTC
+    USDT: 1.0, // 1:1 with USD
+    LTC: 0.011, // ~$90 per LTC
+    ETH: 0.00042, // ~$2,400 per ETH
   };
 
   const amount = usdAmount * (rates[crypto] || 1);

@@ -12,13 +12,13 @@ import logger from '../utils/logger.js';
 import * as walletService from './walletService.js';
 import * as blockCypherService from './blockCypherService.js';
 import * as cryptoPriceService from './cryptoPriceService.js';
-import { invoiceQueries } from '../models/db.js';
+import { invoiceQueries } from '../database/queries/index.js';
 import { query } from '../config/database.js';
 
 // Subscription tier prices (must match subscriptionService.js)
 const SUBSCRIPTION_PRICES = {
-  basic: 25.00,
-  pro: 35.00
+  basic: 25.0,
+  pro: 35.0,
 };
 
 // Invoice expiration time (30 minutes)
@@ -32,8 +32,11 @@ function getXpubs() {
     BTC: process.env.BTC_XPUB || process.env.HD_XPUB_BTC,
     LTC: process.env.LTC_XPUB || process.env.HD_XPUB_LTC,
     ETH: process.env.ETH_XPUB || process.env.HD_XPUB_ETH,
-    USDT_ERC20: process.env.ETH_XPUB || process.env.HD_XPUB_ETH, // USDT ERC20 uses Ethereum addresses
-    USDT_TRC20: process.env.TRX_XPUB || process.env.HD_XPUB_TRON || process.env.ETH_XPUB || process.env.HD_XPUB_ETH // USDT TRC20 uses Tron addresses (fallback to ETH)
+    USDT_TRC20:
+      process.env.TRX_XPUB ||
+      process.env.HD_XPUB_TRON ||
+      process.env.ETH_XPUB ||
+      process.env.HD_XPUB_ETH, // USDT TRC20 uses Tron addresses (fallback to ETH)
   };
 }
 
@@ -48,12 +51,14 @@ function getWebhookBaseUrl() {
  * Generate payment invoice for subscription
  *
  * @param {number} subscriptionId - Shop subscription ID (from shop_subscriptions table)
- * @param {string} chain - Blockchain (BTC, LTC, ETH, USDT_ERC20)
+ * @param {string} chain - Blockchain (BTC, LTC, ETH, USDT_TRC20)
  * @returns {Promise<object>} { invoice, address, expectedAmount, currency, expiresAt }
  */
 export async function generateSubscriptionInvoice(subscriptionId, chain) {
   try {
-    logger.info(`[SubscriptionInvoice] Generating invoice for subscription ${subscriptionId}, chain: ${chain}`);
+    logger.info(
+      `[SubscriptionInvoice] Generating invoice for subscription ${subscriptionId}, chain: ${chain}`
+    );
 
     // 1. Get subscription details
     const subscriptionResult = await query(
@@ -95,13 +100,17 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
       cryptoAmount = conversionResult.cryptoAmount;
       usdRate = conversionResult.usdRate;
 
-      logger.info(`[SubscriptionInvoice] Price conversion: $${usdAmount} USD = ${cryptoAmount} ${currency} (rate: $${usdRate})`);
+      logger.info(
+        `[SubscriptionInvoice] Price conversion: $${usdAmount} USD = ${cryptoAmount} ${currency} (rate: $${usdRate})`
+      );
     } catch (priceError) {
       logger.error('[SubscriptionInvoice] Failed to fetch crypto price:', {
         error: priceError.message,
-        chain: normalizedChain
+        chain: normalizedChain,
       });
-      throw new Error(`Cannot generate invoice: crypto price unavailable for ${normalizedChain}. Please try again in a few moments.`);
+      throw new Error(
+        `Cannot generate invoice: crypto price unavailable for ${normalizedChain}. Please try again in a few moments.`
+      );
     }
 
     // 5. Validate xpub exists for chain
@@ -109,7 +118,9 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
     const xpub = xpubs[normalizedChain];
 
     if (!xpub) {
-      throw new Error(`No xpub configured for chain: ${normalizedChain}. Set ${normalizedChain}_XPUB or HD_XPUB_${normalizedChain.replace('_', '_')} in environment.`);
+      throw new Error(
+        `No xpub configured for chain: ${normalizedChain}. Set ${normalizedChain}_XPUB or HD_XPUB_${normalizedChain.replace('_', '_')} in environment.`
+      );
     }
 
     // 6. Get next derivation index for this chain
@@ -119,9 +130,7 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
 
     // 7. Generate unique payment address
     // Map chain to wallet type (USDT tokens use underlying blockchain)
-    const walletType = normalizedChain === 'USDT_ERC20' ? 'ETH' :
-                       normalizedChain === 'USDT_TRC20' ? 'TRX' :
-                       normalizedChain;
+    const walletType = normalizedChain === 'USDT_TRC20' ? 'TRX' : normalizedChain;
 
     const { address, derivationPath } = await walletService.generateAddress(
       walletType,
@@ -141,7 +150,9 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
       try {
         const callbackUrl = `${getWebhookBaseUrl()}/api/webhooks/blockcypher`;
 
-        logger.info(`[SubscriptionInvoice] Registering BlockCypher webhook for ${normalizedChain}...`);
+        logger.info(
+          `[SubscriptionInvoice] Registering BlockCypher webhook for ${normalizedChain}...`
+        );
 
         webhookSubscriptionId = await blockCypherService.registerWebhook(
           normalizedChain,
@@ -156,7 +167,7 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
         logger.warn(`[SubscriptionInvoice] Webhook registration failed (will rely on polling):`, {
           error: webhookError.message,
           chain: normalizedChain,
-          address
+          address,
         });
       }
     } else {
@@ -169,7 +180,18 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
        (subscription_id, chain, address, address_index, expected_amount, crypto_amount, usd_rate, currency, tatum_subscription_id, expires_at, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
        RETURNING *`,
-      [subscriptionId, normalizedChain, address, nextIndex, usdAmount, cryptoAmount, usdRate, currency, webhookSubscriptionId, expiresAt]
+      [
+        subscriptionId,
+        normalizedChain,
+        address,
+        nextIndex,
+        usdAmount,
+        cryptoAmount,
+        usdRate,
+        currency,
+        webhookSubscriptionId,
+        expiresAt,
+      ]
     );
 
     const invoice = invoiceResult.rows[0];
@@ -184,7 +206,7 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
       cryptoAmount,
       currency,
       usdRate,
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt.toISOString(),
     });
 
     return {
@@ -196,13 +218,13 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
       currency,
       expiresAt,
       derivationPath,
-      webhookSubscriptionId
+      webhookSubscriptionId,
     };
   } catch (error) {
     logger.error('[SubscriptionInvoice] Failed to generate subscription invoice:', {
       error: error.message,
       subscriptionId,
-      chain
+      chain,
     });
     throw new Error(`Failed to generate subscription invoice: ${error.message}`);
   }
@@ -233,14 +255,14 @@ export async function findActiveInvoiceForSubscription(subscriptionId) {
     logger.info(`[SubscriptionInvoice] Found active invoice for subscription ${subscriptionId}:`, {
       invoiceId: result.rows[0].id,
       address: result.rows[0].address,
-      expiresAt: result.rows[0].expires_at
+      expiresAt: result.rows[0].expires_at,
     });
 
     return result.rows[0];
   } catch (error) {
     logger.error('[SubscriptionInvoice] Error finding active invoice:', {
       error: error.message,
-      subscriptionId
+      subscriptionId,
     });
     return null;
   }
@@ -268,14 +290,11 @@ function normalizeChain(chain) {
       return 'ETH';
 
     case 'USDT':
-    case 'USDT_ERC20':
-      return 'USDT_ERC20';
-
     case 'USDT_TRC20':
       return 'USDT_TRC20';
 
     default:
-      throw new Error(`Unsupported chain: ${chain}. Supported: BTC, LTC, ETH, USDT_ERC20`);
+      throw new Error(`Unsupported chain: ${chain}. Supported: BTC, LTC, ETH, USDT_TRC20`);
   }
 }
 
@@ -292,7 +311,6 @@ function getCurrencyFromChain(chain) {
       return 'LTC';
     case 'ETH':
       return 'ETH';
-    case 'USDT_ERC20':
     case 'USDT_TRC20':
       return 'USDT';
     default:
@@ -303,5 +321,5 @@ function getCurrencyFromChain(chain) {
 export default {
   generateSubscriptionInvoice,
   findActiveInvoiceForSubscription,
-  SUBSCRIPTION_PRICES
+  SUBSCRIPTION_PRICES,
 };

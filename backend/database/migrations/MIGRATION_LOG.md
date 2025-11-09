@@ -38,7 +38,8 @@
 | 027 | 027_optimize_database_performance.sql                         | Performance optimization           | Phase 3 (RENAMED from 008) |
 | 028 | 028_add_critical_performance_indexes.sql                      | Critical indexes                   | Phase 3 (RENAMED from 009) |
 | 029 | 029_add_product_reservation.sql                               | Product reservation                | Phase 3 (RENAMED from 009) |
-| 033 | 033_add_wallet_address_sequences.sql                          | Wallet address sequences (BIP44)   | Phase 4 (2025-11-09)        |
+| 033 | 033_add_wallet_address_sequences.sql                          | Wallet address sequences (BIP44)   | Phase 4 (2025-11-09)       |
+| 034 | 034_remove_usdt_erc20.sql                                     | Remove USDT ERC-20 support         | Phase 4 (2025-11-09)       |
 
 ## Migration Numbering Conflicts Resolved
 
@@ -122,6 +123,6 @@ psql $DATABASE_URL -f backend/database/verify_integrity.sql
 
 ---
 
-## Next Migration Number: 034
+## Next Migration Number: 035
 
-When creating new migration, use number **034** and increment sequentially.
+When creating new migration, use number **035** and increment sequentially.

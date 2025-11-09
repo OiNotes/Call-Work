@@ -5,13 +5,16 @@
  * Features:
  * - Free API (no authentication required)
  * - 5-minute caching (reduces API calls)
- * - Supports BTC, ETH, LTC, USDT (ERC20/TRC20)
+ * - Supports BTC, ETH, LTC, USDT (TRC20)
  * - USD → Crypto conversion with proper decimal rounding
  */
 
 import axios from 'axios';
 import logger from '../utils/logger.js';
-import { convertUsdToCrypto as convertUsdToCryptoDecimal, roundCryptoAmount as roundCryptoAmountDecimal } from '../utils/decimal.js';
+import {
+  convertUsdToCrypto as convertUsdToCryptoDecimal,
+  roundCryptoAmount as roundCryptoAmountDecimal,
+} from '../utils/decimal.js';
 
 // CoinGecko API configuration
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3/simple/price';
@@ -22,8 +25,7 @@ const COINGECKO_IDS = {
   BTC: 'bitcoin',
   LTC: 'litecoin',
   ETH: 'ethereum',
-  USDT_ERC20: 'tether',
-  USDT_TRC20: 'tether'
+  USDT_TRC20: 'tether',
 };
 
 // Decimal precision for each cryptocurrency
@@ -31,8 +33,7 @@ const CRYPTO_DECIMALS = {
   BTC: 8,
   LTC: 8,
   ETH: 6,
-  USDT_ERC20: 2,
-  USDT_TRC20: 2
+  USDT_TRC20: 2,
 };
 
 // Price cache (in-memory)
@@ -42,7 +43,7 @@ let lastFetchTime = 0;
 /**
  * Get current cryptocurrency price in USD
  *
- * @param {string} chain - Chain name (BTC, ETH, LTC, USDT_ERC20, USDT_TRC20)
+ * @param {string} chain - Chain name (BTC, ETH, LTC, USDT_TRC20)
  * @returns {Promise<number>} Price in USD
  * @throws {Error} If API fails or chain is unsupported
  */
@@ -70,9 +71,9 @@ export async function getCryptoPrice(chain) {
     const response = await axios.get(COINGECKO_API_URL, {
       params: {
         ids: coinIds,
-        vs_currencies: 'usd'
+        vs_currencies: 'usd',
       },
-      timeout: 10000 // 10 second timeout
+      timeout: 10000, // 10 second timeout
     });
 
     // Update cache with all fetched prices
@@ -98,12 +99,14 @@ export async function getCryptoPrice(chain) {
     logger.error('[CryptoPriceService] Failed to fetch crypto price:', {
       chain,
       error: error.message,
-      response: error.response?.data
+      response: error.response?.data,
     });
 
     // If cache exists, return stale data as fallback
     if (priceCache[chain]) {
-      logger.warn(`[CryptoPriceService] API failed, using stale cached price for ${chain}: $${priceCache[chain]}`);
+      logger.warn(
+        `[CryptoPriceService] API failed, using stale cached price for ${chain}: $${priceCache[chain]}`
+      );
       return priceCache[chain];
     }
 
@@ -157,7 +160,7 @@ export async function convertAndRound(usdAmount, chain) {
 
   return {
     cryptoAmount, // String to preserve precision
-    usdRate: cryptoPrice
+    usdRate: cryptoPrice,
   };
 }
 
@@ -165,5 +168,5 @@ export default {
   getCryptoPrice,
   convertUsdToCrypto,
   roundCryptoAmount,
-  convertAndRound
+  convertAndRound,
 };

@@ -65,7 +65,6 @@ import { startInvoiceCleanup } from './services/invoiceCleanupService.js';
  * - wallet_address_index_btc
  * - wallet_address_index_eth
  * - wallet_address_index_ltc
- * - wallet_address_index_usdt_erc20
  * - wallet_address_index_usdt_trc20
  */
 async function validateDatabaseSequences() {
@@ -76,7 +75,6 @@ async function validateDatabaseSequences() {
       'wallet_address_index_btc',
       'wallet_address_index_eth',
       'wallet_address_index_ltc',
-      'wallet_address_index_usdt_erc20',
       'wallet_address_index_usdt_trc20',
     ];
     

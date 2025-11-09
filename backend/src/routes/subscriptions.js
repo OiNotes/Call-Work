@@ -1,6 +1,6 @@
 /**
  * Subscription Routes
- * 
+ *
  * Defines API endpoints for shop subscription management
  */
 
@@ -23,7 +23,7 @@ router.use(verifyToken);
  * Body: {
  *   tier: 'basic' | 'pro'
  * }
- * 
+ *
  * @security Rate limited to 5 req/hour
  */
 router.post(
@@ -67,33 +67,25 @@ router.get('/my-shops', subscriptionController.getMyShopSubscriptions);
  *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
- * 
+ *
  * @security Rate limited to 5 req/hour
  */
-router.post(
-  '/pay',
-  subscriptionCreationLimiter,
-  subscriptionController.paySubscription
-);
+router.post('/pay', subscriptionCreationLimiter, subscriptionController.paySubscription);
 
 /**
  * POST /api/subscriptions/upgrade
  * Upgrade shop from free to PRO tier
- * 
+ *
  * Body: {
  *   shopId: number,
  *   txHash: string,
  *   currency: 'BTC' | 'ETH' | 'USDT' | 'LTC',
  *   paymentAddress: string
  * }
- * 
+ *
  * @security Rate limited to 5 req/hour
  */
-router.post(
-  '/upgrade',
-  subscriptionCreationLimiter,
-  subscriptionController.upgradeShop
-);
+router.post('/upgrade', subscriptionCreationLimiter, subscriptionController.upgradeShop);
 
 /**
  * GET /api/subscriptions/upgrade-cost/:shopId
@@ -124,7 +116,7 @@ router.get('/pricing', subscriptionController.getPricing);
  * Generate payment invoice for subscription
  *
  * Body: {
- *   chain: 'BTC' | 'LTC' | 'ETH' | 'USDT_ERC20' | 'USDT_TRC20'
+ *   chain: 'BTC' | 'LTC' | 'ETH' | 'USDT_TRC20'
  * }
  */
 router.post('/:id/payment/generate', subscriptionController.generatePaymentInvoice);

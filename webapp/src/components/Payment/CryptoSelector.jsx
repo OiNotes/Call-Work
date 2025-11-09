@@ -11,13 +11,6 @@ const cryptoOptions = [
     color: '#26A17B',
   },
   {
-    id: 'usdt-erc20',
-    name: 'USDT',
-    network: 'ERC20',
-    icon: '₮',
-    color: '#26A17B',
-  },
-  {
     id: 'btc',
     name: 'Bitcoin',
     network: 'BTC',
@@ -27,7 +20,7 @@ const cryptoOptions = [
   {
     id: 'eth',
     name: 'Ethereum',
-    network: 'ETH',
+    network: 'Ethereum',
     icon: 'Ξ',
     color: '#627EEA',
   },
@@ -55,7 +48,7 @@ export default function CryptoSelector({ onSelect, selectedCrypto }) {
     setIsOpen(!isOpen);
   };
 
-  const selected = cryptoOptions.find(c => c.id === selectedCrypto) || cryptoOptions[0];
+  const selected = cryptoOptions.find((c) => c.id === selectedCrypto) || cryptoOptions[0];
 
   return (
     <div className="relative">
@@ -105,9 +98,7 @@ export default function CryptoSelector({ onSelect, selectedCrypto }) {
                 key={crypto.id}
                 onClick={() => handleSelect(crypto.id)}
                 className={`w-full p-4 flex items-center gap-3 touch-target transition-colors ${
-                  crypto.id === selectedCrypto
-                    ? 'bg-orange-primary/20'
-                    : 'hover:bg-white/5'
+                  crypto.id === selectedCrypto ? 'bg-orange-primary/20' : 'hover:bg-white/5'
                 } ${index !== cryptoOptions.length - 1 ? 'border-b border-white/5' : ''}`}
                 whileTap={{ scale: 0.98 }}
               >
@@ -122,8 +113,16 @@ export default function CryptoSelector({ onSelect, selectedCrypto }) {
                   <div className="text-xs text-gray-400">{crypto.network}</div>
                 </div>
                 {crypto.id === selectedCrypto && (
-                  <svg className="w-5 h-5 text-orange-primary" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-5 h-5 text-orange-primary"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
               </motion.button>

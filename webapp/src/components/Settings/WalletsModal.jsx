@@ -9,15 +9,15 @@ import { useApi } from '../../hooks/useApi';
 const WALLET_PATTERNS = {
   BTC: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,62}$/,
   ETH: /^0x[a-fA-F0-9]{40}$/,
-  USDT: /^0x[a-fA-F0-9]{40}$/, // USDT (ERC-20) использует те же адреса что и ETH
-  LTC: /^(L|M|ltc1)[a-zA-HJ-NP-Z0-9]{26,42}$/
+  USDT: /^T[a-zA-Z0-9]{33}$/, // USDT (TRC-20) использует TRON адреса
+  LTC: /^(L|M|ltc1)[a-zA-HJ-NP-Z0-9]{26,42}$/,
 };
 
 const walletFieldMap = {
   BTC: { key: 'btc', field: 'wallet_btc' },
   ETH: { key: 'eth', field: 'wallet_eth' },
   USDT: { key: 'usdt', field: 'wallet_usdt' },
-  LTC: { key: 'ltc', field: 'wallet_ltc' }
+  LTC: { key: 'ltc', field: 'wallet_ltc' },
 };
 
 const orderedWalletTypes = ['BTC', 'ETH', 'USDT', 'LTC'];
@@ -72,7 +72,7 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
     BTC: 'text-orange-500',
     ETH: 'text-blue-400',
     USDT: 'text-emerald-400',
-    LTC: 'text-purple-400'
+    LTC: 'text-purple-400',
   };
 
   return (
@@ -115,7 +115,7 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
               style={{
                 background: isValid
                   ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)'
-                  : 'rgba(255, 255, 255, 0.1)'
+                  : 'rgba(255, 255, 255, 0.1)',
               }}
               whileTap={isValid ? { scale: 0.98 } : {}}
             >
@@ -127,7 +127,7 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
               disabled={saving}
               className="flex-1 py-2.5 rounded-xl font-medium text-white"
               style={{
-                background: 'rgba(255, 255, 255, 0.1)'
+                background: 'rgba(255, 255, 255, 0.1)',
               }}
               whileTap={{ scale: 0.98 }}
             >
@@ -144,11 +144,11 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
               </span>
               <span className="text-green-500 text-xs">✓</span>
             </div>
-            <p className="text-white font-mono text-sm break-all">
-              {wallet.address}
-            </p>
+            <p className="text-white font-mono text-sm break-all">{wallet.address}</p>
             <p className="text-gray-500 text-xs mt-1">
-              {t('wallet.added', { date: new Date(wallet.addedAt || Date.now()).toLocaleDateString('ru-RU') })}
+              {t('wallet.added', {
+                date: new Date(wallet.addedAt || Date.now()).toLocaleDateString('ru-RU'),
+              })}
             </p>
           </div>
 
@@ -158,12 +158,17 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
               className="w-9 h-9 rounded-xl flex items-center justify-center text-blue-400"
               style={{
                 background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
+                border: '1px solid rgba(59, 130, 246, 0.2)',
               }}
               whileTap={{ scale: 0.9 }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
               </svg>
             </motion.button>
 
@@ -172,12 +177,17 @@ function WalletCard({ wallet, onRemove, onEdit, isEditing, onStartEdit, onCancel
               className="w-9 h-9 rounded-xl flex items-center justify-center text-red-400"
               style={{
                 background: 'rgba(255, 59, 48, 0.1)',
-                border: '1px solid rgba(255, 59, 48, 0.2)'
+                border: '1px solid rgba(255, 59, 48, 0.2)',
               }}
               whileTap={{ scale: 0.9 }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             </motion.button>
           </div>
@@ -235,50 +245,56 @@ export default function WalletsModal({ isOpen, onClose }) {
       btc: data.wallet_btc ?? data.wallets?.btc ?? null,
       eth: data.wallet_eth ?? data.wallets?.eth ?? null,
       usdt: data.wallet_usdt ?? data.wallets?.usdt ?? null,
-      ltc: data.wallet_ltc ?? data.wallets?.ltc ?? null
+      ltc: data.wallet_ltc ?? data.wallets?.ltc ?? null,
     });
     setWalletMeta({
-      updatedAt: data.updated_at || data.updatedAt || null
+      updatedAt: data.updated_at || data.updatedAt || null,
     });
   }, []);
 
-  const loadWallets = useCallback(async (signal) => {
-    const { data: shopsResponse, error: shopsError } = await get('/shops/my', {
-      signal,
-      timeout: 10000  // 10 second timeout to prevent infinite loading
-    });
+  const loadWallets = useCallback(
+    async (signal) => {
+      const { data: shopsResponse, error: shopsError } = await get('/shops/my', {
+        signal,
+        timeout: 10000, // 10 second timeout to prevent infinite loading
+      });
 
-    if (signal?.aborted) return { status: 'aborted' };
+      if (signal?.aborted) return { status: 'aborted' };
 
-    if (shopsError) {
-      return { status: 'error', error: 'Failed to load shops' };
-    }
+      if (shopsError) {
+        return { status: 'error', error: 'Failed to load shops' };
+      }
 
-    // ✅ FIX: Already correct - but adding validation
-    const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
-    if (!Array.isArray(shops) || shops.length === 0) {
-      setShop(null);
-      syncWalletState(null);
+      // ✅ FIX: Already correct - but adding validation
+      const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
+      if (!Array.isArray(shops) || shops.length === 0) {
+        setShop(null);
+        syncWalletState(null);
+        return { status: 'success' };
+      }
+
+      const primaryShop = shops[0];
+      setShop(primaryShop);
+
+      const { data: walletsResponse, error: walletsError } = await get(
+        `/shops/${primaryShop.id}/wallets`,
+        {
+          signal,
+          timeout: 10000, // 10 second timeout to prevent infinite loading
+        }
+      );
+
+      if (signal?.aborted) return { status: 'aborted' };
+
+      if (walletsError) {
+        return { status: 'error', error: 'Failed to load wallets' };
+      }
+
+      syncWalletState(walletsResponse);
       return { status: 'success' };
-    }
-
-    const primaryShop = shops[0];
-    setShop(primaryShop);
-
-    const { data: walletsResponse, error: walletsError} = await get(`/shops/${primaryShop.id}/wallets`, {
-      signal,
-      timeout: 10000  // 10 second timeout to prevent infinite loading
-    });
-
-    if (signal?.aborted) return { status: 'aborted' };
-
-    if (walletsError) {
-      return { status: 'error', error: 'Failed to load wallets' };
-    }
-
-    syncWalletState(walletsResponse);
-    return { status: 'success' };
-  }, [get, syncWalletState]);
+    },
+    [get, syncWalletState]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -289,14 +305,14 @@ export default function WalletsModal({ isOpen, onClose }) {
     const controller = new AbortController();
 
     loadWallets(controller.signal)
-      .then(result => {
+      .then((result) => {
         if (!controller.signal.aborted && result?.status === 'error') {
           console.error('Failed to load wallets:', result.error);
           setErrorMessage(t('wallet.loadError'));
           syncWalletState(null);
         }
       })
-      .catch(error => {
+      .catch((error) => {
         if (!controller.signal.aborted) {
           console.error('Failed to load wallets', error);
           setErrorMessage(t('wallet.loadError'));
@@ -355,7 +371,7 @@ export default function WalletsModal({ isOpen, onClose }) {
         return {
           type,
           address,
-          addedAt: walletMeta.updatedAt
+          addedAt: walletMeta.updatedAt,
         };
       })
       .filter(Boolean);
@@ -369,69 +385,74 @@ export default function WalletsModal({ isOpen, onClose }) {
     });
   }, [walletMap]);
 
-  const handleRemoveWallet = useCallback(async (wallet) => {
-    if (!shop) {
-      return;
-    }
+  const handleRemoveWallet = useCallback(
+    async (wallet) => {
+      if (!shop) {
+        return;
+      }
 
-    const mapping = walletFieldMap[wallet.type];
-    if (!mapping) {
-      return;
-    }
+      const mapping = walletFieldMap[wallet.type];
+      if (!mapping) {
+        return;
+      }
 
-    setSaving(true);
-    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
-      [mapping.field]: null
-    });
+      setSaving(true);
+      const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
+        [mapping.field]: null,
+      });
 
-    if (error) {
-      await alert(t('wallet.deleteError'));
+      if (error) {
+        await alert(t('wallet.deleteError'));
+        setSaving(false);
+        return;
+      }
+
+      triggerHaptic('success');
+      syncWalletState(response);
       setSaving(false);
-      return;
-    }
+    },
+    [alert, put, shop, syncWalletState, t, triggerHaptic]
+  );
 
-    triggerHaptic('success');
-    syncWalletState(response);
-    setSaving(false);
-  }, [alert, put, shop, syncWalletState, t, triggerHaptic]);
+  const handleEditWallet = useCallback(
+    async (walletType, newAddress) => {
+      if (!shop) {
+        await alert(t('wallet.shopRequired'));
+        throw new Error('No shop found');
+      }
 
-  const handleEditWallet = useCallback(async (walletType, newAddress) => {
-    if (!shop) {
-      await alert(t('wallet.shopRequired'));
-      throw new Error('No shop found');
-    }
+      const mapping = walletFieldMap[walletType];
+      if (!mapping) {
+        await alert('Invalid wallet type');
+        throw new Error('Invalid wallet type');
+      }
 
-    const mapping = walletFieldMap[walletType];
-    if (!mapping) {
-      await alert('Invalid wallet type');
-      throw new Error('Invalid wallet type');
-    }
+      // Validate address format
+      if (!WALLET_PATTERNS[walletType].test(newAddress)) {
+        await alert(t('wallet.invalidAddress'));
+        throw new Error('Invalid address format');
+      }
 
-    // Validate address format
-    if (!WALLET_PATTERNS[walletType].test(newAddress)) {
-      await alert(t('wallet.invalidAddress'));
-      throw new Error('Invalid address format');
-    }
+      setSaving(true);
+      const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
+        [mapping.field]: newAddress,
+      });
 
-    setSaving(true);
-    const { data: response, error } = await put(`/shops/${shop.id}/wallets`, {
-      [mapping.field]: newAddress
-    });
+      if (error) {
+        await alert(t('wallet.saveError'));
+        setSaving(false);
+        throw new Error('Failed to update wallet');
+      }
 
-    if (error) {
-      await alert(t('wallet.saveError'));
+      syncWalletState(response);
       setSaving(false);
-      throw new Error('Failed to update wallet');
-    }
-
-    syncWalletState(response);
-    setSaving(false);
-  }, [alert, put, shop, syncWalletState, t]);
+    },
+    [alert, put, shop, syncWalletState, t]
+  );
 
   const handleSaveWallets = useCallback(async () => {
     // ✅ useRef-based lock для предотвращения race condition при двойном клике
     if (savingLockRef.current) {
-      console.log('[WalletsModal] Already saving, ignoring duplicate request');
       return;
     }
     savingLockRef.current = true;
@@ -485,7 +506,24 @@ export default function WalletsModal({ isOpen, onClose }) {
       setSaving(false);
       savingLockRef.current = false; // ✅ Всегда сбрасывается в finally
     }
-  }, [alert, btcAddress, ethAddress, hasValidAddress, isValidBTC, isValidETH, isValidLTC, isValidUSDT, put, resetForm, shop, syncWalletState, t, ltcAddress, triggerHaptic, usdtAddress]);
+  }, [
+    alert,
+    btcAddress,
+    ethAddress,
+    hasValidAddress,
+    isValidBTC,
+    isValidETH,
+    isValidLTC,
+    isValidUSDT,
+    put,
+    resetForm,
+    shop,
+    syncWalletState,
+    t,
+    ltcAddress,
+    triggerHaptic,
+    usdtAddress,
+  ]);
 
   return (
     <AnimatePresence>
@@ -505,7 +543,7 @@ export default function WalletsModal({ isOpen, onClose }) {
               paddingBottom: 'calc(var(--tabbar-total) + 20px)',
               maxHeight: '100vh',
               overscrollBehavior: 'contain',
-              WebkitOverflowScrolling: 'touch'
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <div className="px-4 py-6 space-y-4">
@@ -516,8 +554,18 @@ export default function WalletsModal({ isOpen, onClose }) {
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-orange-primary/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-orange-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-5 h-5 text-orange-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <div className="flex-1">
@@ -527,9 +575,7 @@ export default function WalletsModal({ isOpen, onClose }) {
                     <p className="text-gray-400 text-sm mb-2">
                       Укажите адреса для приёма криптовалюты от покупателей.
                     </p>
-                    <p className="text-gray-500 text-xs">
-                      {t('wallet.supported')}
-                    </p>
+                    <p className="text-gray-500 text-xs">{t('wallet.supported')}</p>
                     {shop && (
                       <p className="text-gray-500 text-xs mt-2">
                         Магазин: <span className="text-white">{shop.name}</span>
@@ -589,7 +635,7 @@ export default function WalletsModal({ isOpen, onClose }) {
                       className="w-full h-14 rounded-2xl font-semibold text-white mt-2"
                       style={{
                         background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
-                        boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)'
+                        boxShadow: '0 4px 16px rgba(255, 107, 0, 0.3)',
                       }}
                       whileTap={{ scale: 0.98 }}
                       disabled={saving}
@@ -622,7 +668,9 @@ export default function WalletsModal({ isOpen, onClose }) {
                         {/* Показываем только поля для доступных типов */}
                         {availableWalletTypes.includes('BTC') && (
                           <div>
-                            <label className="text-sm text-gray-400 mb-2 block">Bitcoin (BTC)</label>
+                            <label className="text-sm text-gray-400 mb-2 block">
+                              Bitcoin (BTC)
+                            </label>
                             <input
                               type="text"
                               value={btcAddress}
@@ -631,7 +679,9 @@ export default function WalletsModal({ isOpen, onClose }) {
                               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                             />
                             {btcAddress && (
-                              <span className={`text-sm ${isValidBTC ? 'text-green-500' : 'text-red-500'}`}>
+                              <span
+                                className={`text-sm ${isValidBTC ? 'text-green-500' : 'text-red-500'}`}
+                              >
                                 {isValidBTC ? '✓ Valid BTC' : '⚠️ Invalid BTC'}
                               </span>
                             )}
@@ -640,7 +690,9 @@ export default function WalletsModal({ isOpen, onClose }) {
 
                         {availableWalletTypes.includes('ETH') && (
                           <div>
-                            <label className="text-sm text-gray-400 mb-2 block">Ethereum (ETH)</label>
+                            <label className="text-sm text-gray-400 mb-2 block">
+                              Ethereum (ETH)
+                            </label>
                             <input
                               type="text"
                               value={ethAddress}
@@ -649,7 +701,9 @@ export default function WalletsModal({ isOpen, onClose }) {
                               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                             />
                             {ethAddress && (
-                              <span className={`text-sm ${isValidETH ? 'text-green-500' : 'text-red-500'}`}>
+                              <span
+                                className={`text-sm ${isValidETH ? 'text-green-500' : 'text-red-500'}`}
+                              >
                                 {isValidETH ? '✓ Valid ETH' : '⚠️ Invalid ETH'}
                               </span>
                             )}
@@ -658,16 +712,20 @@ export default function WalletsModal({ isOpen, onClose }) {
 
                         {availableWalletTypes.includes('USDT') && (
                           <div>
-                            <label className="text-sm text-gray-400 mb-2 block">USDT (ERC-20)</label>
+                            <label className="text-sm text-gray-400 mb-2 block">
+                              USDT (TRC-20)
+                            </label>
                             <input
                               type="text"
                               value={usdtAddress}
                               onChange={(e) => setUsdtAddress(e.target.value)}
-                              placeholder="0x1234..."
+                              placeholder="TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS"
                               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                             />
                             {usdtAddress && (
-                              <span className={`text-sm ${isValidUSDT ? 'text-green-500' : 'text-red-500'}`}>
+                              <span
+                                className={`text-sm ${isValidUSDT ? 'text-green-500' : 'text-red-500'}`}
+                              >
                                 {isValidUSDT ? '✓ Valid USDT' : '⚠️ Invalid USDT'}
                               </span>
                             )}
@@ -676,7 +734,9 @@ export default function WalletsModal({ isOpen, onClose }) {
 
                         {availableWalletTypes.includes('LTC') && (
                           <div>
-                            <label className="text-sm text-gray-400 mb-2 block">Litecoin (LTC)</label>
+                            <label className="text-sm text-gray-400 mb-2 block">
+                              Litecoin (LTC)
+                            </label>
                             <input
                               type="text"
                               value={ltcAddress}
@@ -685,7 +745,9 @@ export default function WalletsModal({ isOpen, onClose }) {
                               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-orange-primary"
                             />
                             {ltcAddress && (
-                              <span className={`text-sm ${isValidLTC ? 'text-green-500' : 'text-red-500'}`}>
+                              <span
+                                className={`text-sm ${isValidLTC ? 'text-green-500' : 'text-red-500'}`}
+                              >
                                 {isValidLTC ? '✓ Valid LTC' : '⚠️ Invalid LTC'}
                               </span>
                             )}
@@ -699,7 +761,7 @@ export default function WalletsModal({ isOpen, onClose }) {
                             background: hasValidAddress
                               ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
                               : 'rgba(255, 255, 255, 0.1)',
-                            color: 'white'
+                            color: 'white',
                           }}
                           onClick={handleSaveWallets}
                           disabled={saving || !hasValidAddress}
