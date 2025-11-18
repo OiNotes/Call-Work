@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CALLWORK_DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(EMPLOYEE)
+  telegramId    String?   @unique
+  telegramCode  String?   @unique
+  codeExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reports      Report[]
+  managedUsers User[]   @relation("ManagerToEmployees")
+  manager      User?    @relation("ManagerToEmployees", fields: [managerId], references: [id])
+  managerId    String?
+
+  @@index([email])
+  @@index([telegramId])
+  @@index([telegramCode])
+  @@index([managerId])
+}
+
+model Report {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date DateTime
+
+  // Планирование и проведение встреч
+  zoomAppointments Int @default(0) /// Запланированные Zoom встречи (бывш. pzmScheduled)
+  pzmConducted     Int @default(0) /// Проведённые первичные встречи
+
+  // Отказы
+  refusalsCount   Int     @default(0) /// Количество отказов (бывш. rejections)
+  refusalsReasons String? /// Причины отказов (бывш. rejectionReason)
+
+  // Дополнительные этапы
+  warmingUpCount      Int @default(0) /// Прогрев клиентов (бывш. warmUp)
+  vzmConducted        Int @default(0) /// Проведённые вторичные встречи
+  contractReviewCount Int @default(0) /// Ознакомление с договором (бывш. contractReview)
+
+  // Результаты
+  successfulDeals    Int     @default(0) /// Успешные сделки (бывш. dealsClosed)
+  monthlySalesAmount Decimal @default(0) @db.Decimal(12, 2) /// Сумма продаж за месяц (бывш. salesAmount)
+
+  // Комментарий
+  comment String? /// Дополнительный комментарий сотрудника
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([date])
+}
