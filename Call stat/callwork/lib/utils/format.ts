@@ -30,24 +30,13 @@ export function formatDate(dateInput: Date | string | null | undefined): string 
     return 'Неверная дата'
   }
 
-  // Форматирование через Intl.DateFormat
-  try {
-    return (new (Intl as any).DateFormat('ru-RU', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })).format(date)
-  } catch (error) {
-    // Fallback на ручное форматирование если Intl не работает
-    console.error('Intl.DateFormat error:', error)
+  // Fallback-first: ручное форматирование (более надёжно для SSR)
+  const day = String(date.getDate()).padStart(2, '0')
+  const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+  const month = months[date.getMonth()]
+  const year = date.getFullYear()
 
-    const day = String(date.getDate()).padStart(2, '0')
-    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
-    const month = months[date.getMonth()]
-    const year = date.getFullYear()
-
-    return `${day} ${month} ${year}`
-  }
+  return `${day} ${month} ${year}`
 }
 
 /**
@@ -70,18 +59,12 @@ export function formatDateShort(dateInput: Date | string | null | undefined): st
     return 'Неверная дата'
   }
 
-  try {
-    return (new (Intl as any).DateFormat('ru-RU', {
-      day: '2-digit',
-      month: 'short',
-    })).format(date)
-  } catch (error) {
-    const day = String(date.getDate()).padStart(2, '0')
-    const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
-    const month = months[date.getMonth()]
+  // Fallback-first: ручное форматирование
+  const day = String(date.getDate()).padStart(2, '0')
+  const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+  const month = months[date.getMonth()]
 
-    return `${day} ${month}`
-  }
+  return `${day} ${month}`
 }
 
 /**

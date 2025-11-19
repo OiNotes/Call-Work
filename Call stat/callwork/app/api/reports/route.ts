@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth/get-session'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { Decimal } from '@prisma/client/runtime/library'
+import { broadcastDeal } from '../sse/deals/route'
+import { broadcastActivity } from '../sse/activities/route'
 
 const createReportSchema = z.object({
   date: z.string().datetime(),
@@ -96,6 +98,29 @@ export async function POST(req: Request) {
       },
     })
 
+    // Broadcast сделки в реальном времени если есть успешные сделки
+    if (data.successfulDeals > 0) {
+      broadcastDeal({
+        employeeId: user.id,
+        employeeName: user.name,
+        amount: data.monthlySalesAmount,
+        dealsCount: data.successfulDeals
+      })
+    }
+
+    // Broadcast активности
+    broadcastActivity({
+      type: data.successfulDeals > 0 ? 'deal' : 'report',
+      message: data.successfulDeals > 0
+        ? `${user.name} закрыл ${data.successfulDeals} ${pluralizeDeal(data.successfulDeals)}`
+        : `${user.name} отправил отчёт`,
+      details: data.successfulDeals > 0
+        ? `Сумма: ${formatMoney(data.monthlySalesAmount)}₽`
+        : `Zoom: ${data.zoomAppointments}, ПЗМ: ${data.pzmConducted}`,
+      userId: user.id,
+      userName: user.name
+    })
+
     return NextResponse.json({ report })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -110,4 +135,17 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
+}
+
+function pluralizeDeal(count: number): string {
+  if (count % 10 === 1 && count % 100 !== 11) return 'сделку'
+  if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return 'сделки'
+  return 'сделок'
+}
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value)
 }

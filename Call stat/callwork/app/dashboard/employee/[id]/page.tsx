@@ -6,7 +6,10 @@ import { ArrowLeft, DollarSign, TrendingUp, Users, Target } from 'lucide-react'
 import { KPICard } from '@/components/analytics/KPICard'
 import { RedZoneAnalysis } from '@/components/manager/RedZoneAnalysis'
 import { FunnelChartWithAnalysis } from '@/components/manager/FunnelChartWithAnalysis'
-import { TrendChart } from '@/components/manager/TrendChart'
+import { TeamComparisonChart } from '@/components/manager/TeamComparisonChart'
+import { PersonalFunnel } from '@/components/manager/PersonalFunnel'
+import { PerformanceTrendChart } from '@/components/charts/PerformanceTrendChart'
+import { WeeklyActivityChart } from '@/components/charts/WeeklyActivityChart'
 import { ReportsTable } from '@/components/manager/ReportsTable'
 import { analyzeRedZones } from '@/lib/analytics/recommendations'
 import { formatMoney, formatDateShort } from '@/lib/utils/format'
@@ -117,6 +120,56 @@ export default function EmployeePage({ params }: EmployeePageProps) {
     deals: report.successfulDeals,
   }))
 
+  // Данные для сравнения с командой
+  const teamComparisonData = {
+    employeeStats: {
+      deals: stats.stats.successfulDeals,
+      sales: Number(stats.stats.monthlySalesAmount),
+      pzmConversion: stats.stats.pzmConversion,
+      vzmConversion: stats.stats.vzmToDealConversion,
+    },
+    teamAverage: {
+      deals: stats.teamAverageConversions?.avgDeals || 0,
+      sales: stats.teamAverageConversions?.avgSales || 0,
+      pzmConversion: stats.teamAverageConversions?.avgPzmConversion || 0,
+      vzmConversion: stats.teamAverageConversions?.avgVzmConversion || 0,
+    }
+  }
+
+  // Данные для персональной воронки
+  const personalFunnelData = [
+    {
+      stage: 'Звонки в Zoom',
+      value: stats.stats.zoomAppointments,
+      teamAverage: stats.teamAverageConversions?.avgZoomCalls || 0,
+      conversion: 100,
+      isAboveAverage: stats.stats.zoomAppointments >= (stats.teamAverageConversions?.avgZoomCalls || 0)
+    },
+    {
+      stage: 'ПЗМ проведено',
+      value: stats.stats.pzmConducted,
+      teamAverage: stats.teamAverageConversions?.avgPzm || 0,
+      conversion: stats.stats.pzmConversion,
+      teamConversion: stats.teamAverageConversions?.avgPzmConversion,
+      isAboveAverage: stats.stats.pzmConversion >= (stats.teamAverageConversions?.avgPzmConversion || 0)
+    },
+    {
+      stage: 'ВЗМ проведено',
+      value: stats.stats.vzmConducted,
+      teamAverage: stats.teamAverageConversions?.avgVzm || 0,
+      conversion: stats.stats.pzToVzmConversion,
+      teamConversion: stats.teamAverageConversions?.avgVzmConversion,
+      isAboveAverage: stats.stats.pzToVzmConversion >= (stats.teamAverageConversions?.avgVzmConversion || 0)
+    },
+    {
+      stage: 'Сделки закрыто',
+      value: stats.stats.successfulDeals,
+      teamAverage: stats.teamAverageConversions?.avgDeals || 0,
+      conversion: stats.stats.vzmToDealConversion,
+      isAboveAverage: stats.stats.vzmToDealConversion >= (stats.teamAverageConversions?.avgDealConversion || 0)
+    }
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -203,14 +256,45 @@ export default function EmployeePage({ params }: EmployeePageProps) {
           }} />
         </div>
 
+        {/* Сравнение с командой */}
+        <div className="mb-8">
+          <TeamComparisonChart
+            employeeStats={teamComparisonData.employeeStats}
+            teamAverage={teamComparisonData.teamAverage}
+          />
+        </div>
+
+        {/* Персональная воронка */}
+        <div className="mb-8">
+          <PersonalFunnel funnel={personalFunnelData} />
+        </div>
+
+        {/* Недельная активность */}
+        <div className="bg-white rounded-2xl p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-6">Активность по дням недели</h2>
+          <WeeklyActivityChart
+            data={[
+              { day: 'Пн', pzm: 12, vzm: 8, deals: 5 },
+              { day: 'Вт', pzm: 15, vzm: 10, deals: 7 },
+              { day: 'Ср', pzm: 18, vzm: 12, deals: 9 },
+              { day: 'Чт', pzm: 14, vzm: 9, deals: 6 },
+              { day: 'Пт', pzm: 10, vzm: 7, deals: 4 },
+            ]}
+          />
+        </div>
+
         {/* Анализ красных зон */}
         <RedZoneAnalysis redZones={redZones} />
 
         {/* График динамики */}
         {trendData.length > 0 && (
           <div className="bg-white rounded-2xl p-6 mt-8">
-            <h2 className="text-xl font-semibold mb-6">Динамика продаж</h2>
-            <TrendChart data={trendData} />
+            <h2 className="text-xl font-semibold mb-6">Динамика продаж и сделок</h2>
+            <PerformanceTrendChart data={trendData.map(d => ({
+              date: formatDateShort(d.date),
+              sales: d.sales,
+              deals: d.deals
+            }))} />
           </div>
         )}
 

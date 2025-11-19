@@ -46,11 +46,11 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
     >
       {/* Email Field */}
       <div className="relative">
-        <label htmlFor="email" className="block text-sm font-medium text-[#1D1D1F] mb-2">
+        <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-2">
           Email
         </label>
         <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#86868B]">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">
             <Mail className="w-5 h-5" />
           </div>
           <input
@@ -61,11 +61,10 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
             onFocus={handleEmailFocus}
             onBlur={handleBlur}
             required
-            className={`w-full pl-12 pr-4 py-3.5 rounded-[12px] border bg-white text-[#1D1D1F] placeholder:text-[#86868B] transition-all duration-200 outline-none ${
-              focusedField === 'email'
-                ? 'border-[#007AFF] shadow-[0_0_0_3px_rgba(0,122,255,0.1)]'
-                : 'border-[#D1D1D6] hover:border-[#007AFF]'
-            }`}
+            className={`w-full pl-12 pr-4 py-3.5 rounded-[12px] border bg-[var(--input)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] transition-all duration-200 outline-none ${focusedField === 'email'
+                ? 'border-[var(--primary)] shadow-[0_0_0_3px_rgba(41,151,255,0.1)]'
+                : 'border-[var(--border)] hover:border-[var(--primary)]'
+              }`}
             placeholder="your@email.com"
           />
         </div>
@@ -73,11 +72,11 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
 
       {/* Password Field */}
       <div className="relative">
-        <label htmlFor="password" className="block text-sm font-medium text-[#1D1D1F] mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-[var(--foreground)] mb-2">
           Пароль
         </label>
         <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#86868B]">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">
             <Lock className="w-5 h-5" />
           </div>
           <input
@@ -88,11 +87,10 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
             onFocus={handlePasswordFocus}
             onBlur={handleBlur}
             required
-            className={`w-full pl-12 pr-4 py-3.5 rounded-[12px] border bg-white text-[#1D1D1F] placeholder:text-[#86868B] transition-all duration-200 outline-none ${
-              focusedField === 'password'
-                ? 'border-[#007AFF] shadow-[0_0_0_3px_rgba(0,122,255,0.1)]'
-                : 'border-[#D1D1D6] hover:border-[#007AFF]'
-            }`}
+            className={`w-full pl-12 pr-4 py-3.5 rounded-[12px] border bg-[var(--input)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] transition-all duration-200 outline-none ${focusedField === 'password'
+                ? 'border-[var(--primary)] shadow-[0_0_0_3px_rgba(41,151,255,0.1)]'
+                : 'border-[var(--border)] hover:border-[var(--primary)]'
+              }`}
             placeholder="••••••••"
           />
         </div>
@@ -102,7 +100,7 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
       <div className="flex justify-end">
         <button
           type="button"
-          className="text-sm text-[#007AFF] hover:underline transition-all duration-200"
+          className="text-sm text-[var(--primary)] hover:underline transition-all duration-200"
         >
           Забыли пароль?
         </button>
@@ -114,11 +112,10 @@ export const LoginForm = memo(function LoginForm({ onSubmit, isLoading = false }
         disabled={isLoading}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
-        className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-[12px] font-medium text-white transition-all duration-200 ${
-          isLoading
-            ? 'bg-[#86868B] cursor-not-allowed'
-            : 'bg-[#007AFF] hover:bg-[#0066D6] active:bg-[#0052AD] shadow-[0_2px_8px_rgba(0,122,255,0.3)]'
-        }`}
+        className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-[12px] font-medium text-[var(--primary-foreground)] transition-all duration-200 ${isLoading
+            ? 'bg-[var(--muted)] cursor-not-allowed'
+            : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-lg shadow-[var(--primary)]/30'
+          }`}
       >
         {isLoading ? (
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

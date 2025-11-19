@@ -23,27 +23,27 @@ export const StatCard = memo(function StatCard({ label, value, subtitle, delay =
     <motion.div
       initial={ANIMATION_CONFIG.initial}
       animate={ANIMATION_CONFIG.animate}
-      transition={{ 
-        duration: ANIMATION_CONFIG.duration, 
+      transition={{
+        duration: ANIMATION_CONFIG.duration,
         delay,
         ease: ANIMATION_CONFIG.ease
       }}
-      className="bg-white rounded-[12px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-[#E5E5E7] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-300"
+      className="glass-card rounded-[12px] p-5 border border-[var(--border)] hover:shadow-lg transition-all duration-300"
     >
       <div className="flex flex-col gap-2">
         {/* Label */}
-        <p className="text-xs font-medium text-[#86868B] uppercase tracking-wide">
+        <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
           {label}
         </p>
 
         {/* Value */}
-        <h4 className="text-3xl font-semibold text-[#1D1D1F] tracking-tight">
+        <h4 className="text-3xl font-semibold text-[var(--foreground)] tracking-tight">
           {value}
         </h4>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-sm text-[#86868B] mt-1">
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">
             {subtitle}
           </p>
         )}

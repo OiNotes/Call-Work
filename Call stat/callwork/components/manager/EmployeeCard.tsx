@@ -27,12 +27,12 @@ interface EmployeeCardProps {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3 }
   },
-  hover: { 
+  hover: {
     y: -4,
     boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
     transition: { duration: 0.2 }
@@ -55,16 +55,16 @@ export const EmployeeCard = memo(function EmployeeCard({ employee, stats, onClic
       animate="visible"
       whileHover="hover"
       onClick={onClick}
-      className="bg-white rounded-2xl p-6 border cursor-pointer transition-all"
+      className="glass-card p-6 border border-[var(--border)] cursor-pointer transition-all hover:border-[var(--primary)]/30"
     >
       {/* Аватар и имя */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--info)] flex items-center justify-center text-white font-semibold text-lg shadow-md">
           {getInitials(employee.name)}
         </div>
         <div>
-          <h3 className="font-semibold">{employee.name}</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="font-semibold text-[var(--foreground)]">{employee.name}</h3>
+          <p className="text-sm text-[var(--muted-foreground)]">
             {stats.dealsClosedCount} сделок • {formatMoney(stats.totalSales)}
           </p>
         </div>
@@ -72,13 +72,13 @@ export const EmployeeCard = memo(function EmployeeCard({ employee, stats, onClic
 
       {/* Ключевые метрики */}
       <div className="grid grid-cols-2 gap-3 mb-3">
-        <MetricBadge 
-          label="ПЗМ → ВЗМ" 
+        <MetricBadge
+          label="ПЗМ → ВЗМ"
           value={`${stats.pzToVzmConversion}%`}
           isGood={stats.pzToVzmConversion > 60}
         />
-        <MetricBadge 
-          label="ВЗМ → Сделка" 
+        <MetricBadge
+          label="ВЗМ → Сделка"
           value={`${stats.vzmToDealConversion}%`}
           isGood={stats.vzmToDealConversion > 70}
         />
@@ -86,7 +86,7 @@ export const EmployeeCard = memo(function EmployeeCard({ employee, stats, onClic
 
       {/* Индикатор красной зоны */}
       {stats.hasRedZone && (
-        <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-[var(--danger)] bg-[var(--danger)]/10 rounded-lg px-3 py-2">
           <AlertTriangle className="w-4 h-4" />
           Требует внимания: низкая конверсия
         </div>

@@ -12,31 +12,28 @@ interface KPICardProps {
   subtitle?: string
 }
 
-// Вынесли variants за пределы компонента (не пересоздаются)
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.3, ease: 'easeOut' }
   },
-  hover: { 
+  hover: {
     y: -4,
     transition: { duration: 0.2 }
   }
-}
+} as const
 
-// ✅ React.memo для предотвращения ненужных ре-рендеров
-export const KPICard = memo(function KPICard({ 
-  title, 
-  value, 
-  change, 
-  icon, 
-  subtitle 
+export const KPICard = memo(function KPICard({
+  title,
+  value,
+  change,
+  icon,
+  subtitle
 }: KPICardProps) {
-  // ✅ useMemo для кэширования вычислений
   const isPositive = useMemo(
-    () => change !== undefined && change >= 0, 
+    () => change !== undefined && change >= 0,
     [change]
   )
 
@@ -48,16 +45,16 @@ export const KPICard = memo(function KPICard({
       whileHover="hover"
       className="relative group"
     >
-      <div className="bg-white rounded-[16px] p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#E5E5E7] transition-shadow duration-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="glass-card p-6 border border-[var(--border)] transition-all duration-300 hover:shadow-lg hover:border-[var(--primary)]/30">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <p className="text-sm font-medium text-[#86868B] mb-1">
+            <p className="text-sm font-medium text-[var(--muted-foreground)] mb-1">
               {title}
             </p>
           </div>
           {icon && (
-            <div className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#007AFF]">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)]/10 to-[var(--primary)]/20 flex items-center justify-center text-[var(--primary)] shadow-sm">
               {icon}
             </div>
           )}
@@ -65,24 +62,23 @@ export const KPICard = memo(function KPICard({
 
         {/* Value */}
         <div className="mb-3">
-          <h3 className="text-4xl font-semibold text-[#1D1D1F] tracking-tight">
+          <h3 className="text-4xl font-bold text-[var(--foreground)] tracking-tight">
             {value}
           </h3>
         </div>
 
-        {/* Footer - ✅ убрали motion.div для производительности */}
+        {/* Footer */}
         <div className="flex items-center justify-between">
           {subtitle && (
-            <p className="text-sm text-[#86868B]">
+            <p className="text-sm text-[var(--muted-foreground)]">
               {subtitle}
             </p>
           )}
-          
+
           {change !== undefined && (
             <div
-              className={`flex items-center gap-1 text-sm font-medium ${
-                isPositive ? 'text-[#34C759]' : 'text-[#FF3B30]'
-              }`}
+              className={`flex items-center gap-1 text-sm font-bold px-2 py-0.5 rounded-full ${isPositive ? 'text-[var(--success)] bg-[var(--success)]/10' : 'text-[var(--danger)] bg-[var(--danger)]/10'
+                }`}
             >
               {isPositive ? (
                 <ArrowUpRight className="w-4 h-4" />
@@ -94,8 +90,8 @@ export const KPICard = memo(function KPICard({
           )}
         </div>
 
-        {/* Hover effect border */}
-        <div className="absolute inset-0 rounded-[16px] border-2 border-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        {/* Hover effect glow */}
+        <div className="absolute inset-0 rounded-[var(--radius-lg)] shadow-[var(--shadow-glow)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
       </div>
     </motion.div>
   )

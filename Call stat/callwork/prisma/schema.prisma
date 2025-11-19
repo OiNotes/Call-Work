@@ -12,6 +12,19 @@ enum Role {
   MANAGER
 }
 
+enum AlertType {
+  NO_REPORTS      // Нет отчётов 2+ дня
+  LOW_CONVERSION  // Упала конверсия
+  NO_DEALS        // Нет сделок 5+ дней
+  BEHIND_PACE     // Отстаёт от темпа выполнения плана
+}
+
+enum AlertSeverity {
+  INFO     // Информационное
+  WARNING  // Предупреждение
+  CRITICAL // Критическое
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -24,7 +37,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // НОВЫЕ ПОЛЯ для целей и статуса
+  monthlyGoal Decimal? @db.Decimal(12, 2) /// Месячная цель продаж (nullable)
+  isActive    Boolean  @default(true) /// Активен ли сотрудник
+
   reports      Report[]
+  alerts       Alert[] /// Связь с алертами
   managedUsers User[]   @relation("ManagerToEmployees")
   manager      User?    @relation("ManagerToEmployees", fields: [managerId], references: [id])
   managerId    String?
@@ -68,4 +86,24 @@ model Report {
   @@unique([userId, date])
   @@index([userId, date])
   @@index([date])
+  // Composite index for reporting queries
+  @@index([date, userId])
+}
+
+model Alert {
+  id          String        @id @default(cuid())
+  type        AlertType /// Тип алерта
+  severity    AlertSeverity /// Критичность
+  title       String /// Заголовок
+  description String /// Описание
+  userId      String? /// Связь с сотрудником (nullable)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRead      Boolean       @default(false) /// Прочитано ли
+  createdAt   DateTime      @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([userId])
+  // Composite index for fetching unread alerts for a user
+  @@index([userId, isRead])
 }
