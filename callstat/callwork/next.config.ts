@@ -1,15 +1,9 @@
 import type { NextConfig } from "next";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// Получаем __dirname для ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   // ✅ Turbopack конфигурация - явно указываем корень проекта для монорепо
   turbopack: {
-    root: __dirname,
+    root: process.cwd(),
   },
   
   // ✅ Experimental: оптимизация импортов тяжелых библиотек
