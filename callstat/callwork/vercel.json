@@ -1,4 +1,7 @@
 {
+  "buildCommand": "cd callstat/callwork && npm run build",
+  "outputDirectory": "callstat/callwork/.next",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/check-alerts",

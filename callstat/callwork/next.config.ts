@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ✅ Явно указываем output для Vercel
-  output: 'standalone',
-  
   // ✅ Turbopack конфигурация (по умолчанию в Next.js 16)
   turbopack: {},
   
