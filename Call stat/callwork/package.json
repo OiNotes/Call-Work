@@ -11,7 +11,8 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "bot:dev": "tsx bot/index.ts",
     "bot:start": "node --loader ts-node/esm bot/index.ts",
-    "seed:tv": "npx tsx scripts/seed-tv-today.ts"
+    "seed:tv": "npx tsx scripts/seed-tv-today.ts",
+    "test:analytics": "tsx tests/analytics.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
