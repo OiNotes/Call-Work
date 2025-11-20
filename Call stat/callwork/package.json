@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && prisma db push --accept-data-loss && next build",
     "bot:dev": "tsx bot/index.ts",
     "bot:start": "node --loader ts-node/esm bot/index.ts",
     "seed:tv": "npx tsx scripts/seed-tv-today.ts",
