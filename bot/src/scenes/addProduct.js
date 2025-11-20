@@ -202,13 +202,16 @@ addProductScene.action('cancel_scene', async (ctx) => {
     await ctx.answerCbQuery(); // Silent
     logger.info('product_add_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
-    // Silent transition - edit message without "Отменено" text
-    await ctx.editMessageText(sellerMessages.addProductNamePrompt, successButtons);
+    
+    // Return to Seller Main Menu
+    const { showSellerMainMenu } = await import('../utils/sellerNavigation.js');
+    await showSellerMainMenu(ctx);
+    
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
-    // Local error handling - don't throw to avoid infinite spinner
+    // Local error handling
     try {
-      await ctx.editMessageText(generalMessages.actionFailed, successButtons);
+      await ctx.reply(generalMessages.actionFailed);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

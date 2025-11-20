@@ -151,8 +151,11 @@ describe('Seller Orders Management (P0)', () => {
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
 
+      // Check both replies and edits (error might be shown via editMessageText)
       const replies = testBot.captor.getReplies();
-      const hasErrorMessage = replies.some(
+      const edits = testBot.captor.getEdits();
+      const allMessages = [...replies, ...edits];
+      const hasErrorMessage = allMessages.some(
         (r) => r.text && r.text.includes('Не удалось загрузить')
       );
       expect(hasErrorMessage).toBe(true);
@@ -367,8 +370,11 @@ describe('Seller Orders Management (P0)', () => {
 
       await testBot.handleUpdate(callbackUpdate('seller:order_history'));
 
+      // Check both replies and edits (error might be shown via editMessageText)
       const replies = testBot.captor.getReplies();
-      const hasErrorMessage = replies.some(
+      const edits = testBot.captor.getEdits();
+      const allMessages = [...replies, ...edits];
+      const hasErrorMessage = allMessages.some(
         (r) => r.text && r.text.includes('Не удалось загрузить')
       );
       expect(hasErrorMessage).toBe(true);

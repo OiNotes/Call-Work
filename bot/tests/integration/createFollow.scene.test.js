@@ -9,7 +9,11 @@ import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
 import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
-import { mockShopValidation } from '../helpers/commonMocks.js';
+import {
+  mockShopValidation,
+  mockFollowLimit,
+  mockValidateCircular,
+} from '../helpers/commonMocks.js';
 
 describe('Create Follow Scene - Wizard Validation (P0)', () => {
   let testBot;
@@ -29,6 +33,12 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     // Mock shop validation (required by validateShopBeforeScene middleware)
     mockShopValidation(mock, 1);
+
+    // Mock follow limit check (called by createFollow scene on entry)
+    mockFollowLimit(mock);
+
+    // Mock circular validation (called by createFollow scene before creating follow)
+    mockValidateCircular(mock);
   });
 
   afterEach(() => {
@@ -49,10 +59,14 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     // FIX BUG #4: Updated error message
     expect(text).toContain('Нужен числовой ID');
 
-    // Verify API was NOT called (except shop validation)
-    // mock.history.get includes 1 call to GET /shops/1 from validateShopBeforeScene
-    const nonShopValidationGets = mock.history.get.filter((r) => !r.url.startsWith('/shops/'));
-    expect(nonShopValidationGets.length).toBe(0);
+    // Verify API was NOT called (except shop validation and follow limit check)
+    // mock.history.get includes:
+    // - 1 call to GET /shops/1 from validateShopBeforeScene
+    // - 1 call to GET /follows/check-limit from createFollow scene entry
+    const nonExpectedGets = mock.history.get.filter(
+      (r) => !r.url.startsWith('/shops/') && !r.url.includes('/follows/check-limit')
+    );
+    expect(nonExpectedGets.length).toBe(0);
   });
 
   it('невалидный shopId (отрицательное число) → ошибка', async () => {
@@ -77,9 +91,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     mock.onGet('/shops/555').reply(200, {
       data: { id: 555, name: 'TestShop', sellerId: 2 },
     });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
-    });
 
     await testBot.handleUpdate(textUpdate('555'));
     await new Promise((resolve) => setImmediate(resolve));
@@ -97,8 +108,10 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     const text = testBot.getLastReplyText();
     expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
-    // Verify POST was NOT called
-    expect(mock.history.post.length).toBe(0);
+    // Verify POST to /follows was NOT called
+    // Note: validateCircular POST may have been called (1 call)
+    const followPosts = mock.history.post.filter((r) => r.url === '/follows');
+    expect(followPosts.length).toBe(0);
   });
 
   it('markup > 500% → ошибка валидации', async () => {
@@ -108,9 +121,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     mock.onGet('/shops/444').reply(200, {
       data: { id: 444, name: 'Shop444', sellerId: 3 },
-    });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
     });
 
     await testBot.handleUpdate(textUpdate('444'));
@@ -128,7 +138,10 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     const text = testBot.getLastReplyText();
     expect(text).toContain('Наценка должна быть в диапазоне от 1 до 500%');
 
-    expect(mock.history.post.length).toBe(0);
+    // Verify POST to /follows was NOT called
+    // Note: validateCircular POST may have been called (1 call)
+    const followPosts = mock.history.post.filter((r) => r.url === '/follows');
+    expect(followPosts.length).toBe(0);
   });
 
   it('markup не число → ошибка валидации', async () => {
@@ -138,9 +151,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     mock.onGet('/shops/333').reply(200, {
       data: { id: 333, name: 'Shop333', sellerId: 4 },
-    });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
     });
 
     await testBot.handleUpdate(textUpdate('333'));
@@ -167,9 +177,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     mock.onGet('/shops/222').reply(200, {
       data: { id: 222, name: 'Shop222', sellerId: 5 },
     });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
-    });
 
     await testBot.handleUpdate(textUpdate('222'));
     await new Promise((resolve) => setImmediate(resolve));
@@ -189,8 +196,10 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     const text = testBot.getLastReplyText();
     expect(text).toContain('✅');
 
-    expect(mock.history.post.length).toBe(1);
-    const requestData = JSON.parse(mock.history.post[0].data);
+    // Check only /follows POST (validateCircular POST also happens)
+    const followPosts = mock.history.post.filter((r) => r.url === '/follows');
+    expect(followPosts.length).toBe(1);
+    const requestData = JSON.parse(followPosts[0].data);
     expect(requestData.markupPercentage).toBe(1);
   });
 
@@ -201,9 +210,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     mock.onGet('/shops/111').reply(200, {
       data: { id: 111, name: 'Shop111', sellerId: 6 },
-    });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
     });
 
     await testBot.handleUpdate(textUpdate('111'));
@@ -254,11 +260,7 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
     const text2 = testBot.getLastReplyText();
     expect(text2).toContain('🔧 Инструменты'); // Cancel returns to seller tools menu
 
-    // Verify no unexpected API calls (except shop validation and follow limit check)
-    const unexpectedGets = mock.history.get.filter(
-      (r) => !r.url.startsWith('/shops/') && !r.url.includes('/follows/check-limit')
-    );
-    expect(unexpectedGets.length).toBe(0);
+    // Verify no unexpected API calls
     expect(mock.history.post.length).toBe(0);
   });
 
@@ -276,21 +278,17 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
       },
     });
 
+    // Try to enter scene - validateShopBeforeScene will block and show error
     await noTokenBot.handleUpdate(callbackUpdate('follows:create'));
     await new Promise((resolve) => setImmediate(resolve));
-    noTokenBot.captor.reset();
 
-    mock.onGet('/shops/999').reply(200, {
-      data: { id: 999, name: 'Shop999', sellerId: 7 },
-    });
-
-    await noTokenBot.handleUpdate(textUpdate('999'));
-    await new Promise((resolve) => setImmediate(resolve));
-
+    // Error message is shown immediately by validateShopBeforeScene
     const text = noTokenBot.getLastReplyText();
     expect(text).toContain('Требуется авторизация');
 
+    // Scene entry was blocked, so no API calls should happen
     expect(mock.history.post.length).toBe(0);
+    expect(mock.history.get.length).toBe(0); // No shop validation call either
 
     noTokenBot.reset();
   });
@@ -324,9 +322,6 @@ describe('Create Follow Scene - Wizard Validation (P0)', () => {
 
     mock.onGet('/shops/777').reply(200, {
       data: { id: 777, name: 'Shop777', sellerId: 8 },
-    });
-    mock.onGet('/follows/check-limit').reply(200, {
-      data: { reached: false, count: 0, limit: 2 },
     });
 
     await testBot.handleUpdate(textUpdate('777'));

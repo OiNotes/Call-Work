@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
-import { validateTxHash } from '../../utils/paymentUtils';
+import { validateTxHash, extractHashFromInput } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
 import {
   getSpringPreset,
@@ -47,14 +47,16 @@ export default function PaymentHashModal() {
   const handleSubmit = async () => {
     setError('');
 
-    if (!isValidTxHash) {
+    const cleanHash = extractHashFromInput(txHash);
+
+    if (!cleanHash) {
       setError(t('payment.txHashInvalid'));
       triggerHaptic('error');
       return;
     }
 
     triggerHaptic('success');
-    await submitPaymentHash(txHash);
+    await submitPaymentHash(cleanHash);
     if (!verifyError) {
       setTxHash('');
     }
@@ -237,7 +239,7 @@ export default function PaymentHashModal() {
                   className="space-y-1"
                 >
                   <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Transaction Hash (TX ID)
+                    Transaction Link or Hash
                   </label>
                   <div className="relative">
                     <textarea

@@ -24,7 +24,31 @@ const { general: generalMessages, follows: followMessages } = messages;
 // Step 1: Show markup prompt
 const showMarkupPrompt = async (ctx) => {
   try {
+    // P1-BOT-003 FIX: Validate and set lock (moved from enter() hook)
     const followId = ctx.scene.state.followId;
+    if (!followId) {
+      logger.error('No followId provided to editFollowMarkup scene');
+      return ctx.scene.leave();
+    }
+
+    const now = Date.now();
+    const existingLock = ctx.session.editingFollowId;
+    const lockTimestamp = ctx.session.editingFollowTimestamp || 0;
+
+    // If same follow being edited AND lock is fresh (< 30 seconds old)
+    if (existingLock === followId && now - lockTimestamp < 30000) {
+      logger.warn('Already editing follow, ignoring duplicate request', {
+        userId: ctx.from.id,
+        followId,
+        lockAge: now - lockTimestamp,
+      });
+      return ctx.scene.leave();
+    }
+
+    // Set lock with timestamp
+    ctx.session.editingFollowId = followId;
+    ctx.session.editingFollowTimestamp = now;
+
     const pendingModeSwitch = ctx.scene.state.pendingModeSwitch;
 
     logger.info('edit_markup_step:prompt', {
@@ -144,43 +168,8 @@ const editFollowMarkupScene = new Scenes.WizardScene(
   handleMarkupInput
 );
 
-// Handle scene enter - set initial state
-editFollowMarkupScene.enter((ctx) => {
-  // Prevent race condition: Lock this follow for editing
-  const followId = ctx.scene.state.followId;
-  if (!followId) {
-    logger.error('No followId provided to editFollowMarkup scene');
-    ctx.scene.leave();
-    return;
-  }
-
-  const now = Date.now();
-
-  // ✅ Check if already editing this follow (with timestamp check)
-  const existingLock = ctx.session.editingFollowId;
-  const lockTimestamp = ctx.session.editingFollowTimestamp || 0;
-
-  // If same follow being edited AND lock is fresh (< 30 seconds old)
-  if (existingLock === followId && now - lockTimestamp < 30000) {
-    logger.warn('Already editing follow, ignoring duplicate request', {
-      userId: ctx.from.id,
-      followId,
-      lockAge: now - lockTimestamp,
-    });
-    ctx.scene.leave();
-    return;
-  }
-
-  // ✅ Set lock with timestamp
-  ctx.session.editingFollowId = followId;
-  ctx.session.editingFollowTimestamp = now;
-
-  logger.info('edit_markup_scene_entered', {
-    userId: ctx.from.id,
-    followId,
-    pendingModeSwitch: ctx.scene.state.pendingModeSwitch || null,
-  });
-});
+// P1-BOT-003 FIX: Removed custom enter() hook to allow first wizard step to execute automatically
+// Race condition prevention logic moved to first step (showMarkupPrompt)
 
 // Handle scene leave - cleanup
 editFollowMarkupScene.leave(async (ctx) => {

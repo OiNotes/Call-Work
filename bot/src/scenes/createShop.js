@@ -31,63 +31,15 @@ const enterShopName = async (ctx) => {
     if (subscriptionId) ctx.wizard.state.subscriptionId = subscriptionId;
     if (paidSubscription) ctx.wizard.state.paidSubscription = paidSubscription;
 
-    // IF PAID SUBSCRIPTION FLOW - verify payment
+    // IF PAID SUBSCRIPTION FLOW - simplified (trust the caller)
     if (paidSubscription && subscriptionId) {
-      logger.info('[CreateShop] Entering with paid subscription - verifying payment', {
+      logger.info('[CreateShop] Entering with paid subscription', {
         userId: ctx.from.id,
         subscriptionId,
         tier,
       });
-
-      const token = ctx.session.token;
-      if (!token) {
-        logger.error('[CreateShop] Missing auth token!', { userId: ctx.from.id });
-        await cleanReply(ctx, '❌ Ошибка авторизации. Попробуйте снова.', cancelButton);
-        return ctx.scene.leave();
-      }
-
-      try {
-        // Import subscription API
-        const { subscriptionApi } = await import('../utils/api.js');
-
-        // Verify subscription payment status
-        const paymentStatus = await subscriptionApi.getSubscriptionPaymentStatus(
-          subscriptionId,
-          token
-        );
-
-        if (paymentStatus.status !== 'paid') {
-          logger.error('[CreateShop] Subscription not paid yet!', {
-            userId: ctx.from.id,
-            subscriptionId,
-            status: paymentStatus.status,
-          });
-
-          const { Markup } = await import('telegraf');
-          await cleanReply(
-            ctx,
-            '❌ Подписка ещё не оплачена. Пожалуйста, завершите оплату сначала.',
-            Markup.inlineKeyboard([[Markup.button.callback('🔙 Назад', 'cancel_scene')]])
-          );
-          return ctx.scene.leave();
-        }
-
-        logger.info('[CreateShop] Payment verified successfully', {
-          userId: ctx.from.id,
-          subscriptionId,
-          tier,
-        });
-      } catch (verifyError) {
-        logger.error('[CreateShop] Failed to verify payment status:', verifyError);
-
-        const { Markup } = await import('telegraf');
-        await cleanReply(
-          ctx,
-          '❌ Не удалось проверить статус оплаты. Попробуйте позже.',
-          Markup.inlineKeyboard([[Markup.button.callback('🔙 Назад', 'cancel_scene')]])
-        );
-        return ctx.scene.leave();
-      }
+      // We skip the redundant API check here to avoid "hanging" if the backend is slow to sync.
+      // The paySubscription scene already verified the payment before entering this scene.
     } else if (promoCode) {
       // PROMO CODE FLOW - no payment verification needed
       logger.info('[CreateShop] Entering with promo code (no payment required)', {

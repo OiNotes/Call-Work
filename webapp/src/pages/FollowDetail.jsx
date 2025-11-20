@@ -20,6 +20,7 @@ const FollowDetail = () => {
   const followProducts = useStore((state) => state.followProducts);
 
   const [loading, setLoading] = useState(true);
+  const [networkError, setNetworkError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'manage'
@@ -34,31 +35,40 @@ const FollowDetail = () => {
   const loadData = useCallback(
     async (signal) => {
       if (!followDetailId) return { status: 'skipped' };
+      setNetworkError(false); // Clear previous errors
 
-      const [followData, productsData] = await Promise.all([
-        followsApi.getDetail(followDetailId, { signal }),
-        followsApi.getProducts(followDetailId, { limit: 100, signal }),
-      ]);
+      try {
+        const [followData, productsData] = await Promise.all([
+          followsApi.getDetail(followDetailId, { signal }),
+          followsApi.getProducts(followDetailId, { limit: 100, signal }),
+        ]);
 
-      if (signal?.aborted) return { status: 'aborted' };
+        if (signal?.aborted) return { status: 'aborted' };
 
-      if (followData.error || productsData.error) {
-        return { status: 'error', error: 'Failed to load data' };
+        if (followData.error || productsData.error) {
+          setNetworkError(true);
+          return { status: 'error', error: 'Failed to load data' };
+        }
+
+        const follow = followData?.data || followData;
+        const productsPayload = productsData?.data || productsData;
+        const productsList = productsPayload.products || [];
+
+        // ✅ FIX: Use getState() for stable references
+        const { setCurrentFollow, setFollowProducts } = useStore.getState();
+        setCurrentFollow(follow);
+        setFollowProducts(productsList);
+
+        const total = productsPayload.pagination?.total || productsList.length;
+        setHasMore(productsList.length < total);
+
+        return { status: 'success' };
+      } catch (err) {
+        if (signal?.aborted) return { status: 'aborted' };
+        console.error("Load data error:", err);
+        setNetworkError(true);
+        return { status: 'error', error: err.message };
       }
-
-      const follow = followData?.data || followData;
-      const productsPayload = productsData?.data || productsData;
-      const productsList = productsPayload.products || [];
-
-      // ✅ FIX: Use getState() for stable references
-      const { setCurrentFollow, setFollowProducts } = useStore.getState();
-      setCurrentFollow(follow);
-      setFollowProducts(productsList);
-
-      const total = productsPayload.pagination?.total || productsList.length;
-      setHasMore(productsList.length < total);
-
-      return { status: 'success' };
     },
     [followDetailId, followsApi]
   ); // ✅ FIX: Removed store setters from deps
@@ -204,6 +214,39 @@ const FollowDetail = () => {
             Загрузка подписки...
           </motion.div>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (networkError) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="text-6xl mb-4">📡</div>
+          <div className="text-white text-lg font-semibold mb-2">Ошибка подключения</div>
+          <div className="text-gray-400 text-sm mb-6">
+            Не удалось загрузить данные. Проверьте интернет.
+          </div>
+          <div className="flex flex-col gap-3 items-center">
+            <motion.button
+              onClick={() => {
+                setLoading(true);
+                const controller = new AbortController();
+                loadData(controller.signal).finally(() => setLoading(false));
+              }}
+              className="px-6 py-3 bg-orange-primary rounded-xl text-white font-semibold w-full max-w-xs"
+              whileTap={{ scale: 0.95 }}
+            >
+              Попробовать снова
+            </motion.button>
+            <motion.button
+              onClick={handleBack}
+              className="text-gray-400 text-sm py-2"
+            >
+              Вернуться назад
+            </motion.button>
+          </div>
+        </div>
       </div>
     );
   }

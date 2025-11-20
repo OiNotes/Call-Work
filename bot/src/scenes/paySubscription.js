@@ -339,26 +339,66 @@ const paySubscriptionScene = new Scenes.WizardScene(
   async (ctx) => {
     // If waiting for tx hash and user sends text
     if (ctx.wizard.state.awaitingTxHash && ctx.message?.text) {
-      const txHash = ctx.message.text.trim();
+      const inputText = ctx.message.text.trim();
+      
+      // Logic to extract hash from link or text
+      // Matches 64-char hex string, optionally starting with 0x
+      const hashRegex = /\b(0x)?[a-fA-F0-9]{64}\b/;
+      const match = inputText.match(hashRegex);
+      
+      // Use extracted hash or fallback to full text
+      const txHash = match ? match[0] : inputText;
+
       const { subscriptionId } = ctx.wizard.state;
       const token = ctx.session.token;
 
+      let statusMsg;
       try {
-        await cleanReply(ctx, subMessages.checkingPayment);
+        statusMsg = await cleanReply(ctx, '⏳ Проверяем транзакцию...');
 
-        const result = await subscriptionApi.confirmSubscriptionPayment(
+        // Helper delay function
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        // Initial verification
+        let result = await subscriptionApi.confirmSubscriptionPayment(
           subscriptionId,
           txHash,
           token
         );
 
-        const status =
+        let status =
           result.status ||
           (result.confirmed ? 'confirmed' : result.confirmed === false ? 'pending' : null);
-        const confirmations = result.confirmations || 0;
+        let confirmations = result.confirmations || 0;
+
+        // If pending, try polling a few times (short polling)
+        if (status === 'pending') {
+          for (let i = 1; i <= 3; i++) {
+            try {
+              await ctx.telegram.editMessageText(
+                ctx.chat.id,
+                statusMsg.message_id,
+                null,
+                `⏳ Платёж найден. Ждём подтверждения сети (${i}/3)...`
+              );
+            } catch (e) { /* ignore edit error */ }
+            
+            await delay(3000); // Wait 3 seconds
+
+            // Check status again
+            const check = await subscriptionApi.getSubscriptionPaymentStatus(subscriptionId, token);
+            if (check.status === 'paid' || check.status === 'confirmed') {
+              status = 'confirmed';
+              result = check;
+              break;
+            }
+          }
+        }
+
         const { tier, createShopAfter } = ctx.wizard.state;
 
         if (status === 'confirmed' || status === 'paid') {
+           // Success logic (unchanged)
           const endDate = new Date();
           endDate.setDate(endDate.getDate() + 30);
           const formattedDate = endDate.toLocaleDateString('ru-RU');
@@ -388,6 +428,10 @@ const paySubscriptionScene = new Scenes.WizardScene(
             successMessage += `\n\n${subMessages.proBenefits}`;
           }
 
+          try {
+             await ctx.telegram.deleteMessage(ctx.chat.id, statusMsg.message_id);
+          } catch (e) {}
+
           if (shouldCreateShop) {
             await ctx.reply(`✅ ${successMessage}\n\n📝 Теперь создайте свой магазин:`, {
               parse_mode: 'HTML',
@@ -414,23 +458,35 @@ const paySubscriptionScene = new Scenes.WizardScene(
           return;
         }
 
-        // Pending confirmations
+        // Still pending after polling
+        try {
+             await ctx.telegram.deleteMessage(ctx.chat.id, statusMsg.message_id);
+        } catch (e) {}
+
         await ctx.reply(
-          `Оплата найдена, ждём подтверждений (есть ${confirmations}). Нажмите "Проверить позже".`,
+          `✅ Оплата найдена, но сеть ещё не подтвердила транзакцию.\nЭто нормально, просто подождите пару минут.`,
           {
             ...Markup.inlineKeyboard([
-              [Markup.button.callback('🔄 Проверить позже', 'subscription:paid')],
+              [Markup.button.callback('🔄 Проверить статус', 'subscription:status')],
               [Markup.button.callback(buttonText.cancel, 'seller:menu')],
             ]),
           }
         );
-        ctx.wizard.state.awaitingTxHash = false;
+        // We stay in the scene, waiting for user to click check later
+        ctx.wizard.state.awaitingTxHash = false; 
         return;
+
       } catch (error) {
         logger.error('[PaySubscription] Manual tx confirm failed', error);
+        
+        try {
+             if(statusMsg) await ctx.telegram.deleteMessage(ctx.chat.id, statusMsg.message_id);
+        } catch (e) {}
+
         const msg =
           error.response?.data?.error ||
           'Не удалось проверить транзакцию. Проверьте хэш и попробуйте снова.';
+          
         await ctx.reply(`❌ ${msg}`, {
           parse_mode: 'HTML',
           ...Markup.inlineKeyboard([
@@ -491,7 +547,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
       await ctx.answerCbQuery();
       await cleanReply(
         ctx,
-        'Отправьте хэш транзакции, по которой оплачивали. Мы автоматически проверим оплату в блокчейне.'
+        'Отправьте <b>ссылку на транзакцию</b> или <b>хэш</b> (TXID).\nБот сам найдёт нужные данные в ссылке.'
       );
       ctx.wizard.state.awaitingTxHash = true;
       return;

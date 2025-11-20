@@ -592,7 +592,8 @@ describe('Mark Orders Shipped Scene (P0)', () => {
       await noShopBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
 
       const text = noShopBot.getLastReplyText();
-      expect(text).toContain('Требуется авторизация');
+      // validateShopBeforeScene shows "shop required" when shopId is null
+      expect(text).toContain('Создайте магазин');
 
       noShopBot.reset();
       noShopMock.reset();

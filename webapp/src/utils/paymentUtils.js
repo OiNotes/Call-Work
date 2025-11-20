@@ -52,15 +52,21 @@ export const CRYPTO_OPTIONS = [
   },
 ];
 
-// Validate transaction hash
+// Helper regex for hash extraction (64 chars hex, optional 0x prefix)
+const HASH_REGEX = /\b(0x)?[a-fA-F0-9]{64}\b/;
+
+// Extract hash from any text (URL or raw hash)
+export const extractHashFromInput = (input) => {
+  if (!input || typeof input !== 'string') return null;
+  const match = input.match(HASH_REGEX);
+  return match ? match[0] : null;
+};
+
+// Validate transaction hash (or input containing one)
 export const validateTxHash = (hash) => {
   if (!hash || typeof hash !== 'string') return false;
-
-  // Remove whitespace
-  const cleanHash = hash.trim();
-
-  // Basic validation: at least 40 characters
-  return cleanHash.length >= 40;
+  // Check if input contains a valid hash
+  return HASH_REGEX.test(hash);
 };
 
 // Format transaction hash for display

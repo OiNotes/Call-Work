@@ -637,30 +637,18 @@ ${channel}
     promoTextPrompt: 'Пожалуйста, отправьте промокод текстом.',
     generatingInvoice: 'Генерируем адрес для оплаты…',
     invoiceGenerated: (tier, amount, currency, address, expiresAt, cryptoAmount) => {
-      const expiryDate = new Date(expiresAt).toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-      // Display crypto amount if available, otherwise show USD with warning
-      const amountDisplay = cryptoAmount
-        ? `💰 К оплате: <b>${cryptoAmount} ${currency}</b>`
-        : `💰 К оплате: ${amount} (⚠️ Конвертация в ${currency} выполняется автоматически)`;
+      // Minimalist invoice message
+      const amountLine = cryptoAmount
+        ? `${cryptoAmount} ${currency}`
+        : `${amount} (USD)`;
 
       return (
-        `💳 <b>Счёт на оплату</b>\n\n` +
-        `📦 Тариф: <b>${tier.toUpperCase()}</b> (${amount}/месяц)\n` +
-        amountDisplay +
-        `\n\n` +
-        `🔗 <b>Адрес кошелька:</b>\n` +
+        `💎 <b>Оплата подписки</b>\n` +
+        `Тариф: ${tier.toUpperCase()}\n` +
+        `Сумма: <b>${amountLine}</b>\n\n` +
+        `Адрес (нажмите чтобы скопировать):\n` +
         `<code>${address}</code>\n\n` +
-        `⏰ <b>Оплатите в течение 30 минут</b>\n` +
-        `Истекает: ${expiryDate}\n\n` +
-        `ℹ️ После оплаты нажмите "Я оплатил"\n` +
-        `Проверка происходит автоматически`
+        `После отправки средств пришлите <b>ссылку на транзакцию</b> или <b>TX Hash</b> в этот чат.`
       );
     },
     checkingPayment: 'Проверяем поступление платежа…',

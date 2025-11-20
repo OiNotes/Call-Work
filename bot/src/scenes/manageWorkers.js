@@ -227,6 +227,22 @@ manageWorkersScene.leave(async (ctx) => {
   logger.info(`User ${ctx.from?.id} left manageWorkers scene`);
 });
 
+// Handle cancel command
+manageWorkersScene.command('cancel', async (ctx) => {
+  try {
+    logger.info('manage_workers_cancelled_cmd', { userId: ctx.from.id });
+    await ctx.scene.leave();
+    
+    const { showSellerToolsMenu } = await import('../utils/sellerNavigation.js');
+    await showSellerToolsMenu(ctx);
+  } catch (error) {
+    logger.error('Error in cancel command handler:', error);
+    try {
+      await ctx.reply(generalMessages.actionFailed);
+    } catch (e) {}
+  }
+});
+
 // Handle cancel action within scene
 manageWorkersScene.action('cancel_scene', async (ctx) => {
   try {

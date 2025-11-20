@@ -434,12 +434,14 @@ createFollowScene.action('cancel_scene', async (ctx) => {
     await ctx.answerCbQuery(); // Silent
     logger.info('follow_create_cancelled', { userId: ctx.from.id });
     await ctx.scene.leave();
+    
+    const { showSellerToolsMenu } = await import('../utils/sellerNavigation.js');
     await showSellerToolsMenu(ctx);
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
-    // Local error handling - don't throw to avoid infinite spinner
+    // Local error handling
     try {
-      await ctx.editMessageText(followMessages.cancelOperationError, successButtons);
+       await ctx.reply(generalMessages.actionFailed);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

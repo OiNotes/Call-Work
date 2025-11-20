@@ -19,6 +19,7 @@ import addProductScene from '../../src/scenes/addProduct.js';
 import searchShopScene from '../../src/scenes/searchShop.js';
 import manageWalletsScene from '../../src/scenes/manageWallets.js';
 import createFollowScene from '../../src/scenes/createFollow.js';
+import editFollowMarkupScene from '../../src/scenes/editFollowMarkup.js';
 import paySubscriptionScene from '../../src/scenes/paySubscription.js';
 import upgradeShopScene from '../../src/scenes/upgradeShop.js';
 import markOrdersShippedScene from '../../src/scenes/markOrdersShipped.js';
@@ -91,6 +92,7 @@ export function createTestBot(options = {}) {
     searchShopScene,
     manageWalletsScene,
     createFollowScene,
+    editFollowMarkupScene,
     paySubscriptionScene,
     upgradeShopScene,
     markOrdersShippedScene,
