@@ -9,15 +9,18 @@
 ## ЧАСТЬ 1: ТОП-5 КРУТЫХ ПРИМЕРОВ SKILLS ИЗ СООБЩЕСТВА
 
 ### 1. **obra/superpowers** (GitHub: obra/superpowers)
+
 **Категория:** Development & Collaboration Framework  
 **URL:** https://github.com/obra/superpowers
 
 **Что это:**
+
 - Официальная core skills library для Claude Code от разработчика
 - 20+ battle-tested skills включая TDD, debugging, collaboration patterns
 - Token-efficient (30-50 tokens per skill until loaded)
 
 **Крутые примеры:**
+
 ```
 - RED-GREEN-REFACTOR testing cycle skill
 - 4-phase root cause debugging skill
@@ -27,6 +30,7 @@
 ```
 
 **Best Practices:**
+
 - Process-oriented (систематично, не ad-hoc)
 - Evidence-based (verify before declaring success)
 - Verification-focused (mandatory validation steps)
@@ -38,14 +42,17 @@
 ---
 
 ### 2. **anthropics/skills** (Официальный репозиторий Anthropic)
+
 **URL:** https://github.com/anthropics/skills
 
 **Что это:**
+
 - Official Anthropic repository с reference examples
 - Демонстрирует что возможно с Claude Skills
 - Range от creative (art, music, design) до enterprise workflows
 
 **Крутые примеры:**
+
 ```
 artifacts-builder
 ├─ Build complex React components
@@ -74,6 +81,7 @@ slack-gif-creator
 ```
 
 **Структура Skills:**
+
 ```
 skill-name/
 ├─ SKILL.md                    (метаданные + инструкции)
@@ -90,9 +98,11 @@ skill-name/
 ---
 
 ### 3. **alirezarezvani/claude-code-skill-factory** (Skill Factory Toolkit)
+
 **URL:** https://github.com/alirezarezvani/claude-code-skill-factory
 
 **Что это:**
+
 - Toolkit для генерации production-ready Skills
 - 4 factory systems (Skills, Agents, Prompts, Hooks)
 - Automated quality validation
@@ -100,42 +110,47 @@ skill-name/
 **4 Factory Systems:**
 
 #### a) Skills Factory
+
 ```yaml
 Генерирует:
-- YAML frontmatter с метаданными
-- Python/Shell implementation files
-- Sample data & documentation
-- Quality validation (7-point check)
+  - YAML frontmatter с метаданными
+  - Python/Shell implementation files
+  - Sample data & documentation
+  - Quality validation (7-point check)
 ```
 
-#### b) Agents Factory  
+#### b) Agents Factory
+
 ```yaml
 Создаёт:
-- Enhanced YAML frontmatter
-- MCP integration support
-- Auto-invocation capabilities
-- Tool access configuration
+  - Enhanced YAML frontmatter
+  - MCP integration support
+  - Auto-invocation capabilities
+  - Tool access configuration
 ```
 
 #### c) Prompt Factory
+
 ```yaml
 Delivers:
-- 69 professional presets
-- 15 domains coverage
-- Multiple output formats
-- 7-point quality validation
+  - 69 professional presets
+  - 15 domains coverage
+  - Multiple output formats
+  - 7-point quality validation
 ```
 
 #### d) Hooks Factory
+
 ```yaml
 Produces:
-- 7 event types support
-- Safety validation
-- Language-specific templates
-- Interactive Q&A (5-7 questions)
+  - 7 event types support
+  - Safety validation
+  - Language-specific templates
+  - Interactive Q&A (5-7 questions)
 ```
 
 **3 Official Anthropic Patterns:**
+
 1. **Simple pattern** - Direct skill execution
 2. **Multi-Phase pattern** - Sequential steps
 3. **Agent-Style pattern** - Autonomous agent coordination
@@ -145,6 +160,7 @@ Produces:
 ---
 
 ### 4. **BehiSecc/awesome-claude-skills** (Community Curated Collection)
+
 **URL:** https://github.com/BehiSecc/awesome-claude-skills
 
 **Специализированные Skills:**
@@ -181,7 +197,8 @@ git-workflow-manager
 └─ Commit strategies
 ```
 
-**Для Status Stock 4.0:**  
+**Для Status Stock 4.0:**
+
 - Адаптировать git-workflow-manager для bot development workflow
 - Создать crypto-wallet-validator skill
 - webhook-delivery-testing skill для payment callbacks
@@ -189,9 +206,11 @@ git-workflow-manager
 ---
 
 ### 5. **alirezarezvani/claude-skills** (42+ Production Skills)
+
 **URL:** https://github.com/alirezarezvani/claude-skills
 
 **Что это:**
+
 - 42 production-ready skills in Phase 1
 - Executive advisor skills (CEO, CTO roles)
 - Specialized domain expertise
@@ -205,7 +224,7 @@ CEO Advisor Skill
 ├─ Tech debt analysis
 └─ Executive communications
 
-CTO Advisor Skill  
+CTO Advisor Skill
 ├─ Architecture reviews
 ├─ Team scaling strategies
 ├─ Technology selection
@@ -225,11 +244,13 @@ Security Skills
 ```
 
 **Architecture Pattern:**
+
 - Skills composed automatically (Claude identifies which ones needed)
 - Works across Claude.ai, Claude Code, API
 - Stacking capability (multiple skills in one workflow)
 
-**Для Status Stock 4.0:**  
+**Для Status Stock 4.0:**
+
 - E-Commerce Store Manager skill
 - Payment Processor skill
 - Bot Development skill
@@ -242,35 +263,37 @@ Security Skills
 ### A. Skills Architecture & Design
 
 #### 1. **SKILL.md Frontmatter** (Required + Optional)
+
 ```yaml
 ---
 name: payment-processor
 description: >
   Automate payment processing for crypto and traditional payments.
   Handles wallet validation, transaction verification, failure recovery.
-  
+
 allowed-tools:
   - Bash
   - Write
   - Read
   - Edit
-  
+
 model: claude-3-5-sonnet-20241022
 version: 1.0.0
 license: MIT
 author: Status Stock Team
 ---
-
 # Your markdown instructions here (max 5,000 words)
 ```
 
 #### 2. **Progressive Disclosure Pattern**
+
 - Keep main SKILL.md under 2,000 words
 - Reference detailed docs in `/references/`
 - Load scripts from `/scripts/`
 - Template files in `/assets/`
 
 #### 3. **Composable Skills** (Key Insight!)
+
 - Skills auto-activate based on context
 - No manual loading needed
 - Claude decides which skills relevant
@@ -279,47 +302,58 @@ author: Status Stock Team
 ### B. Execution Patterns (3 Official Patterns)
 
 #### 1. **Simple Pattern**
+
 ```markdown
 # skill-name
 
 ## What this skill does
+
 Direct instruction on what Claude should do.
 
 ## When to use it
+
 When triggered by user request matching skill description.
 
 ## How to implement
+
 Step-by-step instructions.
 ```
 
 #### 2. **Multi-Phase Pattern**
+
 ```markdown
 # skill-name
 
 ## Phase 1: Preparation
+
 - Verify prerequisites
 - Set up workspace
 
-## Phase 2: Execution  
+## Phase 2: Execution
+
 - Run main logic
 - Validate results
 
 ## Phase 3: Completion
+
 - Cleanup
 - Report results
 ```
 
 #### 3. **Agent-Style Pattern**
+
 ```markdown
 # skill-name
 
 ## Subagent Coordination
+
 - Identify which subagents needed
 - Dispatch tasks in parallel
 - Collect and merge results
 - Final verification
 
 ## Tool Access Configuration
+
 - Which tools can subagents use?
 - Safety constraints
 - Resource limits
@@ -328,6 +362,7 @@ Step-by-step instructions.
 ### C. Claude Code Hooks (Event-Driven Automation)
 
 **Available Hook Events:**
+
 ```
 - PreToolUse          (runs before any tool, can block)
 - PostToolUse         (runs after tool completes)
@@ -339,6 +374,7 @@ Step-by-step instructions.
 ```
 
 **Hook Configuration:** `~/.claude/settings.json`
+
 ```json
 {
   "hooks": {
@@ -374,6 +410,7 @@ Step-by-step instructions.
 ### E. Document Automation Patterns
 
 Anthropic built all file handling (PDF, DOCX, XLSX, PPTX) using Skills:
+
 ```
 document-processor/
 ├─ SKILL.md (instructions)
@@ -394,6 +431,7 @@ document-processor/
 ### F. Skills vs MCP (Key Difference!)
 
 **Skills advantages:**
+
 - Markdown-based (easy to write)
 - Token-efficient (small prompt overhead)
 - Composable (auto-stacking)
@@ -401,6 +439,7 @@ document-processor/
 - Works with CLI, code, async
 
 **MCP advantages:**
+
 - Real-time tool access
 - Complex integrations
 - Network APIs
@@ -413,6 +452,7 @@ document-processor/
 ## ЧАСТЬ 3: 7 ИДЕЙ НОВЫХ SKILLS ДЛЯ STATUS STOCK 4.0
 
 ### 1. **crypto-wallet-validator-skill**
+
 **Категория:** Payment Security  
 **Priority:** P0 (Critical)
 
@@ -423,7 +463,7 @@ description: >
   Validate cryptocurrency wallets across multiple blockchains.
   Supports Bitcoin, Ethereum, TRON, and other EVM chains.
   Detects fraudulent wallets, validates ownership, checks balance.
-  
+
 allowed-tools:
   - Bash
   - Read
@@ -439,15 +479,18 @@ dependencies:
 # Crypto Wallet Validator Skill
 
 ## Purpose
+
 Validate customer wallets before payment processing to prevent fraud.
 
 ## Supported Blockchains
+
 - Bitcoin (BTC) - via bitcoinjs-lib
 - Ethereum (ETH) - via ethers.js, Etherscan API
 - TRON (TRX) - via TronWeb, TronGrid API
 - EVM chains - via Etherscan-compatible APIs
 
 ## Validation Checks
+
 1. Format validation (valid address format)
 2. Checksum validation (correct address encoding)
 3. Balance verification (has funds)
@@ -455,12 +498,15 @@ Validate customer wallets before payment processing to prevent fraud.
 5. Risk assessment (blacklist check)
 
 ## Implementation
+
 Uses existing validators in Status Stock 4.0:
+
 - backend/src/services/paymentService.js
 - backend/src/services/blockchainService.js
 ```
 
 **Scripts needed:**
+
 ```bash
 scripts/
 ├─ validate-bitcoin.js
@@ -471,6 +517,7 @@ scripts/
 ```
 
 **References:**
+
 ```
 references/
 ├─ blockchain-apis.md
@@ -480,6 +527,7 @@ references/
 ```
 
 **Use Cases:**
+
 - Verify customer wallet before payment
 - Prevent payment to blacklisted wallets
 - Check wallet has sufficient balance
@@ -488,6 +536,7 @@ references/
 ---
 
 ### 2. **telegram-bot-automation-skill**
+
 **Категория:** Bot Development  
 **Priority:** P0 (Critical)
 
@@ -498,7 +547,7 @@ description: >
   Automate Telegram bot development workflows using Telegraf.js.
   Handles button handlers, scene navigation, session management,
   keyboard generation, message formatting, callback queries.
-  
+
 allowed-tools:
   - Edit
   - Write
@@ -514,12 +563,14 @@ dependencies:
 # Telegram Bot Automation Skill
 
 ## Purpose
+
 Streamline Telegram bot development with Telegraf.js patterns.
 
 ## Patterns Covered
+
 1. Button Handler Pattern
 2. Scene Navigation
-3. Session State Management  
+3. Session State Management
 4. Keyboard Generation
 5. Message Formatting
 6. Callback Query Handling
@@ -528,21 +579,25 @@ Streamline Telegram bot development with Telegraf.js patterns.
 ## Multi-Phase Execution
 
 ### Phase 1: Analyze Intent
+
 - What functionality needed?
 - Which Telegraf features apply?
 - Session state changes?
 
 ### Phase 2: Generate Code
+
 - Create handler function
 - Add keyboard if needed
 - Implement session logic
 
 ### Phase 3: Integration
+
 - Add to bot structure
 - Connect scenes
 - Test manually
 
 ## Implementation Examples
+
 - Create seller menu handler
 - Implement product picker scene
 - Handle checkout flow
@@ -550,6 +605,7 @@ Streamline Telegram bot development with Telegraf.js patterns.
 ```
 
 **Scripts:**
+
 ```bash
 scripts/
 ├─ generate-handler-template.js
@@ -562,6 +618,7 @@ scripts/
 ---
 
 ### 3. **payment-processor-skill**
+
 **Категория:** Payment Processing  
 **Priority:** P0 (Critical)
 
@@ -573,13 +630,13 @@ description: >
   Handles order creation, payment verification, confirmation,
   failure recovery, refunds, webhook processing.
   Supports crypto and traditional payments.
-  
+
 allowed-tools:
   - Bash
   - Edit
   - Read
   - Write
-  
+
 dependencies:
   - crypto validation service
   - database access
@@ -589,23 +646,24 @@ dependencies:
 # Payment Processor Skill
 
 ## Workflow
-
 ```
+
 User Initiates Payment
-    ↓
+↓
 Select Payment Method (Crypto/Card)
-    ↓
+↓
 Validate Wallet (if Crypto)
-    ↓
+↓
 Generate Payment Request
-    ↓
+↓
 Wait for Confirmation
-    ↓
+↓
 Verify Transaction
-    ↓
+↓
 Update Order Status
-    ↓
+↓
 Send Confirmation
+
 ```
 
 ## Error Handling
@@ -628,10 +686,11 @@ Send Confirmation
 ---
 
 ### 4. **database-schema-migration-skill**
+
 **Категория:** Database Operations  
 **Priority:** P1 (High)
 
-```markdown
+````markdown
 ---
 name: database-schema-migration
 description: >
@@ -639,7 +698,7 @@ description: >
   Auto-backup before migration, schema validation,
   rollback capability, data consistency checks.
   Uses existing migration system in backend/database/
-  
+
 allowed-tools:
   - Bash
   - Read
@@ -657,6 +716,7 @@ dependencies:
 ## Phases
 
 ### Phase 1: Preparation
+
 ```bash
 # Backup database
 pg_dump postgres://user@localhost/telegram_shop > backup.sql
@@ -667,14 +727,17 @@ touch database/migrations/001_add_column.sql
 # Verify schema
 psql -c "\d products"
 ```
+````
 
 ### Phase 2: Schema Changes
+
 - ALTER TABLE statements
 - CREATE INDEX for performance
 - ADD CONSTRAINTS for data integrity
 - UPDATE existing data if needed
 
 ### Phase 3: Verification
+
 ```bash
 # Apply migration
 npm run db:migrate
@@ -687,23 +750,26 @@ SELECT COUNT(*) FROM products;
 ```
 
 ### Phase 4: Rollback (if needed)
+
 ```bash
 # Restore from backup
 psql postgres://user@localhost/telegram_shop < backup.sql
 ```
 
 ## Safety Checklist
+
 - [ ] Backup created
 - [ ] Migration script tested locally
 - [ ] Rollback plan ready
 - [ ] Zero-downtime migration design
 - [ ] Data consistency validated
-```
+
+````
 
 ---
 
 ### 5. **webhook-delivery-testing-skill**
-**Категория:** Payment Integration  
+**Категория:** Payment Integration
 **Priority:** P1 (High)
 
 ```markdown
@@ -714,7 +780,7 @@ description: >
   Simulates payment processor responses, validates
   signature verification, tests idempotency,
   error recovery, retry logic.
-  
+
 allowed-tools:
   - Bash
   - Write
@@ -742,28 +808,33 @@ curl -X POST http://localhost:3000/webhook/payment \
     "transaction_id": "test_123",
     "status": "confirmed"
   }'
-```
+````
 
 ### 2. Signature Verification
+
 - Test valid signature → passes
 - Test invalid signature → rejected
 - Test missing signature → rejected
 
 ### 3. Idempotency
+
 - Send same webhook twice
 - Verify only processed once
 - Check idempotency key handling
 
 ### 4. Retry Logic
+
 - Webhook timeout → retry
 - 5xx error → exponential backoff
 - Max retries → alert
 
 ### 5. Error Recovery
+
 - Malformed JSON → error response
 - Missing fields → validation error
 - Unknown payment ID → graceful failure
-```
+
+````
 
 **Scripts:**
 ```bash
@@ -773,15 +844,16 @@ scripts/
 ├─ test-idempotency.js
 ├─ test-retry-logic.sh
 └─ load-test-webhooks.js
-```
+````
 
 ---
 
 ### 6. **monitoring-alerting-skill**
+
 **Категория:** Operations & Monitoring  
 **Priority:** P1 (High)
 
-```markdown
+````markdown
 ---
 name: monitoring-alerting
 description: >
@@ -789,7 +861,7 @@ description: >
   Real-time error log analysis, performance metrics,
   cost tracking, critical alert escalation.
   Uses OpenTelemetry for observability.
-  
+
 allowed-tools:
   - Bash
   - Read
@@ -799,6 +871,7 @@ allowed-tools:
 # Monitoring & Alerting Skill
 
 ## Error Detection
+
 ```bash
 # Analyze error logs
 tail -f backend/logs/error.log | grep -E "ERROR|CRITICAL"
@@ -811,14 +884,17 @@ if [ $(grep -c ERROR backend/logs/error.log) -gt 50 ]; then
   SEND_ALERT "High error rate detected"
 fi
 ```
+````
 
 ## Performance Metrics
+
 - API response time (target: <500ms p95)
 - Database query time (target: <200ms)
 - Bot message latency (target: <100ms)
 - Payment verification time (target: <30s)
 
 ## Cost Tracking
+
 ```bash
 # Estimate daily costs
 BACKEND_COST=$(aws ec2 describe-instances | jq '.[] | .Cost')
@@ -827,23 +903,26 @@ TOTAL_DAILY=$(echo "$BACKEND_COST + $DATABASE_COST" | bc)
 ```
 
 ## Alert Channels
+
 - Telegram notification
 - Email escalation
 - PagerDuty on-call
 - Slack channel
 
 ## Alerting Rules
+
 1. Error rate > 5% → Warning
 2. Error rate > 10% → Critical
 3. API response > 2s → Warning
 4. Payment failure > 3% → Critical
 5. Database connection pool exhausted → Critical
-```
+
+````
 
 ---
 
 ### 7. **backup-recovery-automation-skill**
-**Категория:** Disaster Recovery  
+**Категория:** Disaster Recovery
 **Priority:** P2 (Medium)
 
 ```markdown
@@ -854,7 +933,7 @@ description: >
   Daily database backups, incremental backups,
   backup verification, point-in-time recovery,
   cross-region replication setup.
-  
+
 allowed-tools:
   - Bash
   - Read
@@ -874,15 +953,17 @@ pg_dump postgres://user@localhost/telegram_shop | \
 
 # Verify backup
 gunzip -t backups/full_${TIMESTAMP}.sql.gz
-```
+````
 
 ### Incremental Backup (Hourly)
+
 ```bash
 # Use WAL (Write-Ahead Logs)
 # Stored in: /var/lib/postgresql/[version]/main/pg_wal/
 ```
 
 ### Backup Verification
+
 ```bash
 # Test restore on separate instance
 createdb test_restore
@@ -895,24 +976,29 @@ psql test_restore -c "SELECT COUNT(*) FROM users;"
 ## Disaster Recovery Scenarios
 
 ### Scenario 1: Data Corruption (Last Hour)
+
 → Restore from hourly backup
 
 ### Scenario 2: Data Loss (Last Day)
+
 → Restore from daily backup
 
 ### Scenario 3: Full System Failure
+
 → Restore from off-site backup
 → Recreate application servers
 → Sync data from blockchain (crypto transactions)
 
 ## Recovery Checklist
+
 - [ ] Identify recovery point
 - [ ] Restore database
 - [ ] Verify data integrity
 - [ ] Restart application
 - [ ] Test functionality
 - [ ] Document incident
-```
+
+````
 
 ---
 
@@ -945,9 +1031,10 @@ psql test_restore -c "SELECT COUNT(*) FROM users;"
 
 4. database-schema-migration-skill (if needed)
    └─ Migrate order schema for new fields
-```
+````
 
 **How it works:**
+
 - Claude reads all available skills at session start
 - Automatically chains relevant skills
 - Data flows between skills via files/database
@@ -995,24 +1082,28 @@ fi
 # Example: Bot Feature Implementation
 
 ## Phase 1: Design & Planning
+
 - User describes feature
 - Skill identifies requirements
 - Creates implementation plan
 - Lists affected components
 
 ## Phase 2: Implementation
+
 - Generate handler code
 - Create keyboard layouts
 - Add session management
 - Write tests
 
 ## Phase 3: Integration Testing
+
 - Test locally with ngrok
 - Verify bot responds correctly
 - Check database updates
 - Validate error handling
 
 ## Phase 4: Production Deployment
+
 - Create deployment branch
 - Run full test suite
 - Deploy to production
@@ -1030,31 +1121,32 @@ fi
 ## Skills Composition
 
 skill-data-source-reader
-  └─ Access US census data APIs
-  └─ Load JSON/CSV files
-  └─ Parse schema
+└─ Access US census data APIs
+└─ Load JSON/CSV files
+└─ Parse schema
 
 skill-data-to-database
-  └─ Create PostgreSQL tables
-  └─ Load data with ETL
-  └─ Verify data integrity
+└─ Create PostgreSQL tables
+└─ Load data with ETL
+└─ Verify data integrity
 
 skill-data-analysis
-  └─ Run SQL queries
-  └─ Generate statistics
-  └─ Find newsworthy patterns
+└─ Run SQL queries
+└─ Generate statistics
+└─ Find newsworthy patterns
 
 skill-visualization-generator
-  └─ Create charts/graphs
-  └─ Generate insights
-  └─ Write narrative
+└─ Create charts/graphs
+└─ Generate insights
+└─ Write narrative
 
 skill-publication-uploader
-  └─ Publish to Medium
-  └─ Upload to S3
-  └─ Update website
+└─ Publish to Medium
+└─ Upload to S3
+└─ Update website
 
 ## Result
+
 Fully automated data journalism pipeline with Claude as coordinator
 ```
 
@@ -1066,6 +1158,7 @@ Fully automated data journalism pipeline with Claude as coordinator
 # Auto-Recovery Workflow
 
 ## Error Detection
+
 → Bash hook catches failed command
 → Logs error to system
 
@@ -1162,17 +1255,20 @@ fi
 
 ### Pattern C: **Payment Testing Automation**
 
-```markdown
+````markdown
 # payment-testing-skill
 
 ## Automated Test Suite
 
 ### Unit Tests
+
 ```bash
 npm test -- backend/src/services/paymentService.test.js
 ```
+````
 
 ### Integration Tests
+
 ```bash
 # 1. Start test database
 npm run db:seed
@@ -1191,6 +1287,7 @@ bash scripts/verify-order-status.sh
 ```
 
 ### Webhook Testing
+
 ```bash
 # Use ngrok for public URL
 ngrok http 3000
@@ -1201,6 +1298,7 @@ bash scripts/test-webhook-delivery.sh
 # Verify idempotency
 bash scripts/test-webhook-idempotency.sh
 ```
+
 ```
 
 ---
@@ -1284,6 +1382,7 @@ bash scripts/test-webhook-idempotency.sh
 
 ---
 
-**Research Completed:** November 4, 2025  
-**Next Step:** Start implementing Priority 1 skills this week  
+**Research Completed:** November 4, 2025
+**Next Step:** Start implementing Priority 1 skills this week
 **Estimated Time:** 4-6 hours per skill for production-ready implementation
+```

@@ -12,7 +12,7 @@ export const syncedProductQueries = {
    */
   create: async (syncData) => {
     const { followId, syncedProductId, sourceProductId } = syncData;
-    
+
     const result = await query(
       `INSERT INTO synced_products (follow_id, synced_product_id, source_product_id, last_synced_at, conflict_status)
        VALUES ($1, $2, $3, NOW(), 'synced')
@@ -194,10 +194,7 @@ export const syncedProductQueries = {
    * @returns {Promise<Object>} Deleted record
    */
   delete: async (id) => {
-    const result = await query(
-      'DELETE FROM synced_products WHERE id = $1 RETURNING *',
-      [id]
-    );
+    const result = await query('DELETE FROM synced_products WHERE id = $1 RETURNING *', [id]);
     return result.rows[0];
   },
 
@@ -208,10 +205,9 @@ export const syncedProductQueries = {
    * @returns {Promise<number>} Number of deleted records
    */
   deleteByFollowId: async (followId) => {
-    const result = await query(
-      'DELETE FROM synced_products WHERE follow_id = $1 RETURNING id',
-      [followId]
-    );
+    const result = await query('DELETE FROM synced_products WHERE follow_id = $1 RETURNING id', [
+      followId,
+    ]);
     return result.rows.length;
   },
 
@@ -309,11 +305,13 @@ export const syncedProductQueries = {
        WHERE sp.synced_product_id = $1`,
       [syncedProductId]
     );
-    
-    if (result.rows.length === 0) {return false;}
-    
+
+    if (result.rows.length === 0) {
+      return false;
+    }
+
     const { synced_price, expected_price } = result.rows[0];
     // Compare with small epsilon for floating point precision
     return Math.abs(parseFloat(synced_price) - parseFloat(expected_price)) > 0.01;
-  }
+  },
 };

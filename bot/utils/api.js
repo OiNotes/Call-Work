@@ -33,22 +33,22 @@ apiClient.interceptors.response.use(
     const config = error.config;
 
     // Retry logic for network errors and 5xx server errors
-    const shouldRetry = !error.response || (error.response.status >= 500);
+    const shouldRetry = !error.response || error.response.status >= 500;
     const retryCount = config.retryCount || 0;
-    
+
     if (shouldRetry && retryCount < 3) {
       config.retryCount = retryCount + 1;
-      
+
       // Exponential backoff: 100ms, 300ms, 900ms
       const delays = [100, 300, 900];
       const delay = delays[retryCount] || 900;
-      
+
       console.warn(
         `🔄 Retry ${config.retryCount}/3 for ${config.method?.toUpperCase()} ${config.url} ` +
-        `(delay: ${delay}ms)`
+          `(delay: ${delay}ms)`
       );
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
       return apiClient.request(config);
     }
 
@@ -63,7 +63,7 @@ apiClient.interceptors.response.use(
       // Something else happened
       console.error('Request Error:', error.message);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -79,7 +79,10 @@ export async function createUser(telegramId, username, firstName, role) {
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return { success: false, error: error.response?.data?.message || 'Ошибка создания пользователя' };
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Ошибка создания пользователя',
+    };
   }
 }
 
@@ -91,7 +94,10 @@ export async function getUser(telegramId) {
     if (error.response?.status === 404) {
       return { success: false, notFound: true };
     }
-    return { success: false, error: error.response?.data?.message || 'Ошибка получения данных пользователя' };
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Ошибка получения данных пользователя',
+    };
   }
 }
 
@@ -100,7 +106,10 @@ export async function updateUser(telegramId, updates) {
     const response = await apiClient.patch(`/api/users/telegram/${telegramId}`, updates);
     return { success: true, data: response.data };
   } catch (error) {
-    return { success: false, error: error.response?.data?.message || 'Ошибка обновления пользователя' };
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Ошибка обновления пользователя',
+    };
   }
 }
 
@@ -215,7 +224,10 @@ export async function updateOrderStatus(orderId, status) {
     const response = await apiClient.patch(`/api/orders/${orderId}/status`, { status });
     return { success: true, data: response.data };
   } catch (error) {
-    return { success: false, error: error.response?.data?.message || 'Ошибка обновления статуса заказа' };
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Ошибка обновления статуса заказа',
+    };
   }
 }
 
@@ -259,7 +271,10 @@ export async function generateBitcoinAddress(telegramId) {
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return { success: false, error: error.response?.data?.message || 'Ошибка генерации Bitcoin адреса' };
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Ошибка генерации Bitcoin адреса',
+    };
   }
 }
 

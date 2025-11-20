@@ -15,6 +15,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
 import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
+import { mockShopValidation } from '../helpers/commonMocks.js';
 
 describe('Seller Orders Management (P0)', () => {
   let testBot;
@@ -30,10 +31,13 @@ describe('Seller Orders Management (P0)', () => {
         currentShopId: 1,
         shopName: 'TestShop',
         userId: 1,
-        user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-      }
+        user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+      },
     });
     mock = new MockAdapter(api);
+
+    // Mock shop validation (required by validateShopBeforeScene middleware)
+    mockShopValidation(mock, 1);
   });
 
   afterEach(() => {
@@ -56,7 +60,7 @@ describe('Seller Orders Management (P0)', () => {
               quantity: 2,
               total_price: '1000.00',
               currency: 'USD',
-              status: 'confirmed'
+              status: 'confirmed',
             },
             {
               id: 2,
@@ -66,10 +70,10 @@ describe('Seller Orders Management (P0)', () => {
               quantity: 1,
               total_price: '2500.50',
               currency: 'USD',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -97,16 +101,16 @@ describe('Seller Orders Management (P0)', () => {
       // Проверяем кнопки
       const keyboard = testBot.getLastReplyKeyboard();
       expect(keyboard).toBeTruthy();
-      
+
       // Проверяем наличие кнопки "Отметить выдачу"
       const buttons = keyboard.flat();
-      expect(buttons.some(b => b.text && b.text.includes('Отметить выдачу'))).toBe(true);
-      expect(buttons.some(b => b.text && b.text.includes('Обновить'))).toBe(true);
+      expect(buttons.some((b) => b.text && b.text.includes('Отметить выдачу'))).toBe(true);
+      expect(buttons.some((b) => b.text && b.text.includes('Обновить'))).toBe(true);
     });
 
     it('пустой список → показать сообщение "Нет активных заказов"', async () => {
       mock.onGet('/orders').reply(200, {
-        data: { orders: [] }
+        data: { orders: [] },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -128,10 +132,10 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'Product',
               quantity: 1,
               total_price: '50.00',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -142,14 +146,14 @@ describe('Seller Orders Management (P0)', () => {
 
     it('API error → показать ошибку и кнопку "Назад в меню"', async () => {
       mock.onGet('/orders').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
 
       const replies = testBot.captor.getReplies();
-      const hasErrorMessage = replies.some(r => 
-        r.text && r.text.includes('Не удалось загрузить')
+      const hasErrorMessage = replies.some(
+        (r) => r.text && r.text.includes('Не удалось загрузить')
       );
       expect(hasErrorMessage).toBe(true);
     });
@@ -162,8 +166,8 @@ describe('Seller Orders Management (P0)', () => {
           token: 'test-jwt-token',
           role: 'seller',
           shopId: null, // No shop
-          user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-        }
+          user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+        },
       });
 
       await noShopBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -181,8 +185,8 @@ describe('Seller Orders Management (P0)', () => {
           token: null, // No token
           role: 'seller',
           shopId: 1,
-          user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-        }
+          user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+        },
       });
 
       await noTokenBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -197,7 +201,7 @@ describe('Seller Orders Management (P0)', () => {
   describe('Mark Shipped', () => {
     it('должен отметить заказ как shipped и обновить сообщение', async () => {
       mock.onPut('/orders/1/status').reply(200, {
-        data: { id: 1, status: 'shipped' }
+        data: { id: 1, status: 'shipped' },
       });
 
       await testBot.handleUpdate(callbackUpdate('order:ship:1'));
@@ -214,7 +218,7 @@ describe('Seller Orders Management (P0)', () => {
 
     it('API error → показать ошибку в toast', async () => {
       mock.onPut('/orders/1/status').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('order:ship:1'));
@@ -229,7 +233,7 @@ describe('Seller Orders Management (P0)', () => {
   describe('Mark Delivered', () => {
     it('должен отметить заказ как delivered и показать финальное сообщение', async () => {
       mock.onPut('/orders/1/status').reply(200, {
-        data: { id: 1, status: 'delivered' }
+        data: { id: 1, status: 'delivered' },
       });
 
       await testBot.handleUpdate(callbackUpdate('order:deliver:1'));
@@ -246,7 +250,7 @@ describe('Seller Orders Management (P0)', () => {
 
     it('API error → показать ошибку в toast', async () => {
       mock.onPut('/orders/1/status').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('order:deliver:1'));
@@ -269,7 +273,7 @@ describe('Seller Orders Management (P0)', () => {
           quantity: 2,
           total_price: '400.00',
           status: 'delivered',
-          updated_at: '2025-01-15T10:30:00Z'
+          updated_at: '2025-01-15T10:30:00Z',
         },
         {
           id: 4,
@@ -278,8 +282,8 @@ describe('Seller Orders Management (P0)', () => {
           quantity: 1,
           total_price: '600.00',
           status: 'completed',
-          delivered_at: '2025-01-10T14:20:00Z'
-        }
+          delivered_at: '2025-01-10T14:20:00Z',
+        },
       ];
 
       // Use onAny to catch all requests and check params
@@ -295,7 +299,7 @@ describe('Seller Orders Management (P0)', () => {
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:order_history'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('История заказов');
@@ -335,7 +339,7 @@ describe('Seller Orders Management (P0)', () => {
         quantity: 1,
         total_price: '100.00',
         status: 'delivered',
-        updated_at: '2025-01-15T10:30:00Z'
+        updated_at: '2025-01-15T10:30:00Z',
       }));
 
       // Use onAny to catch all requests
@@ -349,7 +353,7 @@ describe('Seller Orders Management (P0)', () => {
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:order_history'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('История заказов (15)');
@@ -358,14 +362,14 @@ describe('Seller Orders Management (P0)', () => {
 
     it('API error → показать ошибку', async () => {
       mock.onGet('/orders').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:order_history'));
 
       const replies = testBot.captor.getReplies();
-      const hasErrorMessage = replies.some(r => 
-        r.text && r.text.includes('Не удалось загрузить')
+      const hasErrorMessage = replies.some(
+        (r) => r.text && r.text.includes('Не удалось загрузить')
       );
       expect(hasErrorMessage).toBe(true);
     });
@@ -374,7 +378,7 @@ describe('Seller Orders Management (P0)', () => {
   describe('Cancel Order', () => {
     it('должен отменить заказ и обновить сообщение', async () => {
       mock.onPut('/orders/1/status').reply(200, {
-        data: { id: 1, status: 'cancelled' }
+        data: { id: 1, status: 'cancelled' },
       });
 
       await testBot.handleUpdate(callbackUpdate('order:cancel:1'));
@@ -391,7 +395,7 @@ describe('Seller Orders Management (P0)', () => {
 
     it('API error → показать ошибку в toast', async () => {
       mock.onPut('/orders/1/status').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('order:cancel:1'));
@@ -415,7 +419,7 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'iPhone 13',
               quantity: 1,
               total_price: '1000.00',
-              status: 'confirmed'
+              status: 'confirmed',
             },
             {
               id: 2,
@@ -423,7 +427,7 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'MacBook Pro',
               quantity: 1,
               total_price: '2500.00',
-              status: 'confirmed'
+              status: 'confirmed',
             },
             {
               id: 3,
@@ -431,10 +435,10 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'AirPods',
               quantity: 2,
               total_price: '400.00',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -448,7 +452,7 @@ describe('Seller Orders Management (P0)', () => {
 
       // Step 2: Enter order numbers
       mock.onPost('/orders/bulk-status').reply(200, {
-        data: { updated: 2 }
+        data: { updated: 2 },
       });
 
       await testBot.handleUpdate(textUpdate('1 3'));
@@ -468,7 +472,7 @@ describe('Seller Orders Management (P0)', () => {
       await testBot.handleUpdate(callbackUpdate('confirm_ship'));
 
       // Wait for async operations to complete
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали success message
       const text3 = testBot.getLastReplyText();
@@ -487,9 +491,9 @@ describe('Seller Orders Management (P0)', () => {
           orders: [
             { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
             { id: 2, product_name: 'P2', status: 'confirmed', quantity: 1, total_price: '100' },
-            { id: 3, product_name: 'P3', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 3, product_name: 'P3', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -514,9 +518,9 @@ describe('Seller Orders Management (P0)', () => {
             product_name: `P${i + 1}`,
             status: 'confirmed',
             quantity: 1,
-            total_price: '100'
-          }))
-        }
+            total_price: '100',
+          })),
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -539,9 +543,9 @@ describe('Seller Orders Management (P0)', () => {
       mock.onGet('/orders').reply(200, {
         data: {
           orders: [
-            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -558,9 +562,9 @@ describe('Seller Orders Management (P0)', () => {
         data: {
           orders: [
             { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
-            { id: 2, product_name: 'P2', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 2, product_name: 'P2', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -576,9 +580,9 @@ describe('Seller Orders Management (P0)', () => {
       mock.onGet('/orders').reply(200, {
         data: {
           orders: [
-            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -594,9 +598,9 @@ describe('Seller Orders Management (P0)', () => {
       mock.onGet('/orders').reply(200, {
         data: {
           orders: [
-            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -615,16 +619,16 @@ describe('Seller Orders Management (P0)', () => {
       mock.onGet('/orders').reply(200, {
         data: {
           orders: [
-            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' }
-          ]
-        }
+            { id: 1, product_name: 'P1', status: 'confirmed', quantity: 1, total_price: '100' },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
       testBot.captor.reset();
 
       mock.onPost('/orders/bulk-status').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(textUpdate('1'));
@@ -640,7 +644,7 @@ describe('Seller Orders Management (P0)', () => {
 
     it('нет активных заказов → показать сообщение', async () => {
       mock.onGet('/orders').reply(200, {
-        data: { orders: [] }
+        data: { orders: [] },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -661,10 +665,10 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'Product',
               quantity: 1,
               total_price: '99.99',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -683,10 +687,10 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'Product',
               quantity: 1,
               total_price: '100.00',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -706,10 +710,10 @@ describe('Seller Orders Management (P0)', () => {
               product_name: 'Product',
               quantity: 1,
               total_price: '50.00',
-              status: 'confirmed'
-            }
-          ]
-        }
+              status: 'confirmed',
+            },
+          ],
+        },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));
@@ -726,8 +730,8 @@ describe('Seller Orders Management (P0)', () => {
           product_name: 'Product',
           quantity: 1,
           total_price: '50.00',
-          status: 'confirmed'
-        }
+          status: 'confirmed',
+        },
       ]);
 
       await testBot.handleUpdate(callbackUpdate('seller:active_orders'));

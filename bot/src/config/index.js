@@ -22,7 +22,7 @@ const config = {
   currencies: [
     { code: 'BTC', name: 'Bitcoin', symbol: '₿', emoji: '₿' },
     { code: 'ETH', name: 'Ethereum', symbol: 'Ξ', emoji: 'Ξ' },
-    { code: 'USDT', name: 'USDT', symbol: '₮', emoji: '₮' }
+    { code: 'USDT', name: 'USDT', symbol: '₮', emoji: '₮' },
   ],
 
   // Shop registration fee
@@ -35,11 +35,11 @@ const config = {
   sessionDefaults: {
     role: null,
     shopId: null,
-    tempData: {}
+    tempData: {},
   },
 
   // Redis configuration
-  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379'
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 };
 
 export default config;

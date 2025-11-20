@@ -14,7 +14,7 @@ import {
   closeTestDb,
   cleanupTestData,
   createTestUser,
-  createTestShop
+  createTestShop,
 } from '../helpers/testDb.js';
 
 // Create minimal test app
@@ -47,40 +47,37 @@ describe('Worker Controller - Integration Tests', () => {
     ownerUser = await createTestUser({
       telegramId: '9000000001',
       username: 'owner',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create worker user
     workerUser = await createTestUser({
       telegramId: '9000000002',
       username: 'worker',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create FREE tier shop
     freeShop = await createTestShop(ownerUser.id, {
       name: 'Free Shop',
-      description: 'FREE tier shop'
+      description: 'FREE tier shop',
     });
 
     // Create PRO tier shop
     proShop = await createTestShop(ownerUser.id, {
       name: 'Pro Shop',
-      description: 'PRO tier shop'
+      description: 'PRO tier shop',
     });
 
     // Upgrade proShop to PRO tier
-    await pool.query(
-      `UPDATE shops SET tier = 'pro' WHERE id = $1`,
-      [proShop.id]
-    );
+    await pool.query(`UPDATE shops SET tier = 'pro' WHERE id = $1`, [proShop.id]);
 
     // Generate JWT token for owner
     ownerToken = jwt.sign(
       {
         id: ownerUser.id,
         telegramId: ownerUser.telegram_id,
-        username: ownerUser.username
+        username: ownerUser.username,
       },
       config.jwt.secret,
       { expiresIn: config.jwt.expiresIn }
@@ -103,14 +100,13 @@ describe('Worker Controller - Integration Tests', () => {
 
         expect(response.body).toEqual({
           success: false,
-          error: 'Workspace feature requires PRO subscription. Upgrade your shop to add workers.'
+          error: 'Workspace feature requires PRO subscription. Upgrade your shop to add workers.',
         });
 
         // Verify worker was NOT added
-        const workers = await pool.query(
-          'SELECT * FROM shop_workers WHERE shop_id = $1',
-          [freeShop.id]
-        );
+        const workers = await pool.query('SELECT * FROM shop_workers WHERE shop_id = $1', [
+          freeShop.id,
+        ]);
         expect(workers.rows).toHaveLength(0);
       });
 
@@ -125,7 +121,7 @@ describe('Worker Controller - Integration Tests', () => {
         expect(response.body.data).toMatchObject({
           shop_id: proShop.id,
           worker_user_id: workerUser.id,
-          telegram_id: workerUser.telegram_id
+          telegram_id: workerUser.telegram_id,
         });
 
         // Verify worker was added to database
@@ -154,7 +150,7 @@ describe('Worker Controller - Integration Tests', () => {
         // Create another user
         const otherUser = await createTestUser({
           telegramId: '9000000003',
-          username: 'otheruser'
+          username: 'otheruser',
         });
 
         const otherToken = jwt.sign(
@@ -251,14 +247,14 @@ describe('Worker Controller - Integration Tests', () => {
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0]).toMatchObject({
         user_id: workerUser.id,
-        telegram_id: workerUser.telegram_id
+        telegram_id: workerUser.telegram_id,
       });
     });
 
     it('should reject if user is not shop owner', async () => {
       const otherUser = await createTestUser({
         telegramId: '9000000004',
-        username: 'other'
+        username: 'other',
       });
 
       const otherToken = jwt.sign(
@@ -299,17 +295,14 @@ describe('Worker Controller - Integration Tests', () => {
       expect(response.body.message).toBe('Worker removed successfully');
 
       // Verify worker was removed
-      const workers = await pool.query(
-        'SELECT * FROM shop_workers WHERE id = $1',
-        [workerId]
-      );
+      const workers = await pool.query('SELECT * FROM shop_workers WHERE id = $1', [workerId]);
       expect(workers.rows).toHaveLength(0);
     });
 
     it('should reject if user is not shop owner', async () => {
       const otherUser = await createTestUser({
         telegramId: '9000000005',
-        username: 'other2'
+        username: 'other2',
       });
 
       const otherToken = jwt.sign(

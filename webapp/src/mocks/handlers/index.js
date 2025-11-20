@@ -17,7 +17,7 @@ export const handlers = [
   ...settingsHandlers,
   ...analyticsHandlers,
   ...subscriptionsHandlers,
-  ...authHandlers
+  ...authHandlers,
 ];
 
 // Для удобства экспортируем и по отдельности
@@ -29,5 +29,5 @@ export {
   settingsHandlers,
   analyticsHandlers,
   subscriptionsHandlers,
-  authHandlers
+  authHandlers,
 };

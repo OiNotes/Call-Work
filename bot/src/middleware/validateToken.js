@@ -43,14 +43,14 @@ const regenerateToken = async (ctx) => {
     const userData = {
       username: ctx.from.username,
       firstName: ctx.from.first_name,
-      lastName: ctx.from.last_name || ''
+      lastName: ctx.from.last_name || '',
     };
 
     logger.info('Regenerating expired token', {
       userId: telegramId,
-      oldTokenAge: ctx.session.tokenCreatedAt ?
-        Math.floor((Date.now() - new Date(ctx.session.tokenCreatedAt)) / MS_PER_DAY) :
-        'unknown'
+      oldTokenAge: ctx.session.tokenCreatedAt
+        ? Math.floor((Date.now() - new Date(ctx.session.tokenCreatedAt)) / MS_PER_DAY)
+        : 'unknown',
     });
 
     const authData = await authApi.authenticate(telegramId, userData);
@@ -66,7 +66,7 @@ const regenerateToken = async (ctx) => {
   } catch (error) {
     logger.error('Failed to regenerate token', {
       userId: ctx.from.id,
-      error: error.message
+      error: error.message,
     });
     return false;
   }

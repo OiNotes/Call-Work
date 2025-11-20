@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 import { memo } from 'react';
 
-const FloatingButton = memo(function FloatingButton({ 
-  onClick, 
+const FloatingButton = memo(function FloatingButton({
+  onClick,
   icon: Icon,
   className = '',
   bottom = '24',
-  right = '6'
+  right = '6',
 }) {
   // Default Plus icon if no icon provided
   const DefaultIcon = () => (
@@ -31,7 +31,7 @@ const FloatingButton = memo(function FloatingButton({
       whileTap={{ scale: 0.9, rotate: 0 }}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
     >
       <IconComponent className="w-6 h-6 text-white" />
     </motion.button>

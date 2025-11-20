@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -110,21 +110,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -132,42 +132,42 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import express from 'express';
 import { workerController } from '../controllers/workerController.js';
 import { verifyToken } from '../middleware/auth.js';
 &nbsp;
-const router = express.Router();
+const router = <span class="cstat-no" title="statement not covered" >express.Router();</span>
 &nbsp;
 /**
  * @route   GET /api/shops/accessible
  * @desc    Get all shops where user has access (owner or worker)
  * @access  Private
  */
-router.get('/accessible', verifyToken, workerController.getAccessibleShops);
+<span class="cstat-no" title="statement not covered" >router.get('/accessible', verifyToken, workerController.getAccessibleShops);</span>
 &nbsp;
 /**
  * @route   GET /api/shops/workspace
  * @desc    Get shops where user is worker (not owner)
  * @access  Private
  */
-router.get('/workspace', verifyToken, workerController.getWorkerShops);
+<span class="cstat-no" title="statement not covered" >router.get('/workspace', verifyToken, workerController.getWorkerShops);</span>
 &nbsp;
 /**
  * @route   POST /api/shops/:shopId/workers
@@ -175,21 +175,21 @@ router.get('/workspace', verifyToken, workerController.getWorkerShops);
  * @access  Private (Shop owner only)
  * @body    { telegram_id: number } OR { username: string }
  */
-router.post('/:shopId/workers', verifyToken, workerController.add);
+<span class="cstat-no" title="statement not covered" >router.post('/:shopId/workers', verifyToken, workerController.add);</span>
 &nbsp;
 /**
  * @route   GET /api/shops/:shopId/workers
  * @desc    List all workers for a shop
  * @access  Private (Shop owner only)
  */
-router.get('/:shopId/workers', verifyToken, workerController.list);
+<span class="cstat-no" title="statement not covered" >router.get('/:shopId/workers', verifyToken, workerController.list);</span>
 &nbsp;
 /**
  * @route   DELETE /api/shops/:shopId/workers/:workerId
  * @desc    Remove worker from shop
  * @access  Private (Shop owner only)
  */
-router.delete('/:shopId/workers/:workerId', verifyToken, workerController.remove);
+<span class="cstat-no" title="statement not covered" >router.delete('/:shopId/workers/:workerId', verifyToken, workerController.remove);</span>
 &nbsp;
 export default router;
 &nbsp;</pre></td></tr></table></pre>
@@ -199,7 +199,7 @@ export default router;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-25T13:57:17.801Z
+                at 2025-11-08T16:48:59.527Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -35,7 +35,7 @@ function validateXpub(xpub, chain) {
 
   // xpub/ypub/zpub for Bitcoin, Ltub for Litecoin
   const validPrefixes = ['xpub', 'ypub', 'zpub', 'Ltub', 'tpub'];
-  const hasValidPrefix = validPrefixes.some(prefix => xpub.startsWith(prefix));
+  const hasValidPrefix = validPrefixes.some((prefix) => xpub.startsWith(prefix));
 
   if (!hasValidPrefix) {
     logger.error(`[WalletService] Invalid xpub prefix for ${chain}: ${xpub.substring(0, 4)}`);
@@ -71,7 +71,7 @@ export async function generateBtcAddress(xpub, index) {
     // Generate P2PKH address (legacy)
     const { address } = bitcoin.payments.p2pkh({
       pubkey: child.publicKey,
-      network: bitcoin.networks.bitcoin
+      network: bitcoin.networks.bitcoin,
     });
 
     const derivationPath = `m/44'/0'/0'/0/${index}`;
@@ -80,12 +80,12 @@ export async function generateBtcAddress(xpub, index) {
 
     return {
       address,
-      derivationPath
+      derivationPath,
     };
   } catch (error) {
     logger.error('[WalletService] BTC address generation failed:', {
       error: error.message,
-      index
+      index,
     });
     throw new Error(`Failed to generate BTC address: ${error.message}`);
   }
@@ -113,12 +113,12 @@ export async function generateLtcAddress(xpub, index) {
       messagePrefix: '\x19Litecoin Signed Message:\n',
       bech32: 'ltc',
       bip32: {
-        public: 0x019da462,  // Ltub
-        private: 0x019d9cfe
+        public: 0x019da462, // Ltub
+        private: 0x019d9cfe,
       },
-      pubKeyHash: 0x30,  // L address prefix
+      pubKeyHash: 0x30, // L address prefix
       scriptHash: 0x32,
-      wif: 0xb0
+      wif: 0xb0,
     };
 
     // Parse xpub - support both Bitcoin xpub and Litecoin Ltub
@@ -139,7 +139,7 @@ export async function generateLtcAddress(xpub, index) {
     // Generate P2PKH address with Litecoin network parameters
     const { address } = bitcoin.payments.p2pkh({
       pubkey: child.publicKey,
-      network: litecoinNetwork
+      network: litecoinNetwork,
     });
 
     const derivationPath = `m/44'/2'/0'/0/${index}`;
@@ -148,12 +148,12 @@ export async function generateLtcAddress(xpub, index) {
 
     return {
       address,
-      derivationPath
+      derivationPath,
     };
   } catch (error) {
     logger.error('[WalletService] LTC address generation failed:', {
       error: error.message,
-      index
+      index,
     });
     throw new Error(`Failed to generate LTC address: ${error.message}`);
   }
@@ -166,82 +166,74 @@ export async function generateLtcAddress(xpub, index) {
  * @returns {Promise<object>} { address: string, derivationPath: string }
  */
 export async function generateEthAddress(xpub, index) {
-  console.log('🔵 [generateEthAddress] START', {
+  logger.debug('[WalletService] generateEthAddress START', {
     xpubExists: !!xpub,
     xpubLength: xpub?.length,
     index,
-    xpubPreview: xpub ? xpub.substring(0, 20) + '...' : 'undefined'
+    xpubPreview: xpub ? xpub.substring(0, 20) + '...' : 'undefined',
   });
-  
+
   try {
     // Validate inputs
     if (!validateXpub(xpub, 'ETH')) {
-      console.error('🔴 [generateEthAddress] Invalid xpub!', {
+      logger.error('[WalletService] Invalid xpub for ETH', {
         xpub: xpub?.substring(0, 30),
-        validation: 'failed'
+        validation: 'failed',
       });
       throw new Error('Invalid Ethereum xpub');
     }
 
     if (!Number.isInteger(index) || index < 0 || index >= Math.pow(2, 31)) {
-      console.error('🔴 [generateEthAddress] Invalid index:', index);
+      logger.error('[WalletService] Invalid index for ETH', { index });
       throw new Error(`Invalid derivation index: ${index}. Must be 0 to 2^31-1`);
     }
-    
-    console.log('🔵 [generateEthAddress] Validation passed, deriving address...');
+
+    logger.debug('[WalletService] ETH validation passed, deriving address');
 
     // ETH uses standard BIP32 derivation
-    console.log('🔵 [generateEthAddress] Parsing xpub...');
+    logger.debug('[WalletService] Parsing ETH xpub');
     const node = bip32.fromBase58(xpub);
-    console.log('🔵 [generateEthAddress] Xpub parsed successfully');
+    logger.debug('[WalletService] ETH xpub parsed successfully');
 
     // Derive child: m/0/{index} (external chain)
-    console.log('🔵 [generateEthAddress] Deriving child at index:', index);
+    logger.debug('[WalletService] Deriving ETH child', { index });
     const child = node.derive(0).derive(index);
-    console.log('🔵 [generateEthAddress] Child derived');
+    logger.debug('[WalletService] ETH child derived');
 
     // Create Ethereum address from public key
     // BIP32 returns compressed public key (33 bytes), need to pass as hex string with '0x' prefix for ethers
     const publicKey = child.publicKey;
 
     if (!publicKey) {
-      console.error('🔴 [generateEthAddress] Failed to derive public key');
+      logger.error('[WalletService] Failed to derive public key for ETH');
       throw new Error('Failed to derive public key from xpub');
     }
-    
-    console.log('🔵 [generateEthAddress] Public key extracted, length:', publicKey.length);
+
+    logger.debug('[WalletService] ETH public key extracted', { length: publicKey.length });
 
     // Convert Buffer to hex string with '0x' prefix for ethers
     const publicKeyHex = '0x' + publicKey.toString('hex');
-    console.log('🔵 [generateEthAddress] Public key hex:', publicKeyHex.substring(0, 20) + '...');
+    logger.debug('[WalletService] ETH public key hex', {
+      preview: publicKeyHex.substring(0, 20) + '...',
+    });
 
     // Compute Ethereum address using ethers (accepts compressed or uncompressed)
-    console.log('🔵 [generateEthAddress] Computing Ethereum address...');
+    logger.debug('[WalletService] Computing Ethereum address');
     const address = ethers.computeAddress(publicKeyHex);
 
     const derivationPath = `m/44'/60'/0'/0/${index}`;
 
     logger.info(`[WalletService] Generated ETH address at ${derivationPath}: ${address}`);
-    
-    console.log('🟢 [generateEthAddress] SUCCESS:', {
-      address,
-      derivationPath
-    });
 
     return {
       address,
-      derivationPath
+      derivationPath,
     };
   } catch (error) {
-    console.error('🔴 [generateEthAddress] CATCH ERROR:', {
-      message: error.message,
-      stack: error.stack,
-      index
-    });
-    
     logger.error('[WalletService] ETH address generation failed:', {
       error: error.message,
-      index
+      stack: error.stack,
+      index,
     });
     throw new Error(`Failed to generate ETH address: ${error.message}`);
   }
@@ -275,7 +267,7 @@ export async function generateTronAddress(xpub, index) {
 
     // Initialize TronWeb
     const tronWeb = new TronWeb({
-      fullHost: 'https://api.trongrid.io'
+      fullHost: 'https://api.trongrid.io',
     });
 
     // Convert compressed public key to uncompressed format
@@ -302,12 +294,12 @@ export async function generateTronAddress(xpub, index) {
 
     return {
       address,
-      derivationPath
+      derivationPath,
     };
   } catch (error) {
     logger.error('[WalletService] TRON address generation failed:', {
       error: error.message,
-      index
+      index,
     });
     throw new Error(`Failed to generate TRON address: ${error.message}`);
   }
@@ -381,7 +373,7 @@ export function validateAddress(address, chain) {
     logger.error('[WalletService] Address validation error:', {
       error: error.message,
       address,
-      chain
+      chain,
     });
     return false;
   }
@@ -393,5 +385,5 @@ export default {
   generateEthAddress,
   generateTronAddress,
   generateAddress,
-  validateAddress
+  validateAddress,
 };

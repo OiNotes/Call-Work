@@ -57,22 +57,14 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
         >
           {/* Header */}
           <div className="mb-6">
-            <h3 className="text-white text-2xl font-bold tracking-tight mb-2">
-              Изменить наценку
-            </h3>
-            <p className="text-gray-400 text-sm">
-              Укажите новый процент наценки для всех товаров
-            </p>
+            <h3 className="text-white text-2xl font-bold tracking-tight mb-2">Изменить наценку</h3>
+            <p className="text-gray-400 text-sm">Укажите новый процент наценки для всех товаров</p>
           </div>
 
           {/* Markup Value Display */}
           <div className="text-center mb-6">
-            <div className="text-6xl font-bold text-orange-primary mb-1">
-              {markup || 0}%
-            </div>
-            <div className="text-gray-400 text-sm">
-              Наценка
-            </div>
+            <div className="text-6xl font-bold text-orange-primary mb-1">{markup || 0}%</div>
+            <div className="text-gray-400 text-sm">Наценка</div>
           </div>
 
           {/* Slider */}
@@ -83,7 +75,7 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                 {/* Active Track */}
                 <div
                   className="h-full bg-gradient-to-r from-orange-primary to-orange-light transition-none"
-                  style={{ width: `${((markup || 1) - 1) / 499 * 100}%` }}
+                  style={{ width: `${(((markup || 1) - 1) / 499) * 100}%` }}
                 />
               </div>
 
@@ -109,7 +101,7 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                 style={{
                   WebkitAppearance: 'none',
                   appearance: 'none',
-                  zIndex: 10
+                  zIndex: 10,
                 }}
               />
 
@@ -117,14 +109,14 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
               <motion.div
                 className="absolute w-6 h-6 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing pointer-events-none"
                 style={{
-                  left: `calc(${((markup || 1) - 1) / 499 * 100}% - ${((markup || 1) - 1) / 499 * 24}px)`,
+                  left: `calc(${(((markup || 1) - 1) / 499) * 100}% - ${(((markup || 1) - 1) / 499) * 24}px)`,
                   top: '-8px',
-                  boxShadow: '0 0 0 3px rgba(255, 107, 0, 0.15), 0 3px 10px rgba(0, 0, 0, 0.2)'
+                  boxShadow: '0 0 0 3px rgba(255, 107, 0, 0.15), 0 3px 10px rgba(0, 0, 0, 0.2)',
                 }}
                 initial={false}
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.15 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               />
             </div>
 
@@ -174,9 +166,14 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                 viewBox="0 0 24 24"
                 initial={{ x: -5, opacity: 0.5 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
               </motion.svg>
 
               <div className="text-right">
@@ -204,8 +201,16 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
                 transition={controlSpring}
                 className="mb-6 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3"
               >
-                <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="w-4 h-4 text-red-400 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <p className="text-red-400 text-sm font-medium">{error}</p>
               </motion.div>
@@ -231,11 +236,11 @@ const EditMarkupModal = ({ isOpen, onClose, currentMarkup, onSave }) => {
               className="flex-1 bg-gradient-to-r from-orange-primary to-orange-light text-white py-3.5 rounded-xl font-semibold shadow-lg"
               whileHover={{
                 scale: 1.02,
-                boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)'
+                boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)',
               }}
               whileTap={{
                 scale: 0.98,
-                boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+                boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)',
               }}
               transition={controlSpring}
             >

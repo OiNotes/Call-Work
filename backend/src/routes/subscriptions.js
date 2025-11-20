@@ -127,4 +127,10 @@ router.post('/:id/payment/generate', subscriptionController.generatePaymentInvoi
  */
 router.get('/:id/payment/status', subscriptionController.getPaymentStatus);
 
+/**
+ * POST /api/subscriptions/:id/payment/confirm
+ * Manually confirm payment by tx hash (on-chain verification)
+ */
+router.post('/:id/payment/confirm', subscriptionController.confirmPaymentWithTxHash);
+
 export default router;

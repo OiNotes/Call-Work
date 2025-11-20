@@ -5,8 +5,9 @@
 ## Описание
 
 Тестирует 15 сценариев работы AI с множественными товарами:
+
 - ✅ Реальная БД (PostgreSQL)
-- ✅ Реальный AI (DeepSeek API)  
+- ✅ Реальный AI (DeepSeek API)
 - ✅ Реальный Backend API
 - ✅ Автоматическая проверка результатов в БД
 
@@ -123,6 +124,7 @@ node bot/tests/manual/test-bulk-operations.js
 ## Troubleshooting
 
 ### Backend не отвечает
+
 ```bash
 # Проверь что backend запущен
 curl http://localhost:3000/api/health
@@ -132,6 +134,7 @@ cd backend && npm run dev
 ```
 
 ### PostgreSQL недоступен
+
 ```bash
 # Проверь подключение
 psql $DATABASE_URL -c "SELECT 1"
@@ -141,6 +144,7 @@ cat bot/.env | grep DATABASE_URL
 ```
 
 ### DeepSeek API ошибки
+
 ```bash
 # Проверь что ключ настроен
 cat bot/.env | grep DEEPSEEK_API_KEY
@@ -150,6 +154,7 @@ cat bot/.env | grep DEEPSEEK_API_KEY
 ```
 
 ### Тесты падают с timeout
+
 - AI обработка занимает ~2 секунды на команду
 - Увеличь `AI_DELAY` в коде если нужно больше времени
 
@@ -162,15 +167,15 @@ async function test16_your_test_name() {
   // 1. Setup
   await clearProducts();
   await addTestProduct('Product', 100);
-  
+
   // 2. Execute
   const products = await getAllProducts();
   await sendAICommand('your command', products);
-  
+
   // 3. Verify
   const product = await getProductByName('Product');
   const passed = /* your check */;
-  
+
   // 4. Report
   formatResult('Test 16: Your test description', passed, error, details);
   return passed;
@@ -182,7 +187,7 @@ async function test16_your_test_name() {
 ```javascript
 // В main() функции закомментируй остальные тесты
 const tests = [
-  { name: 'Test 5', fn: test5_different_discounts_three_products } // Только один
+  { name: 'Test 5', fn: test5_different_discounts_three_products }, // Только один
 ];
 ```
 

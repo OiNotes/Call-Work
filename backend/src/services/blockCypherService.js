@@ -14,7 +14,7 @@ import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
  *
  * Supported chains:
  * - Bitcoin (btc/main)
- * - Litecoin (litecoin/main)
+ * - Litecoin (ltc/main)
  */
 
 const BLOCKCYPHER_API = 'https://api.blockcypher.com/v1';
@@ -33,9 +33,7 @@ async function rateLimitWait() {
   const now = Date.now();
 
   // Clean old timestamps outside the window
-  requestTimestamps = requestTimestamps.filter(
-    timestamp => now - timestamp < REQUEST_WINDOW_MS
-  );
+  requestTimestamps = requestTimestamps.filter((timestamp) => now - timestamp < REQUEST_WINDOW_MS);
 
   // If we've hit the limit, wait
   if (requestTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
@@ -44,7 +42,7 @@ async function rateLimitWait() {
 
     if (waitTime > 0) {
       logger.debug(`[BlockCypher] Rate limit: waiting ${waitTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
 
@@ -73,14 +71,16 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
 
       if (isLastAttempt) {
         logger.error(`[BlockCypher] All ${maxRetries} retry attempts failed:`, {
-          error: error.message
+          error: error.message,
         });
         throw error;
       }
 
       const delay = baseDelay * Math.pow(2, attempt);
-      logger.warn(`[BlockCypher] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      logger.warn(
+        `[BlockCypher] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -100,7 +100,7 @@ function getChainIdentifier(chain) {
 
     case 'LTC':
     case 'LITECOIN':
-      return 'litecoin/main';
+      return 'ltc/main';
 
     default:
       throw new Error(`Unsupported chain: ${chain}. BlockCypher supports BTC and LTC only.`);
@@ -132,11 +132,11 @@ export async function registerWebhook(chain, address, callbackUrl, confirmations
           event: 'tx-confirmation',
           address: address,
           confirmations: confirmations,
-          url: callbackUrl
+          url: callbackUrl,
         },
         {
           params: BLOCKCYPHER_TOKEN ? { token: BLOCKCYPHER_TOKEN } : {},
-          timeout: 10000
+          timeout: 10000,
         }
       );
     });
@@ -151,7 +151,7 @@ export async function registerWebhook(chain, address, callbackUrl, confirmations
       error: error.message,
       response: error.response?.data,
       chain,
-      address
+      address,
     });
     throw new Error(`Failed to register webhook: ${error.message}`);
   }
@@ -176,7 +176,7 @@ export async function unregisterWebhook(webhookId, chain = 'BTC') {
     await retryWithBackoff(async () => {
       return await axios.delete(url, {
         params: BLOCKCYPHER_TOKEN ? { token: BLOCKCYPHER_TOKEN } : {},
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
@@ -190,7 +190,7 @@ export async function unregisterWebhook(webhookId, chain = 'BTC') {
 
     logger.error('[BlockCypher] Failed to unregister webhook:', {
       error: error.message,
-      webhookId
+      webhookId,
     });
     throw new Error(`Failed to unregister webhook: ${error.message}`);
   }
@@ -215,7 +215,7 @@ export async function getTransaction(chain, txHash) {
     const response = await retryWithBackoff(async () => {
       return await axios.get(url, {
         params: BLOCKCYPHER_TOKEN ? { token: BLOCKCYPHER_TOKEN } : {},
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
@@ -224,7 +224,7 @@ export async function getTransaction(chain, txHash) {
     logger.debug(`[BlockCypher] Transaction fetched:`, {
       txHash,
       confirmations: tx.confirmations,
-      blockHeight: tx.block_height
+      blockHeight: tx.block_height,
     });
 
     return {
@@ -237,13 +237,13 @@ export async function getTransaction(chain, txHash) {
       fees: tx.fees,
       received: tx.received,
       confirmed: tx.confirmed,
-      doubleSpend: tx.double_spend || false
+      doubleSpend: tx.double_spend || false,
     };
   } catch (error) {
     logger.error('[BlockCypher] Failed to get transaction:', {
       error: error.message,
       response: error.response?.data,
-      txHash
+      txHash,
     });
     throw new Error(`Failed to get transaction: ${error.message}`);
   }
@@ -269,13 +269,13 @@ export async function verifyPayment(chain, txHash, expectedAddress, expectedAmou
       return {
         verified: false,
         error: 'Double-spend detected',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
     // Find output to expected address
-    const output = tx.outputs.find(out =>
-      out.addresses && out.addresses.includes(expectedAddress)
+    const output = tx.outputs.find(
+      (out) => out.addresses && out.addresses.includes(expectedAddress)
     );
 
     if (!output) {
@@ -283,7 +283,7 @@ export async function verifyPayment(chain, txHash, expectedAddress, expectedAmou
       return {
         verified: false,
         error: 'Address not found in transaction outputs',
-        confirmations: tx.confirmations
+        confirmations: tx.confirmations,
       };
     }
 
@@ -291,13 +291,13 @@ export async function verifyPayment(chain, txHash, expectedAddress, expectedAmou
     const actualAmount = output.value / 100000000;
 
     // Check amount with tolerance bounds - Industry standard with validation
-    const chain = txHash ? 'BTC' : 'LTC'; // Assume BTC unless LTC is explicit
-    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, chain)) {
+    const chainUpperForTolerance = (chain || '').toUpperCase();
+    if (!amountsMatchWithTolerance(actualAmount, expectedAmount, undefined, chainUpperForTolerance)) {
       return {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount}, Received: ${actualAmount}`,
         confirmations: tx.confirmations,
-        amount: actualAmount
+        amount: actualAmount,
       };
     }
 
@@ -306,32 +306,33 @@ export async function verifyPayment(chain, txHash, expectedAddress, expectedAmou
       txHash,
       address: expectedAddress,
       amount: actualAmount,
-      confirmations: tx.confirmations
+      confirmations: tx.confirmations,
     });
 
     // Get minimum confirmations from constants based on chain
-    const chainUpper = chain.toUpperCase();
-    const minConfirmations = chainUpper === 'BTC' || chainUpper === 'BITCOIN'
-      ? SUPPORTED_CURRENCIES.BTC.confirmations
-      : SUPPORTED_CURRENCIES.LTC.confirmations;
+    const chainUpper = (chain || '').toUpperCase();
+    const minConfirmations =
+      chainUpper === 'BTC' || chainUpper === 'BITCOIN'
+        ? SUPPORTED_CURRENCIES.BTC.confirmations
+        : SUPPORTED_CURRENCIES.LTC.confirmations;
 
     return {
       verified: true,
       confirmations: tx.confirmations,
       amount: actualAmount,
       blockHeight: tx.blockHeight,
-      status: tx.confirmations >= minConfirmations ? 'confirmed' : 'pending'
+      status: tx.confirmations >= minConfirmations ? 'confirmed' : 'pending',
     };
   } catch (error) {
     logger.error('[BlockCypher] Payment verification failed:', {
       error: error.message,
       txHash,
-      expectedAddress
+      expectedAddress,
     });
     return {
       verified: false,
       error: error.message,
-      confirmations: 0
+      confirmations: 0,
     };
   }
 }
@@ -353,19 +354,12 @@ export function parseWebhookPayload(payload) {
     //   ...
     // }
 
-    const {
-      hash,
-      confirmations,
-      outputs,
-      block_height,
-      total,
-      fees
-    } = payload;
+    const { hash, confirmations, outputs, block_height, total, fees } = payload;
 
     logger.info(`[BlockCypher] Webhook received:`, {
       txHash: hash,
       confirmations,
-      blockHeight: block_height
+      blockHeight: block_height,
     });
 
     return {
@@ -375,11 +369,11 @@ export function parseWebhookPayload(payload) {
       outputs: outputs || [],
       total: total ? total / 100000000 : 0, // Convert to BTC/LTC
       fees: fees ? fees / 100000000 : 0,
-      raw: payload
+      raw: payload,
     };
   } catch (error) {
     logger.error('[BlockCypher] Failed to parse webhook payload:', {
-      error: error.message
+      error: error.message,
     });
     throw new Error(`Failed to parse webhook: ${error.message}`);
   }
@@ -401,7 +395,7 @@ export async function getBlockHeight(chain) {
     const response = await retryWithBackoff(async () => {
       return await axios.get(url, {
         params: BLOCKCYPHER_TOKEN ? { token: BLOCKCYPHER_TOKEN } : {},
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
@@ -409,9 +403,45 @@ export async function getBlockHeight(chain) {
   } catch (error) {
     logger.error('[BlockCypher] Failed to get block height:', {
       error: error.message,
-      chain
+      chain,
     });
     throw new Error(`Failed to get block height: ${error.message}`);
+  }
+}
+
+/**
+ * Get address information including transactions
+ *
+ * @param {string} chain - BTC or LTC
+ * @param {string} address - Blockchain address
+ * @returns {Promise<object>} Address info with txrefs
+ */
+export async function getAddressInfo(chain, address) {
+  try {
+    await rateLimitWait();
+
+    const chainId = getChainIdentifier(chain);
+    const url = `${BLOCKCYPHER_API}/${chainId}/addrs/${address}`;
+
+    logger.debug('[BlockCypher] Getting address info:', { url, chain, address, hasToken: !!BLOCKCYPHER_TOKEN });
+
+    const response = await retryWithBackoff(async () => {
+      const config = {
+        params: BLOCKCYPHER_TOKEN ? { token: BLOCKCYPHER_TOKEN } : {},
+        timeout: 10000,
+      };
+      logger.debug('[BlockCypher] Request config:', { url, params: config.params });
+      return await axios.get(url, config);
+    });
+
+    return response.data;
+  } catch (error) {
+    logger.error('[BlockCypher] Failed to get address info:', {
+      error: error.message,
+      chain,
+      address,
+    });
+    throw new Error(`Failed to get address info: ${error.message}`);
   }
 }
 
@@ -421,5 +451,6 @@ export default {
   getTransaction,
   verifyPayment,
   parseWebhookPayload,
-  getBlockHeight
+  getAddressInfo,
+  getBlockHeight,
 };

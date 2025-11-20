@@ -21,9 +21,7 @@ async function getNgrokTunnels() {
 }
 
 function findTunnelByPort(tunnels, port) {
-  return tunnels.find(t =>
-    t.config.addr.includes(`:${port}`) && t.proto === 'https'
-  );
+  return tunnels.find((t) => t.config.addr.includes(`:${port}`) && t.proto === 'https');
 }
 
 function updateEnvFile(filePath, updates) {
@@ -76,18 +74,18 @@ async function main() {
   // Update backend/.env
   updateEnvFile(path.join(rootDir, 'backend', '.env'), {
     FRONTEND_URL: webappUrl,
-    BACKEND_URL: backendUrl
+    BACKEND_URL: backendUrl,
   });
 
   // Update bot/.env
   updateEnvFile(path.join(rootDir, 'bot', '.env'), {
     WEBAPP_URL: webappUrl,
-    BACKEND_URL: backendUrl
+    BACKEND_URL: backendUrl,
   });
 
   // Update webapp/.env
   updateEnvFile(path.join(rootDir, 'webapp', '.env'), {
-    VITE_API_URL: `${backendUrl}/api`
+    VITE_API_URL: `${backendUrl}/api`,
   });
 
   console.log('\n✅ All .env files updated!');

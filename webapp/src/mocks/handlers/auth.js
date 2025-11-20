@@ -8,7 +8,8 @@ export const authHandlers = [
     await request.json();
 
     // Mock JWT token
-    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidGVsZWdyYW1JZCI6IjEyMzQ1Njc4OSIsInVzZXJuYW1lIjoidGVzdCIsImlhdCI6MTY5MDAwMDAwMCwiZXhwIjoxNzAwMDAwMDAwfQ.mock-signature';
+    const mockToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidGVsZWdyYW1JZCI6IjEyMzQ1Njc4OSIsInVzZXJuYW1lIjoidGVzdCIsImlhdCI6MTY5MDAwMDAwMCwiZXhwIjoxNzAwMDAwMDAwfQ.mock-signature';
 
     return HttpResponse.json({
       success: true,
@@ -18,8 +19,8 @@ export const authHandlers = [
         telegram_id: '123456789',
         username: 'test_user',
         first_name: 'Test',
-        last_name: 'User'
-      }
+        last_name: 'User',
+      },
     });
-  })
+  }),
 ];

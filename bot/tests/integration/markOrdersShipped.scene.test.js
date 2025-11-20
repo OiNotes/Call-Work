@@ -9,6 +9,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
 import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
+import { mockShopValidation } from '../helpers/commonMocks.js';
 
 describe('Mark Orders Shipped Scene (P0)', () => {
   let testBot;
@@ -22,10 +23,13 @@ describe('Mark Orders Shipped Scene (P0)', () => {
         shopId: 1,
         shopName: 'TestShop',
         userId: 1,
-        user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-      }
+        user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+      },
     });
     mock = new MockAdapter(api);
+
+    // Mock shop validation (required by validateShopBeforeScene middleware)
+    mockShopValidation(mock, 1);
   });
 
   afterEach(() => {
@@ -37,15 +41,50 @@ describe('Mark Orders Shipped Scene (P0)', () => {
     it('single IDs: "1 3 5" → [1, 3, 5]', async () => {
       // Mock активные заказы
       const mockOrders = [
-        { id: 101, product_name: 'Item 1', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' },
-        { id: 102, product_name: 'Item 2', status: 'processing', buyer_username: 'buyer2', quantity: 2, total_price: '20.00' },
-        { id: 103, product_name: 'Item 3', status: 'confirmed', buyer_username: 'buyer3', quantity: 1, total_price: '15.00' },
-        { id: 104, product_name: 'Item 4', status: 'processing', buyer_username: 'buyer4', quantity: 3, total_price: '30.00' },
-        { id: 105, product_name: 'Item 5', status: 'confirmed', buyer_username: 'buyer5', quantity: 1, total_price: '25.00' }
+        {
+          id: 101,
+          product_name: 'Item 1',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 102,
+          product_name: 'Item 2',
+          status: 'processing',
+          buyer_username: 'buyer2',
+          quantity: 2,
+          total_price: '20.00',
+        },
+        {
+          id: 103,
+          product_name: 'Item 3',
+          status: 'confirmed',
+          buyer_username: 'buyer3',
+          quantity: 1,
+          total_price: '15.00',
+        },
+        {
+          id: 104,
+          product_name: 'Item 4',
+          status: 'processing',
+          buyer_username: 'buyer4',
+          quantity: 3,
+          total_price: '30.00',
+        },
+        {
+          id: 105,
+          product_name: 'Item 5',
+          status: 'confirmed',
+          buyer_username: 'buyer5',
+          quantity: 1,
+          total_price: '25.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       // Step 1: Enter scene
@@ -72,15 +111,50 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('range: "1-5" → [1, 2, 3, 4, 5]', async () => {
       const mockOrders = [
-        { id: 201, product_name: 'Product 1', status: 'confirmed', buyer_username: 'user1', quantity: 1, total_price: '10.00' },
-        { id: 202, product_name: 'Product 2', status: 'confirmed', buyer_username: 'user2', quantity: 1, total_price: '10.00' },
-        { id: 203, product_name: 'Product 3', status: 'confirmed', buyer_username: 'user3', quantity: 1, total_price: '10.00' },
-        { id: 204, product_name: 'Product 4', status: 'confirmed', buyer_username: 'user4', quantity: 1, total_price: '10.00' },
-        { id: 205, product_name: 'Product 5', status: 'confirmed', buyer_username: 'user5', quantity: 1, total_price: '10.00' }
+        {
+          id: 201,
+          product_name: 'Product 1',
+          status: 'confirmed',
+          buyer_username: 'user1',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 202,
+          product_name: 'Product 2',
+          status: 'confirmed',
+          buyer_username: 'user2',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 203,
+          product_name: 'Product 3',
+          status: 'confirmed',
+          buyer_username: 'user3',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 204,
+          product_name: 'Product 4',
+          status: 'confirmed',
+          buyer_username: 'user4',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 205,
+          product_name: 'Product 5',
+          status: 'confirmed',
+          buyer_username: 'user5',
+          quantity: 1,
+          total_price: '10.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -101,11 +175,11 @@ describe('Mark Orders Shipped Scene (P0)', () => {
         status: 'confirmed',
         buyer_username: `user${i + 1}`,
         quantity: 1,
-        total_price: '10.00'
+        total_price: '10.00',
       }));
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -124,12 +198,26 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('duplicates removal: "1 1 2" → [1, 2]', async () => {
       const mockOrders = [
-        { id: 401, product_name: 'Item A', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' },
-        { id: 402, product_name: 'Item B', status: 'confirmed', buyer_username: 'buyer2', quantity: 1, total_price: '20.00' }
+        {
+          id: 401,
+          product_name: 'Item A',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 402,
+          product_name: 'Item B',
+          status: 'confirmed',
+          buyer_username: 'buyer2',
+          quantity: 1,
+          total_price: '20.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -155,12 +243,12 @@ describe('Mark Orders Shipped Scene (P0)', () => {
           status: 'confirmed',
           quantity: 1,
           total_price: '1200.00',
-          shop_name: 'TestShop'
-        }
+          shop_name: 'TestShop',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -181,25 +269,43 @@ describe('Mark Orders Shipped Scene (P0)', () => {
       const keyboard = testBot.getLastReplyKeyboard();
       expect(keyboard).toBeTruthy();
       const buttons = keyboard.flat();
-      expect(buttons.some(b => b.callback_data === 'confirm_ship')).toBe(true);
-      expect(buttons.some(b => b.callback_data === 'cancel_ship')).toBe(true);
+      expect(buttons.some((b) => b.callback_data === 'confirm_ship')).toBe(true);
+      expect(buttons.some((b) => b.callback_data === 'cancel_ship')).toBe(true);
     });
   });
 
   describe('Bulk Update', () => {
     it('должен выполнить bulk update и отправить notifications', async () => {
       const mockOrders = [
-        { id: 601, product_name: 'Phone', status: 'confirmed', buyer_username: 'buyer1', buyer_telegram_id: 111, quantity: 1, total_price: '500.00', shop_name: 'TestShop' },
-        { id: 602, product_name: 'Tablet', status: 'confirmed', buyer_username: 'buyer2', buyer_telegram_id: 222, quantity: 1, total_price: '300.00', shop_name: 'TestShop' }
+        {
+          id: 601,
+          product_name: 'Phone',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          buyer_telegram_id: 111,
+          quantity: 1,
+          total_price: '500.00',
+          shop_name: 'TestShop',
+        },
+        {
+          id: 602,
+          product_name: 'Tablet',
+          status: 'confirmed',
+          buyer_username: 'buyer2',
+          buyer_telegram_id: 222,
+          quantity: 1,
+          total_price: '300.00',
+          shop_name: 'TestShop',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       // Mock bulk update
       mock.onPost('/orders/bulk-status').reply(200, {
-        data: { updated: 2, notified: 2 }
+        data: { updated: 2, notified: 2 },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -225,18 +331,45 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('должен обработать частичный успех (не все заказы обновились)', async () => {
       const mockOrders = [
-        { id: 701, product_name: 'Item 1', status: 'confirmed', buyer_username: 'buyer1', buyer_telegram_id: 111, quantity: 1, total_price: '10.00', shop_name: 'TestShop' },
-        { id: 702, product_name: 'Item 2', status: 'confirmed', buyer_username: 'buyer2', buyer_telegram_id: 222, quantity: 1, total_price: '20.00', shop_name: 'TestShop' },
-        { id: 703, product_name: 'Item 3', status: 'confirmed', buyer_username: 'buyer3', buyer_telegram_id: 333, quantity: 1, total_price: '15.00', shop_name: 'TestShop' }
+        {
+          id: 701,
+          product_name: 'Item 1',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          buyer_telegram_id: 111,
+          quantity: 1,
+          total_price: '10.00',
+          shop_name: 'TestShop',
+        },
+        {
+          id: 702,
+          product_name: 'Item 2',
+          status: 'confirmed',
+          buyer_username: 'buyer2',
+          buyer_telegram_id: 222,
+          quantity: 1,
+          total_price: '20.00',
+          shop_name: 'TestShop',
+        },
+        {
+          id: 703,
+          product_name: 'Item 3',
+          status: 'confirmed',
+          buyer_username: 'buyer3',
+          buyer_telegram_id: 333,
+          quantity: 1,
+          total_price: '15.00',
+          shop_name: 'TestShop',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       // Mock partial success (только 2 из 3 обновились)
       mock.onPost('/orders/bulk-status').reply(200, {
-        data: { updated: 2, notified: 2 }
+        data: { updated: 2, notified: 2 },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -257,11 +390,18 @@ describe('Mark Orders Shipped Scene (P0)', () => {
   describe('Edge Cases', () => {
     it('invalid IDs: "abc" → error', async () => {
       const mockOrders = [
-        { id: 801, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' }
+        {
+          id: 801,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -276,11 +416,18 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('out of range IDs: "999" → error', async () => {
       const mockOrders = [
-        { id: 901, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' }
+        {
+          id: 901,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -295,11 +442,18 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('empty input → error', async () => {
       const mockOrders = [
-        { id: 1001, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' }
+        {
+          id: 1001,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -315,7 +469,7 @@ describe('Mark Orders Shipped Scene (P0)', () => {
     it('no active orders → показать сообщение и выйти', async () => {
       // Mock empty orders
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: []
+        data: [],
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -326,16 +480,25 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('API error при bulk update → показать ошибку', async () => {
       const mockOrders = [
-        { id: 1101, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', buyer_telegram_id: 111, quantity: 1, total_price: '10.00', shop_name: 'TestShop' }
+        {
+          id: 1101,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          buyer_telegram_id: 111,
+          quantity: 1,
+          total_price: '10.00',
+          shop_name: 'TestShop',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       // Mock API error
       mock.onPost('/orders/bulk-status').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -355,11 +518,18 @@ describe('Mark Orders Shipped Scene (P0)', () => {
   describe('Cancel Flow', () => {
     it('отмена через кнопку на этапе ввода', async () => {
       const mockOrders = [
-        { id: 1201, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' }
+        {
+          id: 1201,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -374,11 +544,19 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('отмена на этапе confirmation', async () => {
       const mockOrders = [
-        { id: 1301, product_name: 'Product', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00', shop_name: 'TestShop' }
+        {
+          id: 1301,
+          product_name: 'Product',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+          shop_name: 'TestShop',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -406,8 +584,8 @@ describe('Mark Orders Shipped Scene (P0)', () => {
           token: 'test-jwt-token',
           shopId: null, // No shopId
           userId: 1,
-          user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-        }
+          user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+        },
       });
       const noShopMock = new MockAdapter(api);
 
@@ -427,8 +605,8 @@ describe('Mark Orders Shipped Scene (P0)', () => {
           token: null, // No token
           shopId: 1,
           userId: 1,
-          user: { id: 1, telegramId: '123456', selectedRole: 'seller' }
-        }
+          user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
+        },
       });
       const noTokenMock = new MockAdapter(api);
 
@@ -453,15 +631,15 @@ describe('Mark Orders Shipped Scene (P0)', () => {
         buyer_telegram_id: 1000 + i + 1,
         quantity: 1,
         total_price: '10.00',
-        shop_name: 'TestShop'
+        shop_name: 'TestShop',
       }));
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       mock.onPost('/orders/bulk-status').reply(200, {
-        data: { updated: 16, notified: 16 }
+        data: { updated: 16, notified: 16 },
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));
@@ -493,13 +671,34 @@ describe('Mark Orders Shipped Scene (P0)', () => {
 
     it('обработка заказов с разными статусами (confirmed + processing)', async () => {
       const mockOrders = [
-        { id: 1501, product_name: 'Item 1', status: 'confirmed', buyer_username: 'buyer1', quantity: 1, total_price: '10.00' },
-        { id: 1502, product_name: 'Item 2', status: 'processing', buyer_username: 'buyer2', quantity: 1, total_price: '20.00' },
-        { id: 1503, product_name: 'Item 3', status: 'confirmed', buyer_username: 'buyer3', quantity: 1, total_price: '15.00' }
+        {
+          id: 1501,
+          product_name: 'Item 1',
+          status: 'confirmed',
+          buyer_username: 'buyer1',
+          quantity: 1,
+          total_price: '10.00',
+        },
+        {
+          id: 1502,
+          product_name: 'Item 2',
+          status: 'processing',
+          buyer_username: 'buyer2',
+          quantity: 1,
+          total_price: '20.00',
+        },
+        {
+          id: 1503,
+          product_name: 'Item 3',
+          status: 'confirmed',
+          buyer_username: 'buyer3',
+          quantity: 1,
+          total_price: '15.00',
+        },
       ];
 
       mock.onGet('/orders', { params: { shop_id: 1, status: 'confirmed' } }).reply(200, {
-        data: mockOrders
+        data: mockOrders,
       });
 
       await testBot.handleUpdate(callbackUpdate('seller:mark_shipped'));

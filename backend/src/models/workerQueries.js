@@ -154,11 +154,11 @@ export const workerQueries = {
        WHERE s.id = $1`,
       [shopId, userId]
     );
-    
+
     const accessType = result.rows[0]?.access_type;
     return {
       hasAccess: accessType !== null,
-      accessType
+      accessType,
     };
   },
 
@@ -206,7 +206,7 @@ export const workerQueries = {
       [shopId]
     );
     return parseInt(result.rows[0]?.count || 0);
-  }
+  },
 };
 
 export default workerQueries;

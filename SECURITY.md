@@ -35,14 +35,14 @@ Status Stock implements **cryptographically secure** Telegram WebApp authenticat
 
 ### ❌ What We Prevent
 
-| Threat | Prevention Method |
-|--------|-------------------|
-| **User Impersonation** | HMAC-SHA256 signature verification |
-| **Timing Attacks** | `crypto.timingSafeEqual()` comparison |
-| **Replay Attacks** | 24-hour expiration check |
-| **Tampered Data** | Hash invalidation on any modification |
-| **Bot Token Exposure** | Server-side validation only |
-| **CSRF** | Telegram initData binding to user |
+| Threat                 | Prevention Method                     |
+| ---------------------- | ------------------------------------- |
+| **User Impersonation** | HMAC-SHA256 signature verification    |
+| **Timing Attacks**     | `crypto.timingSafeEqual()` comparison |
+| **Replay Attacks**     | 24-hour expiration check              |
+| **Tampered Data**      | Hash invalidation on any modification |
+| **Bot Token Exposure** | Server-side validation only           |
+| **CSRF**               | Telegram initData binding to user     |
 
 ---
 
@@ -56,6 +56,7 @@ npm test __tests__/unit/telegramAuth.test.js
 ```
 
 **Coverage:**
+
 - ✅ Valid signature verification
 - ✅ Tampered hash rejection
 - ✅ Tampered user ID rejection
@@ -72,6 +73,7 @@ npm test __tests__/integration/telegramAuth.integration.test.js
 ```
 
 **Coverage:**
+
 - ✅ New user creation (201)
 - ✅ Existing user login (200)
 - ✅ User info update
@@ -94,6 +96,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
 ```
 
 **Security checklist:**
+
 - [ ] `JWT_SECRET` is at least 32 characters
 - [ ] `JWT_SECRET` is randomly generated
 - [ ] `TELEGRAM_BOT_TOKEN` is never in frontend code
@@ -107,12 +110,14 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
 ### DO ✅
 
 1. **Always validate on server-side**
+
    ```javascript
    // ✅ Correct
    router.post('/api/endpoint', verifyTelegramInitData, handler);
    ```
 
 2. **Use timing-safe comparison**
+
    ```javascript
    // ✅ Correct (already implemented)
    crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer);
@@ -122,6 +127,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
    ```
 
 3. **Check expiration**
+
    ```javascript
    // ✅ Correct (already implemented)
    const maxAge = 24 * 60 * 60; // 24 hours
@@ -129,6 +135,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
    ```
 
 4. **Send initData in header**
+
    ```javascript
    // ✅ Correct
    headers: { 'x-telegram-init-data': initData }
@@ -140,6 +147,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
 ### DON'T ❌
 
 1. **Never trust client-side validation**
+
    ```javascript
    // ❌ VULNERABLE
    const { telegramId } = req.body; // Can be forged!
@@ -149,6 +157,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
    ```
 
 2. **Never use === for hash comparison**
+
    ```javascript
    // ❌ VULNERABLE to timing attacks
    if (hash === calculatedHash) { ... }
@@ -158,6 +167,7 @@ JWT_EXPIRES_IN=7d  # Can be reduced for higher security
    ```
 
 3. **Never expose bot token**
+
    ```javascript
    // ❌ CRITICAL VULNERABILITY
    const botToken = '123456:ABC-DEF...'; // Hardcoded
@@ -195,6 +205,7 @@ If you discover a security vulnerability, please report it privately:
 ### v1.0.0 (2024-01-15)
 
 **Changes:**
+
 - ✅ Fixed timing attack vulnerability in hash comparison
   - Before: `if (calculatedHash !== hash)`
   - After: `crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer)`
@@ -205,6 +216,7 @@ If you discover a security vulnerability, please report it privately:
 - ✅ Documented security best practices
 
 **Tested attack vectors:**
+
 - [x] Timing attacks on hash comparison - MITIGATED
 - [x] Replay attacks with expired initData - MITIGATED
 - [x] User impersonation via tampered data - MITIGATED
@@ -223,6 +235,7 @@ app.use(helmet());
 ```
 
 **Headers applied:**
+
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `X-XSS-Protection: 1; mode=block`
@@ -239,7 +252,7 @@ Authentication endpoints are protected by rate limiting:
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per window
-  message: 'Too many requests, please try again later'
+  message: 'Too many requests, please try again later',
 });
 ```
 

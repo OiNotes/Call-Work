@@ -65,7 +65,6 @@ export const validateShopBeforeScene = async (ctx, sceneName) => {
 
     logger.info(`[validateShop] ✅ Shop ${shop.id} validated for scene ${sceneName}`);
     return true; // ✅ Valid
-
   } catch (error) {
     // Handle specific HTTP errors
     if (error.response?.status === 404) {
@@ -76,14 +75,21 @@ export const validateShopBeforeScene = async (ctx, sceneName) => {
     }
 
     if (error.response?.status === 403) {
-      logger.warn(`[validateShop] Access denied to shop ${ctx.session.shopId} for scene ${sceneName}`);
+      logger.warn(
+        `[validateShop] Access denied to shop ${ctx.session.shopId} for scene ${sceneName}`
+      );
       ctx.session.shopId = null; // Clear invalid shopId
-      await ctx.reply('❌ Доступ к магазину запрещён. Вы не являетесь владельцем.', sellerMenuNoShop);
+      await ctx.reply(
+        '❌ Доступ к магазину запрещён. Вы не являетесь владельцем.',
+        sellerMenuNoShop
+      );
       return false;
     }
 
     if (error.response?.status === 401) {
-      logger.warn(`[validateShop] Unauthorized for shop ${ctx.session.shopId} for scene ${sceneName}`);
+      logger.warn(
+        `[validateShop] Unauthorized for shop ${ctx.session.shopId} for scene ${sceneName}`
+      );
       ctx.session.token = null; // Clear invalid token
       await ctx.reply('❌ Требуется повторная авторизация. Отправьте /start.');
       return false;

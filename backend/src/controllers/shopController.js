@@ -1,5 +1,6 @@
-import { shopQueries } from '../models/db.js';
-import { dbErrorHandler } from '../middleware/errorHandler.js';
+import { shopQueries } from '../database/queries/index.js';
+import { dbErrorHandler, asyncHandler } from '../middleware/errorHandler.js';
+import { NotFoundError, UnauthorizedError, ValidationError, ConflictError, PaymentRequiredError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
 import { activatePromoSubscription } from '../services/subscriptionService.js';
 import { validateAddress } from '../services/walletService.js';
@@ -13,7 +14,7 @@ export const shopController = {
    * Create new shop
    * Any user can create a shop - they become a seller by creating one
    */
-  create: async (req, res) => {
+  create: asyncHandler(async (req, res) => {
     try {
       const { name, description, logo, promoCode, tier = 'basic', subscriptionId } = req.body;
       const normalizedPromo = promoCode?.trim().toLowerCase();
@@ -23,41 +24,29 @@ export const shopController = {
         userId: req.user.id,
         name,
         tier,
-        subscriptionId
+        subscriptionId,
       });
 
       // Validate tier
       if (!['basic', 'pro'].includes(tier)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid tier. Must be "basic" or "pro"'
-        });
+        throw new ValidationError('Invalid tier. Must be "basic" or "pro"');
       }
 
       // Check if user already has a shop
       const existingShops = await shopQueries.findByOwnerId(req.user.id);
       if (existingShops.length > 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'User already has a shop'
-        });
+        throw new ValidationError('User already has a shop');
       }
 
       // Validate shop name
       if (!name || name.trim().length < 3) {
-        return res.status(400).json({
-          success: false,
-          error: 'Shop name must be at least 3 characters'
-        });
+        throw new ValidationError('Shop name must be at least 3 characters');
       }
 
       // Check if shop name is already taken
       const nameTaken = await shopQueries.isNameTaken(name);
       if (nameTaken) {
-        return res.status(409).json({
-          success: false,
-          error: 'Shop name already taken. Try another one'
-        });
+        throw new ConflictError('Shop name already taken. Try another one');
       }
 
       // Handle subscription-based creation
@@ -78,10 +67,7 @@ export const shopController = {
 
           if (subscriptionCheck.rows.length === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({
-              success: false,
-              error: 'Subscription not found'
-            });
+            throw new NotFoundError('Subscription');
           }
 
           const subscription = subscriptionCheck.rows[0];
@@ -89,28 +75,19 @@ export const shopController = {
           // Verify subscription belongs to user
           if (subscription.user_id !== req.user.id) {
             await client.query('ROLLBACK');
-            return res.status(403).json({
-              success: false,
-              error: 'Subscription belongs to another user'
-            });
+            throw new UnauthorizedError('Subscription belongs to another user');
           }
 
           // Verify subscription is paid
           if (subscription.status !== 'paid') {
             await client.query('ROLLBACK');
-            return res.status(400).json({
-              success: false,
-              error: `Subscription not paid yet (status: ${subscription.status})`
-            });
+            throw new ValidationError(`Subscription not paid yet (status: ${subscription.status})`);
           }
 
           // Verify subscription not already linked
           if (subscription.shop_id !== null) {
             await client.query('ROLLBACK');
-            return res.status(400).json({
-              success: false,
-              error: 'Subscription already linked to a shop'
-            });
+            throw new ValidationError('Subscription already linked to a shop');
           }
 
           // Create shop
@@ -137,14 +114,13 @@ export const shopController = {
           logger.info('[ShopController] Shop created and linked to subscription:', {
             shopId: shop.id,
             subscriptionId,
-            userId: req.user.id
+            userId: req.user.id,
           });
 
           return res.status(201).json({
             success: true,
-            data: shop
+            data: shop,
           });
-
         } catch (error) {
           await client.query('ROLLBACK');
           throw error;
@@ -157,18 +133,12 @@ export const shopController = {
       if (wantsPro && normalizedPromo) {
         // Validate promo code against database
         const validation = await promoCodeQueries.validatePromoCode(normalizedPromo, 'pro');
-        
+
         if (!validation.valid) {
-          return res.status(400).json({
-            success: false,
-            error: validation.error || 'Invalid promo code'
-          });
+          throw new ValidationError(validation.error || 'Invalid promo code');
         }
       } else if (wantsPro && !normalizedPromo) {
-        return res.status(402).json({
-          success: false,
-          error: 'PRO plan requires payment or valid promo code'
-        });
+        throw new PaymentRequiredError('PRO plan requires payment or valid promo code');
       }
 
       let shop = await shopQueries.create({
@@ -176,91 +146,88 @@ export const shopController = {
         name,
         description,
         logo,
-        tier
+        tier,
       });
 
       if (wantsPro && normalizedPromo) {
         // Re-validate promo code (additional safety check)
         const validation = await promoCodeQueries.validatePromoCode(normalizedPromo, 'pro');
-        
+
         if (validation.valid) {
           try {
             shop = await activatePromoSubscription(shop.id, req.user.id, normalizedPromo);
-            
+
             // Increment promo code usage count
             await promoCodeQueries.incrementUsageCount(validation.promoCode.id);
-            
+
             logger.info(`Promo code applied for shop ${shop.id} by user ${req.user.id}`, {
               promoCode: normalizedPromo,
-              promoCodeId: validation.promoCode.id
+              promoCodeId: validation.promoCode.id,
             });
           } catch (promoError) {
-          logger.error('Promo activation failed', { error: promoError.message, stack: promoError.stack });
+            logger.error('Promo activation failed', {
+              error: promoError.message,
+              stack: promoError.stack,
+            });
 
-          // Check if it's idempotency error (promo already used)
-          if (promoError.message === 'Promo code already used by this user') {
-            return res.status(409).json({
+            // Check if it's idempotency error (promo already used)
+            if (promoError.message === 'Promo code already used by this user') {
+              throw new ConflictError('This promo code has already been used by your account');
+            }
+
+            try {
+              await shopQueries.delete(shop.id);
+            } catch (cleanupError) {
+              logger.error('Failed to rollback shop after promo failure', {
+                error: cleanupError.message,
+                stack: cleanupError.stack,
+              });
+            }
+            return res.status(500).json({
               success: false,
-              error: 'This promo code has already been used by your account'
+              error: 'Failed to apply promo code. Shop was not created.',
             });
           }
-
-          try {
-            await shopQueries.delete(shop.id);
-          } catch (cleanupError) {
-            logger.error('Failed to rollback shop after promo failure', { error: cleanupError.message, stack: cleanupError.stack });
-          }
-          return res.status(500).json({
-            success: false,
-            error: 'Failed to apply promo code. Shop was not created.'
-          });
         }
       }
-    }
 
       return res.status(201).json({
         success: true,
-        data: shop
+        data: shop,
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Create shop error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to create shop'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Get shop by ID
    * SECURITY FIX (P0-SEC-2): Filter sensitive data for non-owners
    */
-  getById: async (req, res) => {
+  getById: asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
 
       const shop = await shopQueries.findById(id);
 
       if (!shop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       // SECURITY: Filter sensitive data if not owner
       const isOwner = req.user && req.user.id === shop.owner_id;
-      
+
       if (!isOwner) {
         // Remove sensitive fields for non-owners
         delete shop.wallet_btc;
@@ -274,62 +241,56 @@ export const shopController = {
 
       return res.status(200).json({
         success: true,
-        data: shop
+        data: shop,
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Get shop error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to get shop'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Get shops by seller (current user)
    * Any user can check if they have shops - having a shop makes them a seller
    */
-  getMyShops: async (req, res) => {
+  getMyShops: asyncHandler(async (req, res) => {
     try {
       const shops = await shopQueries.findByOwnerId(req.user.id);
 
       return res.status(200).json({
         success: true,
-        data: shops
+        data: shops,
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Get my shops error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to get shops'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Update shop
    */
-  update: async (req, res) => {
+  update: asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
       const { name, description, logo, isActive } = req.body;
@@ -338,27 +299,18 @@ export const shopController = {
       const existingShop = await shopQueries.findById(id);
 
       if (!existingShop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       if (existingShop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only update your own shops'
-        });
+        throw new UnauthorizedError('You can only update your own shops');
       }
 
       // Check if new name is already taken (if name is being updated)
       if (name && name !== existingShop.name) {
         const nameTaken = await shopQueries.isNameTaken(name, id);
         if (nameTaken) {
-          return res.status(409).json({
-            success: false,
-            error: 'Shop name already taken. Try another one'
-          });
+          throw new ConflictError('Shop name already taken. Try another one');
         }
       }
 
@@ -366,36 +318,33 @@ export const shopController = {
         name,
         description,
         logo,
-        isActive
+        isActive,
       });
 
       return res.status(200).json({
         success: true,
-        data: shop
+        data: shop,
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Update shop error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update shop'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Delete shop
    */
-  delete: async (req, res) => {
+  delete: asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -403,51 +352,49 @@ export const shopController = {
       const existingShop = await shopQueries.findById(id);
 
       if (!existingShop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       if (existingShop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only delete your own shops'
-        });
+        throw new UnauthorizedError('You can only delete your own shops');
       }
 
       await shopQueries.delete(id);
 
       return res.status(200).json({
         success: true,
-        message: 'Shop deleted successfully'
+        message: 'Shop deleted successfully',
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Delete shop error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to delete shop'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * List all active shops
    */
-  listActive: async (req, res) => {
+  listActive: asyncHandler(async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 50;
+      const page = Number.parseInt(req.query.page, 10) || 1;
+      if (!Number.isInteger(page) || page <= 0) {
+        throw new ValidationError('Invalid page parameter');
+      }
+
+      const limit = Number.parseInt(req.query.limit, 10) || 50;
+      if (!Number.isInteger(limit) || limit <= 0 || limit > 1000) {
+        throw new ValidationError('Invalid limit parameter (must be 1-1000)');
+      }
       const offset = (page - 1) * limit;
 
       const shops = await shopQueries.listActive(limit, offset);
@@ -458,52 +405,46 @@ export const shopController = {
         pagination: {
           page,
           limit,
-          total: shops.length
-        }
+          total: shops.length,
+        },
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('List shops error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to list shops'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Search active shops by name
    */
-  search: async (req, res) => {
+  search: asyncHandler(async (req, res) => {
     try {
       const term = (req.query.q || req.query.query || '').trim();
 
       if (term.length < 2) {
-        return res.status(400).json({
-          success: false,
-          error: 'Search query must be at least 2 characters long'
-        });
+        throw new ValidationError('Search query must be at least 2 characters long');
       }
 
-      const limit = parseInt(req.query.limit, 10) || 10;
-      const shops = await shopQueries.searchByName(
-        term,
-        limit,
-        req.user?.id ?? null
-      );
+      const limit = Number.parseInt(req.query.limit, 10) || 10;
+      if (!Number.isInteger(limit) || limit <= 0 || limit > 100) {
+        throw new ValidationError('Invalid limit parameter (must be 1-100)');
+      }
+
+      const shops = await shopQueries.searchByName(term, limit, req.user?.id ?? null);
 
       return res.status(200).json({
         success: true,
-        data: shops
+        data: shops,
       });
     } catch (error) {
       if (error.code) {
@@ -511,23 +452,21 @@ export const shopController = {
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Search shops error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to search shops'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Get shop wallets
    * SECURITY FIX (#5): Only shop owner can view wallet addresses
    */
-  getWallets: async (req, res) => {
+  getWallets: asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -540,10 +479,7 @@ export const shopController = {
 
       if (!shop) {
         logger.warn('[getWallets] Shop not found', { shopId: id });
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       // FIX #5: Check ownership - only shop owner can view wallet addresses
@@ -551,14 +487,10 @@ export const shopController = {
         logger.warn('[getWallets] Unauthorized wallet access attempt', {
           userId: req.user.id,
           shopId: id,
-          shopOwnerId: shop.owner_id
+          shopOwnerId: shop.owner_id,
         });
-        
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. Only shop owner can view wallet addresses.',
-          code: 'FORBIDDEN'
-        });
+
+        throw new UnauthorizedError('Access denied. Only shop owner can view wallet addresses.');
       }
 
       // Return wallet data (only for owner)
@@ -569,25 +501,22 @@ export const shopController = {
           wallet_eth: shop.wallet_eth || null,
           wallet_usdt: shop.wallet_usdt || null,
           wallet_ltc: shop.wallet_ltc || null,
-          updated_at: shop.updated_at
-        }
+          updated_at: shop.updated_at,
+        },
       });
-
     } catch (error) {
       logger.error('Get wallets error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to get wallets'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Update shop wallets
    * P0-DB-1 FIX: Check for wallet duplicates before updating
    * WALLET-VALIDATION: Validate all crypto addresses before database update
    */
-  updateWallets: async (req, res) => {
+  updateWallets: asyncHandler(async (req, res) => {
     try {
       const { id } = req.params;
       const { wallet_btc, wallet_eth, wallet_usdt, wallet_ltc } = req.body;
@@ -596,17 +525,11 @@ export const shopController = {
       const existingShop = await shopQueries.findById(id);
 
       if (!existingShop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       if (existingShop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only update your own shop wallets'
-        });
+        throw new UnauthorizedError('You can only update your own shop wallets');
       }
 
       // WALLET-VALIDATION: Validate Bitcoin address
@@ -616,12 +539,9 @@ export const shopController = {
           logger.warn(`[Wallet Validation] Invalid BTC address attempt`, {
             userId: req.user.id,
             shopId: id,
-            address: wallet_btc.substring(0, 8) + '...'
+            address: wallet_btc.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Bitcoin address format: ${wallet_btc}`
-          });
+          throw new ValidationError(`Invalid Bitcoin address format: ${wallet_btc}`);
         }
       }
 
@@ -632,12 +552,9 @@ export const shopController = {
           logger.warn(`[Wallet Validation] Invalid ETH address attempt`, {
             userId: req.user.id,
             shopId: id,
-            address: wallet_eth.substring(0, 8) + '...'
+            address: wallet_eth.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Ethereum address format: ${wallet_eth}`
-          });
+          throw new ValidationError(`Invalid Ethereum address format: ${wallet_eth}`);
         }
       }
 
@@ -648,12 +565,9 @@ export const shopController = {
           logger.warn(`[Wallet Validation] Invalid USDT address attempt`, {
             userId: req.user.id,
             shopId: id,
-            address: wallet_usdt.substring(0, 8) + '...'
+            address: wallet_usdt.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid USDT (ERC20) address format: ${wallet_usdt}`
-          });
+          throw new ValidationError(`Invalid USDT (ERC20) address format: ${wallet_usdt}`);
         }
       }
 
@@ -664,49 +578,48 @@ export const shopController = {
           logger.warn(`[Wallet Validation] Invalid LTC address attempt`, {
             userId: req.user.id,
             shopId: id,
-            address: wallet_ltc.substring(0, 8) + '...'
+            address: wallet_ltc.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Litecoin address format: ${wallet_ltc}`
-          });
+          throw new ValidationError(`Invalid Litecoin address format: ${wallet_ltc}`);
         }
       }
 
       // Build update object (only include provided fields)
       const walletUpdates = {};
-      if (wallet_btc !== undefined) {walletUpdates.wallet_btc = wallet_btc;}
-      if (wallet_eth !== undefined) {walletUpdates.wallet_eth = wallet_eth;}
-      if (wallet_usdt !== undefined) {walletUpdates.wallet_usdt = wallet_usdt;}
-      if (wallet_ltc !== undefined) {walletUpdates.wallet_ltc = wallet_ltc;}
+      if (wallet_btc !== undefined) {
+        walletUpdates.wallet_btc = wallet_btc;
+      }
+      if (wallet_eth !== undefined) {
+        walletUpdates.wallet_eth = wallet_eth;
+      }
+      if (wallet_usdt !== undefined) {
+        walletUpdates.wallet_usdt = wallet_usdt;
+      }
+      if (wallet_ltc !== undefined) {
+        walletUpdates.wallet_ltc = wallet_ltc;
+      }
 
       // P0-DB-1 FIX: Check for duplicate wallets before updating
       // Only check wallets that are being updated and are not empty
       const pool = (await import('../config/database.js')).default;
-      
+
       for (const [field, value] of Object.entries(walletUpdates)) {
         // Skip empty/null values (allowed)
-        if (!value || value.trim() === '') { continue; }
-        
+        if (!value || value.trim() === '') {
+          continue;
+        }
+
         const normalizedValue = value.trim();
-        
+
         // Check if this wallet address is already used by another shop
         const duplicateCheck = await pool.query(
           `SELECT id, name FROM shops WHERE ${field} = $1 AND id != $2`,
           [normalizedValue, id]
         );
-        
+
         if (duplicateCheck.rows.length > 0) {
           const conflictShop = duplicateCheck.rows[0];
-          return res.status(409).json({
-            success: false,
-            error: `Wallet address already in use by another shop`,
-            details: {
-              wallet_type: field.replace('wallet_', '').toUpperCase(),
-              conflicting_shop_id: conflictShop.id,
-              conflicting_shop_name: conflictShop.name
-            }
-          });
+          throw new ConflictError(`Wallet address already in use by another shop`);
         }
       }
 
@@ -719,27 +632,24 @@ export const shopController = {
           wallet_btc: shop.wallet_btc || null,
           wallet_eth: shop.wallet_eth || null,
           wallet_usdt: shop.wallet_usdt || null,
-          wallet_ltc: shop.wallet_ltc || null
-        }
+          wallet_ltc: shop.wallet_ltc || null,
+          updated_at: shop.updated_at,
+        },
       });
-
     } catch (error) {
       // P0-DB-1: Handle unique constraint violation
       if (error.code === '23505' && error.constraint?.includes('wallet')) {
-        const walletType = error.constraint.replace('shops_wallet_', '').replace('_unique', '').toUpperCase();
-        return res.status(409).json({
-          success: false,
-          error: `${walletType} wallet address already in use by another shop`
-        });
+        const walletType = error.constraint
+          .replace('shops_wallet_', '')
+          .replace('_unique', '')
+          .toUpperCase();
+        throw new ConflictError(`${walletType} wallet address already in use by another shop`);
       }
 
       logger.error('Update wallets error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update wallets'
-      });
+      throw error;
     }
-  }
+  }),
 };
 
 export default shopController;

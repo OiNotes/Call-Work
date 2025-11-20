@@ -22,7 +22,9 @@ export function shopDetailKeyboard(shopId, isSubscribed = false) {
   }
 
   buttons.push([Markup.button.callback('🛍 Товары магазина', `browse_products_${shopId}`)]);
-  buttons.push([Markup.button.callback('🌐 Открыть в веб-приложении', `open_shop_webapp_${shopId}`)]);
+  buttons.push([
+    Markup.button.callback('🌐 Открыть в веб-приложении', `open_shop_webapp_${shopId}`),
+  ]);
   buttons.push([Markup.button.callback('⬅️ Назад', 'buyer_menu')]);
 
   return Markup.inlineKeyboard(buttons);
@@ -56,10 +58,7 @@ export function browseProductsKeyboard(products, shopId) {
   }
 
   const buttons = products.map((product) => [
-    Markup.button.callback(
-      `${product.name} - $${product.price}`,
-      `view_product_${product.id}`
-    ),
+    Markup.button.callback(`${product.name} - $${product.price}`, `view_product_${product.id}`),
   ]);
 
   buttons.push([Markup.button.callback('⬅️ Назад к магазину', `view_shop_${shopId}`)]);
@@ -94,7 +93,9 @@ export function buyerOrderDetailKeyboard(orderId, currentStatus) {
   }
 
   if (currentStatus === 'shipped') {
-    buttons.push([Markup.button.callback('✅ Подтвердить получение', `confirm_delivery_${orderId}`)]);
+    buttons.push([
+      Markup.button.callback('✅ Подтвердить получение', `confirm_delivery_${orderId}`),
+    ]);
   }
 
   buttons.push([Markup.button.callback('💬 Связаться с продавцом', `contact_seller_${orderId}`)]);

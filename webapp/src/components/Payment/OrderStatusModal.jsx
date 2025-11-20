@@ -15,29 +15,17 @@ export default function OrderStatusModal() {
   const platform = usePlatform();
   const android = isAndroid(platform);
 
-  const overlayStyle = useMemo(
-    () => getSurfaceStyle('overlay', platform),
-    [platform]
-  );
+  const overlayStyle = useMemo(() => getSurfaceStyle('overlay', platform), [platform]);
 
-  const modalStyle = useMemo(
-    () => getSurfaceStyle('surfacePanel', platform),
-    [platform]
-  );
+  const modalStyle = useMemo(() => getSurfaceStyle('surfacePanel', platform), [platform]);
 
-  const cardStyle = useMemo(
-    () => getSurfaceStyle('glassCard', platform),
-    [platform]
-  );
+  const cardStyle = useMemo(() => getSurfaceStyle('glassCard', platform), [platform]);
 
-  const sheetSpring = useMemo(
-    () => getSpringPreset('sheet', platform),
-    [platform]
-  );
+  const sheetSpring = useMemo(() => getSpringPreset('sheet', platform), [platform]);
 
   const isOpen = paymentStep === 'success';
 
-  const cryptoInfo = CRYPTO_OPTIONS.find(c => c.id === selectedCrypto);
+  const cryptoInfo = CRYPTO_OPTIONS.find((c) => c.id === selectedCrypto);
 
   const handleClose = () => {
     triggerHaptic('medium');
@@ -74,15 +62,13 @@ export default function OrderStatusModal() {
             exit={{ scale: 0.8, opacity: 0, y: '-40%' }}
             transition={sheetSpring}
           >
-            <div
-              className="rounded-3xl overflow-hidden"
-              style={modalStyle}
-            >
+            <div className="rounded-3xl overflow-hidden" style={modalStyle}>
               {/* Header with gradient */}
               <div
                 className="relative p-8 text-center overflow-hidden"
                 style={{
-                  background: 'linear-gradient(180deg, rgba(255, 107, 0, 0.15) 0%, transparent 100%)'
+                  background:
+                    'linear-gradient(180deg, rgba(255, 107, 0, 0.15) 0%, transparent 100%)',
                 }}
               >
                 {/* Success Icon Animation */}
@@ -93,7 +79,7 @@ export default function OrderStatusModal() {
                     type: 'spring',
                     stiffness: 200,
                     damping: 15,
-                    delay: 0.2
+                    delay: 0.2,
                   }}
                   className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4"
                   style={{
@@ -103,7 +89,7 @@ export default function OrderStatusModal() {
                       0 0 0 8px rgba(255, 107, 0, 0.1),
                       0 0 0 16px rgba(255, 107, 0, 0.05),
                       inset 0 2px 0 rgba(255, 255, 255, 0.3)
-                    `
+                    `,
                   }}
                 >
                   <motion.svg
@@ -157,11 +143,13 @@ export default function OrderStatusModal() {
                   style={{
                     ...cardStyle,
                     background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
-                    boxShadow: 'none'
+                    boxShadow: 'none',
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm font-medium">{t('payment.orderNumber')}</span>
+                    <span className="text-gray-400 text-sm font-medium">
+                      {t('payment.orderNumber')}
+                    </span>
                     <span
                       className="text-white font-bold text-sm tabular-nums"
                       style={{ letterSpacing: '0.02em' }}
@@ -182,9 +170,7 @@ export default function OrderStatusModal() {
                       >
                         {cryptoInfo.icon}
                       </span>
-                      <span className="text-white font-semibold text-sm">
-                        {cryptoInfo.name}
-                      </span>
+                      <span className="text-white font-semibold text-sm">{cryptoInfo.name}</span>
                     </div>
                   </div>
 
@@ -207,8 +193,10 @@ export default function OrderStatusModal() {
                           className="px-3 py-2 rounded-lg font-mono text-xs text-gray-300 break-all tabular-nums"
                           style={{
                             ...cardStyle,
-                            background: android ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-                            boxShadow: 'none'
+                            background: android
+                              ? 'rgba(255, 255, 255, 0.12)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                            boxShadow: 'none',
                           }}
                         >
                           {formatTxHash(completedOrder.txHash, 24)}
@@ -223,7 +211,7 @@ export default function OrderStatusModal() {
                   className="rounded-xl p-4 flex items-center gap-3"
                   style={{
                     background: 'rgba(255, 193, 7, 0.1)',
-                    border: '1px solid rgba(255, 193, 7, 0.3)'
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
                   }}
                 >
                   <div className="relative flex-shrink-0">
@@ -231,24 +219,24 @@ export default function OrderStatusModal() {
                       className="w-3 h-3 rounded-full bg-yellow-500"
                       animate={{
                         scale: [1, 1.2, 1],
-                        opacity: [1, 0.7, 1]
+                        opacity: [1, 0.7, 1],
                       }}
                       transition={{
                         duration: 2,
                         repeat: Infinity,
-                        ease: 'easeInOut'
+                        ease: 'easeInOut',
                       }}
                     />
                     <motion.div
                       className="absolute inset-0 w-3 h-3 rounded-full bg-yellow-500"
                       animate={{
                         scale: [1, 1.5, 1],
-                        opacity: [0.5, 0, 0.5]
+                        opacity: [0.5, 0, 0.5],
                       }}
                       transition={{
                         duration: 2,
                         repeat: Infinity,
-                        ease: 'easeInOut'
+                        ease: 'easeInOut',
                       }}
                     />
                   </div>
@@ -256,9 +244,7 @@ export default function OrderStatusModal() {
                     <p className="text-yellow-500 font-semibold text-sm mb-0.5">
                       {t('payment.checkingPayment')}
                     </p>
-                    <p className="text-gray-400 text-xs">
-                      {t('payment.checkingDesc')}
-                    </p>
+                    <p className="text-gray-400 text-xs">{t('payment.checkingDesc')}</p>
                   </div>
                 </div>
 
@@ -267,11 +253,21 @@ export default function OrderStatusModal() {
                   className="rounded-xl p-4 flex items-start gap-3"
                   style={{
                     background: 'rgba(59, 130, 246, 0.05)',
-                    border: '1px solid rgba(59, 130, 246, 0.15)'
+                    border: '1px solid rgba(59, 130, 246, 0.15)',
                   }}
                 >
-                  <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <p className="text-gray-300 text-xs leading-relaxed">
                     {t('payment.blockchainInfo')}
@@ -296,7 +292,7 @@ export default function OrderStatusModal() {
                       0 8px 24px rgba(255, 107, 0, 0.15),
                       inset 0 1px 0 rgba(255, 255, 255, 0.2)
                     `,
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
                   }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}

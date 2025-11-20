@@ -5,7 +5,13 @@ import { useTelegram } from '../../hooks/useTelegram';
 import { useTranslation } from '../../i18n/useTranslation';
 import { validateTxHash } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid, isIOS } from '../../utils/platform';
+import {
+  getSpringPreset,
+  getSurfaceStyle,
+  getSheetMaxHeight,
+  isAndroid,
+  isIOS,
+} from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentHashModal() {
@@ -21,25 +27,13 @@ export default function PaymentHashModal() {
   // Memoize validation function to avoid recalculation on every render
   const isValidTxHash = useMemo(() => validateTxHash(txHash), [txHash]);
 
-  const overlayStyle = useMemo(
-    () => getSurfaceStyle('overlay', platform),
-    [platform]
-  );
+  const overlayStyle = useMemo(() => getSurfaceStyle('overlay', platform), [platform]);
 
-  const sheetStyle = useMemo(
-    () => getSurfaceStyle('surfacePanel', platform),
-    [platform]
-  );
+  const sheetStyle = useMemo(() => getSurfaceStyle('surfacePanel', platform), [platform]);
 
-  const sheetSpring = useMemo(
-    () => getSpringPreset('sheet', platform),
-    [platform]
-  );
+  const sheetSpring = useMemo(() => getSpringPreset('sheet', platform), [platform]);
 
-  const controlSpring = useMemo(
-    () => getSpringPreset('press', platform),
-    [platform]
-  );
+  const controlSpring = useMemo(() => getSpringPreset('press', platform), [platform]);
 
   const isOpen = paymentStep === 'hash';
 
@@ -95,18 +89,15 @@ export default function PaymentHashModal() {
           <motion.div
             className="fixed inset-x-0 z-50 flex flex-col"
             style={{
-              bottom: 'var(--tabbar-total)',  // ✅ FIX: Position ABOVE TabBar
-              maxHeight: getSheetMaxHeight(platform, ios ? -20 : 32)
+              bottom: 'var(--tabbar-total)', // ✅ FIX: Position ABOVE TabBar
+              maxHeight: getSheetMaxHeight(platform, ios ? -20 : 32),
             }}
             initial={{ y: '100%', scale: 0.95 }}
             animate={{ y: 0, scale: 1 }}
             exit={{ y: '100%', scale: 0.95 }}
             transition={sheetSpring}
           >
-            <div
-              className="rounded-t-[32px] flex flex-col"
-              style={sheetStyle}
-            >
+            <div className="rounded-t-[32px] flex flex-col" style={sheetStyle}>
               {/* Header - Compact */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -114,14 +105,21 @@ export default function PaymentHashModal() {
                     onClick={handleClose}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400"
                     style={{
-                      background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                      background: android
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                     }}
                     whileTap={{ scale: android ? 0.94 : 0.9 }}
                     transition={controlSpring}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                   </motion.button>
                   <div>
@@ -131,9 +129,7 @@ export default function PaymentHashModal() {
                     >
                       {t('payment.txHashTitle')}
                     </h2>
-                    <p className="text-xs text-gray-400">
-                      {t('payment.txHashDesc')}
-                    </p>
+                    <p className="text-xs text-gray-400">{t('payment.txHashDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -148,7 +144,7 @@ export default function PaymentHashModal() {
                     className="absolute inset-0 z-10 flex items-center justify-center"
                     style={{
                       background: 'rgba(0, 0, 0, 0.7)',
-                      backdropFilter: 'blur(4px)'
+                      backdropFilter: 'blur(4px)',
                     }}
                   >
                     <div className="flex flex-col items-center gap-3">
@@ -167,12 +163,22 @@ export default function PaymentHashModal() {
                     className="p-4 rounded-xl"
                     style={{
                       background: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)'
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
                     }}
                   >
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <div className="flex-1">
                         <p className="text-red-400 font-semibold text-sm">Ошибка проверки</p>
@@ -182,7 +188,7 @@ export default function PaymentHashModal() {
                           className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold text-white"
                           style={{
                             background: 'rgba(255, 107, 0, 0.2)',
-                            border: '1px solid rgba(255, 107, 0, 0.3)'
+                            border: '1px solid rgba(255, 107, 0, 0.3)',
                           }}
                           whileTap={{ scale: 0.95 }}
                         >
@@ -203,11 +209,22 @@ export default function PaymentHashModal() {
                     className="w-16 h-16 rounded-xl flex items-center justify-center"
                     style={{
                       background: 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
-                      boxShadow: '0 4px 12px rgba(255, 107, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                      boxShadow:
+                        '0 4px 12px rgba(255, 107, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                     }}
                   >
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                      />
                     </svg>
                   </div>
                 </motion.div>
@@ -234,9 +251,9 @@ export default function PaymentHashModal() {
                         border: error
                           ? '1px solid rgba(239, 68, 68, 0.5)'
                           : txHash.length > 0
-                          ? '1px solid rgba(34, 197, 94, 0.3)'
-                          : '1px solid rgba(255, 255, 255, 0.1)',
-                        transition: 'border 200ms ease-out'
+                            ? '1px solid rgba(34, 197, 94, 0.3)'
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'border 200ms ease-out',
                       }}
                     />
                     {txHash.length > 0 && (
@@ -247,14 +264,34 @@ export default function PaymentHashModal() {
                       >
                         {error ? (
                           <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
-                            <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-3 h-3 text-red-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </div>
                         ) : isValidTxHash ? (
                           <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                            <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-3 h-3 text-green-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           </div>
                         ) : null}
@@ -270,9 +307,7 @@ export default function PaymentHashModal() {
                       {error}
                     </motion.p>
                   )}
-                  <p className="text-gray-500 text-xs">
-                    {t('payment.txHashMin')}
-                  </p>
+                  <p className="text-gray-500 text-xs">{t('payment.txHashMin')}</p>
                 </motion.div>
 
                 {/* Info box - Very compact */}
@@ -283,14 +318,25 @@ export default function PaymentHashModal() {
                   className="flex items-start gap-2 p-2 rounded-lg"
                   style={{
                     background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
                   }}
                 >
-                  <svg className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <p className="text-gray-300 text-xs leading-snug">
-                    <span className="text-blue-400 font-semibold">{t('payment.txHashHow')}</span> {t('payment.txHashHowDesc')}
+                    <span className="text-blue-400 font-semibold">{t('payment.txHashHow')}</span>{' '}
+                    {t('payment.txHashHowDesc')}
                   </p>
                 </motion.div>
               </div>
@@ -310,7 +356,7 @@ export default function PaymentHashModal() {
                         ? '0 4px 16px rgba(255, 107, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.12)'
                         : '0 4px 12px rgba(255, 107, 0, 0.3), 0 8px 24px rgba(255, 107, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       : 'none',
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
                   }}
                   whileTap={isValidTxHash ? { scale: android ? 0.985 : 0.98 } : {}}
                   transition={controlSpring}

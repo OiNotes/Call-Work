@@ -18,15 +18,16 @@ export default function CheckoutProgress({ currentStep, totalSteps }) {
               scaleX: i <= currentStep ? 1 : 0,
             }}
             transition={{
-              type: "spring",
+              type: 'spring',
               stiffness: 300,
               damping: 25,
             }}
             style={{
               originX: 0,
-              background: i <= currentStep
-                ? 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)'
-                : 'rgba(255, 255, 255, 0.1)',
+              background:
+                i <= currentStep
+                  ? 'linear-gradient(135deg, #FF6B00 0%, #FF8C42 100%)'
+                  : 'rgba(255, 255, 255, 0.1)',
             }}
           />
         </motion.div>

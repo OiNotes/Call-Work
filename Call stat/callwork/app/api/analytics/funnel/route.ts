@@ -16,16 +16,28 @@ interface EmployeeConversion {
   conversions: {
     pzmToPzm: number
     pzmToVzm: number
-    vzmToDeal: number
+    vzmToContract: number
+    contractToDeal: number
   }
   totals: {
     zoom: number
     pzm: number
     vzm: number
+    contract: number
     deals: number
     sales: number
   }
   redZones: string[]
+}
+
+interface SideFlow {
+  refusals: {
+    count: number
+    rate: number
+  }
+  warming: {
+    count: number
+  }
 }
 
 interface FunnelResponse {
@@ -39,27 +51,36 @@ interface FunnelResponse {
     zoom: number
     pzm: number
     vzm: number
+    contract: number
     deals: number
     sales: number
+    refusals: number
+    warming: number
   }
   topPerformers: EmployeeConversion[]
   bottomPerformers: EmployeeConversion[]
+  sideFlow: SideFlow
 }
 
 /**
  * GET /api/analytics/funnel
- * 
+ *
  * Рентген воронки продаж с расчётом конверсий и выявлением красных зон
- * 
+ *
  * Query параметры:
  * - startDate: начало периода (ISO string)
  * - endDate: конец периода (ISO string)
  * - userId: опциональный фильтр по сотруднику (доступен только менеджерам)
- * 
+ *
  * Красные зоны (thresholds):
  * - ПЗМ → ПЗМ: < 60%
  * - ПЗМ → ВЗМ: < 60%
- * - ВЗМ → Сделка: < 70%
+ * - ВЗМ → Разбор договора: < 60%
+ * - Разбор договора → Сделка: < 70%
+ *
+ * Side flow:
+ * - Отказы: считаются от ПЗМ Проведено
+ * - Прогрев: количество клиентов на прогреве
  */
 export async function GET(request: NextRequest) {
   try {
@@ -109,6 +130,9 @@ export async function GET(request: NextRequest) {
         vzmConducted: true,
         successfulDeals: true,
         monthlySalesAmount: true,
+        refusalsCount: true,
+        warmingUpCount: true,
+        contractReviewCount: true,
       },
     })
 
@@ -117,25 +141,32 @@ export async function GET(request: NextRequest) {
       zoom: aggregate._sum.zoomAppointments || 0,
       pzm: aggregate._sum.pzmConducted || 0,
       vzm: aggregate._sum.vzmConducted || 0,
+      contract: aggregate._sum.contractReviewCount || 0,
       deals: aggregate._sum.successfulDeals || 0,
       sales: Number(aggregate._sum.monthlySalesAmount || 0),
+      refusals: aggregate._sum.refusalsCount || 0,
+      warming: aggregate._sum.warmingUpCount || 0,
     }
 
     // Конверсии между этапами
-    const conversionPzmToPzm = totals.zoom > 0 
-      ? (totals.pzm / totals.zoom) * 100 
+    const conversionPzmToPzm = totals.zoom > 0
+      ? (totals.pzm / totals.zoom) * 100
       : 0
-    const conversionPzmToVzm = totals.pzm > 0 
-      ? (totals.vzm / totals.pzm) * 100 
+    const conversionPzmToVzm = totals.pzm > 0
+      ? (totals.vzm / totals.pzm) * 100
       : 0
-    const conversionVzmToDeal = totals.vzm > 0 
-      ? (totals.deals / totals.vzm) * 100 
+    const conversionVzmToContract = totals.vzm > 0
+      ? (totals.contract / totals.vzm) * 100
+      : 0
+    const conversionContractToDeal = totals.contract > 0
+      ? (totals.deals / totals.contract) * 100
       : 0
 
     // Красные зоны (thresholds)
     const THRESHOLD_PZM_TO_PZM = 60
     const THRESHOLD_PZM_TO_VZM = 60
-    const THRESHOLD_VZM_TO_DEAL = 70
+    const THRESHOLD_VZM_TO_CONTRACT = 60
+    const THRESHOLD_CONTRACT_TO_DEAL = 70
 
     const funnel: FunnelStage[] = [
       {
@@ -157,10 +188,16 @@ export async function GET(request: NextRequest) {
         isRedZone: conversionPzmToVzm < THRESHOLD_PZM_TO_VZM,
       },
       {
+        stage: 'Разбор договора',
+        value: totals.contract,
+        conversion: Math.round(conversionVzmToContract * 100) / 100,
+        isRedZone: conversionVzmToContract < THRESHOLD_VZM_TO_CONTRACT,
+      },
+      {
         stage: 'Сделки',
         value: totals.deals,
-        conversion: Math.round(conversionVzmToDeal * 100) / 100,
-        isRedZone: conversionVzmToDeal < THRESHOLD_VZM_TO_DEAL,
+        conversion: Math.round(conversionContractToDeal * 100) / 100,
+        isRedZone: conversionContractToDeal < THRESHOLD_CONTRACT_TO_DEAL,
       },
     ]
 
@@ -185,27 +222,32 @@ export async function GET(request: NextRequest) {
             zoom: acc.zoom + r.zoomAppointments,
             pzm: acc.pzm + r.pzmConducted,
             vzm: acc.vzm + r.vzmConducted,
+            contract: acc.contract + r.contractReviewCount,
             deals: acc.deals + r.successfulDeals,
             sales: acc.sales + Number(r.monthlySalesAmount),
           }),
-          { zoom: 0, pzm: 0, vzm: 0, deals: 0, sales: 0 }
+          { zoom: 0, pzm: 0, vzm: 0, contract: 0, deals: 0, sales: 0 }
         )
 
-        const empConvPzmToPzm = empTotals.zoom > 0 
-          ? (empTotals.pzm / empTotals.zoom) * 100 
+        const empConvPzmToPzm = empTotals.zoom > 0
+          ? (empTotals.pzm / empTotals.zoom) * 100
           : 0
-        const empConvPzmToVzm = empTotals.pzm > 0 
-          ? (empTotals.vzm / empTotals.pzm) * 100 
+        const empConvPzmToVzm = empTotals.pzm > 0
+          ? (empTotals.vzm / empTotals.pzm) * 100
           : 0
-        const empConvVzmToDeal = empTotals.vzm > 0 
-          ? (empTotals.deals / empTotals.vzm) * 100 
+        const empConvVzmToContract = empTotals.vzm > 0
+          ? (empTotals.contract / empTotals.vzm) * 100
+          : 0
+        const empConvContractToDeal = empTotals.contract > 0
+          ? (empTotals.deals / empTotals.contract) * 100
           : 0
 
         // Определяем красные зоны для сотрудника
         const redZones: string[] = []
         if (empConvPzmToPzm < THRESHOLD_PZM_TO_PZM) redZones.push('ПЗМ→ПЗМ')
         if (empConvPzmToVzm < THRESHOLD_PZM_TO_VZM) redZones.push('ПЗМ→ВЗМ')
-        if (empConvVzmToDeal < THRESHOLD_VZM_TO_DEAL) redZones.push('ВЗМ→Сделка')
+        if (empConvVzmToContract < THRESHOLD_VZM_TO_CONTRACT) redZones.push('ВЗМ→Разбор')
+        if (empConvContractToDeal < THRESHOLD_CONTRACT_TO_DEAL) redZones.push('Разбор→Сделка')
 
         return {
           id: emp.id,
@@ -213,20 +255,32 @@ export async function GET(request: NextRequest) {
           conversions: {
             pzmToPzm: Math.round(empConvPzmToPzm * 100) / 100,
             pzmToVzm: Math.round(empConvPzmToVzm * 100) / 100,
-            vzmToDeal: Math.round(empConvVzmToDeal * 100) / 100,
+            vzmToContract: Math.round(empConvVzmToContract * 100) / 100,
+            contractToDeal: Math.round(empConvContractToDeal * 100) / 100,
           },
           totals: empTotals,
           redZones,
         }
       })
       .sort((a, b) => {
-        // Сортировка по финальной конверсии (ВЗМ→Сделка)
-        return b.conversions.vzmToDeal - a.conversions.vzmToDeal
+        // Сортировка по финальной конверсии (Разбор→Сделка)
+        return b.conversions.contractToDeal - a.conversions.contractToDeal
       })
 
     // TOP-3 и BOTTOM-3 сотрудников
     const topPerformers = employeeConversions.slice(0, 3)
     const bottomPerformers = employeeConversions.slice(-3).reverse()
+
+    // Side flow - боковые ветки воронки
+    const sideFlow: SideFlow = {
+      refusals: {
+        count: totals.refusals,
+        rate: totals.pzm > 0 ? Math.round((totals.refusals / totals.pzm) * 100 * 100) / 100 : 0
+      },
+      warming: {
+        count: totals.warming
+      }
+    }
 
     const response: FunnelResponse = {
       funnel,
@@ -235,6 +289,7 @@ export async function GET(request: NextRequest) {
       totals,
       topPerformers,
       bottomPerformers,
+      sideFlow,
     }
 
     return NextResponse.json(response)

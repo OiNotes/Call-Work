@@ -13,16 +13,18 @@ import logger from './logger.js';
  */
 export const validateCryptoAddress = (address, crypto) => {
   try {
-    if (!address || typeof address !== 'string') {return false;}
+    if (!address || typeof address !== 'string') {
+      return false;
+    }
 
     const currency = crypto.toLowerCase();
 
     // Map crypto names to wallet-validator currency names
     const currencyMap = {
-      'btc': 'bitcoin',
-      'eth': 'ethereum',
-      'usdt': 'tron',      // USDT uses Tron TRC-20 (TR... addresses)
-      'ltc': 'litecoin'
+      btc: 'bitcoin',
+      eth: 'ethereum',
+      usdt: 'tron', // USDT uses Tron TRC-20 (TR... addresses)
+      ltc: 'litecoin',
     };
 
     const validatorCurrency = currencyMap[currency];
@@ -37,7 +39,7 @@ export const validateCryptoAddress = (address, crypto) => {
     logger.error('Error validating crypto address', {
       error: error.message,
       addressPreview: address.substring(0, 10) + '...',
-      crypto
+      crypto,
     });
     return false;
   }
@@ -88,7 +90,7 @@ export const getCryptoValidationError = (crypto) => {
     BTC: 'Invalid BTC address format. Must be Legacy (1xxx), P2SH (3xxx), or Bech32 (bc1xxx)',
     ETH: 'Invalid ETH address format. Must be 0x followed by 40 hex characters',
     USDT: 'Invalid USDT address format. Must be TRC-20 Tron address (TRxxx...)',
-    LTC: 'Invalid LTC address format. Must be Legacy (Lxxx), P2SH (Mxxx), or Bech32 (ltc1xxx)'
+    LTC: 'Invalid LTC address format. Must be Legacy (Lxxx), P2SH (Mxxx), or Bech32 (ltc1xxx)',
   };
   return errors[crypto.toUpperCase()] || 'Invalid crypto address format';
 };
@@ -96,5 +98,5 @@ export const getCryptoValidationError = (crypto) => {
 export default {
   validateCryptoAddress,
   getCryptoValidationError,
-  detectCryptoType
+  detectCryptoType,
 };

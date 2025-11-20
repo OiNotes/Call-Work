@@ -14,7 +14,7 @@ class DeepseekService {
     this.client = new OpenAI({
       apiKey: this.apiKey,
       baseURL: 'https://api.deepseek.com',
-      timeout: 15000
+      timeout: 15000,
     });
   }
 
@@ -22,7 +22,14 @@ class DeepseekService {
     return Boolean(this.client);
   }
 
-  async chat({ systemPrompt, userMessage, history = [], tools = [], temperature = 0.7, maxTokens = 600 }) {
+  async chat({
+    systemPrompt,
+    userMessage,
+    history = [],
+    tools = [],
+    temperature = 0.7,
+    maxTokens = 600,
+  }) {
     if (!this.isAvailable()) {
       throw new Error('DeepSeek API is not configured');
     }
@@ -30,7 +37,7 @@ class DeepseekService {
     const messages = [
       { role: 'system', content: systemPrompt },
       ...history,
-      { role: 'user', content: userMessage }
+      { role: 'user', content: userMessage },
     ];
 
     const response = await this.client.chat.completions.create({
@@ -39,14 +46,14 @@ class DeepseekService {
       tools: tools.length ? tools : undefined,
       tool_choice: tools.length ? 'auto' : undefined,
       temperature,
-      max_tokens: maxTokens
+      max_tokens: maxTokens,
     });
 
     logger.info('deepseek_chat_call', {
       promptTokens: response.usage?.prompt_tokens || 0,
       completionTokens: response.usage?.completion_tokens || 0,
       totalTokens: response.usage?.total_tokens || 0,
-      finishReason: response.choices[0]?.finish_reason
+      finishReason: response.choices[0]?.finish_reason,
     });
 
     return response;

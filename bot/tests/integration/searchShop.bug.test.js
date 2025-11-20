@@ -24,8 +24,8 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
       skipAuth: true,
       mockSession: {
         token: 'test-jwt-token',
-        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' }
-      }
+        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' },
+      },
     });
     mock = new MockAdapter(api);
   });
@@ -40,7 +40,7 @@ describe('Search Shop - Multiple Results Bug (KNOWN BUG)', () => {
     const mockShops = [
       { id: 1, name: 'Shop One', seller_username: 'seller1', is_subscribed: false },
       { id: 2, name: 'Shop Two', seller_username: 'seller2', is_subscribed: false },
-      { id: 3, name: 'Shop Three', seller_username: 'seller3', is_subscribed: false }
+      { id: 3, name: 'Shop Three', seller_username: 'seller3', is_subscribed: false },
     ];
 
     mock.onGet('/shops/search').reply((_config) => {

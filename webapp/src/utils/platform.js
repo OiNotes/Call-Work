@@ -32,8 +32,7 @@ export function isIOS(platform) {
 const SURFACE_PRESETS = {
   tabbar: {
     default: {
-      background:
-        'linear-gradient(180deg, rgba(23, 33, 43, 0.72) 0%, rgba(15, 15, 15, 0.94) 100%)',
+      background: 'linear-gradient(180deg, rgba(23, 33, 43, 0.72) 0%, rgba(15, 15, 15, 0.94) 100%)',
       backdropFilter: 'blur(16px) saturate(180%)',
       borderTop: '1px solid rgba(255, 255, 255, 0.1)',
       boxShadow:
@@ -48,8 +47,7 @@ const SURFACE_PRESETS = {
   },
   surfaceStrong: {
     default: {
-      background:
-        'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%)',
+      background: 'linear-gradient(180deg, rgba(26, 26, 26, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%)',
       backdropFilter: 'blur(40px) saturate(180%)',
       border: '1px solid rgba(255, 255, 255, 0.1)',
       boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
@@ -100,12 +98,14 @@ const SURFACE_PRESETS = {
   },
   accentGlow: {
     default: {
-      background: 'linear-gradient(135deg, rgba(255, 107, 0, 0.12) 0%, rgba(255, 140, 66, 0.08) 100%)',
+      background:
+        'linear-gradient(135deg, rgba(255, 107, 0, 0.12) 0%, rgba(255, 140, 66, 0.08) 100%)',
       border: '1px solid rgba(255, 107, 0, 0.3)',
       boxShadow: '0 2px 8px rgba(255, 107, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
     },
     android: {
-      background: 'linear-gradient(135deg, rgba(255, 107, 0, 0.24) 0%, rgba(255, 140, 66, 0.14) 100%)',
+      background:
+        'linear-gradient(135deg, rgba(255, 107, 0, 0.24) 0%, rgba(255, 140, 66, 0.14) 100%)',
       border: '1px solid rgba(255, 107, 0, 0.4)',
       boxShadow: '0 1px 6px rgba(255, 107, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
     },
@@ -162,9 +162,7 @@ export function applyPlatformClasses(platform) {
   const html = document.documentElement;
 
   if (!html.classList.contains(`platform-${normalized}`)) {
-    const previous = Array.from(html.classList).filter((cls) =>
-      cls.startsWith('platform-')
-    );
+    const previous = Array.from(html.classList).filter((cls) => cls.startsWith('platform-'));
     previous.forEach((cls) => html.classList.remove(cls));
     html.classList.add(`platform-${normalized}`);
   }

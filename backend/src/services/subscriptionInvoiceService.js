@@ -14,12 +14,7 @@ import * as blockCypherService from './blockCypherService.js';
 import * as cryptoPriceService from './cryptoPriceService.js';
 import { invoiceQueries } from '../database/queries/index.js';
 import { query } from '../config/database.js';
-
-// Subscription tier prices (must match subscriptionService.js)
-const SUBSCRIPTION_PRICES = {
-  basic: 25.0,
-  pro: 35.0,
-};
+import { SUBSCRIPTION_PRICES } from '../config/subscriptionPricing.js';
 
 // Invoice expiration time (30 minutes)
 const INVOICE_EXPIRATION_MINUTES = 30;
@@ -196,7 +191,7 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
 
     const invoice = invoiceResult.rows[0];
 
-    logger.info(`[SubscriptionInvoice] Invoice created successfully:`, {
+    logger.info('[SubscriptionInvoice] Invoice created successfully', {
       invoiceId: invoice.id,
       subscriptionId,
       shopName: shop_name,
@@ -207,6 +202,9 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
       currency,
       usdRate,
       expiresAt: expiresAt.toISOString(),
+      expiresAtUnix: expiresAt.getTime(),
+      currentTimeUnix: Date.now(),
+      validityPeriodSeconds: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
     });
 
     return {
@@ -238,6 +236,15 @@ export async function generateSubscriptionInvoice(subscriptionId, chain) {
  */
 export async function findActiveInvoiceForSubscription(subscriptionId) {
   try {
+    logger.debug('[SubscriptionInvoice] Searching for active invoice', {
+      subscriptionId,
+      searchConditions: {
+        status: 'pending',
+        expires_at: 'must be > NOW()',
+      },
+    });
+
+    // Main query
     const result = await query(
       `SELECT * FROM invoices
        WHERE subscription_id = $1
@@ -249,19 +256,76 @@ export async function findActiveInvoiceForSubscription(subscriptionId) {
     );
 
     if (result.rows.length === 0) {
+      logger.warn('[SubscriptionInvoice] No active invoice found - running diagnostics', {
+        subscriptionId,
+      });
+
+      // Diagnostic query: find ALL invoices for this subscription
+      const diagnosticResult = await query(
+        `SELECT 
+          id, 
+          status, 
+          expires_at, 
+          NOW() as current_time,
+          (expires_at > NOW()) as is_valid,
+          EXTRACT(EPOCH FROM (expires_at - NOW())) as seconds_until_expiry,
+          created_at
+        FROM invoices 
+        WHERE subscription_id = $1
+        ORDER BY created_at DESC
+        LIMIT 5`,
+        [subscriptionId]
+      );
+
+      if (diagnosticResult.rows.length === 0) {
+        logger.warn('[SubscriptionInvoice] No invoices exist for this subscription', {
+          subscriptionId,
+          reason: 'No invoices created yet',
+        });
+      } else {
+        // Analyze why invoice didn't pass conditions
+        diagnosticResult.rows.forEach((inv, index) => {
+          const reasons = [];
+          if (inv.status !== 'pending') {
+            reasons.push(`status=${inv.status} (not 'pending')`);
+          }
+          if (!inv.is_valid) {
+            reasons.push(`expired ${Math.abs(inv.seconds_until_expiry).toFixed(0)}s ago`);
+          }
+
+          logger.warn('[SubscriptionInvoice] Invoice found but not active', {
+            subscriptionId,
+            invoiceId: inv.id,
+            index,
+            status: inv.status,
+            expiresAt: inv.expires_at,
+            currentTime: inv.current_time,
+            isValid: inv.is_valid,
+            secondsUntilExpiry: parseFloat(inv.seconds_until_expiry).toFixed(2),
+            createdAt: inv.created_at,
+            reasons: reasons.length > 0 ? reasons.join(', ') : 'Active and valid',
+          });
+        });
+      }
+
       return null;
     }
 
-    logger.info(`[SubscriptionInvoice] Found active invoice for subscription ${subscriptionId}:`, {
-      invoiceId: result.rows[0].id,
-      address: result.rows[0].address,
-      expiresAt: result.rows[0].expires_at,
+    const invoice = result.rows[0];
+
+    logger.info('[SubscriptionInvoice] Found active invoice', {
+      subscriptionId,
+      invoiceId: invoice.id,
+      address: invoice.address,
+      expiresAt: invoice.expires_at,
+      status: invoice.status,
     });
 
-    return result.rows[0];
+    return invoice;
   } catch (error) {
     logger.error('[SubscriptionInvoice] Error finding active invoice:', {
       error: error.message,
+      stack: error.stack,
       subscriptionId,
     });
     return null;

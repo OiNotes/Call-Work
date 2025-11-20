@@ -281,7 +281,7 @@ CREATE TABLE shop_subscriptions (
   currency VARCHAR(10) NOT NULL CHECK (currency IN ('BTC', 'ETH', 'USDT', 'LTC')),
   period_start TIMESTAMP NOT NULL,
   period_end TIMESTAMP NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'expired', 'cancelled')),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('active', 'pending', 'expired', 'cancelled', 'paid')),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   verified_at TIMESTAMP
 );

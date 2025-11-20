@@ -25,7 +25,7 @@ const Badge = memo(function Badge({
   variant = 'premium',
   children,
   shimmer = false,
-  className = ''
+  className = '',
 }) {
   const platform = usePlatform();
   const android = isAndroid(platform);
@@ -41,22 +41,23 @@ const Badge = memo(function Badge({
       }}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
       {shimmer && !android && (
         <motion.div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
+            background:
+              'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%)',
             backgroundSize: '200% 100%',
           }}
           animate={{
-            backgroundPosition: ['200% 0', '-200% 0']
+            backgroundPosition: ['200% 0', '-200% 0'],
           }}
           transition={{
             duration: 2,
             repeat: Infinity,
-            ease: "linear"
+            ease: 'linear',
           }}
         />
       )}

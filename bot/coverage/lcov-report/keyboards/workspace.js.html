@@ -121,16 +121,8 @@
 <a name='L56'></a><a href='#L56'>56</a>
 <a name='L57'></a><a href='#L57'>57</a>
 <a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -139,8 +131,18 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -151,7 +153,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -160,14 +162,14 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -180,18 +182,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Markup } from 'telegraf';
-import config from '../config/index.js';
+import { getWebAppUrl } from '../utils/webappUrl.js';
+import { buttons as buttonText } from '../texts/messages.js';
 &nbsp;
 /**
  * Workspace menu (restricted seller menu for workers)
  * Workers can: manage products, use AI, view sales
  * Workers cannot: wallets, subscriptions, workers management, shop settings
  */
-export const workspaceMenu = <span class="fstat-no" title="function not covered" >(s</span>hopName) =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
-  [Markup.button.webApp('📱 Открыть Menu', config.webAppUrl)],
-  [Markup.button.callback('💰 Продажи', 'seller:sales')], // Read-only for workers
-  [Markup.button.callback('◀️ Назад', 'workspace:back')],
-  [Markup.button.callback('🔄 Покупатель', 'role:toggle')]
+export const workspaceMenu = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
+  [Markup.button.webApp(buttonText.openCatalog, getWebAppUrl())],
+  [Markup.button.callback(buttonText.viewSales, 'seller:sales')],
+  [Markup.button.callback(buttonText.back, 'workspace:back')],
+  [Markup.button.callback(buttonText.switchRole, 'role:toggle')]
 ]);
 &nbsp;
 /**
@@ -202,32 +205,32 @@ export const workspaceShopSelection = <span class="fstat-no" title="function not
   const buttons = <span class="cstat-no" title="statement not covered" >shops.map(<span class="fstat-no" title="function not covered" >sh</span>op =&gt; </span>
 <span class="cstat-no" title="statement not covered" >    [Markup.button.callback(`${shop.name}`, `workspace:select:${shop.id}`)]</span>
   );
-<span class="cstat-no" title="statement not covered" >  buttons.push([Markup.button.callback('◀️ Главное меню', 'main_menu')]);</span>
+<span class="cstat-no" title="statement not covered" >  buttons.push([Markup.button.callback(buttonText.mainMenu, 'main_menu')]);</span>
 <span class="cstat-no" title="statement not covered" >  return Markup.inlineKeyboard(buttons);</span>
 };
 &nbsp;
 /**
  * Worker management menu (for shop owners)
  */
-export const manageWorkersMenu = <span class="fstat-no" title="function not covered" >(s</span>hopName) =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
-  [Markup.button.callback('➕ Добавить', 'workers:add')],
-  [Markup.button.callback('📋 Список', 'workers:list')],
-  [Markup.button.callback('◀️ Назад', 'seller:main')]
+export const manageWorkersMenu = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
+  [Markup.button.callback(buttonText.addWorker, 'workers:add')],
+  [Markup.button.callback(buttonText.listWorkers, 'workers:list')],
+  [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
 ]);
 &nbsp;
 /**
  * Worker list item keyboard
  */
 export const workerItemMenu = <span class="fstat-no" title="function not covered" >(w</span>orkerId) =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
-  [Markup.button.callback('🗑 Удалить', `workers:remove:${workerId}`)]
+  [Markup.button.callback(buttonText.delete, `workers:remove:${workerId}`)]
 ]);
 &nbsp;
 /**
  * Confirm worker removal keyboard
  */
 export const confirmWorkerRemoval = <span class="fstat-no" title="function not covered" >(w</span>orkerId) =&gt; <span class="cstat-no" title="statement not covered" >Markup.inlineKeyboard([</span>
-  [Markup.button.callback('✅ Да, удалить', `workers:remove:confirm:${workerId}`)],
-  [Markup.button.callback('❌ Отмена', 'workers:list')]
+  [Markup.button.callback(buttonText.delete, `workers:remove:confirm:${workerId}`)],
+  [Markup.button.callback(buttonText.cancel, 'workers:list')]
 ]);
 &nbsp;
 export default {
@@ -244,7 +247,7 @@ export default {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-25T13:17:34.482Z
+                at 2025-11-08T16:04:15.739Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -1,6 +1,6 @@
 /**
  * HD Wallet Invoice Generation Test
- * 
+ *
  * Tests P0-PAY-2: HD Wallet Implementation for unique invoice addresses
  */
 
@@ -48,7 +48,7 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
       `INSERT INTO products (shop_id, name, description, price, stock_quantity)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [testShopId, 'Test Product', 'Test Description', 100.50, 10]
+      [testShopId, 'Test Product', 'Test Description', 100.5, 10]
     );
     testProductId = productResult.rows[0].id;
 
@@ -57,7 +57,7 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
       `INSERT INTO orders (buyer_id, product_id, quantity, total_price, currency, status)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [testUserId, testProductId, 1, 100.50, 'USD', 'pending']
+      [testUserId, testProductId, 1, 100.5, 'USD', 'pending']
     );
     testOrderId = orderResult.rows[0].id;
   });
@@ -95,7 +95,7 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
       expect(response.body.data).toHaveProperty('address');
       expect(response.body.data).toHaveProperty('cryptoAmount');
       expect(response.body.data).toHaveProperty('chain', 'BTC');
-      expect(response.body.data).toHaveProperty('usdAmount', 100.50);
+      expect(response.body.data).toHaveProperty('usdAmount', 100.5);
       expect(response.body.data).toHaveProperty('cryptoPrice');
       expect(response.body.data).toHaveProperty('expiresAt');
       expect(response.body.data).toHaveProperty('status', 'pending');
@@ -110,10 +110,9 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
       expect(cryptoAmount).toBeLessThan(1); // $100 should be less than 1 BTC
 
       // Verify invoice was saved to database
-      const dbResult = await pool.query(
-        'SELECT * FROM invoices WHERE order_id = $1',
-        [testOrderId]
-      );
+      const dbResult = await pool.query('SELECT * FROM invoices WHERE order_id = $1', [
+        testOrderId,
+      ]);
       expect(dbResult.rows.length).toBe(1);
       expect(dbResult.rows[0].address).toBe(address);
       expect(dbResult.rows[0].chain).toBe('BTC');
@@ -151,7 +150,7 @@ describe('HD Wallet Invoice Generation (P0-PAY-2)', () => {
         `INSERT INTO orders (buyer_id, product_id, quantity, total_price, currency, status)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
-        [testUserId, testProductId, 1, 50.00, 'USD', 'pending']
+        [testUserId, testProductId, 1, 50.0, 'USD', 'pending']
       );
       const secondOrderId = orderResult.rows[0].id;
 

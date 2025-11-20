@@ -5,7 +5,7 @@ let mockStorage = {
   orders: [],
   wallets: [],
   workers: [],
-  follows: []
+  follows: [],
 };
 
 // ===== AUTH =====
@@ -21,7 +21,7 @@ export const addShop = (shop) => {
 };
 
 export const updateShop = (shop) => {
-  const index = mockStorage.shops.findIndex(s => s.id === shop.id);
+  const index = mockStorage.shops.findIndex((s) => s.id === shop.id);
   if (index !== -1) {
     mockStorage.shops[index] = shop;
   }
@@ -37,7 +37,7 @@ export const addProduct = (product) => {
 };
 
 export const updateProduct = (product) => {
-  const index = mockStorage.products.findIndex(p => p.id === product.id);
+  const index = mockStorage.products.findIndex((p) => p.id === product.id);
   if (index !== -1) {
     mockStorage.products[index] = product;
   }
@@ -45,11 +45,11 @@ export const updateProduct = (product) => {
 };
 
 export const deleteProduct = (productId) => {
-  const index = mockStorage.products.findIndex(p => p.id === productId);
+  const index = mockStorage.products.findIndex((p) => p.id === productId);
   if (index !== -1) {
     mockStorage.products[index] = {
       ...mockStorage.products[index],
-      is_active: false
+      is_active: false,
     };
   }
 };
@@ -63,7 +63,7 @@ export const addOrder = (order) => {
 };
 
 export const updateOrder = (order) => {
-  const index = mockStorage.orders.findIndex(o => o.id === order.id);
+  const index = mockStorage.orders.findIndex((o) => o.id === order.id);
   if (index !== -1) {
     mockStorage.orders[index] = order;
   }
@@ -81,7 +81,7 @@ export const addWallet = (wallet) => {
 };
 
 export const updateWallet = (wallet) => {
-  const index = mockStorage.wallets.findIndex(w => w.id === wallet.id);
+  const index = mockStorage.wallets.findIndex((w) => w.id === wallet.id);
   if (index !== -1) {
     mockStorage.wallets[index] = wallet;
   }
@@ -89,7 +89,7 @@ export const updateWallet = (wallet) => {
 };
 
 export const removeWallet = (address) => {
-  mockStorage.wallets = mockStorage.wallets.filter(w => w.address !== address);
+  mockStorage.wallets = mockStorage.wallets.filter((w) => w.address !== address);
 };
 
 // ===== WORKERS =====
@@ -101,7 +101,7 @@ export const addWorker = (worker) => {
 };
 
 export const removeWorker = (id) => {
-  mockStorage.workers = mockStorage.workers.filter(w => w.id !== id);
+  mockStorage.workers = mockStorage.workers.filter((w) => w.id !== id);
 };
 
 // ===== FOLLOWS =====
@@ -111,7 +111,7 @@ export const addFollow = (follow) => {
 };
 
 export const updateFollow = (follow) => {
-  const index = mockStorage.follows.findIndex(f => f.id === follow.id);
+  const index = mockStorage.follows.findIndex((f) => f.id === follow.id);
   if (index !== -1) {
     mockStorage.follows[index] = follow;
   }
@@ -119,11 +119,11 @@ export const updateFollow = (follow) => {
 };
 
 export const deleteFollow = (followId) => {
-  mockStorage.follows = mockStorage.follows.filter(f => f.id !== followId);
+  mockStorage.follows = mockStorage.follows.filter((f) => f.id !== followId);
 };
 
 export const deleteFollowById = (id) => {
-  mockStorage.follows = mockStorage.follows.filter(f => f.id !== id);
+  mockStorage.follows = mockStorage.follows.filter((f) => f.id !== id);
 };
 
 export const getFollows = () => mockStorage.follows;
@@ -136,7 +136,7 @@ export const resetStorage = () => {
     orders: [],
     wallets: [],
     workers: [],
-    follows: []
+    follows: [],
   };
 };
 
@@ -165,5 +165,5 @@ export const storage = {
   deleteFollowById,
   getFollows,
   resetStorage,
-  getAuthUserId
+  getAuthUserId,
 };

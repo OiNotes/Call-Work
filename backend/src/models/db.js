@@ -85,7 +85,7 @@ export const userQueries = {
       [userId, role]
     );
     return result.rows[0];
-  }
+  },
 };
 
 /**
@@ -133,9 +133,11 @@ export const shopQueries = {
   },
 
   // Find shops by owner ID
+  // Only return active shops (is_active = true)
+  // Inactive shops (expired subscription) should not be shown
   findByOwnerId: async (ownerId) => {
     const result = await query(
-      'SELECT id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at FROM shops WHERE owner_id = $1 ORDER BY created_at DESC',
+      'SELECT id, owner_id, name, description, logo, tier, is_active, subscription_status, next_payment_due, grace_period_until, registration_paid, wallet_btc, wallet_eth, wallet_usdt, wallet_ltc, created_at, updated_at FROM shops WHERE owner_id = $1 AND is_active = true ORDER BY created_at DESC',
       [ownerId]
     );
     return result.rows;
@@ -152,10 +154,14 @@ export const shopQueries = {
         u.username as seller_username,
         u.first_name as seller_first_name,
         u.last_name as seller_last_name,
-        ${userId ? `EXISTS(
+        ${
+          userId
+            ? `EXISTS(
           SELECT 1 FROM subscriptions sub
           WHERE sub.shop_id = s.id AND sub.user_id = $${paramIndex}
-        )` : 'false'} as is_subscribed
+        )`
+            : 'false'
+        } as is_subscribed
       FROM shops s
       JOIN users u ON s.owner_id = u.id
       WHERE s.is_active = true
@@ -191,10 +197,9 @@ export const shopQueries = {
 
   // Delete shop
   delete: async (id) => {
-    const result = await query(
-      'DELETE FROM shops WHERE id = $1 RETURNING id, owner_id, name',
-      [id]
-    );
+    const result = await query('DELETE FROM shops WHERE id = $1 RETURNING id, owner_id, name', [
+      id,
+    ]);
     return result.rows[0];
   },
 
@@ -248,7 +253,7 @@ export const shopQueries = {
       params
     );
     return result.rows[0];
-  }
+  },
 };
 
 /**
@@ -298,7 +303,6 @@ export const productQueries = {
       paramCount++;
     }
 
-
     if (isActive !== undefined) {
       queryText += ` AND p.is_active = $${paramCount}`;
       params.push(isActive);
@@ -323,7 +327,7 @@ export const productQueries = {
       discountPercentage,
       discountExpiresAt,
       originalPrice,
-      isPreorder
+      isPreorder,
     } = productData;
 
     // Преобразовать undefined → null для корректной работы SQL
@@ -337,7 +341,7 @@ export const productQueries = {
       discountPercentage ?? null,
       originalPrice ?? null,
       discountExpiresAt ?? null,
-      isPreorder ?? null
+      isPreorder ?? null,
     ];
 
     const result = await query(
@@ -375,19 +379,17 @@ export const productQueries = {
 
   // Delete product
   delete: async (id) => {
-    const result = await query(
-      'DELETE FROM products WHERE id = $1 RETURNING id, shop_id, name',
-      [id]
-    );
+    const result = await query('DELETE FROM products WHERE id = $1 RETURNING id, shop_id, name', [
+      id,
+    ]);
     return result.rows[0];
   },
 
   // Count products by shop ID
   countByShopId: async (shopId) => {
-    const result = await query(
-      'SELECT COUNT(*) AS count FROM products WHERE shop_id = $1',
-      [shopId]
-    );
+    const result = await query('SELECT COUNT(*) AS count FROM products WHERE shop_id = $1', [
+      shopId,
+    ]);
     return parseInt(result.rows[0].count, 10) || 0;
   },
 
@@ -512,16 +514,16 @@ export const productQueries = {
         success: true,
         productsUpdated: result.rows.length,
         productsExcluded: excludedProductIds.length,
-        updatedProducts: result.rows
+        updatedProducts: result.rows,
       };
     } catch (error) {
-      console.error('[DB] applyBulkDiscount error:', {
+      logger.error('[DB] applyBulkDiscount error', {
         shopId,
         percentage,
         excludedCount: excludedProductIds.length,
         excludedIds: excludedProductIds,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
       throw error;
     }
@@ -556,7 +558,7 @@ export const productQueries = {
     );
 
     return result.rows;
-  }
+  },
 };
 
 /**
@@ -598,7 +600,7 @@ export const orderQueries = {
   findByBuyerId: async (buyerId, limit = 50, offset = 0) => {
     const MAX_LIMIT = 1000;
     const safeLimit = Math.min(limit, MAX_LIMIT);
-    
+
     const result = await query(
       `SELECT o.*, p.name as product_name, s.name as shop_name
        FROM orders o
@@ -614,11 +616,7 @@ export const orderQueries = {
 
   // Find orders by owner ID
   findByOwnerId: async (ownerId, options = {}) => {
-    const {
-      limit = 50,
-      offset = 0,
-      statuses = []
-    } = options;
+    const { limit = 50, offset = 0, statuses = [] } = options;
 
     const params = [ownerId];
     const conditions = ['s.owner_id = $1'];
@@ -653,11 +651,7 @@ export const orderQueries = {
 
   // Find orders by shop ID with optional status filter
   findByShopId: async (shopId, options = {}) => {
-    const {
-      limit = 50,
-      offset = 0,
-      statuses = []
-    } = options;
+    const { limit = 50, offset = 0, statuses = [] } = options;
 
     const params = [shopId];
     const conditions = ['p.shop_id = $1'];
@@ -737,7 +731,7 @@ export const orderQueries = {
       [orderId]
     );
     return result.rows[0];
-  }
+  },
 };
 
 /**
@@ -751,7 +745,7 @@ export const orderItemQueries = {
     }
 
     const queryFn = client ? client.query.bind(client) : query;
-    
+
     // Build VALUES clause for batch insert
     // Each item: (order_id, product_id, product_name, quantity, price, currency)
     const values = [];
@@ -779,7 +773,7 @@ export const orderItemQueries = {
        RETURNING *`,
       params
     );
-    
+
     return result.rows;
   },
 
@@ -813,7 +807,7 @@ export const orderItemQueries = {
   // Get order items with product stock info (for payment verification)
   findByOrderIdWithStock: async (orderId, client = null) => {
     const queryFn = client ? client.query.bind(client) : query;
-    
+
     const result = await queryFn(
       `SELECT 
          oi.id as item_id,
@@ -833,9 +827,9 @@ export const orderItemQueries = {
        ORDER BY oi.id ASC`,
       [orderId]
     );
-    
+
     return result.rows;
-  }
+  },
 };
 
 /**
@@ -864,10 +858,7 @@ export const paymentQueries = {
 
   // Find payment by transaction hash
   findByTxHash: async (txHash) => {
-    const result = await query(
-      'SELECT * FROM payments WHERE tx_hash = $1',
-      [txHash]
-    );
+    const result = await query('SELECT * FROM payments WHERE tx_hash = $1', [txHash]);
     return result.rows[0];
   },
 
@@ -893,7 +884,7 @@ export const paymentQueries = {
       [id, status, confirmations]
     );
     return result.rows[0];
-  }
+  },
 };
 
 /**
@@ -902,22 +893,37 @@ export const paymentQueries = {
 export const invoiceQueries = {
   // Create invoice with generated address
   create: async (invoiceData) => {
-    const { orderId, chain, address, addressIndex, expectedAmount, currency, webhookSubscriptionId, expiresAt } = invoiceData;
+    const {
+      orderId,
+      chain,
+      address,
+      addressIndex,
+      expectedAmount,
+      currency,
+      webhookSubscriptionId,
+      expiresAt,
+    } = invoiceData;
     const result = await query(
       `INSERT INTO invoices (order_id, chain, address, address_index, expected_amount, currency, tatum_subscription_id, expires_at, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
-      [orderId, chain, address, addressIndex, expectedAmount, currency, webhookSubscriptionId, expiresAt]
+      [
+        orderId,
+        chain,
+        address,
+        addressIndex,
+        expectedAmount,
+        currency,
+        webhookSubscriptionId,
+        expiresAt,
+      ]
     );
     return result.rows[0];
   },
 
   // Find invoice by payment address
   findByAddress: async (address) => {
-    const result = await query(
-      'SELECT * FROM invoices WHERE address = $1',
-      [address]
-    );
+    const result = await query('SELECT * FROM invoices WHERE address = $1', [address]);
     return result.rows[0];
   },
 
@@ -935,28 +941,32 @@ export const invoiceQueries = {
   getNextIndex: async (chain) => {
     // Map chain to sequence name (e.g., BTC -> wallet_address_index_btc)
     const sequenceName = `wallet_address_index_${chain.toLowerCase()}`;
-    
+
     try {
-      const result = await query(
-        `SELECT nextval($1::regclass) as next_index`,
-        [sequenceName]
-      );
+      const result = await query(`SELECT nextval($1::regclass) as next_index`, [sequenceName]);
       // Convert to integer (PostgreSQL returns bigint as string)
       return parseInt(result.rows[0].next_index, 10);
     } catch (error) {
-      console.error(`[DB] getNextIndex error for chain ${chain}:`, error);
+      logger.error('[DB] getNextIndex error', {
+        chain,
+        error: error.message,
+        stack: error.stack,
+      });
       throw new Error(`Failed to get next index for ${chain}: ${error.message}`);
     }
   },
 
   // Update invoice status
-  updateStatus: async (id, status) => {
+  updateStatus: async (id, status, txHash = null) => {
     const result = await query(
       `UPDATE invoices
-       SET status = $2, updated_at = NOW()
+       SET status = $2,
+           paid_at = CASE WHEN $2 = 'paid' THEN NOW() ELSE paid_at END,
+           tx_hash = COALESCE($3, tx_hash),
+           updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
-      [id, status]
+      [id, status, txHash]
     );
     return result.rows[0];
   },
@@ -983,7 +993,7 @@ export const invoiceQueries = {
       [chains]
     );
     return result.rows;
-  }
+  },
 };
 
 /**
@@ -1074,12 +1084,11 @@ export const subscriptionQueries = {
 
   // Count subscribers for a shop
   countByShopId: async (shopId) => {
-    const result = await query(
-      'SELECT COUNT(*) as count FROM subscriptions WHERE shop_id = $1',
-      [shopId]
-    );
+    const result = await query('SELECT COUNT(*) as count FROM subscriptions WHERE shop_id = $1', [
+      shopId,
+    ]);
     return parseInt(result.rows[0].count, 10);
-  }
+  },
 };
 
 export { workerQueries, processedWebhookQueries };
@@ -1093,5 +1102,5 @@ export default {
   subscriptionQueries,
   invoiceQueries,
   workerQueries,
-  processedWebhookQueries
+  processedWebhookQueries,
 };

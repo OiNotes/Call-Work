@@ -1,6 +1,6 @@
 /**
  * Integration Tests: Subscription Payment Automation
- * 
+ *
  * Tests automated payment flow for shop subscriptions:
  * - Invoice structure with subscription_id
  * - Payment verification via webhooks (BTC/LTC)
@@ -17,7 +17,7 @@ import {
   closeTestDb,
   cleanupTestData,
   createTestUser,
-  createTestShop
+  createTestShop,
 } from '../helpers/testDb.js';
 
 // Create minimal test app (webhooks only - no auth needed)
@@ -127,17 +127,19 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
 
     // Clean up test data
     await pool.query('DELETE FROM processed_webhooks');
-    await pool.query('DELETE FROM shop_subscriptions WHERE shop_id IN (SELECT id FROM shops WHERE owner_id >= 9000000000)');
+    await pool.query(
+      'DELETE FROM shop_subscriptions WHERE shop_id IN (SELECT id FROM shops WHERE owner_id >= 9000000000)'
+    );
 
     // Create test user
     user = await createTestUser({
       telegramId: '9000004001',
-      username: 'subscriptionuser'
+      username: 'subscriptionuser',
     });
 
     // Create test shop
     shop = await createTestShop(user.id, {
-      name: 'Subscription Test Shop'
+      name: 'Subscription Test Shop',
     });
   });
 
@@ -154,10 +156,7 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
    */
   async function createTestSubscription(shopId, tier = 'basic', status = 'active') {
     // Get shop owner's user_id (required by migration 009)
-    const shopResult = await pool.query(
-      'SELECT owner_id FROM shops WHERE id = $1',
-      [shopId]
-    );
+    const shopResult = await pool.query('SELECT owner_id FROM shops WHERE id = $1', [shopId]);
 
     if (!shopResult.rows[0]) {
       throw new Error(`Shop with id ${shopId} not found`);
@@ -166,7 +165,7 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
     const userId = shopResult.rows[0].owner_id;
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const amount = tier === 'pro' ? 35.00 : 25.00;
+    const amount = tier === 'pro' ? 35.0 : 25.0;
     const mockTxHash = `test_subscription_${shopId}_${Date.now()}`;
 
     const result = await pool.query(
@@ -192,9 +191,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
       outputs: [
         {
           addresses: [invoice.address],
-          value: Math.floor(invoice.expected_amount * 100000000)
-        }
-      ]
+          value: Math.floor(invoice.expected_amount * 100000000),
+        },
+      ],
     };
   }
 
@@ -220,7 +219,7 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
       expect(invoice.order_id).toBeNull(); // Mutually exclusive
       expect(invoice.chain).toBe('BTC');
       expect(invoice.status).toBe('pending');
-      expect(parseFloat(invoice.expected_amount)).toBe(25.00);
+      expect(parseFloat(invoice.expected_amount)).toBe(25.0);
     });
 
     it('✅ Should create invoice with correct tier pricing', async () => {
@@ -236,7 +235,7 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
 
       const invoice = invoiceResult.rows[0];
 
-      expect(parseFloat(invoice.expected_amount)).toBe(35.00); // PRO tier
+      expect(parseFloat(invoice.expected_amount)).toBe(35.0); // PRO tier
       expect(invoice.currency).toBe('ETH');
     });
 
@@ -319,16 +318,14 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
       expect(invoiceResult.rows[0].status).toBe('pending');
 
       // Simulate payment
-      await pool.query(
-        `UPDATE invoices SET status = 'paid' WHERE id = $1`,
-        [invoiceResult.rows[0].id]
-      );
+      await pool.query(`UPDATE invoices SET status = 'paid' WHERE id = $1`, [
+        invoiceResult.rows[0].id,
+      ]);
 
       // Verify updated status
-      const updated = await pool.query(
-        'SELECT status FROM invoices WHERE id = $1',
-        [invoiceResult.rows[0].id]
-      );
+      const updated = await pool.query('SELECT status FROM invoices WHERE id = $1', [
+        invoiceResult.rows[0].id,
+      ]);
 
       expect(updated.rows[0].status).toBe('paid');
     });
@@ -385,10 +382,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
       expect(response.body.status).toBe('success');
 
       // Verify subscription activated
-      const subResult = await pool.query(
-        'SELECT * FROM shop_subscriptions WHERE id = $1',
-        [subscription.id]
-      );
+      const subResult = await pool.query('SELECT * FROM shop_subscriptions WHERE id = $1', [
+        subscription.id,
+      ]);
 
       expect(subResult.rows[0].status).toBe('active');
       expect(subResult.rows[0].verified_at).not.toBeNull();
@@ -418,10 +414,7 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         .expect(200);
 
       // Verify shop updated
-      const shopResult = await pool.query(
-        'SELECT * FROM shops WHERE id = $1',
-        [shop.id]
-      );
+      const shopResult = await pool.query('SELECT * FROM shops WHERE id = $1', [shop.id]);
 
       expect(shopResult.rows[0].tier).toBe('pro');
       expect(shopResult.rows[0].subscription_status).toBe('active');
@@ -455,10 +448,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         .expect(200);
 
       // Verify next_payment_due is ~30 days from now
-      const shopResult = await pool.query(
-        'SELECT next_payment_due FROM shops WHERE id = $1',
-        [shop.id]
-      );
+      const shopResult = await pool.query('SELECT next_payment_due FROM shops WHERE id = $1', [
+        shop.id,
+      ]);
 
       const nextPaymentDue = new Date(shopResult.rows[0].next_payment_due);
       const expectedDate = new Date(beforePayment.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -513,16 +505,14 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         .expect(200);
 
       // Verify subscription activated but order still pending
-      const subCheck = await pool.query(
-        'SELECT status FROM shop_subscriptions WHERE id = $1',
-        [subscription.id]
-      );
+      const subCheck = await pool.query('SELECT status FROM shop_subscriptions WHERE id = $1', [
+        subscription.id,
+      ]);
       expect(subCheck.rows[0].status).toBe('active');
 
-      const orderCheck = await pool.query(
-        'SELECT status FROM orders WHERE id = $1',
-        [orderResult.rows[0].id]
-      );
+      const orderCheck = await pool.query('SELECT status FROM orders WHERE id = $1', [
+        orderResult.rows[0].id,
+      ]);
       expect(orderCheck.rows[0].status).toBe('pending');
     });
 
@@ -549,10 +539,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         .expect(200);
 
       // Verify invoice marked as paid
-      const invoiceCheck = await pool.query(
-        'SELECT status FROM invoices WHERE id = $1',
-        [invoice.id]
-      );
+      const invoiceCheck = await pool.query('SELECT status FROM invoices WHERE id = $1', [
+        invoice.id,
+      ]);
 
       expect(invoiceCheck.rows[0].status).toBe('paid');
     });
@@ -580,9 +569,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         outputs: [
           {
             addresses: [invoice.address],
-            value: 50000
-          }
-        ]
+            value: 50000,
+          },
+        ],
       };
 
       await request(app)
@@ -592,10 +581,9 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         .expect(200);
 
       // Verify subscription NOT activated due to insufficient amount
-      const subResult = await pool.query(
-        'SELECT status FROM shop_subscriptions WHERE id = $1',
-        [subscription.id]
-      );
+      const subResult = await pool.query('SELECT status FROM shop_subscriptions WHERE id = $1', [
+        subscription.id,
+      ]);
 
       // Status should still be pending (payment recorded but amount validation would fail)
       expect(subResult.rows[0].status).toBe('pending');
@@ -638,18 +626,14 @@ describe.skip('Subscription Payment Automation - Integration Tests (REQUIRES BLO
         ['pro', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), shop.id]
       );
 
-      await pool.query(
-        `UPDATE invoices SET status = 'paid' WHERE id = $1`,
-        [invoice.id]
-      );
+      await pool.query(`UPDATE invoices SET status = 'paid' WHERE id = $1`, [invoice.id]);
 
       await pool.query('COMMIT');
 
       // Verify activation
-      const subResult = await pool.query(
-        'SELECT status FROM shop_subscriptions WHERE id = $1',
-        [subscription.id]
-      );
+      const subResult = await pool.query('SELECT status FROM shop_subscriptions WHERE id = $1', [
+        subscription.id,
+      ]);
 
       expect(subResult.rows[0].status).toBe('active');
 

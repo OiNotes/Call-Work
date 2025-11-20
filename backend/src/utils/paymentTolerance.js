@@ -16,9 +16,9 @@ import logger from './logger.js';
 
 // Tolerance bounds (as decimal, not percentage)
 export const TOLERANCE_BOUNDS = {
-  MIN_TOLERANCE: 0.0001,    // 0.01% minimum
-  MAX_TOLERANCE: 1.0,        // 1.0% maximum
-  DEFAULT_TOLERANCE: 0.005   // 0.5% industry standard
+  MIN_TOLERANCE: 0.0001, // 0.01% minimum
+  MAX_TOLERANCE: 1.0, // 1.0% maximum  
+  DEFAULT_TOLERANCE: 0.01, // 1% to accommodate network fees (previously 0.5%)
 };
 
 /**
@@ -46,7 +46,7 @@ export function clampTolerance(value, context = 'Payment') {
       provided: value,
       minimum: MIN_TOLERANCE,
       clamped: MIN_TOLERANCE,
-      percentage: `${(MIN_TOLERANCE * 100).toFixed(4)}%`
+      percentage: `${(MIN_TOLERANCE * 100).toFixed(4)}%`,
     });
     return MIN_TOLERANCE;
   }
@@ -57,7 +57,7 @@ export function clampTolerance(value, context = 'Payment') {
       provided: value,
       maximum: MAX_TOLERANCE,
       clamped: MAX_TOLERANCE,
-      percentage: `${(MAX_TOLERANCE * 100).toFixed(4)}%`
+      percentage: `${(MAX_TOLERANCE * 100).toFixed(4)}%`,
     });
     return MAX_TOLERANCE;
   }
@@ -78,45 +78,50 @@ export function validateTolerance(value) {
     return {
       valid: true,
       clamped: TOLERANCE_BOUNDS.DEFAULT_TOLERANCE,
-      message: 'Using default tolerance'
+      message: 'Using default tolerance',
     };
   }
 
   if (typeof value !== 'number' || isNaN(value)) {
     return {
       valid: false,
-      error: 'Tolerance must be a number'
+      error: 'Tolerance must be a number',
     };
   }
 
   if (value < 0) {
     return {
       valid: false,
-      error: `Tolerance cannot be negative: ${value}`
+      error: `Tolerance cannot be negative: ${value}`,
     };
   }
 
   if (value < MIN_TOLERANCE) {
     return {
       valid: false,
-      error: `Tolerance too low: ${value} (minimum: ${MIN_TOLERANCE})`
+      error: `Tolerance too low: ${value} (minimum: ${MIN_TOLERANCE})`,
     };
   }
 
   if (value > MAX_TOLERANCE) {
     return {
       valid: false,
-      error: `Tolerance too high: ${value} (maximum: ${MAX_TOLERANCE})`
+      error: `Tolerance too high: ${value} (maximum: ${MAX_TOLERANCE})`,
     };
   }
 
   return {
-    valid: true
+    valid: true,
   };
 }
 
 /**
  * Check if amounts match within tolerance
+ *
+ * IMPORTANT: For crypto payments:
+ * - Overpayment (actual > expected) is ALWAYS accepted
+ * - Underpayment within tolerance is accepted
+ * - Underpayment outside tolerance is rejected
  *
  * @param {number} actual - Actual amount received
  * @param {number} expected - Expected amount
@@ -124,26 +129,37 @@ export function validateTolerance(value) {
  * @param {string} context - Context for logging (e.g., 'BTC', 'ETH', 'USDT')
  * @returns {boolean} - True if amounts match within tolerance
  */
-export function amountsMatchWithTolerance(actual, expected, tolerance = TOLERANCE_BOUNDS.DEFAULT_TOLERANCE, context = 'Payment') {
+export function amountsMatchWithTolerance(
+  actual,
+  expected,
+  tolerance = TOLERANCE_BOUNDS.DEFAULT_TOLERANCE,
+  context = 'Payment'
+) {
   // Clamp tolerance to valid bounds
   const clampedTolerance = clampTolerance(tolerance, context);
 
-  // Calculate tolerance amount
-  const toleranceAmount = expected * clampedTolerance;
+  // CRITICAL: Always accept overpayment in crypto (actual >= expected)
+  if (actual >= expected) {
+    return true;
+  }
 
-  // Check if difference is within tolerance
-  const difference = Math.abs(actual - expected);
-  const matches = difference <= toleranceAmount;
+  // For underpayment: check if within tolerance
+  const toleranceAmount = expected * clampedTolerance;
+  const shortfall = expected - actual; // How much less than expected
+
+  // Use epsilon for floating point comparison to avoid precision issues
+  const epsilon = 1e-10;
+  const matches = shortfall <= toleranceAmount + epsilon;
 
   if (!matches) {
     logger.warn(`[PaymentTolerance] Amount mismatch in ${context}`, {
       expected,
       actual,
-      difference: difference.toFixed(8),
+      shortfall: shortfall.toFixed(8),
       tolerance: clampedTolerance,
       toleranceAmount: toleranceAmount.toFixed(8),
       percentage: `${(clampedTolerance * 100).toFixed(4)}%`,
-      exceedsBy: (difference - toleranceAmount).toFixed(8)
+      exceedsToleranceBy: (shortfall - toleranceAmount).toFixed(8),
     });
   }
 
@@ -178,8 +194,8 @@ export function getToleranceInfo(tolerance) {
     isClamped: clamped !== tolerance,
     bounds: {
       min: toleranceToPercentage(MIN_TOLERANCE),
-      max: toleranceToPercentage(MAX_TOLERANCE)
-    }
+      max: toleranceToPercentage(MAX_TOLERANCE),
+    },
   };
 }
 
@@ -189,5 +205,5 @@ export default {
   validateTolerance,
   amountsMatchWithTolerance,
   toleranceToPercentage,
-  getToleranceInfo
+  getToleranceInfo,
 };

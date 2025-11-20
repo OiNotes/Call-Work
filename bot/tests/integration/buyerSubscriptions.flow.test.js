@@ -26,12 +26,12 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     description: 'Test Shop Description',
     seller_username: 'testseller',
     seller_first_name: 'Test Seller',
-    tier: 'pro'
+    tier: 'pro',
   };
 
   const mockProducts = [
-    { id: 1, name: 'Product 1', price: 10.00, stock_quantity: 5, preorder: false },
-    { id: 2, name: 'Product 2', price: 20.00, stock_quantity: 0, preorder: true }
+    { id: 1, name: 'Product 1', price: 10.0, stock_quantity: 5, preorder: false },
+    { id: 2, name: 'Product 2', price: 20.0, stock_quantity: 0, preorder: true },
   ];
 
   beforeEach(() => {
@@ -41,8 +41,8 @@ describe('Buyer Subscriptions Flow (P0)', () => {
         token: 'test-jwt-token',
         role: 'buyer',
         userId: 2,
-        user: { id: 2, telegramId: '123456', selectedRole: 'buyer' }
-      }
+        user: { id: 2, telegramId: '123456', selectedRole: 'buyer' },
+      },
     });
     mock = new MockAdapter(api);
   });
@@ -56,12 +56,12 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('должен подписаться на магазин (checkSubscription → false)', async () => {
       // Step 1: Check subscription (not subscribed)
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: false }
+        data: { subscribed: false },
       });
 
       // Step 2: Subscribe
       mock.onPost('/subscriptions').reply(200, {
-        data: { shopId: 123, userId: 2 }
+        data: { shopId: 123, userId: 2 },
       });
 
       // Step 3: Get shop details
@@ -73,12 +73,12 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что answerCbQuery был вызван с "Готово"
       expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('Готово'))).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('Готово'))).toBe(true);
 
       // Проверяем текст сообщения
       const text = testBot.getLastReplyText();
@@ -100,7 +100,7 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('already subscribed → noop toast (идемпотентность)', async () => {
       // Already subscribed
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: true }
+        data: { subscribed: true },
       });
 
       mock.onGet('/shops/123').reply(200, { data: mockShop });
@@ -109,11 +109,11 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали информационное сообщение
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
 
       // Проверяем что текст содержит "уже в ваших подписках"
       const text = testBot.getLastReplyText();
@@ -130,7 +130,7 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('должен отписаться от магазина', async () => {
       // Unsubscribe API
       mock.onDelete('/subscriptions/123').reply(200, {
-        data: { unsubscribed: true }
+        data: { unsubscribed: true },
       });
 
       // Get shop details
@@ -142,7 +142,7 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       await testBot.handleUpdate(callbackUpdate('unsubscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем answerCbQuery
       expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
@@ -170,18 +170,18 @@ describe('Buyer Subscriptions Flow (P0)', () => {
         mockSession: {
           token: null,
           role: 'buyer',
-          user: { id: 2, telegramId: '123456', selectedRole: 'buyer' }
-        }
+          user: { id: 2, telegramId: '123456', selectedRole: 'buyer' },
+        },
       });
 
       await noTokenBot.handleUpdate(callbackUpdate('unsubscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали ошибку авторизации
       const answers = noTokenBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('Требуется авторизация'))).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('Требуется авторизация'))).toBe(true);
 
       noTokenBot.reset();
     });
@@ -191,17 +191,17 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('должен показать список подписок', async () => {
       const mockSubscriptions = [
         { shop_id: 1, shop_name: 'Shop A', tier: 'pro' },
-        { shop_id: 2, shop_name: 'Shop B', tier: 'basic' }
+        { shop_id: 2, shop_name: 'Shop B', tier: 'basic' },
       ];
 
       mock.onGet('/subscriptions').reply(200, {
-        data: mockSubscriptions
+        data: mockSubscriptions,
       });
 
       await testBot.handleUpdate(callbackUpdate('buyer:subscriptions'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем answerCbQuery
       expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
@@ -219,7 +219,7 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       await testBot.handleUpdate(callbackUpdate('buyer:subscriptions'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем текст сообщения
       const text = testBot.getLastReplyText();
@@ -233,14 +233,14 @@ describe('Buyer Subscriptions Flow (P0)', () => {
         mockSession: {
           token: null,
           role: 'buyer',
-          user: { id: 2, telegramId: '123456', selectedRole: 'buyer' }
-        }
+          user: { id: 2, telegramId: '123456', selectedRole: 'buyer' },
+        },
       });
 
       await noTokenBot.handleUpdate(callbackUpdate('buyer:subscriptions'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем текст сообщения
       const text = noTokenBot.getLastReplyText();
@@ -254,59 +254,59 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('subscribe to own shop → error', async () => {
       // Check subscription
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: false }
+        data: { subscribed: false },
       });
 
       // Subscribe returns error
       mock.onPost('/subscriptions').reply(400, {
-        error: 'Cannot subscribe to your own shop'
+        error: 'Cannot subscribe to your own shop',
       });
 
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали ошибку
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => 
-        a.text && a.text.includes('Нельзя подписаться на собственный магазин')
-      )).toBe(true);
+      expect(
+        answers.some((a) => a.text && a.text.includes('Нельзя подписаться на собственный магазин'))
+      ).toBe(true);
     });
 
     it('subscription limit (BASIC) → upgrade prompt', async () => {
       // Check subscription
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: false }
+        data: { subscribed: false },
       });
 
       // Subscribe returns limit error
       mock.onPost('/subscriptions').reply(400, {
-        error: 'Subscription limit reached'
+        error: 'Subscription limit reached',
       });
 
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали ошибку (generic error message)
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a =>
-        a.text && a.text.includes('Не удалось оформить подписку')
-      )).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('Не удалось оформить подписку'))).toBe(
+        true
+      );
     });
 
     it('API error при получении подписок → error message', async () => {
       // API returns error
       mock.onGet('/subscriptions').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('buyer:subscriptions'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали ошибку
       const text = testBot.getLastReplyText();
@@ -316,19 +316,19 @@ describe('Buyer Subscriptions Flow (P0)', () => {
     it('API error при отписке → error alert', async () => {
       // Unsubscribe API returns error
       mock.onDelete('/subscriptions/123').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       await testBot.handleUpdate(callbackUpdate('unsubscribe:123'));
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем что показали ошибку
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a =>
-        a.text && a.text.includes('Не удалось отменить подписку')
-      )).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('Не удалось отменить подписку'))).toBe(
+        true
+      );
     });
   });
 
@@ -338,11 +338,11 @@ describe('Buyer Subscriptions Flow (P0)', () => {
       mock.onGet('/shops/123').reply(200, { data: mockShop });
       mock.onGet('/products').reply(200, { data: mockProducts });
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: false }
+        data: { subscribed: false },
       });
 
       await testBot.handleUpdate(callbackUpdate('shop:view:123'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем кнопку "Подписаться"
       let markup = testBot.getLastMarkup();
@@ -353,16 +353,16 @@ describe('Buyer Subscriptions Flow (P0)', () => {
 
       // Step 2: Subscribe
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: false }
+        data: { subscribed: false },
       });
       mock.onPost('/subscriptions').reply(200, {
-        data: { shopId: 123, userId: 2 }
+        data: { shopId: 123, userId: 2 },
       });
       mock.onGet('/shops/123').reply(200, { data: mockShop });
       mock.onGet('/products').reply(200, { data: mockProducts });
 
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем кнопку "Подписан"
       markup = testBot.getLastMarkup();
@@ -373,29 +373,29 @@ describe('Buyer Subscriptions Flow (P0)', () => {
 
       // Step 3: Try to subscribe again (idempotency)
       mock.onGet(/\/subscriptions\/check\/123/).reply(200, {
-        data: { subscribed: true }
+        data: { subscribed: true },
       });
       mock.onGet('/shops/123').reply(200, { data: mockShop });
       mock.onGet('/products').reply(200, { data: mockProducts });
 
       await testBot.handleUpdate(callbackUpdate('subscribe:123'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем toast "уже в подписках"
       const answers = testBot.captor.getAnswers();
-      expect(answers.some(a => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
+      expect(answers.some((a) => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
 
       testBot.captor.reset();
 
       // Step 4: Unsubscribe
       mock.onDelete('/subscriptions/123').reply(200, {
-        data: { unsubscribed: true }
+        data: { unsubscribed: true },
       });
       mock.onGet('/shops/123').reply(200, { data: mockShop });
       mock.onGet('/products').reply(200, { data: mockProducts });
 
       await testBot.handleUpdate(callbackUpdate('unsubscribe:123'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Проверяем кнопку вернулась к "Подписаться"
       markup = testBot.getLastMarkup();

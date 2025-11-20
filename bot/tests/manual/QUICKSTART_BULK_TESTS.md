@@ -14,6 +14,7 @@ npm run test:bulk
 ## Что тестируется
 
 15 сценариев работы AI с группой товаров:
+
 - ✅ Массовые скидки (тест 1, 5, 11)
 - ✅ Групповые обновления (тест 2, 3, 10)
 - ✅ Массовое удаление (тест 6, 7)
@@ -44,6 +45,7 @@ npm run test:bulk
 ## Если тест провалился
 
 ### Пример ошибки:
+
 ```
 ❌ FAIL: Test 1: Скидка 20% на iPhone и MacBook
    Error: iPhone: 0%, MacBook: 0%
@@ -54,18 +56,19 @@ npm run test:bulk
 ```
 
 ### Причины:
+
 1. **AI не вызвал функцию** - проверь логи DeepSeek API
 2. **Backend ошибка** - проверь `backend/logs/error.log`
 3. **БД не обновилась** - увеличь `AI_DELAY` в коде
 
 ## Troubleshooting
 
-| Ошибка | Решение |
-|--------|---------|
-| `ECONNREFUSED` | Backend не запущен: `cd backend && npm run dev` |
-| `connection refused (PostgreSQL)` | Запусти PostgreSQL или проверь `DATABASE_URL` |
-| `401 Unauthorized` | DeepSeek API ключ невалиден - проверь `.env` |
-| `timeout` | Увеличь `AI_DELAY` с 2000 до 5000 в коде |
+| Ошибка                            | Решение                                         |
+| --------------------------------- | ----------------------------------------------- |
+| `ECONNREFUSED`                    | Backend не запущен: `cd backend && npm run dev` |
+| `connection refused (PostgreSQL)` | Запусти PostgreSQL или проверь `DATABASE_URL`   |
+| `401 Unauthorized`                | DeepSeek API ключ невалиден - проверь `.env`    |
+| `timeout`                         | Увеличь `AI_DELAY` с 2000 до 5000 в коде        |
 
 ## Детали
 

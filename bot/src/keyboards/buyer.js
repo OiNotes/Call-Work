@@ -8,7 +8,7 @@ export const buyerMenu = Markup.inlineKeyboard([
   [Markup.button.callback(buttonText.findShop, 'buyer:search')],
   [Markup.button.callback(buttonText.mySubscriptions, 'buyer:subscriptions')],
   [Markup.button.callback(buttonText.myOrders, 'buyer:orders')],
-  [Markup.button.callback(buttonText.switchRole, 'role:toggle')]
+  [Markup.button.callback(buttonText.switchRole, 'role:toggle')],
 ]);
 
 // Buyer menu without shop (shows CTA to create shop)
@@ -18,11 +18,15 @@ export const buyerMenuNoShop = Markup.inlineKeyboard([
   [Markup.button.callback(buttonText.findShop, 'buyer:search')],
   [Markup.button.callback(buttonText.mySubscriptions, 'buyer:subscriptions')],
   [Markup.button.callback(buttonText.myOrders, 'buyer:orders')],
-  [Markup.button.callback(buttonText.switchRole, 'role:toggle')]
+  [Markup.button.callback(buttonText.switchRole, 'role:toggle')],
 ]);
 
 // Shop actions (subscribe/unsubscribe/open)
-export const shopActionsKeyboard = (shopId, isSubscribed = false, counts = { stock: 0, preorder: 0 }) => {
+export const shopActionsKeyboard = (
+  shopId,
+  isSubscribed = false,
+  counts = { stock: 0, preorder: 0 }
+) => {
   const { stock = 0, preorder = 0 } = counts;
   const buttons = [];
 
@@ -37,7 +41,12 @@ export const shopActionsKeyboard = (shopId, isSubscribed = false, counts = { sto
 
   buttons.push(
     [Markup.button.callback(`${buttonText.stockSection} (${stock})`, `shop:stock:${shopId}`)],
-    [Markup.button.callback(`${buttonText.preorderSection} (${preorder})`, `shop:preorder:${shopId}`)],
+    [
+      Markup.button.callback(
+        `${buttonText.preorderSection} (${preorder})`,
+        `shop:preorder:${shopId}`
+      ),
+    ],
     [Markup.button.callback(buttonText.aboutShop, `shop:view:${shopId}`)],
     [Markup.button.callback(buttonText.back, 'buyer:main')]
   );
@@ -54,9 +63,7 @@ export const shopResultsKeyboard = (shops) => {
 
   for (const shop of shopsToShow) {
     const suffix = shop.is_subscribed ? ' (в подписках)' : '';
-    buttons.push([
-      Markup.button.callback(`${shop.name}${suffix}`, `shop:view:${shop.id}`)
-    ]);
+    buttons.push([Markup.button.callback(`${shop.name}${suffix}`, `shop:view:${shop.id}`)]);
   }
 
   // Show "and X more" if there are more results

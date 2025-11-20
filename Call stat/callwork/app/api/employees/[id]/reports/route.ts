@@ -45,12 +45,16 @@ export async function GET(
       skip: offset,
       select: {
         id: true,
+        userId: true,
         date: true,
         zoomAppointments: true,
         pzmConducted: true,
         vzmConducted: true,
+        contractReviewCount: true,
         successfulDeals: true,
         monthlySalesAmount: true,
+        refusalsCount: true,
+        warmingUpCount: true,
       }
     }).then(reports =>
       reports.map(r => ({

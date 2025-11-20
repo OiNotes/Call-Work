@@ -1,7 +1,7 @@
 /**
  * Jest Setup - Runs after environment setup
  * Sets up test helpers and mocks
- * 
+ *
  * Note: Environment variables are set in env-setup.js (runs first)
  */
 

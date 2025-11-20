@@ -9,9 +9,9 @@ export async function enableMocking() {
   console.log('🎭 Mock mode enabled - using MSW');
 
   const { worker } = await import('./browser');
-  
+
   await worker.start({
-    onUnhandledRequest: 'bypass'
+    onUnhandledRequest: 'bypass',
   });
 
   console.log('✅ MSW worker started');

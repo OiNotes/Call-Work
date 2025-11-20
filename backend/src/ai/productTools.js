@@ -4,34 +4,38 @@ export const productTools = [
     strict: true,
     function: {
       name: 'addProduct',
-      description: 'Добавить новый товар в магазин. Use this when user wants to add/create a new product.',
+      description:
+        'Добавить новый товар в магазин. Use this when user wants to add/create a new product.',
       parameters: {
         type: 'object',
         properties: {
           name: {
             type: 'string',
-            description: 'Название товара (минимум 3 символа). Product name in any language.'
+            description: 'Название товара (минимум 3 символа). Product name in any language.',
           },
           price: {
             type: 'number',
-            description: 'Цена товара в USD (только положительные числа). Product price in USD, must be positive.'
+            description:
+              'Цена товара в USD (только положительные числа). Product price in USD, must be positive.',
           },
           stock: {
             type: 'number',
-            description: 'Количество на складе (опционально, по умолчанию 0). Stock quantity, optional, defaults to 0.'
-          }
+            description:
+              'Количество на складе (опционально, по умолчанию 0). Stock quantity, optional, defaults to 0.',
+          },
         },
         required: ['name', 'price', 'stock'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
     strict: true,
     function: {
       name: 'bulkAddProducts',
-      description: 'Добавить несколько товаров одновременно. ALWAYS use this when user wants to add 2+ products in one command.',
+      description:
+        'Добавить несколько товаров одновременно. ALWAYS use this when user wants to add 2+ products in one command.',
       parameters: {
         type: 'object',
         properties: {
@@ -43,18 +47,18 @@ export const productTools = [
               properties: {
                 name: { type: 'string' },
                 price: { type: 'number' },
-                stock: { type: 'number' }
+                stock: { type: 'number' },
               },
               required: ['name', 'price', 'stock'],
-              additionalProperties: false
+              additionalProperties: false,
             },
-            minItems: 2
-          }
+            minItems: 2,
+          },
         },
         required: ['products'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -71,15 +75,15 @@ export const productTools = [
             properties: {
               name: { type: 'string' },
               price: { type: 'number' },
-              stock_quantity: { type: 'number' }
+              stock_quantity: { type: 'number' },
             },
-            additionalProperties: false
-          }
+            additionalProperties: false,
+          },
         },
         required: ['productName', 'updates'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -90,12 +94,12 @@ export const productTools = [
       parameters: {
         type: 'object',
         properties: {
-          productName: { type: 'string' }
+          productName: { type: 'string' },
         },
         required: ['productName'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -109,13 +113,13 @@ export const productTools = [
           productNames: {
             type: 'array',
             items: { type: 'string' },
-            minItems: 2
-          }
+            minItems: 2,
+          },
         },
         required: ['productNames'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -127,9 +131,9 @@ export const productTools = [
         type: 'object',
         properties: {},
         required: [],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -140,13 +144,13 @@ export const productTools = [
       parameters: {
         type: 'object',
         properties: {
-          query: { type: 'string' }
+          query: { type: 'string' },
         },
         required: ['query'],
-        additionalProperties: false
-      }
-    }
-  }
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export default productTools;

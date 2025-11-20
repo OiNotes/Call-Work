@@ -282,7 +282,9 @@ async function main() {
 
     if (verified) {
       console.log('═══════════════════════════════════════════════════════════');
-      console.log(`${colors.green}✓ All migrations applied and verified successfully!${colors.reset}`);
+      console.log(
+        `${colors.green}✓ All migrations applied and verified successfully!${colors.reset}`
+      );
       console.log('═══════════════════════════════════════════════════════════');
       console.log('');
       console.log('Next steps:');

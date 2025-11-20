@@ -21,12 +21,12 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
     name: 'Test Shop',
     description: 'Test Shop Description',
     seller_username: 'testseller',
-    seller_first_name: 'Test Seller'
+    seller_first_name: 'Test Seller',
   };
 
   const mockProducts = [
-    { id: 1, name: 'Product 1', price: 10.00 },
-    { id: 2, name: 'Product 2', price: 20.00 }
+    { id: 1, name: 'Product 1', price: 10.0 },
+    { id: 2, name: 'Product 2', price: 20.0 },
   ];
 
   beforeEach(() => {
@@ -34,8 +34,8 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
       skipAuth: true,
       mockSession: {
         token: 'test-jwt-token',
-        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' }
-      }
+        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' },
+      },
     });
     mock = new MockAdapter(api);
   });
@@ -51,13 +51,13 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
     // ✅ FIX: API использует /products?shopId=X, а НЕ /products/shop/X
     mock.onGet('/products').reply(200, { data: mockProducts });
     mock.onGet(`/subscriptions/check/${shopId}`).reply(200, {
-      data: { subscribed: false }
+      data: { subscribed: false },
     });
 
     await testBot.handleUpdate(callbackUpdate(`shop:view:${shopId}`));
 
     // ✅ FIX: Дать время на async API calls (3 calls: getShop, getProducts, checkSubscription)
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
 
     // Проверяем что answerCbQuery был вызван
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
@@ -74,18 +74,18 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
     mock.onPost(`/subscriptions`).reply(200, { data: { shopId, userId: 1 } });
     mock.onGet(`/shops/${shopId}`).reply(200, { data: mockShop });
     mock.onGet(`/subscriptions/check/${shopId}`).reply(200, {
-      data: { subscribed: false } // Before subscribe
+      data: { subscribed: false }, // Before subscribe
     });
 
     await testBot.handleUpdate(callbackUpdate(`subscribe:${shopId}`));
 
     // ✅ FIX: Дать время на async subscribe API call
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
 
     // Проверяем answerCbQuery (toast shows "Готово")
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
     const answers = testBot.captor.getAnswers();
-    expect(answers.some(a => a.text && a.text.includes('Готово'))).toBe(true);
+    expect(answers.some((a) => a.text && a.text.includes('Готово'))).toBe(true);
 
     // Проверяем что сообщение содержит подтверждение подписки
     const messageText = testBot.getLastReplyText();
@@ -106,18 +106,18 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
 
     // Step 3: Попытка повторной подписки (идемпотентность)
     mock.onGet(`/subscriptions/check/${shopId}`).reply(200, {
-      data: { subscribed: true } // Already subscribed
+      data: { subscribed: true }, // Already subscribed
     });
     mock.onGet(`/shops/${shopId}`).reply(200, { data: mockShop });
 
     await testBot.handleUpdate(callbackUpdate(`subscribe:${shopId}`));
 
     // ✅ FIX: Дать время на async check subscription call
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
 
     // Проверяем что показали информационное сообщение
     const answers2 = testBot.captor.getAnswers();
-    expect(answers2.some(a => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
+    expect(answers2.some((a) => a.text && a.text.includes('уже в ваших подписках'))).toBe(true);
 
     // Проверяем что markup остался с кнопкой "Подписан"
     const markup3 = testBot.getLastMarkup();
@@ -133,7 +133,7 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
     await testBot.handleUpdate(callbackUpdate(`unsubscribe:${shopId}`));
 
     // ✅ FIX: Дать время на async unsubscribe API call
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
 
     // Проверяем answerCbQuery
     expect(testBot.captor.wasAnswerCbQueryCalled()).toBe(true);
@@ -152,17 +152,19 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
   it('нельзя подписаться на свой магазин', async () => {
     // Mock subscribe API with error
     mock.onGet(`/subscriptions/check/${shopId}`).reply(200, {
-      data: { subscribed: false }
+      data: { subscribed: false },
     });
     mock.onPost(`/subscriptions`).reply(400, {
-      error: 'Cannot subscribe to your own shop'
+      error: 'Cannot subscribe to your own shop',
     });
 
     await testBot.handleUpdate(callbackUpdate(`subscribe:${shopId}`));
 
     // Проверяем что показали ошибку
     const answers = testBot.captor.getAnswers();
-    expect(answers.some(a => a.text && a.text.includes('Нельзя подписаться на собственный магазин'))).toBe(true);
+    expect(
+      answers.some((a) => a.text && a.text.includes('Нельзя подписаться на собственный магазин'))
+    ).toBe(true);
   });
 
   it('отписка без токена → ошибка', async () => {
@@ -171,15 +173,15 @@ describe('Subscriptions Flow - Subscribe/Unsubscribe/Idempotency (P0)', () => {
       skipAuth: true,
       mockSession: {
         token: null, // No token
-        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' }
-      }
+        user: { id: 1, telegramId: '123456', selectedRole: 'buyer' },
+      },
     });
 
     await noTokenBot.handleUpdate(callbackUpdate(`unsubscribe:${shopId}`));
 
     // Проверяем что показали ошибку авторизации
     const answers = noTokenBot.captor.getAnswers();
-    expect(answers.some(a => a.text && a.text.includes('Требуется авторизация'))).toBe(true);
+    expect(answers.some((a) => a.text && a.text.includes('Требуется авторизация'))).toBe(true);
 
     noTokenBot.reset();
   });

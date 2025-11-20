@@ -1,12 +1,12 @@
 /**
  * Product Sync Worker
- * 
+ *
  * Background worker that processes product sync jobs from Bull queue.
  * This worker runs separately from the main API server to avoid blocking HTTP requests.
- * 
+ *
  * Usage:
  *   node src/workers/syncWorker.js
- * 
+ *
  * Or in production with PM2:
  *   pm2 start src/workers/syncWorker.js --name sync-worker
  */

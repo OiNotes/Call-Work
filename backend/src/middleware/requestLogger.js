@@ -10,10 +10,10 @@ export const requestLogger = (req, res, next) => {
   // Log request
   logger.info('Incoming request', {
     method: req.method,
-    path: req.originalUrl || req.path,  // ✅ FIX: Use originalUrl for full path
+    path: req.originalUrl || req.path, // ✅ FIX: Use originalUrl for full path
     ip: req.ip,
     userAgent: req.get('user-agent'),
-    userId: req.user?.id
+    userId: req.user?.id,
   });
 
   // Log response when finished
@@ -22,10 +22,10 @@ export const requestLogger = (req, res, next) => {
 
     logger.info('Response sent', {
       method: req.method,
-      path: req.originalUrl || req.path,  // ✅ FIX: Use originalUrl for full path
+      path: req.originalUrl || req.path, // ✅ FIX: Use originalUrl for full path
       statusCode: res.statusCode,
       duration: `${duration}ms`,
-      userId: req.user?.id
+      userId: req.user?.id,
     });
   });
 
@@ -50,12 +50,12 @@ export const sensitiveDataLogger = (req, res, next) => {
 
   logger.debug('Request details', {
     method: req.method,
-    path: req.originalUrl || req.path,  // ✅ FIX: Use originalUrl for full path
+    path: req.originalUrl || req.path, // ✅ FIX: Use originalUrl for full path
     body: logBody,
     query: req.query,
     params: req.params,
     ip: req.ip,
-    userId: req.user?.id
+    userId: req.user?.id,
   });
 
   res.on('finish', () => {
@@ -64,10 +64,10 @@ export const sensitiveDataLogger = (req, res, next) => {
     if (res.statusCode >= 400) {
       logger.warn('Request failed', {
         method: req.method,
-        path: req.originalUrl || req.path,  // ✅ FIX: Use originalUrl for full path
+        path: req.originalUrl || req.path, // ✅ FIX: Use originalUrl for full path
         statusCode: res.statusCode,
         duration: `${duration}ms`,
-        userId: req.user?.id
+        userId: req.user?.id,
       });
     }
   });
@@ -81,14 +81,14 @@ export const sensitiveDataLogger = (req, res, next) => {
 export const errorRequestLogger = (err, req, res, next) => {
   logger.error('Request error', {
     method: req.method,
-    path: req.originalUrl || req.path,  // ✅ FIX: Use originalUrl for full path
+    path: req.originalUrl || req.path, // ✅ FIX: Use originalUrl for full path
     error: err.message,
     stack: err.stack,
     body: req.body,
     params: req.params,
     query: req.query,
     ip: req.ip,
-    userId: req.user?.id
+    userId: req.user?.id,
   });
 
   next(err);
@@ -97,5 +97,5 @@ export const errorRequestLogger = (err, req, res, next) => {
 export default {
   requestLogger,
   sensitiveDataLogger,
-  errorRequestLogger
+  errorRequestLogger,
 };

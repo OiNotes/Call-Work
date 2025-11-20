@@ -15,12 +15,12 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../.env') });
 
 const mockProducts = [
-  { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 }
+  { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 },
 ];
 
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY
+  apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
 async function testBulkAdd(userMessage) {
@@ -34,22 +34,27 @@ async function testBulkAdd(userMessage) {
     model: 'deepseek-chat',
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage }
+      { role: 'user', content: userMessage },
     ],
     tools: productTools,
     tool_choice: 'auto',
     temperature: 0.7,
-    max_tokens: 500
+    max_tokens: 500,
   });
 
   const message = response.choices[0].message;
 
   if (message.tool_calls && message.tool_calls.length > 0) {
     console.log('✅ RESULT: Function Call');
-    message.tool_calls.forEach(call => {
+    message.tool_calls.forEach((call) => {
       console.log(`   Function: ${call.function.name}`);
       const parsed = JSON.parse(call.function.arguments);
-      console.log(`   Arguments:\n${JSON.stringify(parsed, null, 2).split('\n').map(l => '      ' + l).join('\n')}`);
+      console.log(
+        `   Arguments:\n${JSON.stringify(parsed, null, 2)
+          .split('\n')
+          .map((l) => '      ' + l)
+          .join('\n')}`
+      );
     });
     return 'PASS';
   } else {

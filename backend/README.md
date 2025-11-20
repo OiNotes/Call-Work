@@ -22,17 +22,20 @@ Production-ready backend API для Telegram E-Commerce платформы с п
 ## Установка
 
 1. Установите зависимости:
+
 ```bash
 cd backend
 npm install
 ```
 
 2. Создайте файл `.env`:
+
 ```bash
 cp .env.example .env
 ```
 
 3. Настройте переменные окружения в `.env`:
+
 ```env
 PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/telegram_shop
@@ -41,16 +44,19 @@ TELEGRAM_BOT_TOKEN=your-bot-token
 ```
 
 4. Создайте базу данных:
+
 ```bash
 createdb telegram_shop
 ```
 
 5. Выполните SQL миграцию:
+
 ```bash
 psql -d telegram_shop -f database/schema.sql
 ```
 
 6. Запустите сервер:
+
 ```bash
 # Development
 npm run dev
@@ -105,11 +111,13 @@ npm start
 WebSocket доступен на том же порту что и HTTP сервер.
 
 ### Connection
+
 ```javascript
 const ws = new WebSocket('ws://localhost:3000');
 ```
 
 ### Events
+
 ```javascript
 // Connected
 { type: 'connected', message: 'Connected to Telegram Shop WebSocket' }
@@ -169,11 +177,13 @@ backend/
 - 24-hour expiration check для предотвращения replay attacks
 
 **Security Documentation:**
+
 - [Project Security Policy](../SECURITY.md) - Vulnerability reporting & best practices
 
 ## Error Handling
 
 Все ошибки возвращаются в формате:
+
 ```json
 {
   "success": false,
@@ -183,6 +193,7 @@ backend/
 ```
 
 HTTP статус коды:
+
 - 200 - Success
 - 201 - Created
 - 400 - Bad Request
@@ -194,12 +205,14 @@ HTTP статус коды:
 ## Криптовалюты
 
 Поддерживаемые валюты:
+
 - BTC (Bitcoin)
 - ETH (Ethereum)
 - USDT (Tether ERC-20)
 - TON (The Open Network)
 
 Верификация транзакций происходит через blockchain APIs:
+
 - Bitcoin: blockchain.info API
 - Ethereum/USDT: Etherscan API
 - TON: TONCenter API
@@ -219,19 +232,19 @@ npm start
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| PORT | Server port | Yes |
-| DATABASE_URL | PostgreSQL connection string | Yes |
-| JWT_SECRET | JWT secret key | Yes |
-| JWT_EXPIRES_IN | JWT expiration time | No (default: 7d) |
-| TELEGRAM_BOT_TOKEN | Telegram bot token | Yes |
-| BLOCKCHAIN_API_KEY | Bitcoin API key | No |
-| ETHERSCAN_API_KEY | Etherscan API key | No |
-| TRON_API_KEY | TRON API key | No |
-| FRONTEND_URL | Frontend URL for CORS | No |
-| RATE_LIMIT_WINDOW_MS | Rate limit window | No |
-| RATE_LIMIT_MAX_REQUESTS | Max requests per window | No |
+| Variable                | Description                  | Required         |
+| ----------------------- | ---------------------------- | ---------------- |
+| PORT                    | Server port                  | Yes              |
+| DATABASE_URL            | PostgreSQL connection string | Yes              |
+| JWT_SECRET              | JWT secret key               | Yes              |
+| JWT_EXPIRES_IN          | JWT expiration time          | No (default: 7d) |
+| TELEGRAM_BOT_TOKEN      | Telegram bot token           | Yes              |
+| BLOCKCHAIN_API_KEY      | Bitcoin API key              | No               |
+| ETHERSCAN_API_KEY       | Etherscan API key            | No               |
+| TRON_API_KEY            | TRON API key                 | No               |
+| FRONTEND_URL            | Frontend URL for CORS        | No               |
+| RATE_LIMIT_WINDOW_MS    | Rate limit window            | No               |
+| RATE_LIMIT_MAX_REQUESTS | Max requests per window      | No               |
 
 ## License
 

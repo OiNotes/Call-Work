@@ -5,7 +5,11 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { validateCryptoAddress, getCryptoValidationError, detectCryptoType } from '../../src/utils/validation.js';
+import {
+  validateCryptoAddress,
+  getCryptoValidationError,
+  detectCryptoType,
+} from '../../src/utils/validation.js';
 
 describe('Validation Utils Tests', () => {
   describe('validateCryptoAddress', () => {

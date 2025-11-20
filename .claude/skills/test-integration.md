@@ -29,14 +29,14 @@ echo ""
 # Check if backend is running (required for API calls in tests)
 if ! curl -s http://localhost:3000/health >/dev/null 2>&1; then
   echo "⚠️  Backend is not running. Starting backend for tests..."
-  
+
   cd "$PROJECT_DIR/backend"
   npm run dev > ../logs/backend.log 2>&1 &
   BACKEND_PID=$!
-  
+
   echo "Waiting for backend to start..."
   sleep 5
-  
+
   if curl -s http://localhost:3000/health >/dev/null 2>&1; then
     echo "✅ Backend started"
   else
@@ -82,6 +82,7 @@ fi
 ## Test scenarios covered:
 
 ### User flows:
+
 - 👤 User registration and authentication
 - 🏪 Shop creation and management
 - 📦 Product CRUD operations
@@ -90,6 +91,7 @@ fi
 - 🔔 Subscription management
 
 ### Bot interactions:
+
 - Button clicks (callback queries)
 - Text input handling
 - Scene transitions
@@ -100,6 +102,7 @@ fi
 ## Test data:
 
 Tests use fixtures from:
+
 - `bot/tests/fixtures/` (if exists)
 - Mock data generated in test files
 

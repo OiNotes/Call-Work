@@ -29,7 +29,7 @@ export const errorHandler = (err, req, res, _next) => {
     userId: req.user?.id,
     body: req.body,
     params: req.params,
-    query: req.query
+    query: req.query,
   });
 
   // Determine error status
@@ -41,21 +41,21 @@ export const errorHandler = (err, req, res, _next) => {
     if (statusCode >= 500) {
       return res.status(statusCode).json({
         success: false,
-        error: 'An error occurred. Please try again later.'
+        error: 'An error occurred. Please try again later.',
       });
     }
-    
+
     // For 4xx errors, only send message if it's an operational error
     const errorResponse = {
       success: false,
-      error: err.isOperational ? err.message : 'Request failed'
+      error: err.isOperational ? err.message : 'Request failed',
     };
-    
+
     // Only include details for operational errors
     if (err.details && err.isOperational) {
       errorResponse.details = err.details;
     }
-    
+
     return res.status(statusCode).json(errorResponse);
   }
 
@@ -64,7 +64,7 @@ export const errorHandler = (err, req, res, _next) => {
     success: false,
     error: err.message || 'Internal server error',
     stack: err.stack,
-    details: err.details || null
+    details: err.details || null,
   };
 
   res.status(statusCode).json(errorResponse);
@@ -77,13 +77,13 @@ export const notFoundHandler = (req, res) => {
   logger.warn('404 Not Found', {
     path: req.path,
     method: req.method,
-    ip: req.ip
+    ip: req.ip,
   });
 
   res.status(404).json({
     success: false,
     error: 'Route not found',
-    path: req.path
+    path: req.path,
   });
 };
 
@@ -100,10 +100,10 @@ export const asyncHandler = (fn) => {
  * Validation error handler
  */
 export const validationErrorHandler = (errors) => {
-  const details = errors.array().map(err => ({
+  const details = errors.array().map((err) => ({
     field: err.path || err.param,
     message: err.msg,
-    value: err.value
+    value: err.value,
   }));
 
   return new ApiError(400, 'Validation failed', details);
@@ -116,25 +116,25 @@ export const dbErrorHandler = (err) => {
   logger.error('Database error', {
     error: err.message,
     code: err.code,
-    detail: err.detail
+    detail: err.detail,
   });
 
   // PostgreSQL error codes
   if (err.code === '23505') {
     return new ApiError(409, 'Resource already exists', {
-      constraint: err.constraint
+      constraint: err.constraint,
     });
   }
 
   if (err.code === '23503') {
     return new ApiError(400, 'Foreign key constraint violation', {
-      constraint: err.constraint
+      constraint: err.constraint,
     });
   }
 
   if (err.code === '23502') {
     return new ApiError(400, 'Required field is missing', {
-      column: err.column
+      column: err.column,
     });
   }
 
@@ -163,5 +163,5 @@ export default {
   asyncHandler,
   validationErrorHandler,
   dbErrorHandler,
-  jwtErrorHandler
+  jwtErrorHandler,
 };

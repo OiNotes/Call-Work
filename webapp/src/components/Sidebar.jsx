@@ -10,7 +10,7 @@ const Sidebar = memo(function Sidebar() {
     const base = [
       { id: 'subscriptions', label: t('tabs.subscriptions') },
       { id: 'catalog', label: t('tabs.catalog') },
-      { id: 'settings', label: t('tabs.settings') }
+      { id: 'settings', label: t('tabs.settings') },
     ];
 
     if (hasFollows) {
@@ -31,7 +31,9 @@ const Sidebar = memo(function Sidebar() {
           key={item.id}
           onClick={() => setActiveTab(item.id)}
           className={`w-full text-left px-4 py-2 rounded-xl transition-colors ${
-            activeTab === item.id ? 'bg-orange-primary/10 text-orange-primary' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+            activeTab === item.id
+              ? 'bg-orange-primary/10 text-orange-primary'
+              : 'bg-white/5 text-gray-300 hover:bg-white/10'
           }`}
         >
           {item.label}

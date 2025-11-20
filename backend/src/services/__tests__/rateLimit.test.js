@@ -8,8 +8,8 @@ import { jest } from '@jest/globals';
 const mockQuery = jest.fn();
 jest.unstable_mockModule('../../config/database.js', () => ({
   default: {
-    query: mockQuery
-  }
+    query: mockQuery,
+  },
 }));
 
 const { canMigrate, isProShop, validateMigration } = await import('../rateLimit.js');
@@ -22,7 +22,7 @@ describe('Rate Limit Service', () => {
   describe('canMigrate', () => {
     it('should allow migration when under limit', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ count: '1' }]
+        rows: [{ count: '1' }],
       });
 
       const result = await canMigrate(1);
@@ -35,7 +35,7 @@ describe('Rate Limit Service', () => {
 
     it('should block migration when limit exceeded', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ count: '2' }]
+        rows: [{ count: '2' }],
       });
 
       const result = await canMigrate(1);
@@ -47,7 +47,7 @@ describe('Rate Limit Service', () => {
 
     it('should include reset date', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ count: '0' }]
+        rows: [{ count: '0' }],
       });
 
       const result = await canMigrate(1);
@@ -60,7 +60,7 @@ describe('Rate Limit Service', () => {
   describe('isProShop', () => {
     it('should return true for PRO shop', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'pro' }]
+        rows: [{ tier: 'pro' }],
       });
 
       const result = await isProShop(1);
@@ -70,7 +70,7 @@ describe('Rate Limit Service', () => {
 
     it('should return false for basic shop', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'basic' }]
+        rows: [{ tier: 'basic' }],
       });
 
       const result = await isProShop(1);
@@ -82,10 +82,10 @@ describe('Rate Limit Service', () => {
   describe('validateMigration', () => {
     it('should pass validation for PRO shop under limit', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'pro' }]
+        rows: [{ tier: 'pro' }],
       });
       mockQuery.mockResolvedValueOnce({
-        rows: [{ count: '1' }]
+        rows: [{ count: '1' }],
       });
 
       const result = await validateMigration(1);
@@ -96,7 +96,7 @@ describe('Rate Limit Service', () => {
 
     it('should fail validation for basic shop', async () => {
       mockQuery.mockResolvedValueOnce({
-        rows: [{ tier: 'basic' }]
+        rows: [{ tier: 'basic' }],
       });
 
       const result = await validateMigration(1);

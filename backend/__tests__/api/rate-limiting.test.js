@@ -1,6 +1,6 @@
 /**
  * Rate Limiting Tests
- * 
+ *
  * Tests for rate limiting on sensitive endpoints
  * Prevents DoS attacks via spam requests
  */
@@ -9,11 +9,8 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
 import { config } from '../../src/config/env.js';
-import { 
-  userQueries, 
-  shopQueries,
-  getClient 
-} from '../../src/models/db.js';
+import { userQueries, shopQueries } from '../../src/database/queries/index.js';
+import { getClient } from '../../src/config/database.js';
 
 describe('Rate Limiting Tests', () => {
   let user, token, shop;
@@ -24,7 +21,7 @@ describe('Rate Limiting Tests', () => {
       telegram_id: Math.floor(Math.random() * 1000000),
       username: 'ratelimituser',
       first_name: 'Rate',
-      last_name: 'Limit'
+      last_name: 'Limit',
     });
 
     // Generate token
@@ -40,7 +37,7 @@ describe('Rate Limiting Tests', () => {
       name: 'ratelimitshop',
       description: 'Test Shop',
       subscription_tier: 'pro',
-      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
   });
 
@@ -79,9 +76,9 @@ describe('Rate Limiting Tests', () => {
       }
 
       const responses = await Promise.all(requests);
-      
+
       // At least one should be rate limited
-      const rateLimited = responses.filter(r => r.status === 429);
+      const rateLimited = responses.filter((r) => r.status === 429);
       expect(rateLimited.length).toBeGreaterThan(0);
     }, 10000); // Longer timeout for multiple requests
   });
@@ -91,9 +88,9 @@ describe('Rate Limiting Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: 'Test AI message',
-          shopId: shop.id
+          shopId: shop.id,
         });
 
       // Should succeed (or fail for business reasons, but not rate limit)
@@ -108,19 +105,19 @@ describe('Rate Limiting Tests', () => {
           request(app)
             .post('/api/ai/products/chat')
             .set('Authorization', `Bearer ${token}`)
-            .send({ 
+            .send({
               message: `Test message ${i}`,
-              shopId: shop.id
+              shopId: shop.id,
             })
         );
       }
 
       const responses = await Promise.all(requests);
-      
+
       // At least one should be rate limited
-      const rateLimited = responses.filter(r => r.status === 429);
+      const rateLimited = responses.filter((r) => r.status === 429);
       expect(rateLimited.length).toBeGreaterThan(0);
-      
+
       // Verify error message
       const rateLimitedResponse = rateLimited[0];
       expect(rateLimitedResponse.body.error).toMatch(/too many/i);
@@ -136,17 +133,17 @@ describe('Rate Limiting Tests', () => {
           request(app)
             .post('/api/shops')
             .set('Authorization', `Bearer ${token}`)
-            .send({ 
+            .send({
               name: `rateshop${i}`,
-              description: 'Rate limit test shop'
+              description: 'Rate limit test shop',
             })
         );
       }
 
       const responses = await Promise.all(requests);
-      
+
       // At least one should be rate limited
-      const rateLimited = responses.filter(r => r.status === 429);
+      const rateLimited = responses.filter((r) => r.status === 429);
       expect(rateLimited.length).toBeGreaterThan(0);
     }, 10000);
   });
@@ -177,7 +174,7 @@ describe('Rate Limiting Tests', () => {
       }
 
       const responses = await Promise.all(requests);
-      const rateLimited = responses.find(r => r.status === 429);
+      const rateLimited = responses.find((r) => r.status === 429);
 
       if (rateLimited) {
         expect(rateLimited.body.retryAfter).toBeDefined();

@@ -19,9 +19,7 @@ export const handleWorkspaceRole = async (ctx) => {
     // Check if token exists
     if (!ctx.session.token) {
       logger.warn(`User ${ctx.from.id} has no token, cannot load workspace`);
-      await ctx.editMessageText(
-        generalMessages.authorizationRequired
-      );
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
@@ -35,9 +33,7 @@ export const handleWorkspaceRole = async (ctx) => {
           : [];
 
       if (workerShops.length === 0) {
-        await ctx.editMessageText(
-          workspaceMessages.noWorkerAccess
-        );
+        await ctx.editMessageText(workspaceMessages.noWorkerAccess);
         return;
       }
 
@@ -47,31 +43,20 @@ export const handleWorkspaceRole = async (ctx) => {
       logger.info(`User ${ctx.from.id} has access to ${workerShops.length} workspace shops`);
 
       // Show shop selection
-      await ctx.editMessageText(
-        workspaceMessages.selectShop,
-        workspaceShopSelection(workerShops)
-      );
-
+      await ctx.editMessageText(workspaceMessages.selectShop, workspaceShopSelection(workerShops));
     } catch (error) {
       logger.error('Error loading workspace shops:', error);
 
       if (error.response?.status === 404) {
-        await ctx.editMessageText(
-          workspaceMessages.noWorkerAccess
-        );
+        await ctx.editMessageText(workspaceMessages.noWorkerAccess);
       } else {
-        await ctx.editMessageText(
-          workspaceMessages.loadError
-        );
+        await ctx.editMessageText(workspaceMessages.loadError);
       }
     }
-
   } catch (error) {
     logger.error('Error in workspace role handler:', error);
     try {
-      await ctx.editMessageText(
-        workspaceMessages.actionFailed
-      );
+      await ctx.editMessageText(workspaceMessages.actionFailed);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -81,7 +66,7 @@ export const handleWorkspaceRole = async (ctx) => {
 /**
  * Handle workspace shop selection
  * User selected a specific shop to work in
- * 
+ *
  * P0-BOT-6 FIX: Server-side authorization verification
  */
 export const handleWorkspaceShopSelect = async (ctx) => {
@@ -95,11 +80,9 @@ export const handleWorkspaceShopSelect = async (ctx) => {
     if (!ctx.session.token) {
       logger.error('Missing token in workspace shop select', {
         userId: ctx.from.id,
-        shopId
+        shopId,
       });
-      await ctx.editMessageText(
-        generalMessages.authorizationRequired
-      );
+      await ctx.editMessageText(generalMessages.authorizationRequired);
       return;
     }
 
@@ -113,18 +96,16 @@ export const handleWorkspaceShopSelect = async (ctx) => {
           : [];
 
       // Verify user has access to this shop
-      const shop = authorizedShops.find(s => s.id === shopId);
-      
+      const shop = authorizedShops.find((s) => s.id === shopId);
+
       if (!shop) {
         logger.warn('Unauthorized workspace access attempt', {
           userId: ctx.from.id,
           shopId,
-          authorizedShops: authorizedShops.map(s => s.id)
+          authorizedShops: authorizedShops.map((s) => s.id),
         });
-        
-        await ctx.editMessageText(
-          workspaceMessages.shopNotFoundOrRevoked
-        );
+
+        await ctx.editMessageText(workspaceMessages.shopNotFoundOrRevoked);
         return;
       }
 
@@ -137,31 +118,20 @@ export const handleWorkspaceShopSelect = async (ctx) => {
       logger.info(`User ${ctx.from.id} entered workspace for shop ${shop.id} (verified)`);
 
       // Show workspace menu (restricted)
-      await ctx.editMessageText(
-        workspaceMessages.header(shop.name),
-        workspaceMenu(shop.name)
-      );
-
+      await ctx.editMessageText(workspaceMessages.header(shop.name), workspaceMenu(shop.name));
     } catch (verifyError) {
       logger.error('Error verifying workspace access:', verifyError);
-      
+
       if (verifyError.response?.status === 403) {
-        await ctx.editMessageText(
-          workspaceMessages.shopNotFoundOrRevoked
-        );
+        await ctx.editMessageText(workspaceMessages.shopNotFoundOrRevoked);
       } else {
-        await ctx.editMessageText(
-          workspaceMessages.loadError
-        );
+        await ctx.editMessageText(workspaceMessages.loadError);
       }
     }
-
   } catch (error) {
     logger.error('Error in workspace shop select handler:', error);
     try {
-      await ctx.editMessageText(
-        workspaceMessages.actionFailed
-      );
+      await ctx.editMessageText(workspaceMessages.actionFailed);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -191,13 +161,10 @@ export const handleWorkspaceBack = async (ctx) => {
       // Reload shops if not in session
       await handleWorkspaceRole(ctx);
     }
-
   } catch (error) {
     logger.error('Error in workspace back handler:', error);
     try {
-      await ctx.editMessageText(
-        workspaceMessages.actionFailed
-      );
+      await ctx.editMessageText(workspaceMessages.actionFailed);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -224,5 +191,5 @@ export default {
   handleWorkspaceRole,
   handleWorkspaceShopSelect,
   handleWorkspaceBack,
-  setupWorkspaceHandlers
+  setupWorkspaceHandlers,
 };

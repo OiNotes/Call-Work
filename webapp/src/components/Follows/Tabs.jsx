@@ -12,7 +12,9 @@ export default function Tabs({ tabs, activeTab, onChange }) {
           className={`flex-1 relative py-2.5 rounded-lg text-sm font-semibold transition-colors ${
             activeTab === tab.id ? 'text-white' : 'text-gray-400'
           }`}
-          whileHover={activeTab !== tab.id ? { backgroundColor: 'rgba(255, 255, 255, 0.05)' } : undefined}
+          whileHover={
+            activeTab !== tab.id ? { backgroundColor: 'rgba(255, 255, 255, 0.05)' } : undefined
+          }
           whileTap={{ scale: 0.98 }}
           transition={activeTab === tab.id ? controlSpring : { duration: 0.2 }}
         >

@@ -1,8 +1,8 @@
 /**
  * Upgrade Shop Scene
- * 
+ *
  * Multi-step wizard for upgrading from BASIC to PRO tier
- * 
+ *
  * Steps:
  * 1. Show current subscription and upgrade cost (prorated)
  * 2. Select cryptocurrency
@@ -25,12 +25,12 @@ const PAYMENT_ADDRESSES = {
   BTC: process.env.BTC_PAYMENT_ADDRESS || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
   ETH: process.env.ETH_PAYMENT_ADDRESS || '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
   USDT: process.env.USDT_PAYMENT_ADDRESS || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-  LTC: process.env.LTC_PAYMENT_ADDRESS || 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R'
+  LTC: process.env.LTC_PAYMENT_ADDRESS || 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R',
 };
 
 const upgradeShopScene = new Scenes.WizardScene(
   'upgrade_shop',
-  
+
   // Step 1: Show current subscription and upgrade cost
   async (ctx) => {
     try {
@@ -49,29 +49,29 @@ const upgradeShopScene = new Scenes.WizardScene(
 
       // Get current subscription status
       const statusResponse = await api.get(`/subscriptions/status/${shopId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const { subscription, shop } = statusResponse.data;
 
       // Check if already PRO
       if (subscription?.tier === 'pro') {
-        await cleanReply(ctx,
+        await cleanReply(
+          ctx,
           sellerMessages.upgrade.alreadyPro,
-          Markup.inlineKeyboard([
-            [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
-          ])
+          Markup.inlineKeyboard([[Markup.button.callback(buttonText.backToMenu, 'seller:menu')]])
         );
         return ctx.scene.leave();
       }
 
       // Check if has active BASIC subscription
       if (!subscription || subscription.tier !== 'basic' || subscription.status !== 'active') {
-        await cleanReply(ctx,
+        await cleanReply(
+          ctx,
           sellerMessages.upgrade.notEligible,
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.paySubscription, 'subscription:pay')],
-            [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
+            [Markup.button.callback(buttonText.backToMenu, 'seller:menu')],
           ])
         );
         return ctx.scene.leave();
@@ -79,7 +79,7 @@ const upgradeShopScene = new Scenes.WizardScene(
 
       // Get upgrade cost
       const costResponse = await api.get(`/subscriptions/upgrade-cost/${shopId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const { upgradeCost, remainingDays } = costResponse.data;
@@ -99,7 +99,7 @@ const upgradeShopScene = new Scenes.WizardScene(
         message,
         Markup.inlineKeyboard([
           [Markup.button.callback(buttonText.confirm, 'upgrade:confirm')],
-          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')],
         ])
       );
 
@@ -114,9 +114,11 @@ const upgradeShopScene = new Scenes.WizardScene(
       logger.error('[UpgradeShop] Step 1 error:', error);
 
       const errorMsg = error.response?.data?.error || error.message;
-      await cleanReply(ctx, sellerMessages.upgrade.error(errorMsg), Markup.inlineKeyboard([
-        [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
-      ]));
+      await cleanReply(
+        ctx,
+        sellerMessages.upgrade.error(errorMsg),
+        Markup.inlineKeyboard([[Markup.button.callback(buttonText.backToMenu, 'seller:menu')]])
+      );
 
       return ctx.scene.leave();
     }
@@ -149,20 +151,17 @@ const upgradeShopScene = new Scenes.WizardScene(
 
     const message = sellerMessages.upgrade.chooseCrypto(upgradeCost.toFixed(2));
 
-    await ctx.editMessageText(
-      message,
-      {
-        parse_mode: 'HTML',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.cryptoBTC, 'upgrade:crypto:BTC')],
-          [Markup.button.callback(buttonText.cryptoETH, 'upgrade:crypto:ETH')],
-          [Markup.button.callback(buttonText.cryptoUSDT, 'upgrade:crypto:USDT')],
-          [Markup.button.callback(buttonText.cryptoLTC, 'upgrade:crypto:LTC')],
-          [Markup.button.callback(buttonText.back, 'upgrade:back')],
-          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-        ])
-      }
-    );
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback(buttonText.cryptoBTC, 'upgrade:crypto:BTC')],
+        [Markup.button.callback(buttonText.cryptoETH, 'upgrade:crypto:ETH')],
+        [Markup.button.callback(buttonText.cryptoUSDT, 'upgrade:crypto:USDT')],
+        [Markup.button.callback(buttonText.cryptoLTC, 'upgrade:crypto:LTC')],
+        [Markup.button.callback(buttonText.back, 'upgrade:back')],
+        [Markup.button.callback(buttonText.cancel, 'seller:menu')],
+      ]),
+    });
 
     return ctx.wizard.next();
   },
@@ -209,15 +208,16 @@ const upgradeShopScene = new Scenes.WizardScene(
     ctx.wizard.state.currency = currency;
     ctx.wizard.state.paymentAddress = paymentAddress;
 
-    const message = sellerMessages.upgrade.paymentDetails(upgradeCost.toFixed(2), currency, paymentAddress);
-
-    await ctx.editMessageText(
-      message,
-      {
-        parse_mode: 'HTML',
-        ...Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]])
-      }
+    const message = sellerMessages.upgrade.paymentDetails(
+      upgradeCost.toFixed(2),
+      currency,
+      paymentAddress
     );
+
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      ...Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]),
+    });
 
     await smartMessage.send(ctx, { text: sellerMessages.upgrade.sendHashPrompt });
 
@@ -236,8 +236,16 @@ const upgradeShopScene = new Scenes.WizardScene(
     if (ctx.callbackQuery?.data === 'upgrade:retry') {
       await ctx.answerCbQuery();
       const { upgradeCost, currency, paymentAddress } = ctx.wizard.state;
-      const reminder = sellerMessages.upgrade.paymentDetails(upgradeCost.toFixed(2), currency, paymentAddress);
-      await cleanReplyHTML(ctx, reminder, Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]]));
+      const reminder = sellerMessages.upgrade.paymentDetails(
+        upgradeCost.toFixed(2),
+        currency,
+        paymentAddress
+      );
+      await cleanReplyHTML(
+        ctx,
+        reminder,
+        Markup.inlineKeyboard([[Markup.button.callback(buttonText.cancel, 'seller:menu')]])
+      );
       await smartMessage.send(ctx, { text: sellerMessages.upgrade.sendHashPrompt });
       return;
     }
@@ -272,7 +280,11 @@ const upgradeShopScene = new Scenes.WizardScene(
       let successMessage = sellerMessages.upgrade.success(endDate);
       successMessage += `\n\n${sellerMessages.upgrade.benefits}`;
 
-      await cleanReplyHTML(ctx, successMessage, Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]));
+      await cleanReplyHTML(
+        ctx,
+        successMessage,
+        Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]])
+      );
 
       await ctx.scene.leave();
 
@@ -296,15 +308,17 @@ const upgradeShopScene = new Scenes.WizardScene(
       await cleanReplyHTML(
         ctx,
         errorMessage,
-        Markup.inlineKeyboard([[
-          Markup.button.callback(buttonText.retry, 'upgrade:retry'),
-          Markup.button.callback(buttonText.cancel, 'seller:menu')
-        ]])
+        Markup.inlineKeyboard([
+          [
+            Markup.button.callback(buttonText.retry, 'upgrade:retry'),
+            Markup.button.callback(buttonText.cancel, 'seller:menu'),
+          ],
+        ])
       );
 
       return;
     }
-  },
+  }
 );
 
 // Leave handler

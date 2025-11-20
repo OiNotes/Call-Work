@@ -12,7 +12,7 @@ import { setupApiMocks } from '../helpers/api-mocks.js';
 // Create axios instance for testing
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  timeout: 10000
+  timeout: 10000,
 });
 
 describe('API Client Tests', () => {
@@ -32,14 +32,14 @@ describe('API Client Tests', () => {
         id: 123456,
         username: 'testuser',
         first_name: 'Test',
-        last_name: 'User'
+        last_name: 'User',
       };
 
       const response = await api.post('/api/auth/login', {
         telegramId: String(telegramUser.id),
         username: telegramUser.username,
         firstName: telegramUser.first_name,
-        lastName: telegramUser.last_name
+        lastName: telegramUser.last_name,
       });
 
       expect(response.status).toBe(200);
@@ -50,8 +50,8 @@ describe('API Client Tests', () => {
     it('should get user profile', async () => {
       const response = await api.get('/api/auth/profile', {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -63,13 +63,13 @@ describe('API Client Tests', () => {
     it('should create shop', async () => {
       const shopData = {
         name: 'Test Shop',
-        description: 'Test Description'
+        description: 'Test Description',
       };
 
       const response = await api.post('/api/shops', shopData, {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(201);
@@ -80,8 +80,8 @@ describe('API Client Tests', () => {
     it('should get my shops', async () => {
       const response = await api.get('/api/shops/my', {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -91,7 +91,7 @@ describe('API Client Tests', () => {
 
     it('should search shops', async () => {
       const response = await api.get('/api/shops/active', {
-        params: { search: 'electronics' }
+        params: { search: 'electronics' },
       });
 
       expect(response.status).toBe(200);
@@ -114,13 +114,13 @@ describe('API Client Tests', () => {
         name: 'iPhone 15',
         description: 'Latest iPhone',
         price: 999.99,
-        stock: 10
+        stock: 10,
       };
 
       const response = await api.post('/api/products', productData, {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(201);
@@ -133,8 +133,8 @@ describe('API Client Tests', () => {
         params: {
           shopId: 1,
           inStock: true,
-          page: 1
-        }
+          page: 1,
+        },
       });
 
       expect(response.status).toBe(200);
@@ -147,17 +147,15 @@ describe('API Client Tests', () => {
     it('should create order', async () => {
       const orderData = {
         shopId: 1,
-        items: [
-          { productId: 1, quantity: 1, price: 999.99 }
-        ],
+        items: [{ productId: 1, quantity: 1, price: 999.99 }],
         shippingAddress: '123 Main St',
-        paymentMethod: 'BTC'
+        paymentMethod: 'BTC',
       };
 
       const response = await api.post('/api/orders', orderData, {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(201);
@@ -169,8 +167,8 @@ describe('API Client Tests', () => {
       const response = await api.get('/api/orders/my', {
         params: { status: 'pending' },
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -181,16 +179,20 @@ describe('API Client Tests', () => {
       // Setup specific mock for this test
       mock.onPut('/api/orders/1/status').reply(200, {
         id: 1,
-        status: 'processing'
+        status: 'processing',
       });
 
-      const response = await api.put('/api/orders/1/status', {
-        status: 'processing'
-      }, {
-        headers: {
-          Authorization: 'Bearer mock-token'
+      const response = await api.put(
+        '/api/orders/1/status',
+        {
+          status: 'processing',
+        },
+        {
+          headers: {
+            Authorization: 'Bearer mock-token',
+          },
         }
-      });
+      );
 
       expect(response.status).toBe(200);
       expect(response.data.status).toBe('processing');
@@ -199,13 +201,17 @@ describe('API Client Tests', () => {
 
   describe('Subscriptions API', () => {
     it('should subscribe to shop', async () => {
-      const response = await api.post('/api/subscriptions', {
-        shopId: 1
-      }, {
-        headers: {
-          Authorization: 'Bearer mock-token'
+      const response = await api.post(
+        '/api/subscriptions',
+        {
+          shopId: 1,
+        },
+        {
+          headers: {
+            Authorization: 'Bearer mock-token',
+          },
         }
-      });
+      );
 
       expect(response.status).toBe(201);
       expect(response.data.shopId).toBe(1);
@@ -214,13 +220,13 @@ describe('API Client Tests', () => {
 
     it('should check subscription', async () => {
       mock.onGet('/api/subscriptions/1').reply(200, {
-        isSubscribed: true
+        isSubscribed: true,
       });
 
       const response = await api.get('/api/subscriptions/1', {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -230,8 +236,8 @@ describe('API Client Tests', () => {
     it('should unsubscribe from shop', async () => {
       const response = await api.delete('/api/subscriptions/1', {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -241,15 +247,19 @@ describe('API Client Tests', () => {
 
   describe('Payments API', () => {
     it('should verify payment', async () => {
-      const response = await api.post('/api/payments/verify', {
-        orderId: 1,
-        txHash: 'tx-hash-123',
-        currency: 'BTC'
-      }, {
-        headers: {
-          Authorization: 'Bearer mock-token'
+      const response = await api.post(
+        '/api/payments/verify',
+        {
+          orderId: 1,
+          txHash: 'tx-hash-123',
+          currency: 'BTC',
+        },
+        {
+          headers: {
+            Authorization: 'Bearer mock-token',
+          },
         }
-      });
+      );
 
       expect(response.status).toBe(200);
       expect(response.data.verified).toBe(true);
@@ -262,14 +272,14 @@ describe('API Client Tests', () => {
           id: 1,
           orderId: 1,
           txHash: 'tx-hash-123',
-          status: 'confirmed'
-        }
+          status: 'confirmed',
+        },
       ]);
 
       const response = await api.get('/api/payments/order/1', {
         headers: {
-          Authorization: 'Bearer mock-token'
-        }
+          Authorization: 'Bearer mock-token',
+        },
       });
 
       expect(response.status).toBe(200);
@@ -282,7 +292,7 @@ describe('API Client Tests', () => {
     it('should handle 401 Unauthorized', async () => {
       mock.reset();
       mock.onGet('/api/auth/profile').reply(401, {
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       });
 
       await expect(api.get('/api/auth/profile')).rejects.toThrow();
@@ -291,7 +301,7 @@ describe('API Client Tests', () => {
     it('should handle 404 Not Found', async () => {
       mock.reset();
       mock.onGet('/api/shops/999').reply(404, {
-        error: 'Shop not found'
+        error: 'Shop not found',
       });
 
       await expect(api.get('/api/shops/999')).rejects.toThrow();

@@ -8,10 +8,12 @@ export const sellerMenu = (activeOrdersCount = 0, options = {}) => {
 
   const buttons = [
     [Markup.button.webApp(buttonText.openCatalog, getWebAppUrl())],
-    [Markup.button.callback(
-      `${buttonText.activeOrders}${activeOrdersCount > 0 ? ` (${activeOrdersCount})` : ''}`,
-      'seller:active_orders'
-    )]
+    [
+      Markup.button.callback(
+        `${buttonText.activeOrders}${activeOrdersCount > 0 ? ` (${activeOrdersCount})` : ''}`,
+        'seller:active_orders'
+      ),
+    ],
   ];
 
   // P2-7 FIX: Always show "Manage Follows" button regardless of hasFollows
@@ -29,7 +31,7 @@ export const sellerMenu = (activeOrdersCount = 0, options = {}) => {
 export const sellerToolsMenu = (isOwner = false) => {
   const buttons = [
     [Markup.button.callback(buttonText.manageWallets, 'seller:wallets')],
-    [Markup.button.callback(buttonText.manageFollows, 'seller:follows')]
+    [Markup.button.callback(buttonText.manageFollows, 'seller:follows')],
   ];
 
   if (isOwner) {
@@ -45,10 +47,11 @@ export const sellerToolsMenu = (isOwner = false) => {
 };
 
 // Products menu (inside "Товары" screen) - minimalist
-export const productsMenu = () => Markup.inlineKeyboard([
-  [Markup.button.callback(buttonText.addProduct, 'seller:add_product')],
-  [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-]);
+export const productsMenu = () =>
+  Markup.inlineKeyboard([
+    [Markup.button.callback(buttonText.addProduct, 'seller:add_product')],
+    [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+  ]);
 
 // Follows menu - minimalist
 export const followsMenu = (hasFollows = false, followButtons = []) => {
@@ -58,7 +61,7 @@ export const followsMenu = (hasFollows = false, followButtons = []) => {
     Markup.button.callback(
       hasFollows ? buttonText.addFollowMore : buttonText.addFollow,
       'follows:create'
-    )
+    ),
   ]);
   keyboard.push([Markup.button.callback(buttonText.backSimple, 'seller:menu')]);
 
@@ -67,13 +70,10 @@ export const followsMenu = (hasFollows = false, followButtons = []) => {
 
 // Follow detail menu
 export const followDetailMenu = (followId, mode = 'monitor') => {
-  const modeButtonText = mode === 'resell'
-    ? 'Переключить на Мониторинг'
-    : 'Переключить на Перепродажу';
+  const modeButtonText =
+    mode === 'resell' ? 'Переключить на Мониторинг' : 'Переключить на Перепродажу';
 
-  const buttons = [
-    [Markup.button.callback('Каталог', `follow_detail:${followId}`)]
-  ];
+  const buttons = [[Markup.button.callback('Каталог', `follow_detail:${followId}`)]];
 
   if (mode === 'resell') {
     buttons.push([Markup.button.callback(buttonText.editMarkup, `follow_edit:${followId}`)]);
@@ -86,19 +86,19 @@ export const followDetailMenu = (followId, mode = 'monitor') => {
   return Markup.inlineKeyboard(buttons);
 };
 
-export const followCatalogMenu = (followId) => Markup.inlineKeyboard([
-  [Markup.button.callback(buttonText.refresh, `follow_detail:${followId}`)],
-  [Markup.button.callback(buttonText.followSettings, `follow_settings:${followId}`)],
-  [Markup.button.callback(buttonText.backSimple, 'follows:list')]
-]);
+export const followCatalogMenu = (followId) =>
+  Markup.inlineKeyboard([
+    [Markup.button.callback(buttonText.refresh, `follow_detail:${followId}`)],
+    [Markup.button.callback(buttonText.followSettings, `follow_settings:${followId}`)],
+    [Markup.button.callback(buttonText.backSimple, 'follows:list')],
+  ]);
 
 // Seller menu (no shop - need registration) - minimalist
 export const sellerMenuNoShop = Markup.inlineKeyboard([
   [Markup.button.callback(buttonText.createShop, 'seller:create_shop')],
-  [Markup.button.callback(buttonText.mainMenu, 'main_menu')]
+  [Markup.button.callback(buttonText.mainMenu, 'main_menu')],
 ]);
 
 // Subscription status menu
-export const subscriptionStatusMenu = () => Markup.inlineKeyboard([
-  [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-]);
+export const subscriptionStatusMenu = () =>
+  Markup.inlineKeyboard([[Markup.button.callback(buttonText.backToTools, 'seller:tools')]]);

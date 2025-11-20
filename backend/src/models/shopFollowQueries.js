@@ -12,7 +12,7 @@ export const shopFollowQueries = {
    */
   create: async (followData) => {
     const { followerShopId, sourceShopId, mode, markupPercentage = 0 } = followData;
-    
+
     const result = await query(
       `INSERT INTO shop_follows (follower_shop_id, source_shop_id, mode, markup_percentage, status)
        VALUES ($1, $2, $3, $4, 'active')
@@ -91,16 +91,16 @@ export const shopFollowQueries = {
       JOIN users u ON ss.owner_id = u.id
       WHERE sf.follower_shop_id = $1
     `;
-    
+
     const params = [followerShopId];
-    
+
     if (status) {
       queryText += ' AND sf.status = $2';
       params.push(status);
     }
-    
+
     queryText += ' ORDER BY sf.created_at DESC';
-    
+
     const result = await query(queryText, params);
     return result.rows;
   },
@@ -123,16 +123,16 @@ export const shopFollowQueries = {
       JOIN users u ON fs.owner_id = u.id
       WHERE sf.source_shop_id = $1
     `;
-    
+
     const params = [sourceShopId];
-    
+
     if (status) {
       queryText += ' AND sf.status = $2';
       params.push(status);
     }
-    
+
     queryText += ' ORDER BY sf.created_at DESC';
-    
+
     const result = await query(queryText, params);
     return result.rows;
   },
@@ -223,10 +223,7 @@ export const shopFollowQueries = {
    * @returns {Promise<Object>} Deleted follow record
    */
   delete: async (id) => {
-    const result = await query(
-      'DELETE FROM shop_follows WHERE id = $1 RETURNING *',
-      [id]
-    );
+    const result = await query('DELETE FROM shop_follows WHERE id = $1 RETURNING *', [id]);
     return result.rows[0];
   },
 
@@ -279,5 +276,5 @@ export const shopFollowQueries = {
       [sourceShopId]
     );
     return result.rows;
-  }
+  },
 };

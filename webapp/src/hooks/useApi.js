@@ -13,103 +13,105 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 export function useApi() {
   // Create stable API reference with useRef
   const apiRef = useRef(null);
-  
+
   // Initialize only once
   if (!apiRef.current) {
     // Token getter that always returns current token from store
     const getToken = () => useStore.getState().token;
-    
+
     // Create request function with token getter closure
-    const createRequest = (tokenGetter) => async (method, endpoint, data = null, config = {}) => {
-      // Store abort controller for cleanup if needed
-      let abortController = null;
+    const createRequest =
+      (tokenGetter) =>
+      async (method, endpoint, data = null, config = {}) => {
+        // Store abort controller for cleanup if needed
+        let abortController = null;
 
-      try {
-        // Получаем initData из Telegram WebApp для авторизации
-        const initData = window.Telegram?.WebApp?.initData || '';
-        const currentToken = tokenGetter();
+        try {
+          // Получаем initData из Telegram WebApp для авторизации
+          const initData = window.Telegram?.WebApp?.initData || '';
+          const currentToken = tokenGetter();
 
-        // Формируем axios config
-        const axiosConfig = {
-          method,
-          url: `${API_BASE_URL}${endpoint}`,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData,
-            ...(currentToken && { 'Authorization': `Bearer ${currentToken}` }),
-            ...config.headers,
-          },
-          // ✅ FIX: Используем native axios timeout вместо внутреннего AbortController
-          timeout: config.timeout || 15000, // 15 секунд по умолчанию
-          // ✅ FIX: Используем только внешний signal из config (из useEffect cleanup)
-          signal: config.signal,
-          ...config,
-        };
+          // Формируем axios config
+          const axiosConfig = {
+            method,
+            url: `${API_BASE_URL}${endpoint}`,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Telegram-Init-Data': initData,
+              ...(currentToken && { Authorization: `Bearer ${currentToken}` }),
+              ...config.headers,
+            },
+            // ✅ FIX: Используем native axios timeout вместо внутреннего AbortController
+            timeout: config.timeout || 15000, // 15 секунд по умолчанию
+            // ✅ FIX: Используем только внешний signal из config (из useEffect cleanup)
+            signal: config.signal,
+            ...config,
+          };
 
-        // Добавляем data только для методов которые его поддерживают
-        // GET и DELETE не должны иметь body
-        if (method !== 'GET' && method !== 'DELETE' && data !== null) {
-          axiosConfig.data = data;
+          // Добавляем data только для методов которые его поддерживают
+          // GET и DELETE не должны иметь body
+          if (method !== 'GET' && method !== 'DELETE' && data !== null) {
+            axiosConfig.data = data;
+          }
+
+          const response = await axios(axiosConfig);
+          return { data: response.data, error: null };
+        } catch (err) {
+          console.error(`API ${method} ${endpoint} error:`, err);
+
+          // ✅ FIX: Обработка axios native timeout
+          if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+            return { data: null, error: 'Request timeout - please check your connection' };
+          }
+
+          // ✅ FIX: Обработка внешнего AbortSignal (из useEffect cleanup)
+          if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+            return { data: null, error: 'Request cancelled' };
+          }
+
+          // Обычные ошибки
+          const apiError = err.response?.data;
+          const errorMessage =
+            apiError?.error || apiError?.message || err.message || 'Произошла ошибка';
+          return { data: null, error: errorMessage };
+        } finally {
+          // Cleanup: Abort any pending requests if AbortController was used
+          if (abortController) {
+            abortController.abort();
+          }
         }
+      };
 
-        const response = await axios(axiosConfig);
-        return { data: response.data, error: null };
-
-      } catch (err) {
-        console.error(`API ${method} ${endpoint} error:`, err);
-
-        // ✅ FIX: Обработка axios native timeout
-        if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-          return { data: null, error: 'Request timeout - please check your connection' };
-        }
-
-        // ✅ FIX: Обработка внешнего AbortSignal (из useEffect cleanup)
-        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-          return { data: null, error: 'Request cancelled' };
-        }
-
-        // Обычные ошибки
-        const apiError = err.response?.data;
-        const errorMessage = apiError?.error || apiError?.message || err.message || 'Произошла ошибка';
-        return { data: null, error: errorMessage };
-      } finally {
-        // Cleanup: Abort any pending requests if AbortController was used
-        if (abortController) {
-          abortController.abort();
-        }
-      }
-    };
-    
     // Create request function with token getter
     const request = createRequest(getToken);
-    
+
     // Create stable API methods - эти функции НИКОГДА не пересоздаются
     apiRef.current = {
       // GET запрос
       get: async (endpoint, config = {}) => {
         return await request('GET', endpoint, null, config);
       },
-      
+
       // POST запрос
       post: async (endpoint, data, config = {}) => {
         return await request('POST', endpoint, data, config);
       },
-      
+
       // PUT запрос
       put: async (endpoint, data, config = {}) => {
         return await request('PUT', endpoint, data, config);
       },
-      
+
       // DELETE запрос
       delete: async (endpoint, config = {}) => {
         return await request('DELETE', endpoint, null, config);
       },
-      
+
       // PATCH запрос
       patch: async (endpoint, data, config = {}) => {
         return await request('PATCH', endpoint, data, config);
       },
-      
+
       // Универсальный fetchApi wrapper (для совместимости с Settings modals)
       fetchApi: async (endpoint, options = {}) => {
         const method = options.method?.toUpperCase() || 'GET';
@@ -144,10 +146,10 @@ export function useApi() {
           throw new Error(result.error);
         }
         return result.data;
-      }
+      },
     };
   }
-  
+
   // Return SAME reference every time - это ключевая фича
   return apiRef.current;
 }
@@ -157,10 +159,10 @@ export function useApi() {
  */
 export function useShopApi() {
   const api = useApi();
-  
+
   // Используем useRef для stable methods reference
   const methodsRef = useRef(null);
-  
+
   if (!methodsRef.current) {
     methodsRef.current = {
       // Получить список магазинов
@@ -208,10 +210,10 @@ export function useShopApi() {
  */
 export function useFollowsApi() {
   const api = useApi();
-  
+
   // Используем useRef для stable methods reference
   const methodsRef = useRef(null);
-  
+
   if (!methodsRef.current) {
     methodsRef.current = {
       // Детали подписки

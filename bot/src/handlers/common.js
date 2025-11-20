@@ -8,7 +8,12 @@ import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { messages } from '../texts/messages.js';
 
-const { start: startMessages, general: generalMessages, seller: sellerMessages, buyer: buyerMessages } = messages;
+const {
+  start: startMessages,
+  general: generalMessages,
+  seller: sellerMessages,
+  buyer: buyerMessages,
+} = messages;
 
 /**
  * Setup common handlers (main menu, cancel, etc.)
@@ -16,6 +21,12 @@ const { start: startMessages, general: generalMessages, seller: sellerMessages, 
 export const setupCommonHandlers = (bot) => {
   // Main menu action
   bot.action('main_menu', handleMainMenu);
+
+  // Back to main menu (from subscription notifications)
+  bot.action('back_to_main', handleBackToMain);
+
+  // Start create shop (from subscription pending notification)
+  bot.action('start_create_shop', handleStartCreateShop);
 
   // Cancel scene action
   bot.action('cancel_scene', handleCancelScene);
@@ -34,6 +45,12 @@ const handleMainMenu = async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
+    // КРИТИЧНО: Выйти из любой активной сцены перед переходом
+    if (ctx.scene && ctx.scene.current) {
+      await ctx.scene.leave();
+      logger.info(`User ${ctx.from.id} left scene ${ctx.scene.current} via main_menu`);
+    }
+
     // Check if user has saved role - redirect to dashboard instead of resetting
     const savedRole = ctx.session.user?.selectedRole;
 
@@ -50,7 +67,7 @@ const handleMainMenu = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: startMessages.welcome,
-      keyboard: mainMenu()
+      keyboard: mainMenu(),
     });
   } catch (error) {
     logger.error('Error in main menu handler:', error);
@@ -58,7 +75,7 @@ const handleMainMenu = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -79,7 +96,7 @@ const handleCancelScene = async (ctx) => {
     // Return to main menu (minimalist)
     await smartMessage.send(ctx, {
       text: startMessages.welcome,
-      keyboard: mainMenu()
+      keyboard: mainMenu(),
     });
   } catch (error) {
     logger.error('Error canceling scene:', error);
@@ -87,7 +104,7 @@ const handleCancelScene = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -106,17 +123,17 @@ const handleBack = async (ctx) => {
     if (ctx.session.role === 'seller') {
       await smartMessage.send(ctx, {
         text: sellerMessages.panel,
-        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
       });
     } else if (ctx.session.role === 'buyer') {
       await smartMessage.send(ctx, {
         text: buyerMessages.panel,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
     } else {
       await smartMessage.send(ctx, {
         text: startMessages.welcome,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
       });
     }
   } catch (error) {
@@ -125,7 +142,7 @@ const handleBack = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -147,7 +164,7 @@ const handleRoleToggle = async (ctx) => {
       logger.warn(`User ${ctx.from.id} tried to toggle role without current role`);
       await smartMessage.send(ctx, {
         text: startMessages.welcome,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
       });
       return;
     }
@@ -187,7 +204,90 @@ const handleRoleToggle = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: mainMenu()
+        keyboard: mainMenu(),
+      });
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
+  }
+};
+
+/**
+ * Handle back to main menu (from subscription notifications)
+ */
+const handleBackToMain = async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+
+    // КРИТИЧНО: Выйти из любой активной сцены
+    if (ctx.scene && ctx.scene.current) {
+      await ctx.scene.leave();
+      logger.info(`User ${ctx.from.id} left scene ${ctx.scene.current} via back_to_main`);
+    }
+
+    // Set seller role since subscription payment means they're a seller
+    ctx.session.role = 'seller';
+
+    // Save role to database
+    try {
+      if (ctx.session.token) {
+        await authApi.updateRole('seller', ctx.session.token);
+        if (ctx.session.user) {
+          ctx.session.user.selectedRole = 'seller';
+        }
+        logger.info(`Saved seller role for user ${ctx.from.id} (from subscription notification)`);
+      }
+    } catch (error) {
+      logger.error('Failed to save role:', error);
+    }
+
+    // Redirect to seller dashboard
+    await handleSellerRole(ctx);
+  } catch (error) {
+    logger.error('Error in back to main handler:', error);
+    try {
+      await smartMessage.send(ctx, {
+        text: generalMessages.actionFailed,
+        keyboard: sellerMenu(0),
+      });
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
+  }
+};
+
+/**
+ * Handle start create shop (from subscription pending notification)
+ */
+const handleStartCreateShop = async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+
+    // Set seller role
+    ctx.session.role = 'seller';
+
+    // Save role to database
+    try {
+      if (ctx.session.token) {
+        await authApi.updateRole('seller', ctx.session.token);
+        if (ctx.session.user) {
+          ctx.session.user.selectedRole = 'seller';
+        }
+        logger.info(`Saved seller role for user ${ctx.from.id} (from create shop button)`);
+      }
+    } catch (error) {
+      logger.error('Failed to save role:', error);
+    }
+
+    // Enter create shop scene
+    logger.info(`User ${ctx.from.id} entering create shop scene from subscription notification`);
+    await ctx.scene.enter('createShop');
+  } catch (error) {
+    logger.error('Error in start create shop handler:', error);
+    try {
+      await smartMessage.send(ctx, {
+        text: generalMessages.actionFailed,
+        keyboard: sellerMenu(0),
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

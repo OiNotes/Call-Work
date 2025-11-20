@@ -17,7 +17,7 @@ const AnalyticsModal = lazy(() => import('../components/Settings/AnalyticsModal'
 const MigrationModal = lazy(() => import('../components/Settings/MigrationModal'));
 
 const getSettingsSections = (t, lang) => {
-  const languageNames = { 'ru': 'Русский', 'en': 'English' };
+  const languageNames = { ru: 'Русский', en: 'English' };
 
   const sections = [
     {
@@ -29,7 +29,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Управление каталогом товаров',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+              />
             </svg>
           ),
         },
@@ -39,7 +44,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Продажи и аналитика',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
             </svg>
           ),
         },
@@ -49,7 +59,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Мои крипто-кошельки',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+              />
             </svg>
           ),
         },
@@ -59,7 +74,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Работники и доступы',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
             </svg>
           ),
         },
@@ -69,7 +89,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Отслеживайте другие магазины',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
           ),
         },
@@ -79,7 +104,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Миграция на новый канал',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           ),
         },
@@ -94,7 +124,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Тарифы и оплата',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+              />
             </svg>
           ),
         },
@@ -104,7 +139,12 @@ const getSettingsSections = (t, lang) => {
           description: 'Выбор языка интерфейса',
           icon: (
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+              />
             </svg>
           ),
           value: languageNames[lang] || 'Русский',
@@ -112,8 +152,6 @@ const getSettingsSections = (t, lang) => {
       ],
     },
   ];
-
-
 
   return sections;
 };
@@ -172,7 +210,7 @@ export default function Settings() {
       style={{
         paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
         paddingBottom: 'var(--tabbar-total)',
-        scrollBehavior: 'smooth'
+        scrollBehavior: 'smooth',
       }}
     >
       <Header title={t('settings.title')} />
@@ -203,9 +241,7 @@ export default function Settings() {
                 <h2 className="text-xl font-bold text-white mb-1">
                   {user.first_name} {user.last_name}
                 </h2>
-                {user.username && (
-                  <p className="text-sm text-gray-400">@{user.username}</p>
-                )}
+                {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
               </div>
             </div>
           </motion.div>
@@ -226,7 +262,7 @@ export default function Settings() {
                   fontSize: '11px',
                   letterSpacing: '0.05em',
                   marginTop: sectionIndex > 0 ? '24px' : '0',
-                  marginBottom: '12px'
+                  marginBottom: '12px',
                 }}
               >
                 {section.title}
@@ -254,12 +290,12 @@ export default function Settings() {
                       <div className="flex-1">
                         <span className="text-white font-medium text-base block">{item.label}</span>
                         {item.description && (
-                          <span className="text-gray-400 text-xs block mt-0.5">{item.description}</span>
+                          <span className="text-gray-400 text-xs block mt-0.5">
+                            {item.description}
+                          </span>
                         )}
                       </div>
-                      {item.value && (
-                        <span className="text-gray-300 text-sm">{item.value}</span>
-                      )}
+                      {item.value && <span className="text-gray-300 text-sm">{item.value}</span>}
                     </InteractiveListItem>
                   );
                 })}
@@ -271,14 +307,26 @@ export default function Settings() {
 
       {/* Modals - wrapped in Suspense for lazy loading */}
       <Suspense fallback={null}>
-        {showAnalytics && <AnalyticsModal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} />}
-        {showProducts && <ProductsModal isOpen={showProducts} onClose={() => setShowProducts(false)} />}
-        {showSubscription && <SubscriptionModal isOpen={showSubscription} onClose={() => setShowSubscription(false)} />}
-        {showWorkspace && <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />}
+        {showAnalytics && (
+          <AnalyticsModal isOpen={showAnalytics} onClose={() => setShowAnalytics(false)} />
+        )}
+        {showProducts && (
+          <ProductsModal isOpen={showProducts} onClose={() => setShowProducts(false)} />
+        )}
+        {showSubscription && (
+          <SubscriptionModal isOpen={showSubscription} onClose={() => setShowSubscription(false)} />
+        )}
+        {showWorkspace && (
+          <WorkspaceModal isOpen={showWorkspace} onClose={() => setShowWorkspace(false)} />
+        )}
         {showFollows && <FollowsModal isOpen={showFollows} onClose={() => setShowFollows(false)} />}
         {showWallets && <WalletsModal isOpen={showWallets} onClose={() => setShowWallets(false)} />}
-        {showLanguage && <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />}
-        {showMigration && <MigrationModal isOpen={showMigration} onClose={() => setShowMigration(false)} />}
+        {showLanguage && (
+          <LanguageModal isOpen={showLanguage} onClose={() => setShowLanguage(false)} />
+        )}
+        {showMigration && (
+          <MigrationModal isOpen={showMigration} onClose={() => setShowMigration(false)} />
+        )}
       </Suspense>
     </div>
   );

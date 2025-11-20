@@ -46,7 +46,7 @@ if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
   echo "🔧 Starting PostgreSQL..."
   brew services start postgresql@14
   sleep 3
-  
+
   # Verify
   if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
     echo "✅ PostgreSQL started"
@@ -154,18 +154,20 @@ psql telegram_shop -c "\dt" -t | grep -E "users|shops|products|orders" && echo "
 ### 6. Import/Export errors
 
 Claude will automatically:
+
 - Read the problematic file using MCP File System
 - Check exports and imports
 - Fix import statements (e.g., add .js extension for ES modules)
 - Update file if needed
 
 Example fix:
+
 ```javascript
 // ❌ Wrong (ES modules need .js extension)
-import { db } from './database'
+import { db } from './database';
 
 // ✅ Fixed
-import { db } from './database.js'
+import { db } from './database.js';
 ```
 
 ### 7. Webapp build errors
@@ -209,7 +211,7 @@ sleep 3
 # Verify
 if ps aux | grep "node.*bot.js" | grep -v grep >/dev/null; then
   echo "✅ Bot restarted"
-  
+
   # Check logs for successful start
   if grep -q "Bot started successfully" ../logs/bot.log; then
     echo "✅ Bot initialized successfully"
@@ -251,11 +253,13 @@ fi
 ## After fixing:
 
 Always verify with health-check skill:
+
 ```
 "health check"
 ```
 
 If errors persist:
+
 1. Check specific log file
 2. Read full error stack trace
 3. Google error message

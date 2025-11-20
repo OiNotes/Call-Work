@@ -4,7 +4,7 @@ import {
   validateTolerance,
   amountsMatchWithTolerance,
   toleranceToPercentage,
-  getToleranceInfo
+  getToleranceInfo,
 } from './paymentTolerance.js';
 
 /**

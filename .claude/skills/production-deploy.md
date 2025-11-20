@@ -245,6 +245,7 @@ fi
 ## What this skill checks:
 
 ### ✅ Must Pass:
+
 1. **PostgreSQL** - Running and accessible
 2. **Database** - telegram_shop exists and accessible
 3. **Backend Tests** - All passing
@@ -253,6 +254,7 @@ fi
 6. **No Critical Errors** - Error logs clean
 
 ### ⚠️ Warnings (can deploy with caution):
+
 1. **Linting** - Code style warnings
 2. **UI Design** - Design system usage
 3. **Animation Performance** - Non-GPU animations

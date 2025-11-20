@@ -25,15 +25,9 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');
 
-    const secretKey = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(BOT_TOKEN)
-      .digest();
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
 
-    const hash = crypto
-      .createHmac('sha256', secretKey)
-      .update(dataCheckString)
-      .digest('hex');
+    const hash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
     params.set('hash', hash);
 
@@ -43,13 +37,13 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
   beforeAll(async () => {
     // Clean up test users before tests
     const pool = getTestPool();
-    await pool.query("DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)");
+    await pool.query('DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)');
   });
 
   afterAll(async () => {
     // Clean up test users after tests
     const pool = getTestPool();
-    await pool.query("DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)");
+    await pool.query('DELETE FROM users WHERE telegram_id IN (111111111, 222222222, 333333333)');
     await closeTestDb();
   });
 
@@ -59,7 +53,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         id: 111111111,
         username: 'newuser_test',
         first_name: 'New',
-        last_name: 'User'
+        last_name: 'User',
       };
 
       const initData = createValidInitData(user);
@@ -78,8 +72,8 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
           username: 'newuser_test',
           first_name: 'New',
           last_name: 'User',
-          selected_role: null
-        }
+          selected_role: null,
+        },
       });
 
       // Verify JWT token structure
@@ -91,7 +85,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         id: 222222222,
         username: 'existinguser_test',
         first_name: 'Existing',
-        last_name: 'User'
+        last_name: 'User',
       };
 
       const initData = createValidInitData(user);
@@ -115,8 +109,8 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         token: expect.any(String),
         user: {
           telegram_id: 222222222,
-          username: 'existinguser_test'
-        }
+          username: 'existinguser_test',
+        },
       });
 
       // Tokens should be different (different issue time)
@@ -128,7 +122,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         id: 333333333,
         username: 'updatable_user',
         first_name: 'Old',
-        last_name: 'Name'
+        last_name: 'Name',
       };
 
       const initData1 = createValidInitData(user);
@@ -146,7 +140,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         id: 333333333,
         username: 'updatable_user',
         first_name: 'New',
-        last_name: 'Name'
+        last_name: 'Name',
       };
 
       const initData2 = createValidInitData(updatedUser);
@@ -175,7 +169,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining('Invalid')
+        error: expect.stringContaining('Invalid'),
       });
     });
 
@@ -186,10 +180,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
       // Try to impersonate another user (properly parse URLSearchParams first)
       const params = new URLSearchParams(initData);
       const originalUserJson = params.get('user');
-      const tamperedUserJson = originalUserJson.replace(
-        /"id":555555555/,
-        '"id":999999999'
-      );
+      const tamperedUserJson = originalUserJson.replace(/"id":555555555/, '"id":999999999');
       params.set('user', tamperedUserJson);
       // Keep original hash (invalid for tampered data)
       const tamperedInitData = params.toString();
@@ -217,7 +208,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
   describe('Security: Expired initData', () => {
     it('should REJECT expired initData (older than 24 hours)', async () => {
       const user = { id: 777777777, username: 'olduser', first_name: 'Old' };
-      const oldAuthDate = Math.floor(Date.now() / 1000) - (25 * 60 * 60); // 25 hours ago
+      const oldAuthDate = Math.floor(Date.now() / 1000) - 25 * 60 * 60; // 25 hours ago
 
       const initData = createValidInitData(user, oldAuthDate);
 
@@ -228,20 +219,18 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining('expired')
+        error: expect.stringContaining('expired'),
       });
     });
   });
 
   describe('Security: Missing headers', () => {
     it('should REJECT request without x-telegram-init-data header', async () => {
-      const response = await request(app)
-        .post('/api/auth/telegram-validate')
-        .expect(401);
+      const response = await request(app).post('/api/auth/telegram-validate').expect(401);
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining('Unauthorized')
+        error: expect.stringContaining('Unauthorized'),
       });
     });
   });
@@ -250,7 +239,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
     it('should handle user without username (optional field)', async () => {
       const user = {
         id: 888888888,
-        first_name: 'NoUsername'
+        first_name: 'NoUsername',
       };
 
       const initData = createValidInitData(user);
@@ -265,7 +254,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
 
       // Cleanup
       const pool = getTestPool();
-      await pool.query("DELETE FROM users WHERE telegram_id = 888888888");
+      await pool.query('DELETE FROM users WHERE telegram_id = 888888888');
     });
 
     it('should handle Cyrillic names correctly', async () => {
@@ -273,7 +262,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
         id: 999999999,
         username: 'ivan',
         first_name: 'Иван',
-        last_name: 'Петров'
+        last_name: 'Петров',
       };
 
       const initData = createValidInitData(user);
@@ -288,7 +277,7 @@ describe('POST /api/auth/telegram-validate - Integration', () => {
 
       // Cleanup
       const pool = getTestPool();
-      await pool.query("DELETE FROM users WHERE telegram_id = 999999999");
+      await pool.query('DELETE FROM users WHERE telegram_id = 999999999');
     });
   });
 });

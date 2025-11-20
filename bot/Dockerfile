@@ -34,4 +34,4 @@ USER nodejs
 
 # No port exposure needed for bot
 
-CMD ["node", "bot.js"]
+CMD ["node", "src/bot.js"]

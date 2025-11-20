@@ -2,7 +2,7 @@ import logger from '../utils/logger.js';
 import { deepseekService } from './deepseekService.js';
 import { productTools } from '../ai/productTools.js';
 import { generateProductAIPrompt, sanitizeUserInput } from '../ai/systemPrompts.js';
-import { productQueries, shopQueries } from '../models/db.js';
+import { productQueries, shopQueries } from '../database/queries/index.js';
 
 function normalizeHistory(history = []) {
   if (!Array.isArray(history)) {
@@ -20,9 +20,7 @@ function buildAssistantMessage(text, operations = []) {
   }
 
   if (operations.length) {
-    const summary = operations
-      .map((op) => `• ${op}`)
-      .join('\n');
+    const summary = operations.map((op) => `• ${op}`).join('\n');
     parts.push(`\n${summary}`.trim());
   }
 
@@ -32,7 +30,9 @@ function buildAssistantMessage(text, operations = []) {
 function findProductByName(products, name) {
   const target = name.toLowerCase();
   let match = products.find((p) => p.name?.toLowerCase() === target);
-  if (match) {return match;}
+  if (match) {
+    return match;
+  }
   match = products.find((p) => p.name?.toLowerCase().includes(target));
   return match || null;
 }
@@ -48,13 +48,13 @@ async function handleAddProduct(shopId, args = {}) {
     description: args.description?.trim() || null,
     price: args.price,
     currency: 'USD',
-    stockQuantity: Number.isFinite(args.stock) ? args.stock : 0
+    stockQuantity: Number.isFinite(args.stock) ? args.stock : 0,
   });
 
   return {
     operation: 'addProduct',
     summary: `Добавлен товар «${product.name}» — $${product.price}`,
-    product
+    product,
   };
 }
 
@@ -76,19 +76,19 @@ async function handleBulkAddProducts(shopId, args = {}) {
       description: item.description?.trim() || null,
       price: item.price,
       currency: 'USD',
-      stockQuantity: Number.isFinite(item.stock) ? item.stock : 0
+      stockQuantity: Number.isFinite(item.stock) ? item.stock : 0,
     });
     results.push({
       operation: 'addProduct',
       summary: `Добавлен товар «${product.name}» — $${product.price}`,
-      product
+      product,
     });
   }
 
   return {
     operation: 'bulkAddProducts',
     summary: results.map((r) => r.summary).join('\n'),
-    products: results.map((r) => r.product).filter(Boolean)
+    products: results.map((r) => r.product).filter(Boolean),
   };
 }
 
@@ -103,7 +103,7 @@ async function handleDeleteProduct(shopId, products, args = {}) {
   await productQueries.delete(match.id);
   return {
     operation: 'deleteProduct',
-    summary: `Удалён товар «${match.name}».`
+    summary: `Удалён товар «${match.name}».`,
   };
 }
 
@@ -125,7 +125,7 @@ async function handleBulkDeleteByNames(shopId, products, args = {}) {
   }
   return {
     operation: 'bulkDeleteByNames',
-    summary: `Удалены товары: ${removed.join(', ')}`
+    summary: `Удалены товары: ${removed.join(', ')}`,
   };
 }
 
@@ -140,9 +140,15 @@ async function handleUpdateProduct(shopId, products, args = {}) {
   }
 
   const payload = {};
-  if (typeof updates.price === 'number') {payload.price = updates.price;}
-  if (typeof updates.stock_quantity === 'number') {payload.stockQuantity = updates.stock_quantity;}
-  if (updates.name && updates.name.trim().length >= 3) {payload.name = updates.name.trim();}
+  if (typeof updates.price === 'number') {
+    payload.price = updates.price;
+  }
+  if (typeof updates.stock_quantity === 'number') {
+    payload.stockQuantity = updates.stock_quantity;
+  }
+  if (updates.name && updates.name.trim().length >= 3) {
+    payload.name = updates.name.trim();
+  }
 
   if (!Object.keys(payload).length) {
     return { error: 'Не указаны изменения для товара.' };
@@ -150,14 +156,20 @@ async function handleUpdateProduct(shopId, products, args = {}) {
 
   const updated = await productQueries.update(match.id, payload);
   const summaryParts = [`«${match.name}» обновлён`];
-  if (payload.name && payload.name !== match.name) {summaryParts.push(`→ «${payload.name}»`);}
-  if (payload.price !== undefined) {summaryParts.push(`цена $${payload.price}`);}
-  if (payload.stockQuantity !== undefined) {summaryParts.push(`остаток ${payload.stockQuantity}`);}
+  if (payload.name && payload.name !== match.name) {
+    summaryParts.push(`→ «${payload.name}»`);
+  }
+  if (payload.price !== undefined) {
+    summaryParts.push(`цена $${payload.price}`);
+  }
+  if (payload.stockQuantity !== undefined) {
+    summaryParts.push(`остаток ${payload.stockQuantity}`);
+  }
 
   return {
     operation: 'updateProduct',
     summary: summaryParts.join(', '),
-    product: updated
+    product: updated,
   };
 }
 
@@ -165,7 +177,7 @@ function handleListProducts(products) {
   if (!products.length) {
     return {
       operation: 'listProducts',
-      summary: 'Каталог пуст. Добавьте товары, чтобы они появились в магазине.'
+      summary: 'Каталог пуст. Добавьте товары, чтобы они появились в магазине.',
     };
   }
   const top = products
@@ -174,7 +186,7 @@ function handleListProducts(products) {
     .join('\n');
   return {
     operation: 'listProducts',
-    summary: `Каталог (последние ${Math.min(products.length, 10)}):\n${top}`
+    summary: `Каталог (последние ${Math.min(products.length, 10)}):\n${top}`,
   };
 }
 
@@ -187,7 +199,7 @@ function handleSearchProducts(products, args = {}) {
   if (!matches.length) {
     return {
       operation: 'searchProduct',
-      summary: `Товары по запросу «${args.query}» не найдены.`
+      summary: `Товары по запросу «${args.query}» не найдены.`,
     };
   }
   const list = matches
@@ -196,13 +208,15 @@ function handleSearchProducts(products, args = {}) {
     .join('\n');
   return {
     operation: 'searchProduct',
-    summary: `Найдено (${matches.length}):\n${list}`
+    summary: `Найдено (${matches.length}):\n${list}`,
   };
 }
 
 function formatPrice(price) {
   const num = parseFloat(price);
-  if (Number.isNaN(num)) {return '0';}
+  if (Number.isNaN(num)) {
+    return '0';
+  }
   return num % 1 === 0 ? num.toString() : num.toFixed(2).replace(/\.?0+$/, '');
 }
 
@@ -258,7 +272,7 @@ export async function handleProductAI({ shop, message, history = [] }) {
     systemPrompt: prompt,
     userMessage: sanitizedMessage,
     history: normalizedHistory,
-    tools: productTools
+    tools: productTools,
   });
 
   const choice = response.choices?.[0];
@@ -280,13 +294,17 @@ export async function handleProductAI({ shop, message, history = [] }) {
     productsChanged = true;
 
     if (result.product) {
-      updatedProductsCache = updatedProductsCache.filter((p) => p.id !== result.product.id).concat(result.product);
+      updatedProductsCache = updatedProductsCache
+        .filter((p) => p.id !== result.product.id)
+        .concat(result.product);
     }
 
     if (result.products) {
       // For bulk add
       const ids = new Set(result.products.map((p) => p.id));
-      updatedProductsCache = updatedProductsCache.filter((p) => !ids.has(p.id)).concat(result.products);
+      updatedProductsCache = updatedProductsCache
+        .filter((p) => !ids.has(p.id))
+        .concat(result.products);
     }
 
     if (result.operation === 'deleteProduct' || result.operation === 'bulkDeleteByNames') {
@@ -300,14 +318,14 @@ export async function handleProductAI({ shop, message, history = [] }) {
   const newHistory = [
     ...normalizedHistory,
     { role: 'user', content: sanitizedMessage },
-    { role: 'assistant', content: replyText }
+    { role: 'assistant', content: replyText },
   ].slice(-20);
 
   return {
     reply: replyText,
     history: newHistory,
     operations,
-    productsChanged
+    productsChanged,
   };
 }
 

@@ -40,6 +40,7 @@
 | 029 | 029_add_product_reservation.sql                               | Product reservation                | Phase 3 (RENAMED from 009) |
 | 033 | 033_add_wallet_address_sequences.sql                          | Wallet address sequences (BIP44)   | Phase 4 (2025-11-09)       |
 | 034 | 034_remove_usdt_erc20.sql                                     | Remove USDT ERC-20 support         | Phase 4 (2025-11-09)       |
+| 037 | 037_add_paid_status_to_shop_subscriptions.sql                 | Add 'paid' subscription status     | Phase 4 (2025-11-13)       |
 
 ## Migration Numbering Conflicts Resolved
 

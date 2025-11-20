@@ -14,6 +14,12 @@ yarn-error.log*
 # Logs
 logs/*.log
 *.log
+backend/logs/*.log
+bot/logs/*.log
+
+# Test outputs
+coverage/
+test-output*.txt
 
 # OS files
 .DS_Store

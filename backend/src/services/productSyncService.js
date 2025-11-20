@@ -1,4 +1,4 @@
-import { productQueries } from '../models/db.js';
+import { productQueries } from '../database/queries/index.js';
 import { shopFollowQueries } from '../models/shopFollowQueries.js';
 import { syncedProductQueries } from '../models/syncedProductQueries.js';
 import logger from '../utils/logger.js';
@@ -29,21 +29,21 @@ export function calculatePriceWithMarkup(sourcePrice, markupPercentage) {
 async function generateUniqueName(baseName, shopId) {
   // Check if name exists in target shop
   const existingProducts = await productQueries.list({ shopId, limit: 1000 });
-  const existingNames = new Set(existingProducts.map(p => p.name.toLowerCase()));
-  
+  const existingNames = new Set(existingProducts.map((p) => p.name.toLowerCase()));
+
   if (!existingNames.has(baseName.toLowerCase())) {
     return baseName;
   }
-  
+
   // Add suffix (копия N)
   let counter = 1;
   let newName = `${baseName} (копия ${counter})`;
-  
+
   while (existingNames.has(newName.toLowerCase())) {
     counter++;
     newName = `${baseName} (копия ${counter})`;
   }
-  
+
   return newName;
 }
 
@@ -60,30 +60,30 @@ export async function copyProductWithMarkup(sourceProductId, followId) {
     if (!follow) {
       throw new Error(`Follow relationship ${followId} not found`);
     }
-    
+
     if (follow.mode !== 'resell') {
       throw new Error('Can only copy products in resell mode');
     }
-    
+
     // Get source product
     const sourceProduct = await productQueries.findById(sourceProductId);
     if (!sourceProduct) {
       throw new Error(`Source product ${sourceProductId} not found`);
     }
-    
+
     // Check if already synced
     const existing = await syncedProductQueries.findBySourceAndFollow(sourceProductId, followId);
     if (existing) {
       logger.info(`Product ${sourceProductId} already synced to follow ${followId}`);
       return existing;
     }
-    
+
     // Calculate price with markup
     const newPrice = calculatePriceWithMarkup(sourceProduct.price, follow.markup_percentage);
-    
+
     // Generate unique name
     const uniqueName = await generateUniqueName(sourceProduct.name, follow.follower_shop_id);
-    
+
     // Create product in follower shop
     const syncedProduct = await productQueries.create({
       shopId: follow.follower_shop_id,
@@ -91,18 +91,20 @@ export async function copyProductWithMarkup(sourceProductId, followId) {
       description: sourceProduct.description,
       price: newPrice,
       currency: sourceProduct.currency || 'USD',
-      stockQuantity: sourceProduct.stock_quantity
+      stockQuantity: sourceProduct.stock_quantity,
     });
-    
+
     // Create synced_products record
     const syncRecord = await syncedProductQueries.create({
       followId,
       syncedProductId: syncedProduct.id,
-      sourceProductId
+      sourceProductId,
     });
-    
-    logger.info(`Product synced: source ${sourceProductId} → synced ${syncedProduct.id} (follow ${followId})`);
-    
+
+    logger.info(
+      `Product synced: source ${sourceProductId} → synced ${syncedProduct.id} (follow ${followId})`
+    );
+
     return syncRecord;
   } catch (error) {
     logger.error(`Error copying product ${sourceProductId} to follow ${followId}:`, error);
@@ -122,39 +124,45 @@ export async function updateSyncedProduct(syncedProductId) {
     if (!syncRecord) {
       throw new Error(`Synced product ${syncedProductId} not found`);
     }
-    
+
     // Check if manual edits detected
     const hasEdits = await syncedProductQueries.hasManualEdits(syncRecord.synced_product_id);
     if (hasEdits) {
       // Mark as conflict, don't update
       await syncedProductQueries.updateConflictStatus(syncedProductId, 'conflict');
-      logger.warn(`Manual edits detected on synced product ${syncRecord.synced_product_id}, marked as conflict`);
+      logger.warn(
+        `Manual edits detected on synced product ${syncRecord.synced_product_id}, marked as conflict`
+      );
       return syncRecord;
     }
-    
+
     // Get current source product data
     const sourceProduct = await productQueries.findById(syncRecord.source_product_id);
     if (!sourceProduct) {
-      logger.warn(`Source product ${syncRecord.source_product_id} not found, may have been deleted`);
+      logger.warn(
+        `Source product ${syncRecord.source_product_id} not found, may have been deleted`
+      );
       return syncRecord;
     }
-    
+
     // Get follow for markup
     const follow = await shopFollowQueries.findById(syncRecord.follow_id);
     const newPrice = calculatePriceWithMarkup(sourceProduct.price, follow.markup_percentage);
-    
+
     // Update synced product
     await productQueries.update(syncRecord.synced_product_id, {
       price: newPrice,
       stockQuantity: sourceProduct.stock_quantity,
-      isActive: sourceProduct.is_active
+      isActive: sourceProduct.is_active,
     });
-    
+
     // Update last synced timestamp
     await syncedProductQueries.updateLastSynced(syncedProductId);
-    
-    logger.info(`Synced product ${syncRecord.synced_product_id} updated from source ${syncRecord.source_product_id}`);
-    
+
+    logger.info(
+      `Synced product ${syncRecord.synced_product_id} updated from source ${syncRecord.source_product_id}`
+    );
+
     return await syncedProductQueries.findById(syncedProductId);
   } catch (error) {
     logger.error(`Error updating synced product ${syncedProductId}:`, error);
@@ -171,14 +179,14 @@ export async function updateSyncedProduct(syncedProductId) {
 export async function handleSourceProductDelete(sourceProductId) {
   try {
     const syncedProducts = await syncedProductQueries.findBySourceProductId(sourceProductId);
-    
+
     // OPTIMIZED: Batch deactivate with Promise.all (parallel execution)
     await Promise.all(
-      syncedProducts.map(sync => 
+      syncedProducts.map((sync) =>
         productQueries.update(sync.synced_product_id, { isActive: false })
       )
     );
-    
+
     const count = syncedProducts.length;
     logger.info(`Source product ${sourceProductId} deleted, deactivated ${count} synced products`);
     return count;
@@ -200,33 +208,33 @@ export async function syncAllProductsForFollow(followId) {
     if (!follow) {
       throw new Error(`Follow ${followId} not found`);
     }
-    
+
     if (follow.mode !== 'resell') {
       return { synced: 0, skipped: 0, errors: 0 };
     }
-    
+
     // Get all active products from source shop
-    const sourceProducts = await productQueries.list({ 
-      shopId: follow.source_shop_id, 
+    const sourceProducts = await productQueries.list({
+      shopId: follow.source_shop_id,
       isActive: true,
-      limit: 1000 
+      limit: 1000,
     });
-    
+
     const results = { synced: 0, skipped: 0, errors: 0 };
-    
+
     // OPTIMIZED: Parallel execution with Promise.allSettled (prevents one error from stopping all)
-    const syncPromises = sourceProducts.map(product => 
+    const syncPromises = sourceProducts.map((product) =>
       copyProductWithMarkup(product.id, followId)
         .then(() => ({ status: 'synced', productId: product.id }))
-        .catch(error => ({ 
+        .catch((error) => ({
           status: error.message.includes('already synced') ? 'skipped' : 'error',
           productId: product.id,
-          error 
+          error,
         }))
     );
-    
+
     const syncResults = await Promise.all(syncPromises);
-    
+
     // Count results
     for (const result of syncResults) {
       if (result.status === 'synced') {
@@ -238,8 +246,10 @@ export async function syncAllProductsForFollow(followId) {
         logger.error(`Failed to sync product ${result.productId}:`, result.error);
       }
     }
-    
-    logger.info(`Bulk sync for follow ${followId}: ${results.synced} synced, ${results.skipped} skipped, ${results.errors} errors`);
+
+    logger.info(
+      `Bulk sync for follow ${followId}: ${results.synced} synced, ${results.skipped} skipped, ${results.errors} errors`
+    );
     return results;
   } catch (error) {
     logger.error(`Error syncing products for follow ${followId}:`, error);
@@ -261,7 +271,7 @@ export async function updateMarkupForFollow(followId, newMarkupPercentage) {
     const syncedProducts = await syncedProductQueries.findByFollowId(followId);
 
     // Filter synced products only
-    const productsToUpdate = syncedProducts.filter(sync => sync.conflict_status === 'synced');
+    const productsToUpdate = syncedProducts.filter((sync) => sync.conflict_status === 'synced');
 
     if (productsToUpdate.length === 0) {
       logger.info(`No products to update for follow ${followId}`);
@@ -270,42 +280,48 @@ export async function updateMarkupForFollow(followId, newMarkupPercentage) {
 
     // Begin transaction with row-level locks to prevent race conditions
     await client.query('BEGIN');
-    logger.info(`updateMarkupForFollow: Transaction started for follow ${followId}`, { productsCount: productsToUpdate.length });
+    logger.info(`updateMarkupForFollow: Transaction started for follow ${followId}`, {
+      productsCount: productsToUpdate.length,
+    });
 
     // Sequential update with FOR UPDATE locks (not parallel to avoid deadlocks)
     for (const sync of productsToUpdate) {
       // Lock product row
-      await client.query(
-        'SELECT id FROM products WHERE id = $1 FOR UPDATE',
-        [sync.synced_product_id]
-      );
+      await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [
+        sync.synced_product_id,
+      ]);
 
       // Update product price
       const newPrice = calculatePriceWithMarkup(sync.source_product_price, newMarkupPercentage);
-      await client.query(
-        'UPDATE products SET price = $1, updated_at = NOW() WHERE id = $2',
-        [newPrice, sync.synced_product_id]
-      );
+      await client.query('UPDATE products SET price = $1, updated_at = NOW() WHERE id = $2', [
+        newPrice,
+        sync.synced_product_id,
+      ]);
 
       // Update last synced timestamp
-      await client.query(
-        'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
-        [sync.id]
-      );
+      await client.query('UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1', [
+        sync.id,
+      ]);
     }
 
     // Commit transaction
     await client.query('COMMIT');
     const count = productsToUpdate.length;
-    logger.info(`updateMarkupForFollow: Transaction committed for follow ${followId}`, { productsUpdated: count });
+    logger.info(`updateMarkupForFollow: Transaction committed for follow ${followId}`, {
+      productsUpdated: count,
+    });
     return count;
   } catch (error) {
     // Rollback on error
     try {
       await client.query('ROLLBACK');
-      logger.warn(`updateMarkupForFollow: Transaction rolled back for follow ${followId}`, { error: error.message });
+      logger.warn(`updateMarkupForFollow: Transaction rolled back for follow ${followId}`, {
+        error: error.message,
+      });
     } catch (rollbackError) {
-      logger.error(`updateMarkupForFollow: Rollback failed for follow ${followId}`, { error: rollbackError.message });
+      logger.error(`updateMarkupForFollow: Rollback failed for follow ${followId}`, {
+        error: rollbackError.message,
+      });
     }
 
     logger.error(`Error updating markup for follow ${followId}:`, error);
@@ -340,10 +356,9 @@ export async function runPeriodicSync() {
         await client.query('BEGIN');
 
         // Lock the synced product row to prevent concurrent updates
-        await client.query(
-          'SELECT id FROM products WHERE id = $1 FOR UPDATE',
-          [sync.synced_product_id]
-        );
+        await client.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [
+          sync.synced_product_id,
+        ]);
 
         // Check if source differs from synced
         const sourcePrice = parseFloat(sync.source_price);
@@ -367,19 +382,19 @@ export async function runPeriodicSync() {
           );
 
           // Update last synced timestamp
-          await client.query(
-            'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
-            [sync.id]
-          );
+          await client.query('UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1', [
+            sync.id,
+          ]);
 
           stats.updated++;
-          logger.debug(`Synced product ${sync.synced_product_id} updated from source ${sync.source_product_id}`);
+          logger.debug(
+            `Synced product ${sync.synced_product_id} updated from source ${sync.source_product_id}`
+          );
         } else {
           // Just update timestamp
-          await client.query(
-            'UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1',
-            [sync.id]
-          );
+          await client.query('UPDATE synced_products SET last_synced_at = NOW() WHERE id = $1', [
+            sync.id,
+          ]);
           stats.skipped++;
         }
 

@@ -9,9 +9,16 @@
 
 import * as subscriptionService from '../services/subscriptionService.js';
 import * as subscriptionInvoiceService from '../services/subscriptionInvoiceService.js';
+import * as blockCypherService from '../services/blockCypherService.js';
+import * as etherscanService from '../services/etherscanService.js';
+import * as tronService from '../services/tronService.js';
+import { handleSubscriptionPayment } from '../services/pollingService.js';
+import { invoiceQueries, paymentQueries } from '../database/queries/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
+import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
+import { query, getClient } from '../config/database.js';
 
 /**
  * Pay for subscription (monthly renewal or new subscription)
@@ -413,7 +420,8 @@ const generatePaymentInvoice = asyncHandler(async (req, res) => {
         invoice: {
           invoiceId: activeInvoice.id,
           address: activeInvoice.address,
-          expectedAmount: parseFloat(activeInvoice.expected_amount),
+          expectedAmount: parseFloat(activeInvoice.expected_amount), // USD amount
+          cryptoAmount: parseFloat(activeInvoice.crypto_amount),     // EXACT crypto amount
           currency: activeInvoice.currency,
           expiresAt: activeInvoice.expires_at,
           status: activeInvoice.status,
@@ -435,7 +443,8 @@ const generatePaymentInvoice = asyncHandler(async (req, res) => {
       invoice: {
         invoiceId: invoiceData.invoice.id,
         address: invoiceData.address,
-        expectedAmount: invoiceData.expectedAmount,
+        expectedAmount: invoiceData.expectedAmount, // USD amount (for reference)
+        cryptoAmount: invoiceData.cryptoAmount,     // EXACT crypto amount to send
         currency: invoiceData.currency,
         expiresAt: invoiceData.expiresAt,
       },
@@ -494,6 +503,128 @@ const getPaymentStatus = asyncHandler(async (req, res) => {
     logger.error('[SubscriptionController] Error getting payment status:', error);
     throw error;
   }
+});
+
+/**
+ * Manually confirm subscription payment by tx hash (single source of truth: blockchain)
+ * POST /api/subscriptions/:id/payment/confirm
+ *
+ * Body: { txHash: string }
+ */
+const confirmPaymentWithTxHash = asyncHandler(async (req, res) => {
+  const subscriptionId = parseInt(req.params.id, 10);
+  const { txHash } = req.body || {};
+  const userId = req.user.id;
+
+  if (!txHash) {
+    throw new ValidationError('txHash is required');
+  }
+
+  // Ownership check
+  const ownershipCheck = await verifySubscriptionOwnership(subscriptionId, userId);
+  if (!ownershipCheck.success) {
+    return res.status(ownershipCheck.status).json({ error: ownershipCheck.error });
+  }
+
+  // Get latest invoice for this subscription (allow pending/expired within 24h)
+  const invoiceResult = await query(
+    `SELECT *
+       FROM invoices
+      WHERE subscription_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [subscriptionId]
+  );
+
+  if (invoiceResult.rows.length === 0) {
+    return res.status(404).json({ error: 'Invoice not found for this subscription' });
+  }
+
+  const invoice = invoiceResult.rows[0];
+  const chain = (invoice.chain || '').toUpperCase();
+  const currencyMap = {
+    BTC: 'BTC',
+    LTC: 'LTC',
+    ETH: 'ETH',
+    USDT_TRC20: 'USDT',
+  };
+  const paymentCurrency = currencyMap[chain];
+
+  if (!paymentCurrency) {
+    throw new ValidationError(`Unsupported chain for manual confirmation: ${chain}`);
+  }
+
+  const expectedAmount = parseFloat(invoice.crypto_amount || invoice.expected_amount);
+  const address = invoice.address;
+
+  // On-chain verification per chain
+  let verification;
+  if (chain === 'BTC' || chain === 'LTC') {
+    verification = await blockCypherService.verifyPayment(chain, txHash, address, expectedAmount);
+  } else if (chain === 'ETH') {
+    verification = await etherscanService.verifyEthPayment(txHash, address, expectedAmount);
+  } else if (chain === 'USDT_TRC20') {
+    verification = await tronService.verifyPayment(txHash, address, expectedAmount);
+  }
+
+  if (!verification?.verified) {
+    return res.status(400).json({
+      error: verification?.error || 'Payment not verified on blockchain',
+      confirmations: verification?.confirmations || 0,
+    });
+  }
+
+  const minConfirm = SUPPORTED_CURRENCIES[paymentCurrency].confirmations;
+  const confirmations = verification.confirmations ?? 0;
+  const status = verification.status || (confirmations >= minConfirm ? 'confirmed' : 'pending');
+
+  // Upsert payment
+  const payment = await paymentQueries.create({
+    orderId: invoice.order_id || null,
+    subscriptionId: invoice.subscription_id || null,
+    txHash,
+    amount: verification.amount,
+    currency: invoice.currency,
+    status,
+  });
+
+  // Update confirmations if present
+  if (verification.confirmations !== undefined) {
+    await paymentQueries.updateStatus(payment.id, status, verification.confirmations);
+  }
+
+  // Mark invoice as paid with tx hash
+  await invoiceQueries.updateStatus(invoice.id, 'paid', txHash);
+
+  // Activate subscription if confirmed
+  let activation = 'skipped';
+  if (status === 'confirmed') {
+    invoice.tx_hash = txHash;
+    try {
+      await handleSubscriptionPayment(invoice);
+      activation = 'activated';
+    } catch (e) {
+      logger.error('[SubscriptionController] Activation failed after manual confirm', {
+        error: e.message,
+        subscriptionId,
+        invoiceId: invoice.id,
+      });
+      activation = `activation_error: ${e.message}`;
+    }
+  }
+
+  return res.json({
+    success: true,
+    status,
+    confirmations,
+    activation,
+    payment: {
+      id: payment.id,
+      txHash: payment.tx_hash,
+      amount: payment.amount,
+      currency: payment.currency,
+    },
+  });
 });
 
 /**
@@ -665,5 +796,6 @@ export {
   getMyShopSubscriptions,
   generatePaymentInvoice,
   getPaymentStatus,
+  confirmPaymentWithTxHash,
   createPendingSubscription,
 };

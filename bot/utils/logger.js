@@ -8,7 +8,7 @@ const LOG_LEVELS = {
   ERROR: 'ERROR',
   WARN: 'WARN',
   INFO: 'INFO',
-  DEBUG: 'DEBUG'
+  DEBUG: 'DEBUG',
 };
 
 class Logger {

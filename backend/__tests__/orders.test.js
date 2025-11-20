@@ -6,13 +6,13 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createTestApp } from './helpers/testApp.js';
-import { 
-  closeTestDb, 
+import {
+  closeTestDb,
   cleanupTestData,
   createTestUser,
   createTestShop,
   createTestProduct,
-  getProductById
+  getProductById,
 } from './helpers/testDb.js';
 
 const app = createTestApp();
@@ -183,11 +183,11 @@ describe('POST /api/orders', () => {
     const results = await Promise.allSettled([order1Promise, order2Promise]);
 
     // Extract responses
-    const responses = results.map(r => r.status === 'fulfilled' ? r.value : null);
+    const responses = results.map((r) => (r.status === 'fulfilled' ? r.value : null));
 
     // Count successful orders
-    const successfulOrders = responses.filter(r => r && r.status === 201);
-    const failedOrders = responses.filter(r => r && r.status === 400);
+    const successfulOrders = responses.filter((r) => r && r.status === 201);
+    const failedOrders = responses.filter((r) => r && r.status === 400);
 
     // Verify: Only ONE order should succeed (race condition prevented)
     // The transaction + FOR UPDATE lock ensures atomicity

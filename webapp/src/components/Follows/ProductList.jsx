@@ -74,7 +74,7 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        wordBreak: 'break-word'
+                        wordBreak: 'break-word',
                       }}
                     >
                       {product.name}
@@ -90,11 +90,16 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
 
                   {/* Price & Stock */}
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-white text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+                    <div
+                      className="text-white text-xl font-bold tabular-nums"
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
                       ${product.price}
                     </div>
                     <div className="bg-white/5 px-2.5 py-1 rounded-lg">
-                      <span className="text-gray-400 text-xs font-medium">{product.stock_quantity} шт</span>
+                      <span className="text-gray-400 text-xs font-medium">
+                        {product.stock_quantity} шт
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -106,7 +111,8 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
             const syncedProduct = product.synced_product || {};
             const sourcePrice = Number(sourceProduct.price);
             const followerPrice = Number(syncedProduct.price);
-            const hasMarkup = Number.isFinite(sourcePrice) && sourcePrice > 0 && Number.isFinite(followerPrice);
+            const hasMarkup =
+              Number.isFinite(sourcePrice) && sourcePrice > 0 && Number.isFinite(followerPrice);
             const markupPercent = hasMarkup
               ? Math.round(((followerPrice - sourcePrice) / sourcePrice) * 100)
               : null;
@@ -135,14 +141,16 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      wordBreak: 'break-word'
+                      wordBreak: 'break-word',
                     }}
                   >
                     {sourceProduct.name || syncedProduct.name}
                   </h3>
                   {/* Preorder Badge */}
-                  {((sourceProduct.is_preorder || sourceProduct.availability === 'preorder') ||
-                    (syncedProduct.is_preorder || syncedProduct.availability === 'preorder')) && (
+                  {(sourceProduct.is_preorder ||
+                    sourceProduct.availability === 'preorder' ||
+                    syncedProduct.is_preorder ||
+                    syncedProduct.availability === 'preorder') && (
                     <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-400/50 bg-blue-500/15 text-[10px] font-semibold text-blue-200 uppercase tracking-wider">
                       <span>🔖</span>
                       <span>Предзаказ</span>
@@ -154,7 +162,10 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
                 <div className="relative flex items-center justify-between">
                   {/* Ваша цена - крупно, акцент */}
                   <div className="flex items-center gap-2">
-                    <div className="text-orange-primary text-xl font-bold tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+                    <div
+                      className="text-orange-primary text-xl font-bold tabular-nums"
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
                       ${syncedProduct.price}
                     </div>
                     {markupPercent !== null && (
@@ -166,7 +177,9 @@ const ProductList = ({ products, mode, onLoadMore, hasMore, loadingMore }) => {
 
                   {/* Количество - компактно справа */}
                   <div className="bg-white/5 px-2.5 py-1 rounded-lg">
-                    <span className="text-gray-400 text-xs font-medium">{syncedProduct.stock_quantity} шт</span>
+                    <span className="text-gray-400 text-xs font-medium">
+                      {syncedProduct.stock_quantity} шт
+                    </span>
                   </div>
                 </div>
               </motion.div>

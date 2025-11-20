@@ -30,7 +30,7 @@ const FILES_TO_CHECK = [
   'src/scenes/searchShop.js',
   'src/scenes/createShop.js',
   'src/scenes/addProduct.js',
-  'src/scenes/manageWallets.js'
+  'src/scenes/manageWallets.js',
 ];
 
 /**
@@ -106,7 +106,7 @@ async function checkFile(filePath) {
         line,
         pattern,
         handlerName: handlerName || 'inline',
-        snippet: lineText.trim()
+        snippet: lineText.trim(),
       });
     }
   }
@@ -143,7 +143,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Error:', err);
   process.exit(1);
 });

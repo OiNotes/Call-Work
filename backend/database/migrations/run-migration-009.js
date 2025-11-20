@@ -1,6 +1,6 @@
 /**
  * Migration Runner for 009_add_channel_url
- * 
+ *
  * Usage:
  *   node backend/database/migrations/run-migration-009.js
  */
@@ -25,7 +25,7 @@ const pool = new Pool({
 
 async function runMigration() {
   const client = await pool.connect();
-  
+
   try {
     console.log('🔄 Starting migration 009: Add channel_url to shops...\n');
 
@@ -96,7 +96,6 @@ async function runMigration() {
       console.log('📊 Sample data:');
       console.table(sampleData.rows);
     }
-
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     console.error(error.stack);
@@ -108,7 +107,7 @@ async function runMigration() {
 }
 
 // Run migration
-runMigration().catch(err => {
+runMigration().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });

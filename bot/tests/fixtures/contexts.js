@@ -19,13 +19,13 @@ export function createMockContext(overrides = {}) {
       id: 123456,
       username: 'testuser',
       first_name: 'Test',
-      last_name: 'User'
+      last_name: 'User',
     },
 
     // Chat info (getter simulation)
     chat: overrides.chat || {
       id: 123456,
-      type: 'private'
+      type: 'private',
     },
 
     // Message
@@ -41,7 +41,7 @@ export function createMockContext(overrides = {}) {
       shopId: null,
       shopName: null,
       role: null,
-      ...overrides.session
+      ...overrides.session,
     },
 
     // Wizard
@@ -50,14 +50,14 @@ export function createMockContext(overrides = {}) {
       next: jest.fn(),
       back: jest.fn(),
       selectStep: jest.fn(),
-      ...overrides.wizard
+      ...overrides.wizard,
     },
 
     // Scene
     scene: {
       enter: jest.fn(),
       leave: jest.fn().mockResolvedValue(undefined),
-      ...overrides.scene
+      ...overrides.scene,
     },
 
     // Methods
@@ -72,7 +72,7 @@ export function createMockContext(overrides = {}) {
     update: overrides.update || {},
 
     // Additional overrides
-    ...overrides
+    ...overrides,
   };
 
   return baseContext;
@@ -84,7 +84,7 @@ export function createMockContext(overrides = {}) {
 export function createTextMessageContext(text, overrides = {}) {
   return createMockContext({
     message: { text },
-    ...overrides
+    ...overrides,
   });
 }
 
@@ -94,7 +94,7 @@ export function createTextMessageContext(text, overrides = {}) {
 export function createCallbackContext(data, overrides = {}) {
   return createMockContext({
     callbackQuery: { data },
-    ...overrides
+    ...overrides,
   });
 }
 
@@ -106,8 +106,8 @@ export function createAuthedContext(sessionData = {}, overrides = {}) {
     session: {
       userId: 123456,
       token: 'mock-jwt-token',
-      ...sessionData
+      ...sessionData,
     },
-    ...overrides
+    ...overrides,
   });
 }

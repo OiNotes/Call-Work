@@ -29,46 +29,52 @@ export async function cleanupExpiredInvoices() {
     logger.info(`[Invoice Cleanup] Found ${expiredInvoices.length} expired invoices`);
 
     // Update invoice status to 'expired'
-    const invoiceIds = expiredInvoices.map(inv => inv.id);
-    await client.query(`
+    const invoiceIds = expiredInvoices.map((inv) => inv.id);
+    await client.query(
+      `
       UPDATE invoices
       SET status = 'expired', updated_at = NOW()
       WHERE id = ANY($1)
-    `, [invoiceIds]);
+    `,
+      [invoiceIds]
+    );
 
     // Cancel associated orders (if any)
-    const orderIds = expiredInvoices
-      .filter(inv => inv.order_id)
-      .map(inv => inv.order_id);
+    const orderIds = expiredInvoices.filter((inv) => inv.order_id).map((inv) => inv.order_id);
 
     if (orderIds.length > 0) {
-      await client.query(`
+      await client.query(
+        `
         UPDATE orders
         SET status = 'cancelled', updated_at = NOW()
         WHERE id = ANY($1) AND status = 'pending'
-      `, [orderIds]);
+      `,
+        [orderIds]
+      );
 
       // Release reserved stock
-      await client.query(`
+      await client.query(
+        `
         UPDATE products p
         SET reserved_quantity = reserved_quantity - oi.quantity
         FROM order_items oi
         WHERE oi.product_id = p.id
         AND oi.order_id = ANY($1)
-      `, [orderIds]);
+      `,
+        [orderIds]
+      );
     }
 
     await client.query('COMMIT');
 
     logger.info(`[Invoice Cleanup] Cleaned ${expiredInvoices.length} expired invoices`, {
-      orders_cancelled: orderIds.length
+      orders_cancelled: orderIds.length,
     });
 
     return {
       cleaned: expiredInvoices.length,
-      orders_cancelled: orderIds.length
+      orders_cancelled: orderIds.length,
     };
-
   } catch (error) {
     await client.query('ROLLBACK');
     logger.error('[Invoice Cleanup] Error:', error);
@@ -83,23 +89,26 @@ export async function cleanupExpiredInvoices() {
  */
 export function startInvoiceCleanup() {
   // Run immediately on start
-  cleanupExpiredInvoices().catch(err =>
+  cleanupExpiredInvoices().catch((err) =>
     logger.error('[Invoice Cleanup] Initial run failed:', err)
   );
 
   // Run every hour
-  setInterval(async () => {
-    try {
-      await cleanupExpiredInvoices();
-    } catch (error) {
-      logger.error('[Invoice Cleanup] Periodic run failed:', error);
-    }
-  }, 60 * 60 * 1000); // 1 hour
+  setInterval(
+    async () => {
+      try {
+        await cleanupExpiredInvoices();
+      } catch (error) {
+        logger.error('[Invoice Cleanup] Periodic run failed:', error);
+      }
+    },
+    60 * 60 * 1000
+  ); // 1 hour
 
   logger.info('[Invoice Cleanup] Service started (runs every hour)');
 }
 
 export default {
   cleanupExpiredInvoices,
-  startInvoiceCleanup
+  startInvoiceCleanup,
 };

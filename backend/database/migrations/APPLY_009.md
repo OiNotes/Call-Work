@@ -53,6 +53,7 @@ psql telegram_shop -c "DROP INDEX IF EXISTS idx_shops_channel_url; ALTER TABLE s
 ### Backend API
 
 **Migration Controller** (`POST /shops/:shopId/migration`):
+
 - ✅ Теперь сохраняет `newChannelUrl` в `shops.channel_url` после broadcast
 - ✅ Response включает `oldChannelUrl` из БД (если есть)
 - ✅ Следующая миграция видит предыдущий канал
@@ -60,6 +61,7 @@ psql telegram_shop -c "DROP INDEX IF EXISTS idx_shops_channel_url; ALTER TABLE s
 ### Database
 
 **shops table:**
+
 ```sql
 -- Новая колонка
 channel_url VARCHAR(255) NULL
@@ -71,6 +73,7 @@ idx_shops_channel_url ON shops(channel_url)
 ### Backward Compatibility
 
 ✅ **Полностью совместимо:**
+
 - Старые shops имеют `channel_url = NULL`
 - API работает с fallback: `shop.channel_url || oldChannelUrl || null`
 - Если миграция не применена - код всё равно работает
@@ -78,10 +81,12 @@ idx_shops_channel_url ON shops(channel_url)
 ## Зависимости
 
 **Должны быть применены ДО этой миграции:**
+
 - `schema.sql` (base schema)
 - `007_add_shop_tier_and_subscription_status.sql` (tier column)
 
 **НЕ требуется:**
+
 - Existing data migration
 - Service restart (hot reload работает)
 
@@ -90,6 +95,7 @@ idx_shops_channel_url ON shops(channel_url)
 ### Ошибка: "column already exists"
 
 Migration идемпотентна, можно запускать повторно:
+
 ```sql
 ALTER TABLE shops ADD COLUMN IF NOT EXISTS channel_url VARCHAR(255);
 ```
@@ -97,6 +103,7 @@ ALTER TABLE shops ADD COLUMN IF NOT EXISTS channel_url VARCHAR(255);
 ### Ошибка: "relation shops does not exist"
 
 Сначала примените base schema:
+
 ```bash
 node backend/database/migrations.cjs
 ```
@@ -104,6 +111,7 @@ node backend/database/migrations.cjs
 ### После миграции API возвращает NULL в oldChannelUrl
 
 Это ОК! Значит:
+
 1. Это первая миграция канала для этого shop
 2. ИЛИ миграция была до добавления `channel_url` колонки
 

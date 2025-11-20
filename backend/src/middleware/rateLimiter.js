@@ -11,7 +11,7 @@ const createRateLimiter = (windowMs, maxRequests, message) => {
     max: maxRequests,
     message: {
       success: false,
-      error: message || ERROR_MESSAGES.RATE_LIMIT_EXCEEDED
+      error: message || ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
     },
     standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
     legacyHeaders: false, // Disable `X-RateLimit-*` headers
@@ -20,15 +20,15 @@ const createRateLimiter = (windowMs, maxRequests, message) => {
         ip: req.ip,
         path: req.path,
         method: req.method,
-        userId: req.user?.id
+        userId: req.user?.id,
       });
 
       res.status(429).json({
         success: false,
         error: message || ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
-        retryAfter: req.rateLimit.resetTime
+        retryAfter: req.rateLimit.resetTime,
       });
-    }
+    },
   });
 };
 
@@ -121,7 +121,7 @@ export const customLimiter = (options = {}) => {
   const {
     windowMs = RATE_LIMITS.API.WINDOW_MS,
     max = RATE_LIMITS.API.MAX_REQUESTS,
-    message = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED
+    message = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
   } = options;
 
   return createRateLimiter(windowMs, max, message);
@@ -137,5 +137,5 @@ export default {
   productCreationLimiter,
   subscriptionCreationLimiter,
   aiRequestLimiter,
-  customLimiter
+  customLimiter,
 };

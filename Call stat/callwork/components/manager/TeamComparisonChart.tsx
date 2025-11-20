@@ -45,26 +45,28 @@ export function TeamComparisonChart({ employeeStats, teamAverage }: TeamComparis
       className="bg-white rounded-2xl p-6 border"
     >
       <h3 className="text-lg font-semibold mb-4">Сравнение с командой</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
-          <XAxis dataKey="metric" stroke="#94a3b8" />
-          <YAxis stroke="#94a3b8" />
-          <Tooltip />
-          <Legend />
-          <Bar
-            dataKey="employee"
-            fill="#3b82f6"
-            name="Сотрудник"
-            radius={[8, 8, 0, 0]}
-          />
-          <Bar
-            dataKey="team"
-            fill="#94a3b8"
-            name="Средняя по команде"
-            radius={[8, 8, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <XAxis dataKey="metric" stroke="#94a3b8" />
+            <YAxis stroke="#94a3b8" />
+            <Tooltip />
+            <Legend />
+            <Bar
+              dataKey="employee"
+              fill="#3b82f6"
+              name="Сотрудник"
+              radius={[8, 8, 0, 0]}
+            />
+            <Bar
+              dataKey="team"
+              fill="#94a3b8"
+              name="Средняя по команде"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </motion.div>
   )
 }

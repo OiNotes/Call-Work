@@ -7,8 +7,8 @@ import { config } from '../config/env.js';
  */
 const CSRF_EXEMPT_USER_AGENTS = [
   'TelegramBot',
-  'axios/1.13',  // Bot client
-  'node-fetch'
+  'axios/1.13', // Bot client
+  'node-fetch',
 ];
 
 /**
@@ -35,7 +35,7 @@ const CSRF_EXEMPT_USER_AGENTS = [
 
 /**
  * Validate Origin or Referer header to prevent CSRF attacks
- * 
+ *
  * @param {object} req - Express request
  * @param {object} res - Express response
  * @param {function} next - Express next middleware
@@ -63,11 +63,11 @@ export const validateOrigin = (req, res, next) => {
 
   // Skip CSRF for bot requests (trusted server-to-server calls)
   const userAgent = req.headers['user-agent'] || '';
-  if (CSRF_EXEMPT_USER_AGENTS.some(ua => userAgent.includes(ua))) {
+  if (CSRF_EXEMPT_USER_AGENTS.some((ua) => userAgent.includes(ua))) {
     logger.debug('CSRF check bypassed for bot user-agent:', {
       userAgent,
       path: req.path,
-      method: req.method
+      method: req.method,
     });
     return next();
   }
@@ -89,15 +89,19 @@ export const validateOrigin = (req, res, next) => {
   }
 
   // Check if origin matches any allowed origin
-  const isValidOrigin = origin && allowedOrigins.some(allowed => {
-    // Exact match or starts with (to handle subdomains)
-    return origin === allowed || origin.startsWith(allowed);
-  });
+  const isValidOrigin =
+    origin &&
+    allowedOrigins.some((allowed) => {
+      // Exact match or starts with (to handle subdomains)
+      return origin === allowed || origin.startsWith(allowed);
+    });
 
   // Check if referer matches any allowed origin
-  const isValidReferer = referer && allowedOrigins.some(allowed => {
-    return referer.startsWith(allowed);
-  });
+  const isValidReferer =
+    referer &&
+    allowedOrigins.some((allowed) => {
+      return referer.startsWith(allowed);
+    });
 
   // At least one of Origin or Referer must be valid
   if (!isValidOrigin && !isValidReferer) {
@@ -107,12 +111,12 @@ export const validateOrigin = (req, res, next) => {
       origin: origin || 'none',
       referer: referer || 'none',
       ip: req.ip,
-      userAgent: req.get('user-agent')
+      userAgent: req.get('user-agent'),
     });
 
     return res.status(403).json({
       success: false,
-      error: 'Invalid origin - possible CSRF attack detected'
+      error: 'Invalid origin - possible CSRF attack detected',
     });
   }
 
@@ -124,5 +128,5 @@ export const validateOrigin = (req, res, next) => {
  * Export middleware
  */
 export default {
-  validateOrigin
+  validateOrigin,
 };

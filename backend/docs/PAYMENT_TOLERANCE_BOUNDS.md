@@ -14,6 +14,7 @@ Payment tolerance is used in payment verification to allow minor differences bet
 **Problem:** Tolerance was hardcoded as 0.5% (0.005) with no bounds checking, validation, or logging.
 
 **Solution:** Centralized tolerance validation utility with:
+
 - MIN_TOLERANCE = 0.01% (0.0001)
 - MAX_TOLERANCE = 1.0% (1.0)
 - DEFAULT_TOLERANCE = 0.5% (0.005) - industry standard
@@ -23,11 +24,11 @@ Payment tolerance is used in payment verification to allow minor differences bet
 
 ## Tolerance Bounds
 
-| Bound | Value | Percentage | Use Case |
-|-------|-------|-----------|----------|
-| **Minimum** | 0.0001 | 0.01% | Prevents too-tight tolerance that rejects valid payments |
-| **Default** | 0.005 | 0.5% | Industry standard for blockchain payments |
-| **Maximum** | 1.0 | 1.0% | Prevents excessive tolerance that accepts fraud |
+| Bound       | Value  | Percentage | Use Case                                                 |
+| ----------- | ------ | ---------- | -------------------------------------------------------- |
+| **Minimum** | 0.0001 | 0.01%      | Prevents too-tight tolerance that rejects valid payments |
+| **Default** | 0.005  | 0.5%       | Industry standard for blockchain payments                |
+| **Maximum** | 1.0    | 1.0%       | Prevents excessive tolerance that accepts fraud          |
 
 ### Rationale
 
@@ -40,76 +41,86 @@ Payment tolerance is used in payment verification to allow minor differences bet
 ## API Reference
 
 ### `TOLERANCE_BOUNDS`
+
 Constant object with predefined bounds:
+
 ```javascript
 import { TOLERANCE_BOUNDS } from '../utils/paymentTolerance.js';
 
-TOLERANCE_BOUNDS.MIN_TOLERANCE  // 0.0001
-TOLERANCE_BOUNDS.MAX_TOLERANCE  // 1.0
-TOLERANCE_BOUNDS.DEFAULT_TOLERANCE  // 0.005
+TOLERANCE_BOUNDS.MIN_TOLERANCE; // 0.0001
+TOLERANCE_BOUNDS.MAX_TOLERANCE; // 1.0
+TOLERANCE_BOUNDS.DEFAULT_TOLERANCE; // 0.005
 ```
 
 ### `clampTolerance(value, context?)`
+
 Clamps tolerance to valid bounds. Automatically logs if value is out of bounds.
 
 **Parameters:**
+
 - `value` (number): Tolerance value (decimal form, not percentage)
 - `context` (string, optional): Context for logging (e.g., 'BTC', 'ETH')
 
 **Returns:** (number) Clamped tolerance value
 
 **Examples:**
+
 ```javascript
 import { clampTolerance } from '../utils/paymentTolerance.js';
 
 // Within bounds - returns as-is
-clampTolerance(0.005, 'BTC')  // → 0.005
+clampTolerance(0.005, 'BTC'); // → 0.005
 
 // Too low - clamps to min and logs warning
-clampTolerance(0.00001, 'BTC')  // → 0.0001
+clampTolerance(0.00001, 'BTC'); // → 0.0001
 // [Warning] Tolerance too low for BTC...
 
 // Too high - clamps to max and logs warning
-clampTolerance(1.5, 'ETH')  // → 1.0
+clampTolerance(1.5, 'ETH'); // → 1.0
 // [Warning] Tolerance too high for ETH...
 
 // Null/undefined - returns default
-clampTolerance(null, 'USDT')  // → 0.005
+clampTolerance(null, 'USDT'); // → 0.005
 ```
 
 ### `validateTolerance(value)`
+
 Validates tolerance without clamping. Returns validation result object.
 
 **Parameters:**
+
 - `value` (number): Tolerance value to validate
 
 **Returns:** (object) `{ valid: boolean, error?: string, clamped?: number }`
 
 **Examples:**
+
 ```javascript
 import { validateTolerance } from '../utils/paymentTolerance.js';
 
 // Valid tolerance
-validateTolerance(0.005)
+validateTolerance(0.005);
 // → { valid: true }
 
 // Invalid - too high
-validateTolerance(2.0)
+validateTolerance(2.0);
 // → { valid: false, error: 'Tolerance too high: 2.0 (maximum: 1.0)' }
 
 // Invalid - negative
-validateTolerance(-0.005)
+validateTolerance(-0.005);
 // → { valid: false, error: 'Tolerance cannot be negative: -0.005' }
 
 // Invalid - non-numeric
-validateTolerance('0.5')
+validateTolerance('0.5');
 // → { valid: false, error: 'Tolerance must be a number' }
 ```
 
 ### `amountsMatchWithTolerance(actual, expected, tolerance?, context?)`
+
 Checks if amounts match within tolerance. Automatically clamps tolerance and logs mismatches.
 
 **Parameters:**
+
 - `actual` (number): Actual amount received
 - `expected` (number): Expected amount
 - `tolerance` (number, optional): Tolerance value (default: 0.005)
@@ -118,59 +129,66 @@ Checks if amounts match within tolerance. Automatically clamps tolerance and log
 **Returns:** (boolean) True if amounts match within tolerance
 
 **Examples:**
+
 ```javascript
 import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
 // Matches within 0.5% default tolerance
-amountsMatchWithTolerance(100.5, 100, undefined, 'BTC')
+amountsMatchWithTolerance(100.5, 100, undefined, 'BTC');
 // → true (0.5% difference = exactly at limit)
 
 // Doesn't match - exceeds 0.5%
-amountsMatchWithTolerance(101, 100, undefined, 'BTC')
+amountsMatchWithTolerance(101, 100, undefined, 'BTC');
 // → false (1% difference > 0.5%)
 // [Warning] Amount mismatch in BTC...
 
 // Custom tolerance (0.1%)
-amountsMatchWithTolerance(100.1, 100, 0.001, 'USDT')
+amountsMatchWithTolerance(100.1, 100, 0.001, 'USDT');
 // → true (0.1% difference = exactly at limit)
 
 // Custom tolerance gets clamped if out of bounds
-amountsMatchWithTolerance(100.5, 100, 2.0)
+amountsMatchWithTolerance(100.5, 100, 2.0);
 // → true (tolerance clamped to 1.0%, 0.5% < 1.0%)
 ```
 
 ### `toleranceToPercentage(tolerance)`
+
 Converts decimal tolerance to percentage string.
 
 **Parameters:**
+
 - `tolerance` (number): Tolerance in decimal form
 
 **Returns:** (string) Percentage string
 
 **Examples:**
+
 ```javascript
 import { toleranceToPercentage } from '../utils/paymentTolerance.js';
 
-toleranceToPercentage(0.005)     // → '0.5000%'
-toleranceToPercentage(0.01)      // → '1.0000%'
-toleranceToPercentage(0.0001)    // → '0.0100%'
-toleranceToPercentage(1.0)       // → '100.0000%'
+toleranceToPercentage(0.005); // → '0.5000%'
+toleranceToPercentage(0.01); // → '1.0000%'
+toleranceToPercentage(0.0001); // → '0.0100%'
+toleranceToPercentage(1.0); // → '100.0000%'
 ```
 
 ### `getToleranceInfo(tolerance)`
+
 Returns detailed info object about tolerance.
 
 **Parameters:**
+
 - `tolerance` (number): Tolerance value
 
 **Returns:** (object) `{ provided, clamped, percentage, isDefault, isClamped, bounds }`
 
 **Examples:**
+
 ```javascript
 import { getToleranceInfo } from '../utils/paymentTolerance.js';
 
 // Valid tolerance
-getToleranceInfo(0.005)
+getToleranceInfo(0.005);
 // → {
 //   provided: 0.005,
 //   clamped: 0.005,
@@ -181,7 +199,7 @@ getToleranceInfo(0.005)
 // }
 
 // Out-of-bounds tolerance
-getToleranceInfo(2.0)
+getToleranceInfo(2.0);
 // → {
 //   provided: 2.0,
 //   clamped: 1.0,
@@ -197,27 +215,30 @@ getToleranceInfo(2.0)
 ## Usage Examples
 
 ### Before (Hardcoded tolerance):
+
 ```javascript
 // BTC/LTC webhook verification
-const tolerance = expectedAmount * 0.005;  // Hardcoded 0.5%
+const tolerance = expectedAmount * 0.005; // Hardcoded 0.5%
 if (Math.abs(receivedAmount - expectedAmount) > tolerance) {
   // Reject payment
 }
 
 // ETH/USDT verification
-const tolerance = expectedAmount * 0.01;  // Hardcoded 1.0%?
+const tolerance = expectedAmount * 0.01; // Hardcoded 1.0%?
 if (Math.abs(amount - expectedAmount) > tolerance) {
   // Reject payment
 }
 ```
 
 **Problems:**
+
 - Tolerance hardcoded in multiple places
 - Different services used different values (0.005, 0.01)
 - No validation or bounds checking
 - No logging when tolerance is used
 
 ### After (Centralized with bounds):
+
 ```javascript
 import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
@@ -240,6 +261,7 @@ if (!amountsMatchWithTolerance(amount, expected, customTolerance, 'USDT')) {
 ```
 
 **Benefits:**
+
 - Centralized, single source of truth
 - Automatic bounds checking and clamping
 - Consistent behavior across all services
@@ -290,6 +312,7 @@ if (!amountsMatchWithTolerance(amount, expected, customTolerance, 'USDT')) {
 ## Logging Examples
 
 ### When tolerance is clamped too low:
+
 ```
 [PaymentTolerance] Tolerance too low for BTC
 provided: 0.00001
@@ -299,6 +322,7 @@ percentage: 0.01%
 ```
 
 ### When tolerance is clamped too high:
+
 ```
 [PaymentTolerance] Tolerance too high for USDT
 provided: 2.0
@@ -308,6 +332,7 @@ percentage: 100.0000%
 ```
 
 ### When amount mismatch detected:
+
 ```
 [PaymentTolerance] Amount mismatch in BTC
 expected: 0.5
@@ -324,12 +349,14 @@ exceedsBy: 0.01750000
 ## Testing
 
 Run tolerance tests:
+
 ```bash
 cd backend
 npm test -- paymentTolerance.test.js
 ```
 
 Test coverage includes:
+
 - Bound enforcement (clamping)
 - Validation logic
 - Amount matching with various tolerances
@@ -343,12 +370,13 @@ Test coverage includes:
 If you need to change tolerance globally:
 
 1. **Update `TOLERANCE_BOUNDS` constants:**
+
    ```javascript
    // backend/src/utils/paymentTolerance.js
    export const TOLERANCE_BOUNDS = {
-     MIN_TOLERANCE: 0.00005,    // Changed from 0.0001
-     MAX_TOLERANCE: 0.5,         // Changed from 1.0
-     DEFAULT_TOLERANCE: 0.003    // Changed from 0.005
+     MIN_TOLERANCE: 0.00005, // Changed from 0.0001
+     MAX_TOLERANCE: 0.5, // Changed from 1.0
+     DEFAULT_TOLERANCE: 0.003, // Changed from 0.005
    };
    ```
 
@@ -364,6 +392,7 @@ If you need to change tolerance globally:
 ## Best Practices
 
 1. **Always use `amountsMatchWithTolerance`** instead of manual calculation:
+
    ```javascript
    // ✅ Good
    if (amountsMatchWithTolerance(actual, expected, undefined, 'BTC')) { ... }
@@ -373,13 +402,15 @@ If you need to change tolerance globally:
    ```
 
 2. **Provide context string** for better logging:
+
    ```javascript
-   amountsMatchWithTolerance(amount, expected, undefined, 'ETH')
+   amountsMatchWithTolerance(amount, expected, undefined, 'ETH');
    // vs
-   amountsMatchWithTolerance(amount, expected)  // Still works, but no context in logs
+   amountsMatchWithTolerance(amount, expected); // Still works, but no context in logs
    ```
 
 3. **Validate tolerance if accepting user input:**
+
    ```javascript
    const userTolerance = req.body.tolerance;
    const validation = validateTolerance(userTolerance);
@@ -410,6 +441,7 @@ If you need to change tolerance globally:
 ## Future Enhancements
 
 Possible improvements:
+
 - Per-currency tolerance bounds (BTC different from USDT)
 - Database-configurable tolerance (set via admin panel)
 - Tolerance override audit log with approvals

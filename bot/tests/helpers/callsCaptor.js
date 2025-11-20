@@ -1,6 +1,6 @@
 /**
  * Calls Captor для integration-тестов
- * 
+ *
  * Перехватывает вызовы ctx.reply, ctx.editMessageText, ctx.answerCbQuery
  * Позволяет проверять что бот ответил пользователю
  */
@@ -29,7 +29,7 @@ export function createCallsCaptor() {
         type: 'reply',
         args,
         text: args[0],
-        markup: args[1]?.reply_markup || args[1]
+        markup: args[1]?.reply_markup || args[1],
       });
       return originalReply ? originalReply(...args) : { message_id: Date.now() };
     };
@@ -39,7 +39,7 @@ export function createCallsCaptor() {
         type: 'editMessageText',
         args,
         text: args[0],
-        markup: args[1]?.reply_markup || args[1]
+        markup: args[1]?.reply_markup || args[1],
       });
       return originalEditText ? originalEditText(...args) : true;
     };
@@ -48,7 +48,7 @@ export function createCallsCaptor() {
       calls.push({
         type: 'editMessageReplyMarkup',
         args,
-        markup: args[0]?.reply_markup || args[0]
+        markup: args[0]?.reply_markup || args[0],
       });
       return originalEditMarkup ? originalEditMarkup(...args) : true;
     };
@@ -57,7 +57,7 @@ export function createCallsCaptor() {
       calls.push({
         type: 'answerCbQuery',
         args,
-        text: args[0]
+        text: args[0],
       });
       return originalAnswerCb ? originalAnswerCb(...args) : true;
     };
@@ -70,7 +70,7 @@ export function createCallsCaptor() {
           type: 'editMessageText',
           args,
           text: args[3], // text is 4th arg in telegram API
-          markup: args[4]?.reply_markup || args[4]
+          markup: args[4]?.reply_markup || args[4],
         });
         return originalTelegramEditText ? originalTelegramEditText(...args) : true;
       };
@@ -82,7 +82,7 @@ export function createCallsCaptor() {
           type: 'editMessageText', // Treat as edit for test purposes
           args,
           text: media?.caption || '',
-          markup: args[4]?.reply_markup || args[4]
+          markup: args[4]?.reply_markup || args[4],
         });
         return originalTelegramEditMedia ? originalTelegramEditMedia(...args) : true;
       };
@@ -95,7 +95,7 @@ export function createCallsCaptor() {
    * Получить последний ответ (reply или editMessageText)
    */
   const getLastReply = () => {
-    const replyCalls = calls.filter(c => c.type === 'reply' || c.type === 'editMessageText');
+    const replyCalls = calls.filter((c) => c.type === 'reply' || c.type === 'editMessageText');
     if (replyCalls.length === 0) return null;
     return replyCalls[replyCalls.length - 1];
   };
@@ -104,7 +104,7 @@ export function createCallsCaptor() {
    * Получить последнюю клавиатуру
    */
   const getLastMarkup = () => {
-    const markupCalls = calls.filter(c => c.markup !== undefined);
+    const markupCalls = calls.filter((c) => c.markup !== undefined);
     if (markupCalls.length === 0) return null;
     return markupCalls[markupCalls.length - 1].markup;
   };
@@ -113,14 +113,14 @@ export function createCallsCaptor() {
    * Проверить, был ли вызван answerCbQuery
    */
   const wasAnswerCbQueryCalled = () => {
-    return calls.some(c => c.type === 'answerCbQuery');
+    return calls.some((c) => c.type === 'answerCbQuery');
   };
 
   /**
    * Получить все вызовы определённого типа
    */
   const getCallsOfType = (type) => {
-    return calls.filter(c => c.type === type);
+    return calls.filter((c) => c.type === type);
   };
 
   /**
@@ -141,21 +141,21 @@ export function createCallsCaptor() {
    * Получить все reply вызовы
    */
   const getReplies = () => {
-    return calls.filter(c => c.type === 'reply');
+    return calls.filter((c) => c.type === 'reply');
   };
 
   /**
    * Получить все editMessageText вызовы
    */
   const getEdits = () => {
-    return calls.filter(c => c.type === 'editMessageText');
+    return calls.filter((c) => c.type === 'editMessageText');
   };
 
   /**
    * Получить все answerCbQuery вызовы
    */
   const getAnswers = () => {
-    return calls.filter(c => c.type === 'answerCbQuery');
+    return calls.filter((c) => c.type === 'answerCbQuery');
   };
 
   /**
@@ -178,7 +178,7 @@ export function createCallsCaptor() {
     getReplies,
     getEdits,
     getAnswers,
-    getLastReplyText
+    getLastReplyText,
   };
 }
 
@@ -189,7 +189,7 @@ export function createCallsCaptor() {
  */
 export function extractButtons(markup) {
   if (!markup) return [];
-  
+
   const keyboard = markup.inline_keyboard || markup.keyboard || [];
   const buttons = [];
 
@@ -210,12 +210,12 @@ export function extractButtons(markup) {
  */
 export function isTopButton(button, markup) {
   if (!markup) return false;
-  
+
   const keyboard = markup.inline_keyboard || markup.keyboard || [];
   if (keyboard.length === 0) return false;
 
   const firstRow = keyboard[0];
-  return firstRow.some(b => b.text === button.text);
+  return firstRow.some((b) => b.text === button.text);
 }
 
 /**
@@ -226,5 +226,5 @@ export function isTopButton(button, markup) {
  */
 export function findButton(text, markup) {
   const buttons = extractButtons(markup);
-  return buttons.find(b => b.text === text) || null;
+  return buttons.find((b) => b.text === text) || null;
 }

@@ -2,6 +2,8 @@
  * WebSocket utility for broadcasting events to clients
  */
 
+import logger from './logger.js';
+
 let wssInstance = null;
 
 /**
@@ -17,28 +19,30 @@ export function initWebSocket(wss) {
  * @param {string} event - Event name
  * @param {object} data - Event data
  */
+
 export function broadcast(event, data) {
   if (!wssInstance) {
-    console.warn('[WebSocket] Instance not initialized, skipping broadcast');
+    logger.warn('[WebSocket] Instance not initialized, skipping broadcast');
     return;
   }
 
   const message = JSON.stringify({
     type: event,
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   let sentCount = 0;
   wssInstance.clients.forEach((client) => {
-    if (client.readyState === 1) { // WebSocket.OPEN
+    if (client.readyState === 1) {
+      // WebSocket.OPEN
       client.send(message);
       sentCount++;
     }
   });
 
   if (sentCount > 0) {
-    console.log(`[WebSocket] Broadcasted ${event} to ${sentCount} clients`);
+    logger.debug('[WebSocket] Broadcasted event', { event, clientCount: sentCount });
   }
 }
 

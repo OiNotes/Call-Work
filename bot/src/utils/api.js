@@ -9,8 +9,8 @@ const api = axios.create({
   baseURL: config.backendUrl + '/api',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 // Create axios instance for payment endpoints with longer timeout
@@ -19,8 +19,8 @@ const paymentAxios = axios.create({
   baseURL: config.backendUrl + '/api',
   timeout: 60000, // 60 seconds for blockchain queries
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 // P1-BOT-002 FIX: Configure retry logic for network errors
@@ -34,7 +34,7 @@ axiosRetry(api, {
     if (axiosRetry.isNetworkError(error)) {
       logger.warn('Network error detected, retrying...', {
         url: error.config?.url,
-        attempt: error.config?.['axios-retry']?.retryCount || 0
+        attempt: error.config?.['axios-retry']?.retryCount || 0,
       });
       return true;
     }
@@ -43,7 +43,7 @@ axiosRetry(api, {
       logger.warn('Server error detected, retrying...', {
         url: error.config?.url,
         status: error.response.status,
-        attempt: error.config?.['axios-retry']?.retryCount || 0
+        attempt: error.config?.['axios-retry']?.retryCount || 0,
       });
       return true;
     }
@@ -54,9 +54,9 @@ axiosRetry(api, {
     logger.info('Retrying API request', {
       url: error.config?.url,
       retryCount,
-      error: error.message
+      error: error.message,
     });
-  }
+  },
 });
 
 // Apply same retry logic to payment API
@@ -67,7 +67,7 @@ axiosRetry(paymentAxios, {
     if (axiosRetry.isNetworkError(error)) {
       logger.warn('Payment API network error, retrying...', {
         url: error.config?.url,
-        attempt: error.config?.['axios-retry']?.retryCount || 0
+        attempt: error.config?.['axios-retry']?.retryCount || 0,
       });
       return true;
     }
@@ -75,7 +75,7 @@ axiosRetry(paymentAxios, {
       logger.warn('Payment API server error, retrying...', {
         url: error.config?.url,
         status: error.response.status,
-        attempt: error.config?.['axios-retry']?.retryCount || 0
+        attempt: error.config?.['axios-retry']?.retryCount || 0,
       });
       return true;
     }
@@ -85,9 +85,9 @@ axiosRetry(paymentAxios, {
     logger.info('Retrying payment API request', {
       url: error.config?.url,
       retryCount,
-      error: error.message
+      error: error.message,
     });
-  }
+  },
 });
 
 // Apply interceptors to payment API instance
@@ -125,7 +125,7 @@ paymentAxios.interceptors.response.use(
       logger.error(`Payment API Error: ${error.response.status} ${error.response.config.url}`, {
         responseData: error.response.data,
         requestBody,
-        validationErrors: error.response.data?.details || null
+        validationErrors: error.response.data?.details || null,
       });
     } else if (error.request) {
       logger.error('Payment API Error: No response received', { url: error.config?.url });
@@ -173,7 +173,7 @@ api.interceptors.response.use(
       logger.error(`API Error: ${error.response.status} ${error.response.config.url}`, {
         responseData: error.response.data,
         requestBody,
-        validationErrors: error.response.data?.details || null
+        validationErrors: error.response.data?.details || null,
       });
     } else if (error.request) {
       logger.error('API Error: No response received', { url: error.config?.url });
@@ -189,16 +189,16 @@ export const authApi = {
   // Register or login user
   async authenticate(telegramId, userData) {
     const requestBody = {
-      telegramId: parseInt(telegramId, 10),  // Send as integer, not string
+      telegramId: parseInt(telegramId, 10), // Send as integer, not string
       username: userData.username,
-      firstName: userData.firstName || userData.first_name,  // Support both camelCase and snake_case
-      lastName: userData.lastName || userData.last_name || ''
+      firstName: userData.firstName || userData.first_name, // Support both camelCase and snake_case
+      lastName: userData.lastName || userData.last_name || '',
     };
 
     const { data } = await api.post('/auth/register', requestBody, {
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
     // Unwrap response: return data.data instead of data
     return data.data || data;
@@ -206,21 +206,22 @@ export const authApi = {
 
   // Update user role
   async updateRole(role, token) {
-    const { data } = await api.patch('/auth/role',
+    const { data } = await api.patch(
+      '/auth/role',
       { role },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     return data.data || data;
-  }
+  },
 };
 
 export const shopApi = {
   // Get user's shop
   async getMyShop(token) {
     const { data } = await api.get('/shops/my', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     const shops = data.data || data;
     return Array.isArray(shops) ? shops : [];
@@ -229,7 +230,7 @@ export const shopApi = {
   // Create new shop
   async createShop(shopData, token) {
     const { data } = await api.post('/shops', shopData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (shop object) instead of wrapper
     return data.data || data;
@@ -238,7 +239,7 @@ export const shopApi = {
   // Search shops
   async searchShops(query, token = null) {
     const config = {
-      params: { q: query }
+      params: { q: query },
     };
 
     if (token) {
@@ -264,7 +265,7 @@ export const shopApi = {
   // Get accessible shops (owner + worker)
   async getAccessibleShops(token) {
     const { data } = await api.get('/shops/accessible', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
@@ -272,29 +273,25 @@ export const shopApi = {
   // Get worker shops only (not owner)
   async getWorkerShops(token) {
     const { data } = await api.get('/shops/workspace', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
-  }
+  },
 };
 
 export const workerApi = {
   // Add worker to shop
   async addWorker(shopId, workerData, token) {
-    const { data } = await api.post(
-      `/shops/${shopId}/workers`,
-      workerData,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await api.post(`/shops/${shopId}/workers`, workerData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data.data || data;
   },
 
   // List shop workers
   async listWorkers(shopId, token) {
     const { data } = await api.get(`/shops/${shopId}/workers`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
@@ -302,17 +299,17 @@ export const workerApi = {
   // Remove worker
   async removeWorker(shopId, workerId, token) {
     const { data } = await api.delete(`/shops/${shopId}/workers/${workerId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
-  }
+  },
 };
 
 export const productApi = {
   // Create product
   async createProduct(productData, token) {
     const { data } = await api.post('/products', productData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (product object) instead of wrapper
     return data.data || data;
@@ -321,7 +318,7 @@ export const productApi = {
   // Get shop products
   async getShopProducts(shopId) {
     const { data } = await api.get('/products', {
-      params: { shopId }
+      params: { shopId },
     });
     // Unwrap response: return data.data (array of products) instead of wrapper
     return data.data || data;
@@ -330,7 +327,7 @@ export const productApi = {
   // Update product
   async updateProduct(productId, productData, token) {
     const { data } = await api.put(`/products/${productId}`, productData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (product object) instead of wrapper
     return data.data || data;
@@ -339,7 +336,7 @@ export const productApi = {
   // Delete product
   async deleteProduct(productId, token) {
     const { data } = await api.delete(`/products/${productId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data instead of wrapper
     return data.data || data;
@@ -347,10 +344,11 @@ export const productApi = {
 
   // Bulk delete all products from a shop
   async bulkDeleteAll(shopId, token) {
-    const { data } = await api.post('/products/bulk-delete-all',
+    const { data } = await api.post(
+      '/products/bulk-delete-all',
       { shopId },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data (result with deletedCount and deletedProducts) instead of wrapper
@@ -359,10 +357,11 @@ export const productApi = {
 
   // Bulk delete specific products by IDs
   async bulkDeleteByIds(shopId, productIds, token) {
-    const { data } = await api.post('/products/bulk-delete-by-ids',
+    const { data } = await api.post(
+      '/products/bulk-delete-by-ids',
       { shopId, productIds },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data (result with deletedCount and deletedProducts) instead of wrapper
@@ -374,14 +373,14 @@ export const productApi = {
     const { data } = await api.post(
       '/products/bulk-discount',
       {
-        shopId: shopId,  // camelCase для соответствия Backend API
+        shopId: shopId, // camelCase для соответствия Backend API
         percentage: discountData.percentage,
         type: discountData.type, // 'permanent' or 'timer'
         duration: discountData.duration, // milliseconds or null
-        excluded_product_ids: discountData.excludedProductIds || []  // НОВОЕ!
+        excluded_product_ids: discountData.excludedProductIds || [], // НОВОЕ!
       },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data (result with productsUpdated and products) instead of wrapper
@@ -392,21 +391,21 @@ export const productApi = {
   async removeBulkDiscount(shopId, token) {
     const { data } = await api.post(
       '/products/bulk-discount/remove',
-      { shopId: shopId },  // camelCase для соответствия Backend API
+      { shopId: shopId }, // camelCase для соответствия Backend API
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data instead of wrapper
     return data.data || data;
-  }
+  },
 };
 
 export const orderApi = {
   // Get buyer orders
   async getMyOrders(token) {
     const { data } = await api.get('/orders/my', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (array of orders) instead of wrapper
     const orders = data.data || data;
@@ -417,13 +416,11 @@ export const orderApi = {
   async getShopOrders(shopId, token, options = {}) {
     try {
       const params = {
-        shop_id: shopId
+        shop_id: shopId,
       };
 
       if (options.status) {
-        params.status = Array.isArray(options.status)
-          ? options.status.join(',')
-          : options.status;
+        params.status = Array.isArray(options.status) ? options.status.join(',') : options.status;
       }
 
       if (options.limit) {
@@ -438,12 +435,12 @@ export const orderApi = {
         shopId,
         filters: options,
         params,
-        hasToken: !!token
+        hasToken: !!token,
       });
 
       const { data } = await api.get('/orders', {
         params,
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       logger.info('getShopOrders response:', {
@@ -454,22 +451,26 @@ export const orderApi = {
           isArray: Array.isArray(data),
           dataIsArray: Array.isArray(data?.data),
           payloadHasOrders: !!(data?.data?.orders || data?.orders),
-          ordersCount: data?.data?.orders?.length || data?.data?.length || data?.orders?.length || data?.length || 0
-        }
+          ordersCount:
+            data?.data?.orders?.length ||
+            data?.data?.length ||
+            data?.orders?.length ||
+            data?.length ||
+            0,
+        },
       });
 
       // Unwrap response: return data.data (array of orders) instead of wrapper
       const payload = data.data || data;
       const orders = Array.isArray(payload?.orders) ? payload.orders : payload;
       return Array.isArray(orders) ? orders : [];
-
     } catch (error) {
       logger.error('getShopOrders error:', {
         error: error.message,
         status: error.response?.status,
         data: error.response?.data,
         shopId,
-        filters: options
+        filters: options,
       });
       throw error; // Re-throw to be caught by handler
     }
@@ -479,7 +480,7 @@ export const orderApi = {
   async getActiveOrdersCount(shopId, token) {
     const { data } = await api.get('/orders/active/count', {
       headers: { Authorization: `Bearer ${token}` },
-      params: { shop_id: shopId }
+      params: { shop_id: shopId },
     });
 
     const count = data?.data?.count ?? data?.count ?? 0;
@@ -512,21 +513,21 @@ export const orderApi = {
   async getAnalytics(shopId, startDate, endDate, token) {
     try {
       const response = await api.get('/orders/analytics', {
-        params: { 
+        params: {
           shop_id: shopId,
           from: startDate,
-          to: endDate
+          to: endDate,
         },
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       return response.data.data;
     } catch (error) {
       logger.error('Error fetching analytics:', error);
       throw error;
     }
-  }
+  },
 };
 
 // P0-BOT-7 FIX: Use paymentAxios with 60s timeout for payment endpoints
@@ -534,7 +535,7 @@ export const paymentApi = {
   // Verify crypto payment (blockchain query - needs 60s timeout)
   async verifyPayment(paymentData, token) {
     const { data } = await paymentAxios.post('/payments/verify', paymentData, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (payment object) instead of wrapper
     return data.data || data;
@@ -542,20 +543,21 @@ export const paymentApi = {
 
   // Generate crypto address
   async generateAddress(currency, token) {
-    const { data } = await paymentAxios.post('/payments/address',
+    const { data } = await paymentAxios.post(
+      '/payments/address',
       { currency },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     // Unwrap response: return data.data (address object) instead of wrapper
     return data.data || data;
-  }
+  },
 };
 
 export const subscriptionApi = {
   // Check if user is subscribed to shop
   async checkSubscription(shopId, token) {
     const { data } = await api.get(`/subscriptions/check/${shopId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (object with isSubscribed and subscription) instead of wrapper
     return data.data || data;
@@ -567,10 +569,10 @@ export const subscriptionApi = {
       '/subscriptions',
       {
         shopId: Number(shopId),
-        telegramId: telegramId ? String(telegramId) : undefined
+        telegramId: telegramId ? String(telegramId) : undefined,
       },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data (subscription object) instead of wrapper
@@ -580,7 +582,7 @@ export const subscriptionApi = {
   // Get user subscriptions
   async getMySubscriptions(token) {
     const { data } = await api.get('/subscriptions', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (array of subscriptions) instead of wrapper
     return data.data || data;
@@ -589,7 +591,7 @@ export const subscriptionApi = {
   // Unsubscribe from shop
   async unsubscribe(shopId, token) {
     const { data } = await api.delete(`/subscriptions/${shopId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data instead of wrapper
     return data.data || data;
@@ -598,7 +600,7 @@ export const subscriptionApi = {
   // Get shop subscribers (shop owner only)
   async getShopSubscribers(shopId, token) {
     const { data } = await api.get(`/subscriptions/shop/${shopId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     // Unwrap response: return data.data (object with subscribers array and count) instead of wrapper
     return data.data || data;
@@ -610,7 +612,7 @@ export const subscriptionApi = {
       `/subscriptions/${subscriptionId}/payment/generate`,
       { chain },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.invoice instead of wrapper
@@ -619,14 +621,23 @@ export const subscriptionApi = {
 
   // Get payment status for subscription (blockchain query - needs 60s timeout)
   async getSubscriptionPaymentStatus(subscriptionId, token) {
-    const { data } = await paymentAxios.get(
-      `/subscriptions/${subscriptionId}/payment/status`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await paymentAxios.get(`/subscriptions/${subscriptionId}/payment/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     // Unwrap response: return data.payment instead of wrapper
     return data.payment || data.data || data;
+  },
+
+  // Manual confirmation by tx hash (server verifies on-chain)
+  async confirmSubscriptionPayment(subscriptionId, txHash, token) {
+    const { data } = await paymentAxios.post(
+      `/subscriptions/${subscriptionId}/payment/confirm`,
+      { txHash },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return data.data || data;
   },
 
   // Create pending subscription (first-time shop creation)
@@ -635,7 +646,7 @@ export const subscriptionApi = {
       '/subscriptions/pending',
       { tier },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     // Unwrap response: return data.data instead of wrapper
@@ -644,15 +655,12 @@ export const subscriptionApi = {
 
   // Get subscription status for shop
   async getStatus(shopId, token) {
-    const { data } = await api.get(
-      `/subscriptions/status/${shopId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await api.get(`/subscriptions/status/${shopId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     // Unwrap response: return data.data instead of wrapper
     return data.data || data;
-  }
+  },
 };
 
 export const notificationApi = {
@@ -661,27 +669,28 @@ export const notificationApi = {
       '/notifications/migrate-channel',
       {
         shop_id: Number(shopId),
-        new_channel: newChannel
+        new_channel: newChannel,
       },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     return data.data || data;
-  }
+  },
 };
 
 export const followApi = {
   // P1-BOT-004: Validate circular dependency
   async validateCircular(followerShopId, sourceShopId, token) {
     try {
-      const { data } = await api.post('/follows/validate-circular',
+      const { data } = await api.post(
+        '/follows/validate-circular',
         {
           followerShopId: Number(followerShopId),
-          sourceShopId: Number(sourceShopId)
+          sourceShopId: Number(sourceShopId),
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       return data.data || data;
@@ -699,7 +708,7 @@ export const followApi = {
   async getMyFollows(shopId, token) {
     const { data } = await api.get('/follows/my', {
       params: { shopId },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
@@ -707,7 +716,7 @@ export const followApi = {
   // Get follow detail
   async getFollowDetail(followId, token) {
     const { data } = await api.get(`/follows/${followId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
@@ -716,7 +725,7 @@ export const followApi = {
   async getFollowProducts(followId, token, params = {}) {
     const { data } = await api.get(`/follows/${followId}/products`, {
       params,
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
@@ -725,20 +734,16 @@ export const followApi = {
   async checkFollowLimit(shopId, token) {
     const { data } = await api.get('/follows/check-limit', {
       params: { shopId },
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
 
   // Create follow
   async createFollow(followData, token) {
-    const { data } = await api.post(
-      '/follows',
-      followData,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await api.post('/follows', followData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data.data || data;
   },
 
@@ -748,7 +753,7 @@ export const followApi = {
       `/follows/${followId}/markup`,
       { markupPercentage: Number(markupPercentage) },
       {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     return data.data || data;
@@ -760,58 +765,46 @@ export const followApi = {
     if (markupPercentage !== null) {
       requestBody.markupPercentage = Number(markupPercentage);
     }
-    
-    const { data } = await api.put(
-      `/follows/${followId}/mode`,
-      requestBody,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+
+    const { data } = await api.put(`/follows/${followId}/mode`, requestBody, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data.data || data;
   },
 
   // Delete follow
   async deleteFollow(followId, token) {
     const { data } = await api.delete(`/follows/${followId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
-  }
+  },
 };
 
 export const walletApi = {
   // Get shop wallets
   async getWallets(shopId, token) {
     const { data } = await api.get(`/shops/${shopId}/wallets`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data.data || data;
   },
 
   // Update shop wallets
   async updateWallets(shopId, wallets, token) {
-    const { data } = await api.put(
-      `/shops/${shopId}/wallets`,
-      wallets,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await api.put(`/shops/${shopId}/wallets`, wallets, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data.data || data;
   },
 
   // Generate QR code for wallet
   async generateQR(qrData, token) {
-    const { data } = await api.post(
-      '/payments/qr',
-      qrData,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
+    const { data } = await api.post('/payments/qr', qrData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return data;
-  }
+  },
 };
 
 // Export named api instance for testing

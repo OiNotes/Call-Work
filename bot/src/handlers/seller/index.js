@@ -16,7 +16,7 @@ import {
   handleOrderStats,
   handleOrderSearch,
   handleOrderExport,
-  handleOrderHistoryJump
+  handleOrderHistoryJump,
 } from './orders.js';
 import { showSellerToolsMenu } from '../../utils/sellerNavigation.js';
 import { validateShopBeforeScene } from '../../utils/sceneValidation.js';
@@ -37,21 +37,33 @@ const getSellerMenu = async (ctx) => {
     try {
       const [count, follows] = await Promise.all([
         // Active orders count requires token (user-specific data)
-        token ? orderApi.getActiveOrdersCount(shopId, token).catch((error) => {
-          logger.error('Failed to get active orders count:', error);
-          return 0;
-        }) : Promise.resolve(0),
+        token
+          ? orderApi.getActiveOrdersCount(shopId, token).catch((error) => {
+              logger.error('Failed to get active orders count:', error);
+              return 0;
+            })
+          : Promise.resolve(0),
         // Follows list - use HTTP API with token
-        token ? followApi.getMyFollows(shopId, token).catch((error) => {
-          logger.error('Failed to get follows for menu:', error);
-          return [];
-        }) : Promise.resolve([])
+        token
+          ? followApi.getMyFollows(shopId, token).catch((error) => {
+              // ✅ 401 - это нормально если токен expired или юзер новый
+              if (error.response?.status === 401) {
+                logger.debug('Token expired or user not authenticated for follows menu');
+              } else {
+                logger.error('Failed to get follows for menu:', error);
+              }
+              return [];
+            })
+          : Promise.resolve([]),
       ]);
 
       activeCount = count || 0;
       hasFollows = Array.isArray(follows) && follows.length > 0;
     } catch (error) {
       logger.error('Failed to compose seller menu data:', error);
+      // ✅ Гарантия что значения установлены
+      activeCount = 0;
+      hasFollows = false;
     }
   }
 
@@ -64,9 +76,7 @@ const getWorkerDisplayName = (worker) => {
     return `@${worker.username}`;
   }
   if (worker.first_name) {
-    return worker.last_name
-      ? `${worker.first_name} ${worker.last_name}`
-      : worker.first_name;
+    return worker.last_name ? `${worker.first_name} ${worker.last_name}` : worker.first_name;
   }
   if (worker.telegram_id) {
     return `ID:${worker.telegram_id}`;
@@ -76,7 +86,7 @@ const getWorkerDisplayName = (worker) => {
 
 const buildWorkersListKeyboard = (workers) => {
   const buttons = workers.map((worker) => [
-    Markup.button.callback(getWorkerDisplayName(worker), `workers:remove:${worker.id}`)
+    Markup.button.callback(getWorkerDisplayName(worker), `workers:remove:${worker.id}`),
   ]);
 
   buttons.push([Markup.button.callback(buttonText.addWorker, 'workers:add')]);
@@ -94,10 +104,7 @@ const showWorkersList = async (ctx, options = {}) => {
     ctx.session.workerList = workers;
 
     if (!Array.isArray(workers) || workers.length === 0) {
-      await ctx.reply(
-        `${successPrefix}${sellerMessages.noWorkers(shopName)}`,
-        manageWorkersMenu()
-      );
+      await ctx.reply(`${successPrefix}${sellerMessages.noWorkers(shopName)}`, manageWorkersMenu());
       return;
     }
 
@@ -110,10 +117,7 @@ const showWorkersList = async (ctx, options = {}) => {
     );
   } catch (error) {
     logger.error('Error fetching workers:', error);
-    await ctx.reply(
-      generalMessages.actionFailed,
-      manageWorkersMenu()
-    );
+    await ctx.reply(generalMessages.actionFailed, manageWorkersMenu());
   }
 };
 
@@ -122,7 +126,8 @@ const formatSubscriptionStatus = (data) => {
   const status = data.status || (data.currentSubscription ? 'active' : 'inactive');
 
   // Prepare expiresAt date
-  const dateSource = data.nextPaymentDue || data.periodEnd || data.currentSubscription?.period_end || null;
+  const dateSource =
+    data.nextPaymentDue || data.periodEnd || data.currentSubscription?.period_end || null;
 
   // Use new detailed messages based on tier
   if (tier === 'basic') {
@@ -198,7 +203,7 @@ export const handleSellerRole = async (ctx) => {
       logger.debug('Fetched user shops:', {
         userId: ctx.from.id,
         isArray: Array.isArray(shops),
-        shopsCount: Array.isArray(shops) ? shops.length : 'not array'
+        shopsCount: Array.isArray(shops) ? shops.length : 'not array',
       });
 
       if (Array.isArray(shops) && shops.length > 0) {
@@ -210,7 +215,7 @@ export const handleSellerRole = async (ctx) => {
         logger.info('User shop loaded:', {
           userId: ctx.from.id,
           shopId: shop.id,
-          shopName: shop.name
+          shopName: shop.name,
         });
 
         // Получить аналитику за 7 дней
@@ -219,14 +224,14 @@ export const handleSellerRole = async (ctx) => {
           const today = new Date();
           const weekAgo = new Date(today);
           weekAgo.setDate(today.getDate() - 7);
-          
+
           const analytics = await orderApi.getAnalytics(
             shop.id,
             weekAgo.toISOString().split('T')[0],
             today.toISOString().split('T')[0],
             ctx.session.token
           );
-          
+
           weekRevenue = analytics.summary?.totalRevenue || 0;
         } catch (error) {
           logger.error('Failed to get week analytics:', error);
@@ -248,7 +253,14 @@ export const handleSellerRole = async (ctx) => {
           const follows = await followApi.getMyFollows(shop.id, ctx.session.token);
           hasFollows = Array.isArray(follows) && follows.length > 0;
         } catch (error) {
-          logger.error('Failed to get follows list for seller menu:', error);
+          // ✅ 401 - это нормально если токен expired или юзер новый
+          if (error.response?.status === 401) {
+            logger.debug('Token expired or user not authenticated, showing menu without follows');
+            hasFollows = false;
+          } else {
+            logger.error('Failed to get follows list for seller menu:', error);
+            hasFollows = false;
+          }
         }
         ctx.session.hasFollows = hasFollows;
 
@@ -259,7 +271,12 @@ export const handleSellerRole = async (ctx) => {
         const statusBar = getTipForShop(ctx, shopHealth);
 
         // Форматировать заголовок с аналитикой и статус-баром
-        const header = sellerMessages.shopPanelWithStats(shop.name, weekRevenue, activeCount, statusBar);
+        const header = sellerMessages.shopPanelWithStats(
+          shop.name,
+          weekRevenue,
+          activeCount,
+          statusBar
+        );
 
         await ctx.reply(header, sellerMenu(activeCount, { hasFollows }));
         return;
@@ -272,13 +289,18 @@ export const handleSellerRole = async (ctx) => {
       await ctx.reply(sellerMessages.noShop, sellerMenuNoShop);
     } catch (error) {
       logger.error('Error checking shop:', error);
+
+      // ✅ P2-3 FIX: Clear shop data but keep role='seller'
+      // (user can be seller without shop - shows create shop menu)
       ctx.session.shopId = null;
       ctx.session.shopName = null;
       ctx.session.shopTier = null;
+      // ctx.session.role remains 'seller' - this is intentional
 
-      const message = (error.response?.status === 404 || error.response?.status === 401)
-        ? sellerMessages.noShop
-        : generalMessages.actionFailed;
+      const message =
+        error.response?.status === 404 || error.response?.status === 401
+          ? sellerMessages.noShop
+          : generalMessages.actionFailed;
 
       await ctx.reply(message, sellerMenuNoShop);
     }
@@ -454,7 +476,10 @@ export const setupSellerHandlers = (bot) => {
       await ctx.scene.enter('migrate_channel');
     } catch (error) {
       logger.error('Error entering migrate_channel scene:', error);
-      await ctx.reply(generalMessages.actionFailed, sellerToolsMenu(ctx.session.isShopOwner ?? false));
+      await ctx.reply(
+        generalMessages.actionFailed,
+        sellerToolsMenu(ctx.session.isShopOwner ?? false)
+      );
     }
   });
 
@@ -510,18 +535,14 @@ export const setupSellerHandlers = (bot) => {
       }
 
       const api = await import('../../utils/api.js');
-      const response = await api.default.get(
-        `/subscriptions/status/${ctx.session.shopId}`,
-        { headers: { Authorization: `Bearer ${ctx.session.token}` } }
-      );
+      const response = await api.default.get(`/subscriptions/status/${ctx.session.shopId}`, {
+        headers: { Authorization: `Bearer ${ctx.session.token}` },
+      });
 
       const status = response.data;
       const message = formatSubscriptionStatus(status);
 
-      await ctx.reply(
-        message,
-        buildSubscriptionKeyboard(status)
-      );
+      await ctx.reply(message, buildSubscriptionKeyboard(status));
 
       logger.info(`User ${ctx.from.id} viewed subscription status`);
     } catch (error) {
@@ -540,10 +561,7 @@ export const setupSellerHandlers = (bot) => {
 
       if (!ctx.session.shopId || !ctx.session.token) {
         const menu = await getSellerMenu(ctx);
-        await ctx.reply(
-          generalMessages.authorizationRequired,
-          menu
-        );
+        await ctx.reply(generalMessages.authorizationRequired, menu);
         return;
       }
 
@@ -561,10 +579,7 @@ export const setupSellerHandlers = (bot) => {
     } catch (error) {
       logger.error('Error in tools submenu handler:', error);
       const menu = await getSellerMenu(ctx);
-      await ctx.reply(
-        sellerMessages.toolsError,
-        menu
-      );
+      await ctx.reply(sellerMessages.toolsError, menu);
     }
   });
 
@@ -580,19 +595,15 @@ export const setupSellerHandlers = (bot) => {
 
       if (!ctx.session.token) {
         const menu = await getSellerMenu(ctx);
-        await ctx.reply(
-          generalMessages.authorizationRequired,
-          menu
-        );
+        await ctx.reply(generalMessages.authorizationRequired, menu);
         return;
       }
 
       // Get subscription status from backend
       const api = await import('../../utils/api.js');
-      const response = await api.default.get(
-        `/subscriptions/status/${ctx.session.shopId}`,
-        { headers: { Authorization: `Bearer ${ctx.session.token}` } }
-      );
+      const response = await api.default.get(`/subscriptions/status/${ctx.session.shopId}`, {
+        headers: { Authorization: `Bearer ${ctx.session.token}` },
+      });
 
       // Backend returns FLAT object
       const subscriptionData = response.data;
@@ -611,10 +622,7 @@ export const setupSellerHandlers = (bot) => {
     } catch (error) {
       logger.error('Error in subscription hub handler:', error);
       const menu = await getSellerMenu(ctx);
-      await ctx.reply(
-        sellerMessages.subscriptionStatusError,
-        menu
-      );
+      await ctx.reply(sellerMessages.subscriptionStatusError, menu);
     }
   });
 
@@ -628,7 +636,7 @@ export const setupSellerHandlers = (bot) => {
  */
 const handleWorkers = async (ctx) => {
   await ctx.answerCbQuery();
-  
+
   try {
     if (!ctx.session.shopId) {
       await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
@@ -637,10 +645,7 @@ const handleWorkers = async (ctx) => {
 
     if (!ctx.session.token) {
       const menu = await getSellerMenu(ctx);
-      await ctx.reply(
-        generalMessages.authorizationRequired,
-        menu
-      );
+      await ctx.reply(generalMessages.authorizationRequired, menu);
       return;
     }
 
@@ -656,19 +661,13 @@ const handleWorkers = async (ctx) => {
 
         if (shopDetails?.owner_id && shopDetails.owner_id !== ctx.session.user?.id) {
           const menu = await getSellerMenu(ctx);
-          await ctx.reply(
-            sellerMessages.workersOwnerOnly,
-            menu
-          );
+          await ctx.reply(sellerMessages.workersOwnerOnly, menu);
           return;
         }
       } catch (error) {
         logger.error('Failed to load shop details for workers menu:', error);
         const menu = await getSellerMenu(ctx);
-        await ctx.reply(
-          generalMessages.actionFailed,
-          menu
-        );
+        await ctx.reply(generalMessages.actionFailed, menu);
         return;
       }
     }
@@ -685,8 +684,17 @@ const handleWorkers = async (ctx) => {
     logger.info(`User ${ctx.from.id} opened workers management`);
   } catch (error) {
     logger.error('Error in workers menu handler:', error);
-    const menu = await getSellerMenu(ctx);
-    await ctx.reply(generalMessages.actionFailed, menu);
+
+    try {
+      const menu = await getSellerMenu(ctx);
+      // ✅ Edit message вместо reply (не создаёт новое сообщение)
+      await ctx.editMessageText(generalMessages.actionFailed, menu);
+    } catch (editError) {
+      // ✅ Fallback если edit не удался (например, сообщение удалено)
+      logger.debug('Failed to edit message, using reply fallback:', editError.message);
+      const menu = await getSellerMenu(ctx);
+      await ctx.reply(generalMessages.actionFailed, menu);
+    }
   }
 };
 
@@ -723,10 +731,7 @@ const handleWorkersList = async (ctx) => {
     }
 
     if (!ctx.session.token) {
-      await ctx.reply(
-        generalMessages.authorizationRequired,
-        manageWorkersMenu()
-      );
+      await ctx.reply(generalMessages.authorizationRequired, manageWorkersMenu());
       return;
     }
     await showWorkersList(ctx);
@@ -753,10 +758,7 @@ const handleWorkerRemove = async (ctx) => {
 
     if (!ctx.session.token) {
       const menu = await getSellerMenu(ctx);
-      await ctx.reply(
-        generalMessages.authorizationRequired,
-        menu
-      );
+      await ctx.reply(generalMessages.authorizationRequired, menu);
       return;
     }
 
@@ -782,10 +784,7 @@ const handleWorkerRemove = async (ctx) => {
     }
 
     const name = getWorkerDisplayName(worker);
-    await ctx.reply(
-      sellerMessages.workerRemoveConfirm(name),
-      confirmWorkerRemoval(workerId)
-    );
+    await ctx.reply(sellerMessages.workerRemoveConfirm(name), confirmWorkerRemoval(workerId));
   } catch (error) {
     logger.error('Error in worker remove handler:', error);
     await ctx.answerCbQuery(generalMessages.actionFailed);
@@ -806,10 +805,7 @@ const handleWorkerRemoveConfirm = async (ctx) => {
 
     if (!ctx.session.token) {
       const menu = await getSellerMenu(ctx);
-      await ctx.reply(
-        generalMessages.authorizationRequired,
-        menu
-      );
+      await ctx.reply(generalMessages.authorizationRequired, menu);
       return;
     }
 

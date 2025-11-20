@@ -58,5 +58,5 @@ export const subscriptionsApi = {
    */
   async unsubscribe(token, shopId) {
     return await client.delete(`/api/subscriptions/${shopId}`, token);
-  }
+  },
 };

@@ -23,7 +23,7 @@ module.exports = {
       script: 'src/server.js',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
       },
       instances: 1,
       exec_mode: 'cluster',
@@ -37,14 +37,14 @@ module.exports = {
       max_restarts: 10,
       min_uptime: '10s',
       listen_timeout: 3000,
-      kill_timeout: 5000
+      kill_timeout: 5000,
     },
     {
       name: 'bot',
       cwd: './bot',
       script: 'src/bot.js',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
       },
       instances: 1,
       exec_mode: 'fork',
@@ -56,8 +56,8 @@ module.exports = {
       merge_logs: true,
       autorestart: true,
       max_restarts: 10,
-      min_uptime: '10s'
-    }
+      min_uptime: '10s',
+    },
   ],
 
   deploy: {
@@ -69,8 +69,8 @@ module.exports = {
       path: '/var/www/telegram-shop',
       'post-deploy': 'npm install && pm2 reload ecosystem.config.js --env production',
       env: {
-        NODE_ENV: 'production'
-      }
-    }
-  }
+        NODE_ENV: 'production',
+      },
+    },
+  },
 };

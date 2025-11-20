@@ -13,7 +13,7 @@ const { seller: sellerMessages, general: generalMessages } = messages;
 
 /**
  * Manage Wallets Scene - Redesigned with logical flow
- * 
+ *
  * STATE 0 (no wallets): Show "Send wallet address" + [Назад]
  * STATE 1 (has wallets): Show wallet buttons + "Send to add more" + [Назад]
  * STATE 2 (wallet detail): Show QR/Edit/Delete/Back options
@@ -56,16 +56,20 @@ async function showQRCode(ctx, crypto) {
     logger.info('wallet_qr_request', {
       userId: ctx.from.id,
       crypto,
-      addressPrefix: address.substring(0, 10)
+      addressPrefix: address.substring(0, 10),
     });
 
     // Generate QR via backend API with timeout protection
     const response = await generateQRWithTimeout(
-      () => walletApi.generateQR({
-        address,
-        amount: 0,
-        currency: crypto
-      }, ctx.session.token),
+      () =>
+        walletApi.generateQR(
+          {
+            address,
+            amount: 0,
+            currency: crypto,
+          },
+          ctx.session.token
+        ),
       10000 // 10 second timeout
     );
 
@@ -84,15 +88,14 @@ async function showQRCode(ctx, crypto) {
       { source: buffer },
       {
         caption: `${crypto} кошелёк\n\n\`${address}\``,
-        parse_mode: 'Markdown'
+        parse_mode: 'Markdown',
       }
     );
 
     logger.info('wallet_qr_sent', {
       userId: ctx.from.id,
-      crypto
+      crypto,
     });
-
   } catch (error) {
     logger.error('Error showing QR code:', error);
 
@@ -112,12 +115,18 @@ const showWallets = async (ctx) => {
 
     // Validate session
     if (!ctx.session.shopId) {
-      await smartMessage.send(ctx, { text: generalMessages.shopRequired, keyboard: successButtons });
+      await smartMessage.send(ctx, {
+        text: generalMessages.shopRequired,
+        keyboard: successButtons,
+      });
       return await ctx.scene.leave();
     }
 
     if (!ctx.session.token) {
-      await smartMessage.send(ctx, { text: generalMessages.authorizationRequired, keyboard: successButtons });
+      await smartMessage.send(ctx, {
+        text: generalMessages.authorizationRequired,
+        keyboard: successButtons,
+      });
       return await ctx.scene.leave();
     }
 
@@ -128,14 +137,16 @@ const showWallets = async (ctx) => {
       BTC: shop.wallet_btc || null,
       ETH: shop.wallet_eth || null,
       USDT: shop.wallet_usdt || null,
-      LTC: shop.wallet_ltc || null
+      LTC: shop.wallet_ltc || null,
     };
 
     const message = sellerMessages.walletsContext;
 
     const buttons = SUPPORTED_CRYPTOS.map((crypto) => {
       const address = wallets[crypto];
-      const status = address ? formatAddress(address) || address : sellerMessages.walletsStatusEmpty;
+      const status = address
+        ? formatAddress(address) || address
+        : sellerMessages.walletsStatusEmpty;
       const action = address ? `wallet:view:${crypto}` : `wallet:add:${crypto}`;
       return [Markup.button.callback(`${crypto} • ${status}`, action)];
     });
@@ -147,7 +158,10 @@ const showWallets = async (ctx) => {
     return ctx.wizard.next();
   } catch (error) {
     logger.error('Error showing wallets:', error);
-    await smartMessage.send(ctx, { text: sellerMessages.walletsLoadError, keyboard: successButtons });
+    await smartMessage.send(ctx, {
+      text: sellerMessages.walletsLoadError,
+      keyboard: successButtons,
+    });
     return await ctx.scene.leave();
   }
 };
@@ -178,7 +192,7 @@ const handleInput = async (ctx) => {
           sellerMessages.walletsAddPromptSpecific(crypto),
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -198,28 +212,25 @@ const handleInput = async (ctx) => {
             sellerMessages.walletsNotFound,
             Markup.inlineKeyboard([
               [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-              [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+              [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
             ])
           );
           return;
         }
 
         // STATE 2: Wallet detail menu
-        await ctx.editMessageText(
-          `${crypto} кошелёк.\n\nАдрес:\n\`${address}\``,
-          {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [Markup.button.callback(buttonText.viewQr, `wallet:qr:${crypto}`)],
-                [Markup.button.callback(buttonText.changeWallet, `wallet:change:${crypto}`)],
-                [Markup.button.callback(buttonText.deleteWallet, `wallet:delete:${crypto}`)],
-                [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-                [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-              ]
-            }
-          }
-        );
+        await ctx.editMessageText(`${crypto} кошелёк.\n\nАдрес:\n\`${address}\``, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [Markup.button.callback(buttonText.viewQr, `wallet:qr:${crypto}`)],
+              [Markup.button.callback(buttonText.changeWallet, `wallet:change:${crypto}`)],
+              [Markup.button.callback(buttonText.deleteWallet, `wallet:delete:${crypto}`)],
+              [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
+              [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+            ],
+          },
+        });
         return;
       }
 
@@ -230,7 +241,7 @@ const handleInput = async (ctx) => {
           sellerMessages.walletsAddPrompt,
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -255,14 +266,14 @@ const handleInput = async (ctx) => {
           BTC: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
           ETH: '0x742d35Cc6634C0532925a3b844Bc7e7595f42bE1',
           USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-          LTC: 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R'
+          LTC: 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R',
         };
 
         await ctx.editMessageText(
           sellerMessages.walletsPromptReplace(crypto, examples[crypto] || 'адрес кошелька'),
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -278,7 +289,7 @@ const handleInput = async (ctx) => {
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.delete, `wallet:delete_confirm:${crypto}`)],
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -299,14 +310,14 @@ const handleInput = async (ctx) => {
 
         logger.info('wallet_deleted', {
           userId: ctx.from.id,
-          crypto
+          crypto,
         });
 
         await ctx.editMessageText(
           sellerMessages.walletsDeleted(crypto),
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+            [Markup.button.callback('↩️ В меню', 'seller:menu')],
           ])
         );
 
@@ -348,7 +359,7 @@ const handleInput = async (ctx) => {
           `${sellerMessages.walletsUnknownAddress}\n${sellerMessages.walletsUseButtons}`,
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -364,7 +375,7 @@ const handleInput = async (ctx) => {
           sellerMessages.walletsInvalidAddress(detectedType),
           Markup.inlineKeyboard([
             [Markup.button.callback(buttonText.backToWallets, 'wallet:back')],
-            [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
+            [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
           ])
         );
         return;
@@ -378,11 +389,7 @@ const handleInput = async (ctx) => {
       const walletData = { [walletField]: address };
 
       // Save wallet
-      await walletApi.updateWallets(
-        ctx.session.shopId,
-        walletData,
-        ctx.session.token
-      );
+      await walletApi.updateWallets(ctx.session.shopId, walletData, ctx.session.token);
 
       await deleteUserInput();
 
@@ -390,7 +397,7 @@ const handleInput = async (ctx) => {
         shopId: ctx.session.shopId,
         crypto,
         userId: ctx.from.id,
-        isEdit: !!ctx.wizard.state.editingWallet
+        isEdit: !!ctx.wizard.state.editingWallet,
       });
 
       const formatted = formatAddress(address) || address;
@@ -399,7 +406,7 @@ const handleInput = async (ctx) => {
         : sellerMessages.walletsSaved(crypto);
       await smartMessage.send(ctx, {
         text: `${successMessage}
-${formatted}`
+${formatted}`,
       });
 
       // Clear editing state
@@ -433,10 +440,12 @@ ${formatted}`
 
     // No input
     await smartMessage.send(ctx, { text: sellerMessages.walletsUseButtons });
-
   } catch (error) {
     logger.error('Error in handleInput:', error);
-    await smartMessage.send(ctx, { text: sellerMessages.walletsLoadError, keyboard: successButtons });
+    await smartMessage.send(ctx, {
+      text: sellerMessages.walletsLoadError,
+      keyboard: successButtons,
+    });
     return await ctx.scene.leave();
   }
 };
@@ -445,11 +454,7 @@ ${formatted}`
 // CREATE WIZARD SCENE
 // ==========================================
 
-const manageWalletsScene = new Scenes.WizardScene(
-  'manageWallets',
-  showWallets,
-  handleInput
-);
+const manageWalletsScene = new Scenes.WizardScene('manageWallets', showWallets, handleInput);
 
 // Handle scene leave
 manageWalletsScene.leave(async (ctx) => {

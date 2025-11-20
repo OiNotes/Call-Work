@@ -30,10 +30,7 @@ class TelegramService {
         .join('\n');
 
       // Create secret key
-      const secretKey = crypto
-        .createHmac('sha256', 'WebAppData')
-        .update(this.botToken)
-        .digest();
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(this.botToken).digest();
 
       // Calculate hash
       const calculatedHash = crypto
@@ -78,7 +75,7 @@ class TelegramService {
         lastName: user.last_name,
         username: user.username,
         languageCode: user.language_code,
-        isPremium: user.is_premium
+        isPremium: user.is_premium,
       };
     } catch (error) {
       logger.error('Init data parsing error', { error: error.message, stack: error.stack });
@@ -107,12 +104,15 @@ class TelegramService {
       const response = await axios.post(`${this.apiUrl}/sendMessage`, {
         chat_id: chatId,
         text,
-        ...options
+        ...options,
       });
 
       return response.data.result;
     } catch (error) {
-      logger.error('Send message error', { error: error.response?.data || error.message, stack: error.stack });
+      logger.error('Send message error', {
+        error: error.response?.data || error.message,
+        stack: error.stack,
+      });
       throw error;
     }
   }
@@ -179,10 +179,10 @@ Status: Pending Payment
 
     return this.sendMessage(sellerTelegramId, message, {
       reply_markup: {
-        inline_keyboard: [[
-          { text: 'Отметить выдачу', callback_data: `order:deliver:${orderData.orderId}` }
-        ]]
-      }
+        inline_keyboard: [
+          [{ text: 'Отметить выдачу', callback_data: `order:deliver:${orderData.orderId}` }],
+        ],
+      },
     });
   }
 
@@ -197,7 +197,7 @@ Status: Pending Payment
       confirmed: '✅',
       shipped: '🚚',
       delivered: '📦',
-      cancelled: '❌'
+      cancelled: '❌',
     };
 
     const statusText = {
@@ -205,7 +205,7 @@ Status: Pending Payment
       confirmed: 'Подтверждён',
       shipped: 'Отправлен',
       delivered: 'Доставлен',
-      cancelled: 'Отменён'
+      cancelled: 'Отменён',
     };
 
     const emoji = statusEmoji[orderData.status] || '📋';
@@ -232,21 +232,30 @@ ${emoji} Обновление статуса заказа
       return null;
     }
 
+    const tierEmoji = payload.tier === 'pro' ? '⭐' : '✨';
     const tierLabel = (payload.tier || 'basic').toUpperCase();
     const nextDue = payload.nextPaymentDue
-      ? new Date(payload.nextPaymentDue).toLocaleDateString('ru-RU', { dateStyle: 'medium' })
-      : 'не задана';
+      ? new Date(payload.nextPaymentDue).toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        })
+      : 'не указана';
 
-    const message = `
-✅ Подписка активирована
+    const message = `${tierEmoji} <b>Магазин активирован</b>
 
-Магазин: ${payload.shopName || 'Ваш магазин'}
+<b>${payload.shopName || 'Ваш магазин'}</b>
 Тариф: ${tierLabel}
-Следующая оплата: ${nextDue}
+Действует до: ${nextDue}`;
 
-Спасибо за оплату!`;
-
-    return this.sendMessage(telegramId, message.trim());
+    return this.sendMessage(telegramId, message.trim(), {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📋 Перейти в меню', callback_data: 'back_to_main' }],
+        ],
+      },
+    });
   }
 
   /**
@@ -259,14 +268,24 @@ ${emoji} Обновление статуса заказа
       return null;
     }
 
+    const tierEmoji = payload.tier === 'pro' ? '⭐' : '✨';
     const tierLabel = (payload.tier || 'basic').toUpperCase();
 
-    const message = `
-✅ Оплата подписки (${tierLabel}) получена.
+    const message = `${tierEmoji} <b>Оплата получена</b>
 
-Создайте магазин в боте, чтобы активировать подписку и начать продажу.`;
+Тариф: ${tierLabel}
 
-    return this.sendMessage(telegramId, message.trim());
+Создайте магазин, чтобы активировать подписку.`;
+
+    return this.sendMessage(telegramId, message.trim(), {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🏪 Создать магазин', callback_data: 'start_create_shop' }],
+          [{ text: '📋 В меню', callback_data: 'back_to_main' }],
+        ],
+      },
+    });
   }
 
   /**
@@ -277,7 +296,10 @@ ${emoji} Обновление статуса заказа
       const response = await axios.get(`${this.apiUrl}/getMe`);
       return response.data.result;
     } catch (error) {
-      logger.error('Get bot info error', { error: error.response?.data || error.message, stack: error.stack });
+      logger.error('Get bot info error', {
+        error: error.response?.data || error.message,
+        stack: error.stack,
+      });
       throw error;
     }
   }
@@ -290,12 +312,15 @@ ${emoji} Обновление статуса заказа
     try {
       const response = await axios.post(`${this.apiUrl}/setWebhook`, {
         url,
-        allowed_updates: ['message', 'callback_query']
+        allowed_updates: ['message', 'callback_query'],
       });
 
       return response.data.result;
     } catch (error) {
-      logger.error('Set webhook error', { error: error.response?.data || error.message, stack: error.stack });
+      logger.error('Set webhook error', {
+        error: error.response?.data || error.message,
+        stack: error.stack,
+      });
       throw error;
     }
   }
@@ -308,7 +333,10 @@ ${emoji} Обновление статуса заказа
       const response = await axios.post(`${this.apiUrl}/deleteWebhook`);
       return response.data.result;
     } catch (error) {
-      logger.error('Delete webhook error', { error: error.response?.data || error.message, stack: error.stack });
+      logger.error('Delete webhook error', {
+        error: error.response?.data || error.message,
+        stack: error.stack,
+      });
       throw error;
     }
   }

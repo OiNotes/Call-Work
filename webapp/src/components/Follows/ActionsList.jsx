@@ -1,13 +1,7 @@
 import { PencilIcon, ArrowPathIcon, TrashIcon } from '@heroicons/react/24/outline';
 import InteractiveListItem from '../common/InteractiveListItem';
 
-export default function ActionsList({
-  mode,
-  markup,
-  onEditMarkup,
-  onSwitchMode,
-  onDelete
-}) {
+export default function ActionsList({ mode, markup, onEditMarkup, onSwitchMode, onDelete }) {
   const modeLabel = mode === 'monitor' ? 'Мониторинг' : 'Перепродажа';
   const switchToMode = mode === 'monitor' ? 'resell' : 'monitor';
   const switchToLabel = switchToMode === 'monitor' ? 'Мониторинг' : 'Перепродажа';
@@ -35,12 +29,8 @@ export default function ActionsList({
                   <PencilIcon className="w-5 h-5 text-orange-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white font-medium text-base">
-                    Изменить наценку
-                  </div>
-                  <div className="text-gray-400 text-xs mt-0.5">
-                    Текущая: +{markup}%
-                  </div>
+                  <div className="text-white font-medium text-base">Изменить наценку</div>
+                  <div className="text-gray-400 text-xs mt-0.5">Текущая: +{markup}%</div>
                 </div>
                 <svg
                   className="w-5 h-5 text-gray-400 flex-shrink-0"
@@ -73,9 +63,7 @@ export default function ActionsList({
               <ArrowPathIcon className="w-5 h-5 text-gray-300" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white font-medium text-base">
-                Переключить режим
-              </div>
+              <div className="text-white font-medium text-base">Переключить режим</div>
               <div className="text-gray-400 text-xs mt-0.5">
                 Сейчас: {modeLabel} → Переключить на: {switchToLabel}
               </div>
@@ -86,12 +74,7 @@ export default function ActionsList({
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </InteractiveListItem>
         </div>
@@ -116,12 +99,8 @@ export default function ActionsList({
               <TrashIcon className="w-5 h-5 text-red-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-red-500 font-medium text-base">
-                Удалить подписку
-              </div>
-              <div className="text-gray-400 text-xs mt-0.5">
-                Это действие нельзя отменить
-              </div>
+              <div className="text-red-500 font-medium text-base">Удалить подписку</div>
+              <div className="text-gray-400 text-xs mt-0.5">Это действие нельзя отменить</div>
             </div>
             <svg
               className="w-5 h-5 text-red-500 flex-shrink-0"
@@ -129,12 +108,7 @@ export default function ActionsList({
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </InteractiveListItem>
         </div>

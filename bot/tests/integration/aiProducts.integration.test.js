@@ -1,6 +1,6 @@
 /**
  * AI Product Management Integration Tests
- * 
+ *
  * Тестирует интеграцию AI handler с processProductCommand
  * МОКИРУЕМ: processProductCommand (нашу бизнес-логику)
  * НЕ МОКИРУЕМ: DeepSeek API (внешний сервис, не наша ответственность)
@@ -16,11 +16,11 @@ const mockProcessProductCommand = jest.fn();
 
 /**
  * SKIP: AI Integration Tests требуют рефакторинга мокирования
- * 
+ *
  * Проблема: ES modules exports are read-only, невозможно замокировать processProductCommand
  * Решение: Требуется рефакторинг productAI.js для dependency injection
  * Время: ~2-3 часа
- * 
+ *
  * Статус: AI handler корректно зарегистрирован в testBot.js и работает в production
  * Приоритет: Low (функциональность работает, только тесты требуют доработки)
  */
@@ -32,7 +32,7 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
   const mockProducts = [
     { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 },
     { id: 2, name: 'MacBook Pro', price: 2499, currency: 'USD', stock_quantity: 5 },
-    { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 }
+    { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 },
   ];
 
   beforeEach(() => {
@@ -41,10 +41,10 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockSession: {
         token: 'test-jwt-token',
         user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
-        role: 'seller',  // CRITICAL: AI handler checks ctx.session.role
+        role: 'seller', // CRITICAL: AI handler checks ctx.session.role
         shopId: 1,
-        shopName: 'Test Shop'
-      }
+        shopName: 'Test Shop',
+      },
     });
     mock = new MockAdapter(api);
 
@@ -69,29 +69,29 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'addProduct',
-        message: '✅ Товар добавлен:\n\niPhone 15 - $999'
+        message: '✅ Товар добавлен:\n\niPhone 15 - $999',
       });
 
       // Mock API createProduct
       mock.onPost('/products').reply(201, {
-        data: { id: 4, name: 'iPhone 15', price: 999, currency: 'USD', stock_quantity: 0 }
+        data: { id: 4, name: 'iPhone 15', price: 999, currency: 'USD', stock_quantity: 0 },
       });
 
       await testBot.handleUpdate(textUpdate('добавь iPhone 15 за 999'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('✅');
       expect(text).toContain('iPhone 15');
       expect(text).toContain('999');
-      
+
       // Verify processProductCommand was called
       expect(mockProcessProductCommand).toHaveBeenCalledWith(
         'добавь iPhone 15 за 999',
         expect.objectContaining({
           shopId: 1,
           shopName: 'Test Shop',
-          token: 'test-jwt-token'
+          token: 'test-jwt-token',
         })
       );
     });
@@ -100,11 +100,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: false,
         operation: 'addProduct',
-        message: '❌ Ошибка: не удалось добавить товар'
+        message: '❌ Ошибка: не удалось добавить товар',
       });
 
       await testBot.handleUpdate(textUpdate('добавь товар'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('❌');
@@ -120,13 +120,13 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'deleteProduct',
-        message: '✅ Товар удалён:\n\niPhone 15 Pro'
+        message: '✅ Товар удалён:\n\niPhone 15 Pro',
       });
 
       mock.onDelete('/products/1').reply(200, { success: true });
 
       await testBot.handleUpdate(textUpdate('удали iPhone 15 Pro'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('✅');
@@ -137,11 +137,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: false,
         operation: 'deleteProduct',
-        message: '❌ Товар не найден'
+        message: '❌ Товар не найден',
       });
 
       await testBot.handleUpdate(textUpdate('удали несуществующий товар'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('не найден');
@@ -156,11 +156,12 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'listProducts',
-        message: '📦 Товары (3):\n\n1. iPhone 15 Pro - $999 (остаток: 10)\n2. MacBook Pro - $2499 (остаток: 5)\n3. AirPods Pro - $249 (остаток: 20)'
+        message:
+          '📦 Товары (3):\n\n1. iPhone 15 Pro - $999 (остаток: 10)\n2. MacBook Pro - $2499 (остаток: 5)\n3. AirPods Pro - $249 (остаток: 20)',
       });
 
       await testBot.handleUpdate(textUpdate('покажи товары'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('📦');
@@ -171,15 +172,15 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
 
     it('пустой каталог', async () => {
       mock.onGet('/products', { params: { shopId: 1 } }).reply(200, { data: [] });
-      
+
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'listProducts',
-        message: '📦 Товары (0)\n\nКаталог пуст'
+        message: '📦 Товары (0)\n\nКаталог пуст',
       });
 
       await testBot.handleUpdate(textUpdate('покажи товары'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('пуст');
@@ -194,15 +195,15 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'updateProduct',
-        message: '✅ Товар обновлён:\n\niPhone 15 Pro - $899 (было: $999)'
+        message: '✅ Товар обновлён:\n\niPhone 15 Pro - $899 (было: $999)',
       });
 
       mock.onPut('/products/1').reply(200, {
-        data: { id: 1, name: 'iPhone 15 Pro', price: 899, currency: 'USD', stock_quantity: 10 }
+        data: { id: 1, name: 'iPhone 15 Pro', price: 899, currency: 'USD', stock_quantity: 10 },
       });
 
       await testBot.handleUpdate(textUpdate('смени цену iPhone на 899'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('✅');
@@ -218,11 +219,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'searchProduct',
-        message: '🔍 Найдено:\n\nMacBook Pro - $2499 (остаток: 5)'
+        message: '🔍 Найдено:\n\nMacBook Pro - $2499 (остаток: 5)',
       });
 
       await testBot.handleUpdate(textUpdate('найди макбук'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('🔍');
@@ -233,11 +234,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: false,
         operation: 'searchProduct',
-        message: '❌ Не найдено совпадений для "samsung"'
+        message: '❌ Не найдено совпадений для "samsung"',
       });
 
       await testBot.handleUpdate(textUpdate('найди samsung'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('Не найдено');
@@ -252,15 +253,15 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'recordSale',
-        message: '✅ Продажа записана:\n\niPhone 15 Pro - 1 шт.\nОстаток: 9'
+        message: '✅ Продажа записана:\n\niPhone 15 Pro - 1 шт.\nОстаток: 9',
       });
 
       mock.onPut('/products/1').reply(200, {
-        data: { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 9 }
+        data: { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 9 },
       });
 
       await testBot.handleUpdate(textUpdate('купили iPhone'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('✅');
@@ -271,11 +272,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: false,
         operation: 'recordSale',
-        message: '❌ Недостаточно товара на складе (запрошено: 100, доступно: 5)'
+        message: '❌ Недостаточно товара на складе (запрошено: 100, доступно: 5)',
       });
 
       await testBot.handleUpdate(textUpdate('купили 100 MacBook'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('Недостаточно');
@@ -290,11 +291,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'getProductInfo',
-        message: 'iPhone 15 Pro - $999'
+        message: 'iPhone 15 Pro - $999',
       });
 
       await testBot.handleUpdate(textUpdate('какая цена у iPhone?'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('iPhone 15 Pro');
@@ -305,11 +306,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       mockProcessProductCommand.mockResolvedValue({
         success: true,
         operation: 'getProductInfo',
-        message: 'MacBook Pro - остаток: 5 шт.'
+        message: 'MacBook Pro - остаток: 5 шт.',
       });
 
       await testBot.handleUpdate(textUpdate('сколько MacBook осталось?'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('MacBook Pro');
@@ -324,11 +325,11 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
     it('AI unavailable → fallback to menu', async () => {
       mockProcessProductCommand.mockResolvedValue({
         fallbackToMenu: true,
-        message: '❌ AI временно недоступен. Используйте меню.'
+        message: '❌ AI временно недоступен. Используйте меню.',
       });
 
       await testBot.handleUpdate(textUpdate('добавь товар'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('недоступен');
@@ -339,7 +340,7 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
       testBot.setSessionState({ aiCommands: new Array(10).fill(Date.now()) });
 
       await testBot.handleUpdate(textUpdate('добавь товар'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('Слишком много команд');
@@ -348,13 +349,13 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
     it('user in scene → ignore AI command', async () => {
       // Enter a scene
       await testBot.handleUpdate(textUpdate('/start'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // Try AI command while in scene
       mockProcessProductCommand.mockClear();
-      
+
       await testBot.handleUpdate(textUpdate('добавь товар'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // processProductCommand should NOT be called
       expect(mockProcessProductCommand).not.toHaveBeenCalled();
@@ -371,17 +372,17 @@ describe.skip('AI Product Management - Integration Tests (SKIPPED - requires DI 
         message: 'Найдено несколько товаров. Выберите:',
         options: [
           { id: 1, name: 'iPhone 15 Pro', price: 999 },
-          { id: 2, name: 'iPhone 15', price: 899 }
+          { id: 2, name: 'iPhone 15', price: 899 },
         ],
-        operation: 'deleteProduct'
+        operation: 'deleteProduct',
       });
 
       await testBot.handleUpdate(textUpdate('удали iPhone'));
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const text = testBot.getLastReplyText();
       expect(text).toContain('Найдено несколько');
-      
+
       const keyboard = testBot.getLastReplyKeyboard();
       expect(keyboard).toBeTruthy();
       expect(keyboard.length).toBeGreaterThan(0);

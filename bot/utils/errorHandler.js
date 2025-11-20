@@ -106,7 +106,7 @@ export async function retryOperation(operation, maxRetries = 3, delay = 1000) {
     } catch (error) {
       lastError = error;
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
       }
     }
   }

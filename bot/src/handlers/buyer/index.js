@@ -56,7 +56,7 @@ const resolveSubscription = async (ctx, shopId) => {
 
 const resolveSectionCounts = async (shopId, products = null) => {
   try {
-    const list = products || await productApi.getShopProducts(shopId);
+    const list = products || (await productApi.getShopProducts(shopId));
     const split = splitProductsByAvailability(list);
     return {
       stock: split.stock.length,
@@ -79,9 +79,8 @@ const buildSubscriptionsMessage = (subscriptions) => {
 
 const buildShopInfoMessage = (shop, sections) => formatters.shopInfo(shop, sections);
 
-const buildProductSectionMessage = (section, shopName, products) => (
-  formatters.productSection(section, shopName, products)
-);
+const buildProductSectionMessage = (section, shopName, products) =>
+  formatters.productSection(section, shopName, products);
 
 /**
  * Handle buyer role selection
@@ -116,7 +115,7 @@ export const handleBuyerRole = async (ctx) => {
           // No shop - show CTA to create shop
           await smartMessage.send(ctx, {
             text: buyerMessages.panel,
-            keyboard: buyerMenuNoShop
+            keyboard: buyerMenuNoShop,
           });
           logger.info(`Buyer ${ctx.from.id} has no shop, showing CTA`);
           return;
@@ -129,7 +128,7 @@ export const handleBuyerRole = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: buyerMessages.panel,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   } catch (error) {
     logger.error('Error in buyer role handler:', error);
@@ -137,7 +136,7 @@ export const handleBuyerRole = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -160,7 +159,7 @@ const handleSearchShops = async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -179,7 +178,7 @@ const handleSubscriptions = async (ctx) => {
     if (!ctx.session.token) {
       await smartMessage.send(ctx, {
         text: generalMessages.authorizationRequired,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
       return;
     }
@@ -190,13 +189,13 @@ const handleSubscriptions = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: message,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   } catch (error) {
     logger.error('Error fetching subscriptions:', error);
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   }
 };
@@ -230,7 +229,7 @@ const handleSubscribe = async (ctx) => {
 
       await smartMessage.send(ctx, {
         text: buyerMessages.subscriptionActive(),
-        keyboard: shopActionsKeyboard(shopId, true, counts)
+        keyboard: shopActionsKeyboard(shopId, true, counts),
       });
 
       logger.info(`User ${ctx.from.id} already subscribed to shop ${shopId}`);
@@ -246,7 +245,7 @@ const handleSubscribe = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: buyerMessages.subscriptionAdded(shop.name),
-      keyboard: shopActionsKeyboard(shopId, true, counts)
+      keyboard: shopActionsKeyboard(shopId, true, counts),
     });
 
     logger.info(`User ${ctx.from.id} subscribed to shop ${shopId}`);
@@ -295,7 +294,7 @@ const handleUnsubscribe = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: buyerMessages.subscriptionRemoved(shop.name),
-      keyboard: shopActionsKeyboard(shopId, false, counts)
+      keyboard: shopActionsKeyboard(shopId, false, counts),
     });
 
     logger.info(`User ${ctx.from.id} unsubscribed from shop ${shopId}`);
@@ -316,7 +315,7 @@ const handleOrders = async (ctx) => {
     if (!ctx.session.token) {
       await smartMessage.send(ctx, {
         text: generalMessages.authorizationRequired,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
       return;
     }
@@ -330,14 +329,14 @@ const handleOrders = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: message,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
     logger.info(`User ${ctx.from.id} viewed orders (${orders.length} total)`);
   } catch (error) {
     logger.error('Error fetching orders:', error);
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   }
 };
@@ -381,15 +380,21 @@ const handleShopView = async (ctx) => {
       keyboard: shopActionsKeyboard(shopId, isSubscribed, {
         stock: sectioned.stock.length,
         preorder: sectioned.preorder.length,
-      })
+      }),
     });
 
     logger.info(`User ${ctx.from.id} viewed shop ${shopId} details`);
   } catch (error) {
     logger.error('Error viewing shop:', error);
+
+    // ✅ P2-2 FIX: Answer callback query to remove spinner
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery('Ошибка загрузки').catch(() => {});
+    }
+
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   }
 };
@@ -424,15 +429,21 @@ const handleShopSection = async (ctx, section) => {
       keyboard: shopActionsKeyboard(shopId, isSubscribed, {
         stock: sectioned.stock.length,
         preorder: sectioned.preorder.length,
-      })
+      }),
     });
 
     logger.info(`User ${ctx.from.id} viewed section ${section} for shop ${shopId}`);
   } catch (error) {
     logger.error('Error viewing shop section:', error);
+
+    // ✅ P2-2 FIX: Answer callback query to remove spinner
+    if (ctx.callbackQuery) {
+      await ctx.answerCbQuery('Ошибка загрузки').catch(() => {});
+    }
+
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
   }
 };

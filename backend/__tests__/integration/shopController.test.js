@@ -1,7 +1,7 @@
 /**
  * Integration tests for shopController
  * Tests shop name validation and uniqueness
- * 
+ *
  * FIXED: Each test creates a NEW user because backend allows only 1 shop per user (P0 constraint)
  */
 
@@ -51,13 +51,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should accept valid shop name (letters, numbers, underscore)', async () => {
       const testUser = await createTestUser();
       const authToken = generateToken(testUser.id);
-      
+
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'test_shop_123',
-          description: 'Test shop'
+          description: 'Test shop',
         });
 
       expect(response.status).toBe(201);
@@ -68,13 +68,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject shop name with spaces', async () => {
       const testUser = await createTestUser();
       const authToken = generateToken(testUser.id);
-      
+
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'test shop invalid',
-          description: 'Test shop'
+          description: 'Test shop',
         });
 
       expect(response.status).toBe(400);
@@ -84,8 +84,8 @@ describe('POST /api/shops - Shop Name Validation', () => {
         expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
-            message: 'Shop name must contain only letters, numbers, and underscore'
-          })
+            message: 'Shop name must contain only letters, numbers, and underscore',
+          }),
         ])
       );
     });
@@ -93,13 +93,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject shop name with special characters', async () => {
       const testUser = await createTestUser();
       const authToken = generateToken(testUser.id);
-      
+
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'test-shop@#$',
-          description: 'Test shop'
+          description: 'Test shop',
         });
 
       expect(response.status).toBe(400);
@@ -108,8 +108,8 @@ describe('POST /api/shops - Shop Name Validation', () => {
         expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
-            message: 'Shop name must contain only letters, numbers, and underscore'
-          })
+            message: 'Shop name must contain only letters, numbers, and underscore',
+          }),
         ])
       );
     });
@@ -117,13 +117,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject shop name shorter than 3 characters', async () => {
       const testUser = await createTestUser();
       const authToken = generateToken(testUser.id);
-      
+
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'ab',
-          description: 'Test shop'
+          description: 'Test shop',
         });
 
       expect(response.status).toBe(400);
@@ -132,8 +132,8 @@ describe('POST /api/shops - Shop Name Validation', () => {
         expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
-            message: 'Shop name must be 3-30 characters'
-          })
+            message: 'Shop name must be 3-30 characters',
+          }),
         ])
       );
     });
@@ -141,13 +141,13 @@ describe('POST /api/shops - Shop Name Validation', () => {
     test('should reject shop name longer than 30 characters', async () => {
       const testUser = await createTestUser();
       const authToken = generateToken(testUser.id);
-      
+
       const response = await request(app)
         .post('/api/shops')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'test_shop_with_very_long_name_123456789',
-          description: 'Test shop'
+          description: 'Test shop',
         });
 
       expect(response.status).toBe(400);
@@ -156,8 +156,8 @@ describe('POST /api/shops - Shop Name Validation', () => {
         expect.arrayContaining([
           expect.objectContaining({
             field: 'name',
-            message: 'Shop name must be 3-30 characters'
-          })
+            message: 'Shop name must be 3-30 characters',
+          }),
         ])
       );
     });
@@ -176,7 +176,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName,
-          description: 'First shop'
+          description: 'First shop',
         });
 
       expect(response1.status).toBe(201);
@@ -190,7 +190,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: shopName,
-          description: 'Duplicate shop'
+          description: 'Duplicate shop',
         });
 
       expect(response2.status).toBe(409);
@@ -210,7 +210,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName.toLowerCase(),
-          description: 'First shop'
+          description: 'First shop',
         });
 
       expect(response1.status).toBe(201);
@@ -224,7 +224,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: shopName.toUpperCase(),
-          description: 'Duplicate shop'
+          description: 'Duplicate shop',
         });
 
       expect(response2.status).toBe(409);
@@ -244,7 +244,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken1}`)
         .send({
           name: shopName,
-          description: 'First shop'
+          description: 'First shop',
         });
 
       expect(response1.status).toBe(201);
@@ -258,7 +258,7 @@ describe('POST /api/shops - Shop Name Validation', () => {
         .set('Authorization', `Bearer ${authToken2}`)
         .send({
           name: 'Test_Shop_Unique_3',
-          description: 'Duplicate shop'
+          description: 'Duplicate shop',
         });
 
       expect(response2.status).toBe(409);
@@ -284,7 +284,7 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         name: 'test_shop_update',
-        description: 'Test shop for updates'
+        description: 'Test shop for updates',
       });
 
     testShop = response.body.data;
@@ -299,7 +299,7 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        name: 'test_shop_updated_name'
+        name: 'test_shop_updated_name',
       });
 
     expect(response.status).toBe(200);
@@ -312,20 +312,17 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
     const testUser2 = await createTestUser();
     const authToken2 = generateToken(testUser2.id);
 
-    await request(app)
-      .post('/api/shops')
-      .set('Authorization', `Bearer ${authToken2}`)
-      .send({
-        name: 'test_shop_existing',
-        description: 'Existing shop'
-      });
+    await request(app).post('/api/shops').set('Authorization', `Bearer ${authToken2}`).send({
+      name: 'test_shop_existing',
+      description: 'Existing shop',
+    });
 
     // Try to update original testShop to existing name
     const response = await request(app)
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        name: 'test_shop_existing'
+        name: 'test_shop_existing',
       });
 
     expect(response.status).toBe(409);
@@ -343,7 +340,7 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        name: currentShop.body.data.name // Same name
+        name: currentShop.body.data.name, // Same name
       });
 
     expect(response.status).toBe(200);
@@ -355,7 +352,7 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
       .put(`/api/shops/${testShop.id}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
-        name: 'invalid name!' // Contains space and special character
+        name: 'invalid name!', // Contains space and special character
       });
 
     expect(response.status).toBe(400);
@@ -364,8 +361,8 @@ describe('PUT /api/shops/:id - Update Shop Name Validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           field: 'name',
-          message: 'Shop name must contain only letters, numbers, and underscore'
-        })
+          message: 'Shop name must contain only letters, numbers, and underscore',
+        }),
       ])
     );
   });

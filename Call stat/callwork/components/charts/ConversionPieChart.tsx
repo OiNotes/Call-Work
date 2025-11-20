@@ -17,7 +17,7 @@ const COLORS = ['var(--success)', 'var(--primary)', 'var(--warning)', 'var(--dan
 
 export const ConversionPieChart = memo(function ConversionPieChart({ data }: ConversionPieChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie
           data={data}

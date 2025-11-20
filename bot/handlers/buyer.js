@@ -3,7 +3,7 @@ import {
   subscribeToShop,
   unsubscribeFromShop,
   getSubscriptions,
-  getOrdersByBuyer
+  getOrdersByBuyer,
 } from '../utils/api.js';
 import {
   buyerMenuKeyboard,
@@ -11,7 +11,7 @@ import {
   subscriptionsListKeyboard,
   buyerOrdersMenuKeyboard,
   backToBuyerMenuKeyboard,
-  searchResultKeyboard
+  searchResultKeyboard,
 } from '../keyboards/buyerMenu.js';
 
 // Show buyer menu
@@ -21,13 +21,13 @@ export async function handleBuyerMenu(ctx) {
 
     await ctx.editMessageText(
       `🛍 Меню покупателя\n\n` +
-      `Добро пожаловать в Status Stock!\n\n` +
-      `Здесь вы можете:\n` +
-      `• Находить интересные магазины\n` +
-      `• Подписываться на любимые магазины\n` +
-      `• Делать заказы\n` +
-      `• Отслеживать доставку\n\n` +
-      `Выберите действие:`,
+        `Добро пожаловать в Status Stock!\n\n` +
+        `Здесь вы можете:\n` +
+        `• Находить интересные магазины\n` +
+        `• Подписываться на любимые магазины\n` +
+        `• Делать заказы\n` +
+        `• Отслеживать доставку\n\n` +
+        `Выберите действие:`,
       buyerMenuKeyboard()
     );
   } catch (error) {
@@ -45,8 +45,8 @@ export async function handleSearchShop(ctx) {
 
     await ctx.editMessageText(
       `🔍 Поиск магазина\n\n` +
-      `Введите название магазина или его часть:\n\n` +
-      `Например: "sneakers", "fashion", "tech"`
+        `Введите название магазина или его часть:\n\n` +
+        `Например: "sneakers", "fashion", "tech"`
     );
   } catch (error) {
     console.error('Error in handleSearchShop:', error);
@@ -81,21 +81,18 @@ export async function handleShopSearchInput(ctx) {
 
       if (shops.length === 0) {
         await ctx.reply(
-          `😔 Магазины не найдены\n\n` +
-          `Попробуйте изменить запрос.`,
+          `😔 Магазины не найдены\n\n` + `Попробуйте изменить запрос.`,
           searchResultKeyboard([])
         );
       } else {
         await ctx.reply(
-          `✅ Найдено магазинов: ${shops.length}\n\n` +
-          `Выберите магазин для просмотра:`,
+          `✅ Найдено магазинов: ${shops.length}\n\n` + `Выберите магазин для просмотра:`,
           searchResultKeyboard(shops)
         );
       }
     } else {
       await ctx.reply(
-        `😔 Магазины не найдены\n\n` +
-        `Попробуйте изменить запрос.`,
+        `😔 Магазины не найдены\n\n` + `Попробуйте изменить запрос.`,
         searchResultKeyboard([])
       );
     }
@@ -117,7 +114,7 @@ export async function handleViewShop(ctx, shopId) {
     let isSubscribed = false;
 
     if (subsResult.success && subsResult.data) {
-      isSubscribed = subsResult.data.some(sub => sub.shopId === shopId);
+      isSubscribed = subsResult.data.some((sub) => sub.shopId === shopId);
     }
 
     // Mock shop data for now
@@ -127,15 +124,15 @@ export async function handleViewShop(ctx, shopId) {
       name: 'Shop Name',
       description: 'Shop description',
       productsCount: 0,
-      subscribersCount: 0
+      subscribersCount: 0,
     };
 
     await ctx.editMessageText(
       `🏪 ${shop.name}\n\n` +
-      `📝 ${shop.description || 'Описание отсутствует'}\n\n` +
-      `📦 Товаров: ${shop.productsCount || 0}\n` +
-      `⭐️ Подписчиков: ${shop.subscribersCount || 0}\n\n` +
-      `${isSubscribed ? '✅ Вы подписаны на этот магазин' : ''}`,
+        `📝 ${shop.description || 'Описание отсутствует'}\n\n` +
+        `📦 Товаров: ${shop.productsCount || 0}\n` +
+        `⭐️ Подписчиков: ${shop.subscribersCount || 0}\n\n` +
+        `${isSubscribed ? '✅ Вы подписаны на этот магазин' : ''}`,
       shopDetailKeyboard(shopId, isSubscribed)
     );
   } catch (error) {
@@ -153,11 +150,11 @@ export async function handleSubscribe(ctx, shopId) {
 
     if (result.success) {
       await ctx.answerCbQuery('✅ Вы подписались на магазин!');
-      
+
       // Show success message instead of re-fetching shop data
       await ctx.editMessageText(
         `✅ Вы успешно подписались на магазин!\n\n` +
-        `Теперь вы будете получать уведомления о новых товарах и акциях.`,
+          `Теперь вы будете получать уведомления о новых товарах и акциях.`,
         shopDetailKeyboard(shopId, true)
       );
     } else {
@@ -178,11 +175,11 @@ export async function handleUnsubscribe(ctx, shopId) {
 
     if (result.success) {
       await ctx.answerCbQuery('✅ Вы отписались от магазина');
-      
+
       // Show success message instead of re-fetching shop data
       await ctx.editMessageText(
         `✅ Вы отписались от магазина\n\n` +
-        `Вы больше не будете получать уведомления от этого магазина.`,
+          `Вы больше не будете получать уведомления от этого магазина.`,
         shopDetailKeyboard(shopId, false)
       );
     } else {
@@ -211,14 +208,13 @@ export async function handleMySubscriptions(ctx) {
       if (subscriptions.length === 0) {
         await ctx.editMessageText(
           `⭐️ Мои подписки\n\n` +
-          `У вас пока нет подписок.\n\n` +
-          `Найдите интересные магазины и подпишитесь на них!`,
+            `У вас пока нет подписок.\n\n` +
+            `Найдите интересные магазины и подпишитесь на них!`,
           subscriptionsListKeyboard([])
         );
       } else {
         await ctx.editMessageText(
-          `⭐️ Мои подписки (${subscriptions.length})\n\n` +
-          `Выберите магазин:`,
+          `⭐️ Мои подписки (${subscriptions.length})\n\n` + `Выберите магазин:`,
           subscriptionsListKeyboard(subscriptions)
         );
       }
@@ -240,8 +236,7 @@ export async function handleBuyerOrders(ctx) {
     await ctx.answerCbQuery();
 
     await ctx.editMessageText(
-      `📦 Мои заказы\n\n` +
-      `Выберите категорию заказов:`,
+      `📦 Мои заказы\n\n` + `Выберите категорию заказов:`,
       buyerOrdersMenuKeyboard()
     );
   } catch (error) {
@@ -266,29 +261,33 @@ export async function handleBuyerOrdersByStatus(ctx, status) {
 
       // Filter by status
       if (status === 'active') {
-        orders = orders.filter(o => ['new', 'processing', 'shipped'].includes(o.status));
+        orders = orders.filter((o) => ['new', 'processing', 'shipped'].includes(o.status));
       } else {
-        orders = orders.filter(o => o.status === status);
+        orders = orders.filter((o) => o.status === status);
       }
 
       if (orders.length === 0) {
-        const statusText = status === 'active' ? 'активных' :
-                          status === 'completed' ? 'завершенных' :
-                          'отмененных';
+        const statusText =
+          status === 'active' ? 'активных' : status === 'completed' ? 'завершенных' : 'отмененных';
 
         await ctx.editMessageText(
-          `📦 Заказы\n\n` +
-          `У вас нет ${statusText} заказов.`,
+          `📦 Заказы\n\n` + `У вас нет ${statusText} заказов.`,
           buyerOrdersMenuKeyboard()
         );
       } else {
         let ordersList = `📦 Заказы (${orders.length})\n\n`;
 
         orders.slice(0, 10).forEach((order, index) => {
-          const statusEmoji = order.status === 'new' ? '🆕' :
-                             order.status === 'processing' ? '⏳' :
-                             order.status === 'shipped' ? '📦' :
-                             order.status === 'completed' ? '✅' : '❌';
+          const statusEmoji =
+            order.status === 'new'
+              ? '🆕'
+              : order.status === 'processing'
+                ? '⏳'
+                : order.status === 'shipped'
+                  ? '📦'
+                  : order.status === 'completed'
+                    ? '✅'
+                    : '❌';
 
           ordersList += `${index + 1}. ${statusEmoji} Заказ #${order.id}\n`;
           ordersList += `   Магазин: ${order.shop?.name || 'N/A'}\n`;
@@ -323,11 +322,11 @@ export async function handleOpenWebappBuyer(ctx) {
 
     await ctx.editMessageText(
       `🌐 Веб-приложение\n\n` +
-      `Откройте полную версию платформы для:\n` +
-      `• Удобного просмотра товаров\n` +
-      `• Оформления заказов\n` +
-      `• Управления профилем\n\n` +
-      `🔗 [Открыть веб-приложение](${webappUrl})`,
+        `Откройте полную версию платформы для:\n` +
+        `• Удобного просмотра товаров\n` +
+        `• Оформления заказов\n` +
+        `• Управления профилем\n\n` +
+        `🔗 [Открыть веб-приложение](${webappUrl})`,
       {
         parse_mode: 'Markdown',
         reply_markup: {

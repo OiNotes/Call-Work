@@ -25,12 +25,12 @@ export async function send(ctx, content) {
     return await ctx.replyWithPhoto(photo, {
       caption: safeText,
       parse_mode,
-      ...keyboard
+      ...keyboard,
     });
   } else {
     return await ctx.reply(safeText, {
       parse_mode,
-      ...keyboard
+      ...keyboard,
     });
   }
 }
@@ -59,7 +59,7 @@ export async function answerCallback(ctx, text = '', showAlert = false) {
   } catch (error) {
     logger.debug('answerCbQuery failed (query too old?)', {
       userId: ctx.from?.id,
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -67,5 +67,5 @@ export async function answerCallback(ctx, text = '', showAlert = false) {
 export default {
   send,
   answerCallback,
-  truncateText
+  truncateText,
 };

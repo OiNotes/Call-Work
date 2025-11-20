@@ -1,6 +1,6 @@
 /**
  * Validation Tests
- * 
+ *
  * Tests for input validation on endpoints
  * Prevents invalid data and injection attacks
  */
@@ -9,12 +9,8 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
 import { config } from '../../src/config/env.js';
-import { 
-  userQueries, 
-  shopQueries,
-  productQueries,
-  getClient 
-} from '../../src/models/db.js';
+import { userQueries, shopQueries, productQueries } from '../../src/database/queries/index.js';
+import { getClient } from '../../src/config/database.js';
 
 describe('Validation Tests', () => {
   let user, token, shop, product;
@@ -25,7 +21,7 @@ describe('Validation Tests', () => {
       telegram_id: Math.floor(Math.random() * 1000000),
       username: 'validationuser',
       first_name: 'Validation',
-      last_name: 'Test'
+      last_name: 'Test',
     });
 
     // Generate token
@@ -41,7 +37,7 @@ describe('Validation Tests', () => {
       name: 'validationshop',
       description: 'Test Shop',
       subscription_tier: 'pro',
-      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
     // Create product
@@ -51,7 +47,7 @@ describe('Validation Tests', () => {
       description: 'Test',
       price: 100,
       currency: 'USD',
-      stock: 10
+      stock: 10,
     });
   });
 
@@ -72,8 +68,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletBtc: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        .send({
+          walletBtc: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         });
 
       expect(response.status).toBe(200);
@@ -83,8 +79,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletEth: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb'
+        .send({
+          walletEth: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
         });
 
       expect(response.status).toBe(200);
@@ -94,8 +90,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletUsdt: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+        .send({
+          walletUsdt: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
         });
 
       expect(response.status).toBe(200);
@@ -105,8 +101,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletLtc: 'LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL'
+        .send({
+          walletLtc: 'LdP8Qox1VAhCzLJNqrr74YovaWYyNBUWvL',
         });
 
       expect(response.status).toBe(200);
@@ -116,8 +112,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletBtc: 'invalid_btc_address'
+        .send({
+          walletBtc: 'invalid_btc_address',
         });
 
       expect(response.status).toBe(400);
@@ -128,8 +124,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletEth: '0xinvalid'
+        .send({
+          walletEth: '0xinvalid',
         });
 
       expect(response.status).toBe(400);
@@ -140,8 +136,8 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop.id}/wallets`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
-          walletEth: '742d35Cc6634C0532925a3b844Bc9e7595f0bEb'
+        .send({
+          walletEth: '742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
         });
 
       expect(response.status).toBe(400);
@@ -155,9 +151,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/products/bulk-delete-by-ids')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           shopId: shop.id,
-          productIds
+          productIds,
         });
 
       // May fail for business logic, but should not fail validation
@@ -170,9 +166,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/products/bulk-delete-by-ids')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           shopId: shop.id,
-          productIds
+          productIds,
         });
 
       expect(response.status).toBe(400);
@@ -185,9 +181,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/orders/bulk-status')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           order_ids: orderIds,
-          status: 'confirmed'
+          status: 'confirmed',
         });
 
       expect(response.status).toBe(400);
@@ -198,9 +194,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/products/bulk-delete-by-ids')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           shopId: shop.id,
-          productIds: ['invalid', 'ids', 'here']
+          productIds: ['invalid', 'ids', 'here'],
         });
 
       expect(response.status).toBe(400);
@@ -211,9 +207,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/products/bulk-delete-by-ids')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           shopId: shop.id,
-          productIds: []
+          productIds: [],
         });
 
       expect(response.status).toBe(400);
@@ -225,9 +221,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: 'Add a new product',
-          shopId: shop.id
+          shopId: shop.id,
         });
 
       // May fail for business logic, but should not fail validation
@@ -238,9 +234,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: '',
-          shopId: shop.id
+          shopId: shop.id,
         });
 
       expect(response.status).toBe(400);
@@ -253,9 +249,9 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: longMessage,
-          shopId: shop.id
+          shopId: shop.id,
         });
 
       expect(response.status).toBe(400);
@@ -268,10 +264,10 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: 'Test',
           shopId: shop.id,
-          conversationHistory: history
+          conversationHistory: history,
         });
 
       expect(response.status).toBe(400);
@@ -284,10 +280,10 @@ describe('Validation Tests', () => {
       const response = await request(app)
         .post('/api/ai/products/chat')
         .set('Authorization', `Bearer ${token}`)
-        .send({ 
+        .send({
           message: 'Test',
           shopId: shop.id,
-          conversationHistory: history
+          conversationHistory: history,
         });
 
       // Should not fail validation

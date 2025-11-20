@@ -134,6 +134,7 @@ echo "=== End of Report ==="
 ## Automatic actions:
 
 If unhealthy, Claude will:
+
 1. Show detailed error logs from appropriate log files
 2. Identify missing services (ngrok, PostgreSQL, Backend, Bot)
 3. Suggest specific fixes
@@ -151,16 +152,19 @@ If unhealthy, Claude will:
 ## Quick fix commands:
 
 If ngrok is down:
+
 ```bash
 ./stop.sh && ./start.sh  # Fresh restart with new ngrok
 ```
 
 If PostgreSQL is down:
+
 ```bash
 brew services start postgresql@14
 ```
 
 If Backend/Bot down but ngrok OK:
+
 ```bash
 cd backend && npm run dev  # Backend only
 cd bot && npm start        # Bot only

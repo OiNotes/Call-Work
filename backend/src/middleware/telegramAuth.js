@@ -21,11 +21,11 @@ export const verifyTelegramInitData = (req, res, next) => {
       logger.warn('Missing Telegram initData', {
         ip: req.ip,
         path: req.path,
-        method: req.method
+        method: req.method,
       });
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized: No Telegram data'
+        error: 'Unauthorized: No Telegram data',
       });
     }
 
@@ -36,11 +36,11 @@ export const verifyTelegramInitData = (req, res, next) => {
     if (!hash) {
       logger.warn('Missing hash in initData', {
         ip: req.ip,
-        path: req.path
+        path: req.path,
       });
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized: Invalid Telegram data'
+        error: 'Unauthorized: Invalid Telegram data',
       });
     }
 
@@ -70,17 +70,19 @@ export const verifyTelegramInitData = (req, res, next) => {
     const hashBuffer = Buffer.from(hash, 'hex');
     const calculatedHashBuffer = Buffer.from(calculatedHash, 'hex');
 
-    if (hashBuffer.length !== calculatedHashBuffer.length ||
-        !crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer)) {
+    if (
+      hashBuffer.length !== calculatedHashBuffer.length ||
+      !crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer)
+    ) {
       logger.warn('Invalid Telegram initData signature', {
         ip: req.ip,
         path: req.path,
         expectedHash: calculatedHash.substring(0, 8) + '...',
-        providedHash: hash.substring(0, 8) + '...'
+        providedHash: hash.substring(0, 8) + '...',
       });
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized: Invalid Telegram signature'
+        error: 'Unauthorized: Invalid Telegram signature',
       });
     }
 
@@ -95,11 +97,11 @@ export const verifyTelegramInitData = (req, res, next) => {
         path: req.path,
         authDate,
         currentTime,
-        age: currentTime - authDate
+        age: currentTime - authDate,
       });
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized: Telegram data expired'
+        error: 'Unauthorized: Telegram data expired',
       });
     }
 
@@ -110,26 +112,25 @@ export const verifyTelegramInitData = (req, res, next) => {
         req.telegramUser = JSON.parse(userParam);
         logger.debug('Telegram user validated', {
           userId: req.telegramUser.id,
-          username: req.telegramUser.username
+          username: req.telegramUser.username,
         });
       } catch (parseError) {
         logger.error('Failed to parse user data from initData', {
-          error: parseError.message
+          error: parseError.message,
         });
       }
     }
 
     next();
-
   } catch (error) {
     logger.error('Telegram initData validation error', {
       error: error.message,
       stack: error.stack,
-      path: req.path
+      path: req.path,
     });
     return res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   }
 };
@@ -149,7 +150,7 @@ export const optionalTelegramAuth = (req, res, next) => {
     logger.debug('Skipping Telegram validation in development/test', {
       path: req.path,
       method: req.method,
-      env
+      env,
     });
     return next();
   }
@@ -160,5 +161,5 @@ export const optionalTelegramAuth = (req, res, next) => {
 
 export default {
   verifyTelegramInitData,
-  optionalTelegramAuth
+  optionalTelegramAuth,
 };

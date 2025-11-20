@@ -1,6 +1,6 @@
 /**
  * /start Flow Integration Test
- * 
+ *
  * Тестирует memory роли: повторный /start должен сразу показывать ЛК
  * БЕЗ повторного вопроса о роли (P0 priority)
  */
@@ -34,9 +34,9 @@ describe('/start Flow - Role Memory (P0)', () => {
           id: 1,
           telegramId: '123456',
           username: 'testuser',
-          selectedRole: null // Нет сохранённой роли
-        }
-      }
+          selectedRole: null, // Нет сохранённой роли
+        },
+      },
     });
 
     // Mock shop APIs - no shop, no workspace
@@ -60,14 +60,14 @@ describe('/start Flow - Role Memory (P0)', () => {
           id: 1,
           telegramId: '123456',
           username: 'testuser',
-          selectedRole: null
-        }
-      }
+          selectedRole: null,
+        },
+      },
     });
 
     // Mock: user has shop
     mock.onGet('/shops/my').reply(200, {
-      data: [{ id: 1, name: 'MyShop', sellerId: 1 }]
+      data: [{ id: 1, name: 'MyShop', sellerId: 1 }],
     });
 
     // Mock: update role to seller
@@ -90,9 +90,9 @@ describe('/start Flow - Role Memory (P0)', () => {
           id: 1,
           telegramId: '123456',
           username: 'testuser',
-          selectedRole: 'buyer' // Saved buyer role
-        }
-      }
+          selectedRole: 'buyer', // Saved buyer role
+        },
+      },
     });
 
     // Mock: no shop
@@ -115,14 +115,14 @@ describe('/start Flow - Role Memory (P0)', () => {
           id: 1,
           telegramId: '123456',
           username: 'testuser',
-          selectedRole: 'buyer' // User had buyer role
-        }
-      }
+          selectedRole: 'buyer', // User had buyer role
+        },
+      },
     });
 
     // Mock: user has shop (overrides buyer role)
     mock.onGet('/shops/my').reply(200, {
-      data: [{ id: 1, name: 'MyShop', sellerId: 1 }]
+      data: [{ id: 1, name: 'MyShop', sellerId: 1 }],
     });
 
     // Mock: update role to seller

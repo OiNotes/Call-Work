@@ -10,7 +10,7 @@ const ORDER_STATE_MACHINE = {
   shipped: ['delivered'],
   delivered: [],
   cancelled: [],
-  expired: []
+  expired: [],
 };
 
 /**
@@ -24,7 +24,7 @@ export const validateStatusTransition = (currentStatus, newStatus) => {
   if (currentStatus === newStatus) {
     return {
       valid: true,
-      idempotent: true
+      idempotent: true,
     };
   }
 
@@ -34,7 +34,7 @@ export const validateStatusTransition = (currentStatus, newStatus) => {
     logger.warn(`Invalid order status in database: ${currentStatus}`);
     return {
       valid: false,
-      error: `Unknown current status: ${currentStatus}`
+      error: `Unknown current status: ${currentStatus}`,
     };
   }
 
@@ -43,14 +43,14 @@ export const validateStatusTransition = (currentStatus, newStatus) => {
     logger.warn(`Invalid state transition attempted: ${currentStatus} → ${newStatus}`);
     return {
       valid: false,
-      error: `Cannot transition from ${currentStatus} to ${newStatus}`
+      error: `Cannot transition from ${currentStatus} to ${newStatus}`,
     };
   }
 
   // Valid state transition
   return {
     valid: true,
-    idempotent: false
+    idempotent: false,
   };
 };
 

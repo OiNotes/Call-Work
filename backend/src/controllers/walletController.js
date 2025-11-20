@@ -1,5 +1,6 @@
-import { shopQueries } from '../models/db.js';
-import { dbErrorHandler } from '../middleware/errorHandler.js';
+import { shopQueries } from '../database/queries/index.js';
+import { dbErrorHandler, asyncHandler } from '../middleware/errorHandler.js';
+import { NotFoundError, UnauthorizedError, ValidationError, ConflictError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
 import { validateAddress } from '../services/walletService.js';
 
@@ -11,7 +12,7 @@ export const walletController = {
   /**
    * Get shop wallet addresses
    */
-  getWallets: async (req, res) => {
+  getWallets: asyncHandler(async (req, res) => {
     try {
       const { shopId } = req.params;
 
@@ -19,18 +20,12 @@ export const walletController = {
       const shop = await shopQueries.findById(shopId);
 
       if (!shop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       // Verify shop ownership
       if (shop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only view wallet addresses for your own shops'
-        });
+        throw new UnauthorizedError('You can only view wallet addresses for your own shops');
       }
 
       // Return wallet addresses
@@ -43,59 +38,45 @@ export const walletController = {
             btc: shop.wallet_btc || null,
             eth: shop.wallet_eth || null,
             usdt: shop.wallet_usdt || null,
-            ltc: shop.wallet_ltc || null
-          }
-        }
+            ltc: shop.wallet_ltc || null,
+          },
+        },
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Get wallets error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to get wallet addresses'
-      });
+      throw error;
     }
-  },
+  }),
+
 
   /**
    * Update shop wallet addresses
    * WALLET-VALIDATION: Validate all crypto addresses before database update
    */
-  updateWallets: async (req, res) => {
+  updateWallets: asyncHandler(async (req, res) => {
     try {
       const { shopId } = req.params;
-      const {
-        walletBtc,
-        walletEth,
-        walletUsdt,
-        walletLtc
-      } = req.body;
+      const { walletBtc, walletEth, walletUsdt, walletLtc } = req.body;
 
       // Check if shop exists
       const existingShop = await shopQueries.findById(shopId);
 
       if (!existingShop) {
-        return res.status(404).json({
-          success: false,
-          error: 'Shop not found'
-        });
+        throw new NotFoundError('Shop');
       }
 
       // Verify shop ownership
       if (existingShop.owner_id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only update wallet addresses for your own shops'
-        });
+        throw new UnauthorizedError('You can only update wallet addresses for your own shops');
       }
 
       // WALLET-VALIDATION: Validate Bitcoin address
@@ -105,12 +86,9 @@ export const walletController = {
           logger.warn(`[Wallet Validation] Invalid BTC address attempt`, {
             userId: req.user.id,
             shopId: shopId,
-            address: walletBtc.substring(0, 8) + '...'
+            address: walletBtc.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Bitcoin address format: ${walletBtc}`
-          });
+          throw new ValidationError(`Invalid Bitcoin address format: ${walletBtc}`);
         }
       }
 
@@ -121,12 +99,9 @@ export const walletController = {
           logger.warn(`[Wallet Validation] Invalid ETH address attempt`, {
             userId: req.user.id,
             shopId: shopId,
-            address: walletEth.substring(0, 8) + '...'
+            address: walletEth.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Ethereum address format: ${walletEth}`
-          });
+          throw new ValidationError(`Invalid Ethereum address format: ${walletEth}`);
         }
       }
 
@@ -137,12 +112,9 @@ export const walletController = {
           logger.warn(`[Wallet Validation] Invalid USDT address attempt`, {
             userId: req.user.id,
             shopId: shopId,
-            address: walletUsdt.substring(0, 8) + '...'
+            address: walletUsdt.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid USDT (ERC20) address format: ${walletUsdt}`
-          });
+          throw new ValidationError(`Invalid USDT (ERC20) address format: ${walletUsdt}`);
         }
       }
 
@@ -153,12 +125,9 @@ export const walletController = {
           logger.warn(`[Wallet Validation] Invalid LTC address attempt`, {
             userId: req.user.id,
             shopId: shopId,
-            address: walletLtc.substring(0, 8) + '...'
+            address: walletLtc.substring(0, 8) + '...',
           });
-          return res.status(400).json({
-            success: false,
-            error: `Invalid Litecoin address format: ${walletLtc}`
-          });
+          throw new ValidationError(`Invalid Litecoin address format: ${walletLtc}`);
         }
       }
 
@@ -171,10 +140,7 @@ export const walletController = {
           [walletBtc, shopId]
         );
         if (duplicateBtc.rows.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: `Bitcoin address already used by shop "${duplicateBtc.rows[0].name}"`
-          });
+          throw new ConflictError(`Bitcoin address already used by shop "${duplicateBtc.rows[0].name}"`);
         }
       }
 
@@ -184,10 +150,7 @@ export const walletController = {
           [walletEth, shopId]
         );
         if (duplicateEth.rows.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: `Ethereum address already used by shop "${duplicateEth.rows[0].name}"`
-          });
+          throw new ConflictError(`Ethereum address already used by shop "${duplicateEth.rows[0].name}"`);
         }
       }
 
@@ -197,10 +160,7 @@ export const walletController = {
           [walletUsdt, shopId]
         );
         if (duplicateUsdt.rows.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: `USDT address already used by shop "${duplicateUsdt.rows[0].name}"`
-          });
+          throw new ConflictError(`USDT address already used by shop "${duplicateUsdt.rows[0].name}"`);
         }
       }
 
@@ -210,10 +170,7 @@ export const walletController = {
           [walletLtc, shopId]
         );
         if (duplicateLtc.rows.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: `Litecoin address already used by shop "${duplicateLtc.rows[0].name}"`
-          });
+          throw new ConflictError(`Litecoin address already used by shop "${duplicateLtc.rows[0].name}"`);
         }
       }
 
@@ -248,10 +205,7 @@ export const walletController = {
 
       // If no updates provided
       if (updates.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'No wallet addresses provided to update'
-        });
+        throw new ValidationError('No wallet addresses provided to update');
       }
 
       // Add updated_at
@@ -280,30 +234,26 @@ export const walletController = {
             btc: updatedShop.wallet_btc || null,
             eth: updatedShop.wallet_eth || null,
             usdt: updatedShop.wallet_usdt || null,
-            ltc: updatedShop.wallet_ltc || null
+            ltc: updatedShop.wallet_ltc || null,
           },
-          updatedAt: updatedShop.updated_at
+          updatedAt: updatedShop.updated_at,
         },
-        message: 'Wallet addresses updated successfully'
+        message: 'Wallet addresses updated successfully',
       });
-
     } catch (error) {
       if (error.code) {
         const handledError = dbErrorHandler(error);
         return res.status(handledError.statusCode).json({
           success: false,
           error: handledError.message,
-          ...(handledError.details ? { details: handledError.details } : {})
+          ...(handledError.details ? { details: handledError.details } : {}),
         });
       }
 
       logger.error('Update wallets error', { error: error.message, stack: error.stack });
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update wallet addresses'
-      });
+      throw error;
     }
-  }
+  }),
 };
 
 export default walletController;

@@ -26,20 +26,21 @@ export const useWebSocket = () => {
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    
+
     // ✅ Skip WebSocket on ngrok (free tier doesn't support WS)
     if (API_URL.includes('ngrok')) {
-      console.log('⚠️ WebSocket disabled on ngrok (use localhost for real-time features)');
       setIsConnected(false);
       return;
     }
-    
+
     const wsUrl = API_URL.replace(/^http/, 'ws').replace(/\/api$/, '');
+    let mounted = true; // ✅ Mounted flag to prevent actions after unmount
 
     function connect() {
+      if (!mounted) return; // ✅ Guard against unmounted component
+
       // Prevent multiple connections
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log('WebSocket already connected');
         return;
       }
 
@@ -48,7 +49,6 @@ export const useWebSocket = () => {
         wsRef.current = ws;
 
         ws.onopen = () => {
-          console.log('✅ WebSocket connected');
           setIsConnected(true);
           reconnectAttemptsRef.current = 0;
 
@@ -73,12 +73,10 @@ export const useWebSocket = () => {
         };
 
         ws.onclose = (event) => {
-          console.log('🔌 WebSocket disconnected', {
-            code: event.code,
-            reason: event.reason
-          });
           setIsConnected(false);
           wsRef.current = null;
+
+          if (!mounted) return; // ✅ Don't reconnect if unmounted
 
           // Clear existing timeout before creating new one
           if (reconnectTimeoutRef.current) {
@@ -90,15 +88,18 @@ export const useWebSocket = () => {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current++;
 
-          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})...`);
-
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            if (mounted) {
+              // ✅ Double check before reconnecting
+              connect();
+            }
           }, delay);
         };
       } catch (error) {
         console.error('Failed to create WebSocket connection:', error);
         setIsConnected(false);
+
+        if (!mounted) return; // ✅ Don't retry if unmounted
 
         // Clear existing timeout before creating new one
         if (reconnectTimeoutRef.current) {
@@ -108,17 +109,17 @@ export const useWebSocket = () => {
 
         // Retry connection after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
+          if (mounted) {
+            // ✅ Double check before retrying
+            connect();
+          }
         }, 3000);
       }
     }
 
     function handleWebSocketMessage(data) {
-      console.log('📨 WebSocket message:', data);
-
       switch (data.type) {
         case 'connected':
-          console.log('✅ WebSocket welcome:', data.message);
           break;
 
         case 'pong':
@@ -126,14 +127,12 @@ export const useWebSocket = () => {
           break;
 
         case 'product_added':
-          console.log('🆕 Product added:', data);
           if (data.shopId) {
             refetchProducts(data.shopId);
           }
           break;
 
         case 'product:updated':
-          console.log('✏️ Product updated:', data);
           if (data.shopId || data.data?.shopId) {
             const shopId = data.shopId || data.data?.shopId;
             refetchProducts(shopId);
@@ -141,33 +140,39 @@ export const useWebSocket = () => {
           break;
 
         case 'product_deleted':
-          console.log('🗑️ Product deleted:', data);
           if (data.shopId) {
             refetchProducts(data.shopId);
           }
           break;
 
         case 'order_status':
-          console.log('📦 Order status update:', data);
           if (data.orderId && data.status) {
             updateOrderStatus(data.orderId, data.status);
           }
           break;
 
         case 'new_subscriber':
-          console.log('👤 New subscriber:', data);
           if (data.shopId) {
             incrementSubscribers(data.shopId);
           }
           break;
 
         case 'shop_updated':
-          console.log('🏪 Shop updated:', data);
           // Could refetch shop data here
           break;
 
+        case 'subscription_payment_confirmed':
+          // Subscription payment confirmed - reload subscription list
+          if (data.subscriptionId) {
+            // Force refetch subscriptions in Settings/Subscriptions page
+            // This will update the UI to show 'active' status
+            window.dispatchEvent(new CustomEvent('subscription_confirmed', {
+              detail: data
+            }));
+          }
+          break;
+
         default:
-          console.log('❓ Unknown WebSocket message type:', data.type);
       }
     }
 
@@ -183,6 +188,8 @@ export const useWebSocket = () => {
 
     // Cleanup
     return () => {
+      mounted = false; // ✅ Set flag to prevent future actions
+
       clearInterval(heartbeatInterval);
 
       if (reconnectTimeoutRef.current) {

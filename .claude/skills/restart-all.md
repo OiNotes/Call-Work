@@ -79,6 +79,7 @@ echo "🚀 Restarting with fresh ngrok tunnel..."
 ## Verify restart:
 
 After restart, check:
+
 - Backend: `curl http://localhost:3000/health`
 - ngrok: `curl -s http://localhost:4040/api/tunnels | jq '.tunnels[0].public_url'`
 - Logs: `tail -f logs/backend.log logs/bot.log`

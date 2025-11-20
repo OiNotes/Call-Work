@@ -14,7 +14,7 @@ export const testShops = {
     wallet_usdt: null,
     wallet_ton: null,
     seller_username: 'test_seller',
-    seller_first_name: 'Test'
+    seller_first_name: 'Test',
   },
 
   inactive: {
@@ -26,8 +26,8 @@ export const testShops = {
     wallet_btc: null,
     wallet_eth: null,
     wallet_usdt: null,
-    wallet_ton: null
-  }
+    wallet_ton: null,
+  },
 };
 
 export const testProducts = {
@@ -38,7 +38,7 @@ export const testProducts = {
     description: 'Latest iPhone',
     price: 999.99,
     stock: 10,
-    isActive: true
+    isActive: true,
   },
 
   outOfStock: {
@@ -48,8 +48,8 @@ export const testProducts = {
     description: 'Out of stock',
     price: 2499.99,
     stock: 0,
-    isActive: true
-  }
+    isActive: true,
+  },
 };
 
 export const testOrders = {
@@ -63,8 +63,8 @@ export const testOrders = {
       {
         productId: 1,
         quantity: 1,
-        price: 999.99
-      }
-    ]
-  }
+        price: 999.99,
+      },
+    ],
+  },
 };

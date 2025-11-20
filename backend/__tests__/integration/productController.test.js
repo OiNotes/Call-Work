@@ -13,7 +13,7 @@ import {
   cleanupTestData,
   createTestUser,
   createTestShop,
-  createTestProduct
+  createTestProduct,
 } from '../helpers/testDb.js';
 
 describe('Product Controller - Integration Tests', () => {
@@ -38,33 +38,30 @@ describe('Product Controller - Integration Tests', () => {
     ownerUser = await createTestUser({
       telegramId: '9000001001',
       username: 'productowner',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create worker user
     workerUser = await createTestUser({
       telegramId: '9000001002',
       username: 'productworker',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create unauthorized user
     unauthorizedUser = await createTestUser({
       telegramId: '9000001003',
       username: 'unauthorized',
-      selectedRole: 'buyer'
+      selectedRole: 'buyer',
     });
 
     // Create shop
     shop = await createTestShop(ownerUser.id, {
-      name: 'Product Test Shop'
+      name: 'Product Test Shop',
     });
 
     // Upgrade shop to PRO tier (needed for workers)
-    await pool.query(
-      `UPDATE shops SET tier = 'pro' WHERE id = $1`,
-      [shop.id]
-    );
+    await pool.query(`UPDATE shops SET tier = 'pro' WHERE id = $1`, [shop.id]);
 
     // Add worker to shop
     await pool.query(
@@ -76,7 +73,7 @@ describe('Product Controller - Integration Tests', () => {
     // Create a test product
     product = await createTestProduct(shop.id, {
       name: 'Test Product',
-      price: '50.00'
+      price: '50.00',
     });
 
     // Generate JWT tokens
@@ -111,7 +108,7 @@ describe('Product Controller - Integration Tests', () => {
       description: 'New product description',
       price: '29.99',
       currency: 'USD',
-      stockQuantity: 100
+      stockQuantity: 100,
     };
 
     describe('BUG-W2: Worker authorization for product creation', () => {
@@ -125,15 +122,14 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data).toMatchObject({
           name: 'New Product',
-          shop_id: shop.id
+          shop_id: shop.id,
         });
         expect(parseFloat(response.body.data.price)).toBe(29.99);
 
         // Verify in database
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [response.body.data.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [
+          response.body.data.id,
+        ]);
         expect(result.rows).toHaveLength(1);
       });
 
@@ -147,14 +143,13 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.success).toBe(true);
         expect(response.body.data).toMatchObject({
           name: 'New Product',
-          shop_id: shop.id
+          shop_id: shop.id,
         });
 
         // Verify in database
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [response.body.data.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [
+          response.body.data.id,
+        ]);
         expect(result.rows).toHaveLength(1);
       });
 
@@ -179,7 +174,7 @@ describe('Product Controller - Integration Tests', () => {
           .set('Authorization', `Bearer ${ownerToken}`)
           .send({
             name: 'Updated Product',
-            price: '99.99'
+            price: '99.99',
           })
           .expect(200);
 
@@ -188,10 +183,7 @@ describe('Product Controller - Integration Tests', () => {
         expect(parseFloat(response.body.data.price)).toBe(99.99);
 
         // Verify in database
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [product.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
         expect(result.rows[0].name).toBe('Updated Product');
       });
 
@@ -201,7 +193,7 @@ describe('Product Controller - Integration Tests', () => {
           .set('Authorization', `Bearer ${workerToken}`)
           .send({
             name: 'Worker Updated Product',
-            description: 'Updated by worker'
+            description: 'Updated by worker',
           })
           .expect(200);
 
@@ -215,7 +207,7 @@ describe('Product Controller - Integration Tests', () => {
           .put(`/api/products/${product.id}`)
           .set('Authorization', `Bearer ${unauthorizedToken}`)
           .send({
-            name: 'Hacked Product'
+            name: 'Hacked Product',
           })
           .expect(403);
 
@@ -223,10 +215,7 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.error).toContain('own or manage as a worker');
 
         // Verify product was NOT updated
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [product.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
         expect(result.rows[0].name).toBe('Test Product'); // Original name
       });
     });
@@ -244,10 +233,7 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.message).toBe('Product deleted successfully');
 
         // Verify product is deleted
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [product.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
         expect(result.rows).toHaveLength(0);
       });
 
@@ -260,10 +246,7 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.success).toBe(true);
 
         // Verify product is deleted
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [product.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
         expect(result.rows).toHaveLength(0);
       });
 
@@ -277,10 +260,7 @@ describe('Product Controller - Integration Tests', () => {
         expect(response.body.error).toContain('own or manage as a worker');
 
         // Verify product still exists
-        const result = await pool.query(
-          'SELECT * FROM products WHERE id = $1',
-          [product.id]
-        );
+        const result = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
         expect(result.rows).toHaveLength(1);
       });
     });
@@ -304,10 +284,7 @@ describe('Product Controller - Integration Tests', () => {
       expect(response.body.data.deletedCount).toBeGreaterThanOrEqual(3);
 
       // Verify all products deleted
-      const result = await pool.query(
-        'SELECT * FROM products WHERE shop_id = $1',
-        [shop.id]
-      );
+      const result = await pool.query('SELECT * FROM products WHERE shop_id = $1', [shop.id]);
       expect(result.rows).toHaveLength(0);
     });
 
@@ -332,10 +309,7 @@ describe('Product Controller - Integration Tests', () => {
       expect(response.body.error).toContain('own or manage as a worker');
 
       // Verify products still exist
-      const result = await pool.query(
-        'SELECT * FROM products WHERE shop_id = $1',
-        [shop.id]
-      );
+      const result = await pool.query('SELECT * FROM products WHERE shop_id = $1', [shop.id]);
       expect(result.rows.length).toBeGreaterThanOrEqual(3);
     });
   });
@@ -355,7 +329,7 @@ describe('Product Controller - Integration Tests', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({
           shopId: shop.id,
-          productIds: [product2.id, product3.id]
+          productIds: [product2.id, product3.id],
         })
         .expect(200);
 
@@ -363,17 +337,13 @@ describe('Product Controller - Integration Tests', () => {
       expect(response.body.data.deletedCount).toBe(2);
 
       // Verify specific products deleted
-      const result = await pool.query(
-        'SELECT * FROM products WHERE id = ANY($1::int[])',
-        [[product2.id, product3.id]]
-      );
+      const result = await pool.query('SELECT * FROM products WHERE id = ANY($1::int[])', [
+        [product2.id, product3.id],
+      ]);
       expect(result.rows).toHaveLength(0);
 
       // Verify original product still exists
-      const originalResult = await pool.query(
-        'SELECT * FROM products WHERE id = $1',
-        [product.id]
-      );
+      const originalResult = await pool.query('SELECT * FROM products WHERE id = $1', [product.id]);
       expect(originalResult.rows).toHaveLength(1);
     });
 
@@ -383,7 +353,7 @@ describe('Product Controller - Integration Tests', () => {
         .set('Authorization', `Bearer ${workerToken}`)
         .send({
           shopId: shop.id,
-          productIds: [product2.id]
+          productIds: [product2.id],
         })
         .expect(200);
 
@@ -397,17 +367,16 @@ describe('Product Controller - Integration Tests', () => {
         .set('Authorization', `Bearer ${unauthorizedToken}`)
         .send({
           shopId: shop.id,
-          productIds: [product2.id, product3.id]
+          productIds: [product2.id, product3.id],
         })
         .expect(403);
 
       expect(response.body.error).toContain('own or manage as a worker');
 
       // Verify products still exist
-      const result = await pool.query(
-        'SELECT * FROM products WHERE id = ANY($1::int[])',
-        [[product2.id, product3.id]]
-      );
+      const result = await pool.query('SELECT * FROM products WHERE id = ANY($1::int[])', [
+        [product2.id, product3.id],
+      ]);
       expect(result.rows).toHaveLength(2);
     });
   });

@@ -31,7 +31,7 @@ const sessionRecoveryMiddleware = async (ctx, next) => {
         userId: ctx.from.id,
         hasToken: !!ctx.session.token,
         hasShopId: !!ctx.session.shopId,
-        role: ctx.session.user?.selectedRole
+        role: ctx.session.user?.selectedRole,
       });
 
       await recoverSessionData(ctx);
@@ -41,7 +41,7 @@ const sessionRecoveryMiddleware = async (ctx, next) => {
   } catch (error) {
     logger.error('Session recovery middleware error:', {
       userId: ctx.from?.id,
-      error: error.message
+      error: error.message,
     });
 
     // Continue anyway - handler will show appropriate error
@@ -65,6 +65,17 @@ function checkIfRecoveryNeeded(ctx) {
     return true;
   }
 
+  // NEW: If role is 'seller' but shopId missing, also try recovery
+  if (ctx.session.role === 'seller' && !ctx.session.shopId) {
+    return true;
+  }
+
+  // NEW: If token exists but no shopId, check if user has shop
+  // (removed role check - it was blocking recovery for sellers)
+  if (ctx.session.token && !ctx.session.shopId) {
+    return true;
+  }
+
   return false;
 }
 
@@ -74,8 +85,8 @@ function checkIfRecoveryNeeded(ctx) {
  */
 async function recoverSessionData(ctx) {
   try {
-    // Recover shop data for sellers
-    if (ctx.session.user?.selectedRole === 'seller' && !ctx.session.shopId) {
+    // NEW: Always try to recover shop data if token exists but shopId missing
+    if (ctx.session.token && !ctx.session.shopId) {
       const shops = await shopApi.getMyShop(ctx.session.token);
 
       if (shops && Array.isArray(shops) && shops.length > 0) {
@@ -83,14 +94,28 @@ async function recoverSessionData(ctx) {
         ctx.session.shopId = shop.id;
         ctx.session.shopName = shop.name;
 
+        // NEW: If user has shop, set role to 'seller'
+        if (!ctx.session.role) {
+          ctx.session.role = 'seller';
+        }
+
+        // NEW: Also update user.selectedRole if user object exists
+        if (ctx.session.user) {
+          ctx.session.user.selectedRole = 'seller';
+        }
+
         logger.info('Shop data recovered', {
           userId: ctx.from.id,
           shopId: shop.id,
-          shopName: shop.name
+          shopName: shop.name,
+          roleSet: ctx.session.role,
         });
+
+        // Session will be automatically saved by redisSession middleware
+        // No need for explicit save (prevents race condition)
       } else {
         logger.debug('No shop found for user', {
-          userId: ctx.from.id
+          userId: ctx.from.id,
         });
       }
     }
@@ -100,25 +125,27 @@ async function recoverSessionData(ctx) {
 
     logger.info('Session recovery completed', {
       userId: ctx.from.id,
-      recoveredShopId: !!ctx.session.shopId
+      recoveredShopId: !!ctx.session.shopId,
+      role: ctx.session.role,
     });
   } catch (error) {
     logger.error('Failed to recover session data:', {
       userId: ctx.from.id,
       error: error.message,
-      status: error.response?.status
+      status: error.response?.status,
     });
 
     // If token expired, clear session
     if (error.response?.status === 401) {
       logger.info('Token expired during recovery, clearing session', {
-        userId: ctx.from.id
+        userId: ctx.from.id,
       });
 
       ctx.session.token = null;
       ctx.session.user = null;
       ctx.session.shopId = null;
       ctx.session.shopName = null;
+      ctx.session.role = null;
     }
 
     throw error;

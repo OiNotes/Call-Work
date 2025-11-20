@@ -5,7 +5,7 @@ import { getClient, closePool } from '../../src/config/database.js';
 
 /**
  * CSRF Protection Tests (P0-SEC-5)
- * 
+ *
  * Tests that CSRF protection prevents cross-site request forgery attacks
  * by validating Origin/Referer headers on state-changing requests
  */
@@ -27,13 +27,11 @@ describe('CSRF Protection', () => {
       testUserId = userResult.rows[0].id;
 
       // Get auth token
-      const authResponse = await request(app)
-        .post('/api/auth/register')
-        .send({
-          telegramId: 999999999,
-          username: 'csrf_test_user',
-          firstName: 'CSRF Test'
-        });
+      const authResponse = await request(app).post('/api/auth/register').send({
+        telegramId: 999999999,
+        username: 'csrf_test_user',
+        firstName: 'CSRF Test',
+      });
 
       authToken = authResponse.body.token;
     } finally {
@@ -156,9 +154,7 @@ describe('CSRF Protection', () => {
     });
 
     it('should allow HEAD requests without origin check', async () => {
-      const response = await request(app)
-        .head('/health')
-        .set('Origin', 'https://attacker.com');
+      const response = await request(app).head('/health').set('Origin', 'https://attacker.com');
 
       expect(response.status).not.toBe(403);
     });
@@ -167,14 +163,12 @@ describe('CSRF Protection', () => {
   describe('Webhook Exemption', () => {
     it('should allow webhook POST without origin (external services)', async () => {
       // BlockCypher webhook simulation
-      const response = await request(app)
-        .post('/webhooks/blockcypher?token=test-secret')
-        .send({
-          hash: '0x123test',
-          confirmations: 3,
-          block_height: 800000,
-          outputs: []
-        });
+      const response = await request(app).post('/webhooks/blockcypher?token=test-secret').send({
+        hash: '0x123test',
+        confirmations: 3,
+        block_height: 800000,
+        outputs: [],
+      });
 
       // Should not be blocked by CSRF (403)
       // May fail for other reasons (401 wrong token), but not 403
@@ -184,8 +178,7 @@ describe('CSRF Protection', () => {
 
   describe('Health Check Exemption', () => {
     it('should allow health check without origin', async () => {
-      const response = await request(app)
-        .get('/health');
+      const response = await request(app).get('/health');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -234,7 +227,7 @@ describe('CSRF Protection', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Hacked Shop',
-          description: 'Created by attacker'
+          description: 'Created by attacker',
         });
 
       expect(response.status).toBe(403);
@@ -259,7 +252,7 @@ describe('CSRF Protection', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           productId: 1,
-          quantity: 100
+          quantity: 100,
         });
 
       expect(response.status).toBe(403);

@@ -64,24 +64,14 @@ router.get('/:id', productValidation.getById, productController.getById);
  * @desc    Update product
  * @access  Private (Shop owner or worker)
  */
-router.put(
-  '/:id',
-  verifyToken,
-  productValidation.update,
-  productController.update
-);
+router.put('/:id', verifyToken, productValidation.update, productController.update);
 
 /**
  * @route   DELETE /api/products/:id
  * @desc    Delete product
  * @access  Private (Shop owner or worker)
  */
-router.delete(
-  '/:id',
-  verifyToken,
-  productValidation.getById,
-  productController.delete
-);
+router.delete('/:id', verifyToken, productValidation.getById, productController.delete);
 
 /**
  * @route   POST /api/products/bulk-delete-all
@@ -113,22 +103,14 @@ router.post(
  * @desc    Apply bulk discount to all products in a shop
  * @access  Private (Shop owner or worker)
  */
-router.post(
-  '/bulk-discount',
-  verifyToken,
-  productController.applyBulkDiscount
-);
+router.post('/bulk-discount', verifyToken, productController.applyBulkDiscount);
 
 /**
  * @route   POST /api/products/bulk-discount/remove
  * @desc    Remove bulk discount from all products in a shop
  * @access  Private (Shop owner or worker)
  */
-router.post(
-  '/bulk-discount/remove',
-  verifyToken,
-  productController.removeBulkDiscount
-);
+router.post('/bulk-discount/remove', verifyToken, productController.removeBulkDiscount);
 
 /**
  * @route   POST /api/products/bulk-update

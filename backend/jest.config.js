@@ -15,10 +15,7 @@ export default {
   coverageReporters: ['text', 'lcov', 'html'],
 
   // Test match patterns
-  testMatch: [
-    '**/__tests__/**/*.test.js',
-    '**/?(*.)+(spec|test).js'
-  ],
+  testMatch: ['**/__tests__/**/*.test.js', '**/?(*.)+(spec|test).js'],
 
   // Module settings
   transform: {},

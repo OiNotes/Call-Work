@@ -6,11 +6,11 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createTestApp } from './helpers/testApp.js';
-import { 
-  closeTestDb, 
+import {
+  closeTestDb,
   cleanupTestData,
   createTestUser,
-  getUserByTelegramId
+  getUserByTelegramId,
 } from './helpers/testDb.js';
 
 const app = createTestApp();
@@ -32,10 +32,7 @@ describe('POST /api/auth/register', () => {
       lastName: 'User',
     };
 
-    const response = await request(app)
-      .post('/api/auth/register')
-      .send(userData)
-      .expect(201);
+    const response = await request(app).post('/api/auth/register').send(userData).expect(201);
 
     // Check response structure
     expect(response.body).toHaveProperty('token');
@@ -98,11 +95,9 @@ describe('GET /api/auth/profile', () => {
     });
 
     // Generate token
-    const token = jwt.sign(
-      { id: user.id, telegram_id: user.telegram_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, telegram_id: user.telegram_id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     const response = await request(app)
       .get('/api/auth/profile')
@@ -115,9 +110,7 @@ describe('GET /api/auth/profile', () => {
   });
 
   it('should reject request without token', async () => {
-    const response = await request(app)
-      .get('/api/auth/profile')
-      .expect(401);
+    const response = await request(app).get('/api/auth/profile').expect(401);
 
     expect(response.body).toHaveProperty('error');
   });
@@ -140,11 +133,9 @@ describe('PATCH /api/auth/role', () => {
       selected_role: 'buyer',
     });
 
-    const token = jwt.sign(
-      { id: user.id, telegram_id: user.telegram_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, telegram_id: user.telegram_id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     const response = await request(app)
       .patch('/api/auth/role')
@@ -166,11 +157,9 @@ describe('PATCH /api/auth/role', () => {
       selected_role: 'seller',
     });
 
-    const token = jwt.sign(
-      { id: user.id, telegram_id: user.telegram_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, telegram_id: user.telegram_id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     const response = await request(app)
       .patch('/api/auth/role')
@@ -188,11 +177,9 @@ describe('PATCH /api/auth/role', () => {
   it('should reject invalid role', async () => {
     const user = await createTestUser();
 
-    const token = jwt.sign(
-      { id: user.id, telegram_id: user.telegram_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, telegram_id: user.telegram_id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     const response = await request(app)
       .patch('/api/auth/role')
@@ -217,11 +204,9 @@ describe('Auth Middleware', () => {
   it('should allow access to protected route with valid token', async () => {
     const user = await createTestUser();
 
-    const token = jwt.sign(
-      { id: user.id, telegram_id: user.telegram_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, telegram_id: user.telegram_id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     // Try accessing protected route (e.g., /api/shops/my)
     const response = await request(app)
@@ -233,9 +218,7 @@ describe('Auth Middleware', () => {
   });
 
   it('should block access to protected route without token', async () => {
-    const response = await request(app)
-      .get('/api/shops/my')
-      .expect(401);
+    const response = await request(app).get('/api/shops/my').expect(401);
 
     expect(response.body).toHaveProperty('error');
   });

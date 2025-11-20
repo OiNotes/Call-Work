@@ -17,7 +17,7 @@ class DeepSeekClient {
     this.client = new OpenAI({
       baseURL: 'https://api.deepseek.com',
       apiKey: config.deepseekApiKey,
-      timeout: 10000 // 10s timeout
+      timeout: 10000, // 10s timeout
     });
 
     logger.info('DeepSeek client initialized');
@@ -44,7 +44,13 @@ class DeepSeekClient {
    * @param {number} maxRetries - Max retry attempts (if using positional args)
    * @returns {Object} API response with tool calls
    */
-  async chat(systemPromptOrOptions, userMessage, tools = [], conversationHistory = [], maxRetries = 3) {
+  async chat(
+    systemPromptOrOptions,
+    userMessage,
+    tools = [],
+    conversationHistory = [],
+    maxRetries = 3
+  ) {
     if (!this.isAvailable()) {
       throw new Error('DeepSeek API not configured');
     }
@@ -57,18 +63,22 @@ class DeepSeekClient {
     let toolChoice;
     let retries;
 
-    if (typeof systemPromptOrOptions === 'object' && systemPromptOrOptions !== null && !Array.isArray(systemPromptOrOptions)) {
+    if (
+      typeof systemPromptOrOptions === 'object' &&
+      systemPromptOrOptions !== null &&
+      !Array.isArray(systemPromptOrOptions)
+    ) {
       // New style: options object
       const options = systemPromptOrOptions;
       systemPrompt = options.system;
       messages = options.messages || [];
       apiTools = options.tools || [];
       temperature = options.temperature;
-      toolChoice = options.toolChoice;  // Support custom tool_choice
+      toolChoice = options.toolChoice; // Support custom tool_choice
       retries = options.maxRetries || 3;
 
       // If system prompt provided, ensure it's at the start of messages
-      if (systemPrompt && !messages.some(m => m.role === 'system')) {
+      if (systemPrompt && !messages.some((m) => m.role === 'system')) {
         messages = [{ role: 'system', content: systemPrompt }, ...messages];
       }
     } else {
@@ -82,7 +92,7 @@ class DeepSeekClient {
       messages = [
         { role: 'system', content: systemPrompt },
         ...conversationHistory,
-        { role: 'user', content: userMessage }
+        { role: 'user', content: userMessage },
       ];
     }
 
@@ -90,7 +100,7 @@ class DeepSeekClient {
     logger.debug('deepseek_api_messages', {
       messagesCount: messages.length,
       historyLength: conversationHistory.length,
-      messages: JSON.stringify(messages, null, 2)
+      messages: JSON.stringify(messages, null, 2),
     });
 
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -98,22 +108,19 @@ class DeepSeekClient {
         const startTime = Date.now();
 
         // Determine temperature: explicit > auto-detect based on tools > default
-        const finalTemperature = temperature !== undefined
-          ? temperature
-          : (apiTools.length > 0 ? 0.2 : 0.7);
+        const finalTemperature =
+          temperature !== undefined ? temperature : apiTools.length > 0 ? 0.2 : 0.7;
 
         // Determine tool_choice: explicit > 'auto' (default when tools present) > undefined
-        const finalToolChoice = apiTools.length > 0
-          ? (toolChoice || 'auto')
-          : undefined;
+        const finalToolChoice = apiTools.length > 0 ? toolChoice || 'auto' : undefined;
 
         const response = await this.client.chat.completions.create({
           model: 'deepseek-chat',
           messages,
           tools: apiTools.length > 0 ? apiTools : undefined,
-          tool_choice: finalToolChoice,  // Support explicit tool_choice: 'auto', 'none', 'required'
-          temperature: finalTemperature,  // Support explicit temperature override
-          max_tokens: 500
+          tool_choice: finalToolChoice, // Support explicit tool_choice: 'auto', 'none', 'required'
+          temperature: finalTemperature, // Support explicit temperature override
+          max_tokens: 500,
         });
 
         const latency = Date.now() - startTime;
@@ -128,32 +135,32 @@ class DeepSeekClient {
           latencyMs: latency,
           model: response.model,
           finishReason: response.choices[0]?.finish_reason,
-          attempt
+          attempt,
         });
 
         return response;
-
       } catch (error) {
         logger.error(`DeepSeek API error (attempt ${attempt}/${maxRetries}):`, {
           error: error.message,
           status: error.status,
           code: error.code,
-          type: error.type
+          type: error.type,
         });
 
         // Retry on 503 (server overload) and 429 (rate limit) with exponential backoff
         if ((error.status === 503 || error.status === 429) && attempt < maxRetries) {
-          const delay = error.status === 429
-            ? Math.pow(2, attempt) * 2000  // Longer delay for rate limits: 4s, 8s, 16s
-            : Math.pow(2, attempt) * 1000; // Regular delay for 503: 2s, 4s, 8s
-          
+          const delay =
+            error.status === 429
+              ? Math.pow(2, attempt) * 2000 // Longer delay for rate limits: 4s, 8s, 16s
+              : Math.pow(2, attempt) * 1000; // Regular delay for 503: 2s, 4s, 8s
+
           logger.warn(`DeepSeek API error ${error.status}, retry ${attempt}/${maxRetries}`, {
             delay,
             status: error.status,
-            message: error.message
+            message: error.message,
           });
-          
-          await new Promise(resolve => setTimeout(resolve, delay));
+
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
@@ -165,7 +172,7 @@ class DeepSeekClient {
         // Retry on network errors and 500 errors
         if (attempt < maxRetries && (error.code === 'ECONNREFUSED' || error.status >= 500)) {
           const delay = Math.pow(2, attempt) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
 
@@ -186,7 +193,13 @@ class DeepSeekClient {
    * @param {Function} onChunk - Callback called with each text chunk: (chunk: string, fullText: string) => void
    * @returns {Object} Complete response with finish_reason, content, and tool_calls
    */
-  async chatStreaming(systemPrompt, userMessage, tools = [], conversationHistory = [], onChunk = null) {
+  async chatStreaming(
+    systemPrompt,
+    userMessage,
+    tools = [],
+    conversationHistory = [],
+    onChunk = null
+  ) {
     if (!this.isAvailable()) {
       throw new Error('DeepSeek API not configured');
     }
@@ -194,14 +207,14 @@ class DeepSeekClient {
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
-      { role: 'user', content: userMessage }
+      { role: 'user', content: userMessage },
     ];
 
     // Debug logging - see what AI actually receives
     logger.debug('deepseek_api_messages_streaming', {
       messagesCount: messages.length,
       historyLength: conversationHistory.length,
-      messages: JSON.stringify(messages, null, 2)
+      messages: JSON.stringify(messages, null, 2),
     });
 
     const startTime = Date.now();
@@ -214,10 +227,10 @@ class DeepSeekClient {
         model: 'deepseek-chat',
         messages,
         tools: tools.length > 0 ? tools : undefined,
-        tool_choice: tools.length > 0 ? 'auto' : undefined,  // 'auto' - AI сам решает когда использовать функции
-        temperature: tools.length > 0 ? 0.2 : 0.7,  // Низкая temp для function calling, нормальная для чата
+        tool_choice: tools.length > 0 ? 'auto' : undefined, // 'auto' - AI сам решает когда использовать функции
+        temperature: tools.length > 0 ? 0.2 : 0.7, // Низкая temp для function calling, нормальная для чата
         max_tokens: 500,
-        stream: true  // Enable streaming
+        stream: true, // Enable streaming
       });
 
       // Process stream chunks
@@ -247,8 +260,8 @@ class DeepSeekClient {
                 type: 'function',
                 function: {
                   name: toolCall.function?.name || '',
-                  arguments: toolCall.function?.arguments || ''
-                }
+                  arguments: toolCall.function?.arguments || '',
+                },
               };
             } else {
               // Accumulate function arguments
@@ -271,27 +284,28 @@ class DeepSeekClient {
         latencyMs: latency,
         textLength: fullText.length,
         toolCallsCount: toolCalls.length,
-        finishReason
+        finishReason,
       });
 
       // Return response in same format as non-streaming chat()
       return {
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: fullText || null,
-            tool_calls: toolCalls.length > 0 ? toolCalls : undefined
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: fullText || null,
+              tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+            },
+            finish_reason: finishReason,
           },
-          finish_reason: finishReason
-        }],
-        model: 'deepseek-chat'
+        ],
+        model: 'deepseek-chat',
       };
-
     } catch (error) {
       logger.error('DeepSeek streaming API error:', {
         error: error.message,
         status: error.status,
-        code: error.code
+        code: error.code,
       });
       throw error;
     }
@@ -307,8 +321,8 @@ class DeepSeekClient {
    * @returns {number} Cost in USD
    */
   calculateCost(promptTokens, completionTokens, cacheHit = false) {
-    const inputCostPerM = cacheHit ? 0.068 : 0.27;  // $0.068 or $0.27 per 1M tokens
-    const outputCostPerM = 1.09;  // $1.09 per 1M tokens
+    const inputCostPerM = cacheHit ? 0.068 : 0.27; // $0.068 or $0.27 per 1M tokens
+    const outputCostPerM = 1.09; // $1.09 per 1M tokens
 
     const inputCost = (promptTokens / 1000000) * inputCostPerM;
     const outputCost = (completionTokens / 1000000) * outputCostPerM;

@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
-import { syncQueue, queueProductSync, getSyncStatus, closeQueue } from '../../src/jobs/syncQueue.js';
+import {
+  syncQueue,
+  queueProductSync,
+  getSyncStatus,
+  closeQueue,
+} from '../../src/jobs/syncQueue.js';
 
 // Mock the productSyncService
 jest.unstable_mockModule('../../src/services/productSyncService.js', () => ({
@@ -78,9 +83,9 @@ describe('Product Sync Queue', () => {
     // This test verifies the job is added to queue
     // Actual processing happens in worker
     const jobCount = await syncQueue.count();
-    
+
     await queueProductSync(4, 5, 4);
-    
+
     const newJobCount = await syncQueue.count();
     expect(newJobCount).toBeGreaterThanOrEqual(jobCount);
   });

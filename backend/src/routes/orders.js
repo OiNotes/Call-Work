@@ -10,12 +10,7 @@ const router = express.Router();
  * @desc    Create new order
  * @access  Private (WebApp)
  */
-router.post(
-  '/',
-  verifyToken,
-  orderValidation.create,
-  orderController.create
-);
+router.post('/', verifyToken, orderValidation.create, orderController.create);
 
 /**
  * @route   GET /api/orders/my
@@ -68,35 +63,21 @@ router.get('/', verifyToken, (req, res, next) => {
  * @desc    Generate invoice for order payment
  * @access  Private (WebApp)
  */
-router.post(
-  '/:id/invoice',
-  verifyToken,
-  orderController.generateInvoice
-);
+router.post('/:id/invoice', verifyToken, orderController.generateInvoice);
 
 /**
  * @route   GET /api/orders/:id
  * @desc    Get order by ID
  * @access  Private (WebApp)
  */
-router.get(
-  '/:id',
-  verifyToken,
-  orderValidation.getById,
-  orderController.getById
-);
+router.get('/:id', verifyToken, orderValidation.getById, orderController.getById);
 
 /**
  * @route   PUT /api/orders/:id/status
  * @desc    Update order status
  * @access  Private (WebApp)
  */
-router.put(
-  '/:id/status',
-  verifyToken,
-  orderValidation.updateStatus,
-  orderController.updateStatus
-);
+router.put('/:id/status', verifyToken, orderValidation.updateStatus, orderController.updateStatus);
 
 /**
  * @route   POST /api/orders/bulk-status

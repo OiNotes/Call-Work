@@ -19,10 +19,10 @@ export function validateCryptoAddress(address, crypto) {
 
     // Map crypto names to wallet-validator currency names
     const currencyMap = {
-      'btc': 'bitcoin',
-      'eth': 'ethereum',
-      'usdt': 'tron',      // USDT uses Tron TRC-20 (TR... addresses)
-      'ltc': 'litecoin'
+      btc: 'bitcoin',
+      eth: 'ethereum',
+      usdt: 'tron', // USDT uses Tron TRC-20 (TR... addresses)
+      ltc: 'litecoin',
     };
 
     const validatorCurrency = currencyMap[currency];
@@ -37,7 +37,7 @@ export function validateCryptoAddress(address, crypto) {
     logger.error('Error validating crypto address:', {
       error: error.message,
       address: address.substring(0, 10) + '...',
-      crypto
+      crypto,
     });
     return false;
   }
@@ -88,7 +88,7 @@ export function getCryptoValidationError(crypto) {
     BTC: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa (начинается с 1, 3, или bc1)',
     ETH: '0x742d35Cc6634C0532925a3b844Bc7e7595f42bE1 (начинается с 0x)',
     USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t (начинается с TR)',
-    LTC: 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R (начинается с L, M, или ltc1)'
+    LTC: 'LTC1A2B3C4D5E6F7G8H9J0K1L2M3N4P5Q6R (начинается с L, M, или ltc1)',
   };
 
   return `❌ Неверный формат ${crypto} адреса\n\nПример:\n${examples[crypto] || 'проверьте формат адреса'}`;

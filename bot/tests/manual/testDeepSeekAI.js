@@ -1,8 +1,8 @@
 /**
  * Manual DeepSeek AI Testing Script
- * 
+ *
  * Реальные вызовы DeepSeek API для тестирования всех 9 операций
- * 
+ *
  * Usage:
  *   node tests/manual/testDeepSeekAI.js
  */
@@ -24,13 +24,13 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 const mockProducts = [
   { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 },
   { id: 2, name: 'MacBook Pro', price: 2499, currency: 'USD', stock_quantity: 5 },
-  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 }
+  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 },
 ];
 
 // Initialize DeepSeek client
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY
+  apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
 // Use real productTools from source
@@ -48,11 +48,14 @@ const toolsOLD = [
           price: { type: 'number', description: 'Цена товара (положительное число)' },
           currency: { type: 'string', enum: ['USD', 'EUR', 'RUB'], description: 'Валюта' },
           description: { type: 'string', description: 'Описание товара (опционально)' },
-          stock_quantity: { type: 'integer', description: 'Количество на складе (опционально, по умолчанию 0)' }
+          stock_quantity: {
+            type: 'integer',
+            description: 'Количество на складе (опционально, по умолчанию 0)',
+          },
         },
-        required: ['name', 'price']
-      }
-    }
+        required: ['name', 'price'],
+      },
+    },
   },
   {
     type: 'function',
@@ -62,19 +65,19 @@ const toolsOLD = [
       parameters: {
         type: 'object',
         properties: {
-          productName: { type: 'string', description: 'Название товара для удаления' }
+          productName: { type: 'string', description: 'Название товара для удаления' },
         },
-        required: ['productName']
-      }
-    }
+        required: ['productName'],
+      },
+    },
   },
   {
     type: 'function',
     function: {
       name: 'listProducts',
       description: 'Показать все товары в каталоге',
-      parameters: { type: 'object', properties: {} }
-    }
+      parameters: { type: 'object', properties: {} },
+    },
   },
   {
     type: 'function',
@@ -84,11 +87,11 @@ const toolsOLD = [
       parameters: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Поисковый запрос' }
+          query: { type: 'string', description: 'Поисковый запрос' },
         },
-        required: ['query']
-      }
-    }
+        required: ['query'],
+      },
+    },
   },
   {
     type: 'function',
@@ -104,21 +107,21 @@ const toolsOLD = [
             properties: {
               name: { type: 'string' },
               price: { type: 'number' },
-              stock_quantity: { type: 'integer' }
-            }
-          }
+              stock_quantity: { type: 'integer' },
+            },
+          },
         },
-        required: ['productName', 'updates']
-      }
-    }
+        required: ['productName', 'updates'],
+      },
+    },
   },
   {
     type: 'function',
     function: {
       name: 'bulkDeleteAll',
       description: 'Удалить ВСЕ товары из каталога (очистить полностью)',
-      parameters: { type: 'object', properties: {} }
-    }
+      parameters: { type: 'object', properties: {} },
+    },
   },
   {
     type: 'function',
@@ -131,12 +134,12 @@ const toolsOLD = [
           productNames: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Массив названий товаров для удаления'
-          }
+            description: 'Массив названий товаров для удаления',
+          },
         },
-        required: ['productNames']
-      }
-    }
+        required: ['productNames'],
+      },
+    },
   },
   {
     type: 'function',
@@ -147,11 +150,14 @@ const toolsOLD = [
         type: 'object',
         properties: {
           productName: { type: 'string', description: 'Название проданного товара' },
-          quantity: { type: 'integer', description: 'Количество проданных единиц (по умолчанию 1)' }
+          quantity: {
+            type: 'integer',
+            description: 'Количество проданных единиц (по умолчанию 1)',
+          },
         },
-        required: ['productName']
-      }
-    }
+        required: ['productName'],
+      },
+    },
   },
   {
     type: 'function',
@@ -161,12 +167,12 @@ const toolsOLD = [
       parameters: {
         type: 'object',
         properties: {
-          productName: { type: 'string', description: 'Название товара' }
+          productName: { type: 'string', description: 'Название товара' },
         },
-        required: ['productName']
-      }
-    }
-  }
+        required: ['productName'],
+      },
+    },
+  },
 ];
 
 // Test single command
@@ -183,22 +189,22 @@ async function testCommand(userMessage, products = mockProducts) {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+        { role: 'user', content: userMessage },
       ],
       tools: productTools,
       tool_choice: 'auto',
-      temperature: 0.7,  // Match production settings
-      max_tokens: 500
+      temperature: 0.7, // Match production settings
+      max_tokens: 500,
     });
 
     const message = response.choices[0].message;
 
     if (message.tool_calls && message.tool_calls.length > 0) {
       console.log('✅ AI RESPONSE: Function Call');
-      message.tool_calls.forEach(call => {
+      message.tool_calls.forEach((call) => {
         console.log(`   Function: ${call.function.name}`);
         console.log(`   Arguments: ${call.function.arguments}`);
-        
+
         try {
           const args = JSON.parse(call.function.arguments);
           console.log(`   Parsed:`, JSON.stringify(args, null, 2));
@@ -214,7 +220,9 @@ async function testCommand(userMessage, products = mockProducts) {
     }
 
     // Usage stats
-    console.log(`\n📊 Tokens: ${response.usage.total_tokens} (prompt: ${response.usage.prompt_tokens}, completion: ${response.usage.completion_tokens})`);
+    console.log(
+      `\n📊 Tokens: ${response.usage.total_tokens} (prompt: ${response.usage.prompt_tokens}, completion: ${response.usage.completion_tokens})`
+    );
 
     return response;
   } catch (error) {
@@ -285,8 +293,14 @@ async function runAllTests() {
     // ========================================
     // BULK ADD PRODUCTS (НОВЫЕ ТЕСТЫ)
     // ========================================
-    { command: 'добавь: iPhone 999 3шт, Samsung 799 5шт, Xiaomi 399', category: 'BULK ADD PRODUCTS (3 items)' },
-    { command: 'добавь товары: красная кружка $10 2шт, синяя кружка $12', category: 'BULK ADD PRODUCTS (2 items)' },
+    {
+      command: 'добавь: iPhone 999 3шт, Samsung 799 5шт, Xiaomi 399',
+      category: 'BULK ADD PRODUCTS (3 items)',
+    },
+    {
+      command: 'добавь товары: красная кружка $10 2шт, синяя кружка $12',
+      category: 'BULK ADD PRODUCTS (2 items)',
+    },
 
     // ========================================
     // UPDATE PRODUCT - DISCOUNT (НОВЫЕ ТЕСТЫ)
@@ -300,14 +314,17 @@ async function runAllTests() {
     // ========================================
     { command: 'скидка 20% на все товары', category: 'BULK UPDATE PRICES - Discount All' },
     { command: 'подними цены на 10%', category: 'BULK UPDATE PRICES - Increase All' },
-    { command: 'скидка 15% на всё кроме iPhone', category: 'BULK UPDATE PRICES - Exclude Products' },
+    {
+      command: 'скидка 15% на всё кроме iPhone',
+      category: 'BULK UPDATE PRICES - Exclude Products',
+    },
     { command: 'распродажа 25% на 24 часа', category: 'BULK UPDATE PRICES - Timed Discount' },
 
     // ========================================
     // UPDATE PRODUCT - STOCK (НОВЫЕ ТЕСТЫ)
     // ========================================
     { command: 'увеличь остаток iPhone до 50', category: 'UPDATE PRODUCT - Increase Stock' },
-    { command: 'уменьши количество MacBook до 3', category: 'UPDATE PRODUCT - Decrease Stock' }
+    { command: 'уменьши количество MacBook до 3', category: 'UPDATE PRODUCT - Decrease Stock' },
   ];
 
   let successCount = 0;
@@ -317,9 +334,9 @@ async function runAllTests() {
     try {
       await testCommand(test.command, test.products || mockProducts);
       successCount++;
-      
+
       // Sleep 1s между запросами (rate limit)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error) {
       failCount++;
       console.error(`\n❌ Test failed: ${test.category}`);
@@ -346,7 +363,7 @@ runAllTests()
     console.log('\n✅ All tests completed');
     process.exit(0);
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('\n❌ Tests failed:', error.message);
     process.exit(1);
   });

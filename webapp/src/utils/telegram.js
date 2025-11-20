@@ -5,7 +5,6 @@
 export function initTelegramApp() {
   const tg = window.Telegram?.WebApp;
   if (!tg) {
-    console.warn('Telegram WebApp SDK not found');
     return null;
   }
 
@@ -16,22 +15,13 @@ export function initTelegramApp() {
 
     // ✅ Check platform before requesting fullscreen (not supported on web)
     if (tg.requestFullscreen && tg.platform !== 'web') {
-      console.log('🚀 Requesting FULL fullscreen mode...');
       try {
         tg.requestFullscreen();
-        console.log('✅ Fullscreen requested successfully');
-      } catch (err) {
-        console.warn('⚠️ Fullscreen request failed:', err);
-      }
+      } catch (err) {}
     } else {
-      console.log('ℹ️ Fullscreen not available on this platform');
     }
 
     // Проверка fullscreen режима
-    console.log('📱 Fullscreen mode:', tg.isExpanded);
-    console.log('📱 Viewport height:', tg.viewportHeight);
-    console.log('📱 Platform:', tg.platform);
-    console.log('📱 Version:', tg.version);
 
     // Настройка цветов
     tg.setHeaderColor('#0A0A0A');
@@ -50,12 +40,6 @@ export function initTelegramApp() {
     // Подписка на viewport события для адаптивности
     if (tg.onEvent) {
       tg.onEvent('viewportChanged', (data) => {
-        console.log('📱 Viewport changed:', {
-          isExpanded: data.isExpanded,
-          height: data.height,
-          isStateStable: data.isStateStable
-        });
-
         // Принудительно установить высоту при изменении viewport
         if (data.isExpanded) {
           document.documentElement.style.height = '100vh';
@@ -64,9 +48,7 @@ export function initTelegramApp() {
       });
 
       // Обработчики fullscreen событий (Mini Apps 2.0)
-      tg.onEvent('fullscreenChanged', (data) => {
-        console.log('🖥️ Fullscreen changed:', data);
-      });
+      tg.onEvent('fullscreenChanged', (data) => {});
 
       tg.onEvent('fullscreenFailed', (error) => {
         console.error('❌ Fullscreen failed:', error);

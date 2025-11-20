@@ -20,7 +20,7 @@ async function canMigrate(shopId) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    
+
     // Count migrations this month
     const result = await pool.query(
       `SELECT COUNT(*) as count
@@ -39,14 +39,16 @@ async function canMigrate(shopId) {
     // Next reset date (1st of next month)
     const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    logger.info(`[RateLimit] Shop ${shopId}: ${migrationsThisMonth}/${maxMigrations} migrations used this month`);
+    logger.info(
+      `[RateLimit] Shop ${shopId}: ${migrationsThisMonth}/${maxMigrations} migrations used this month`
+    );
 
     return {
       allowed,
       remaining,
       used: migrationsThisMonth,
       limit: maxMigrations,
-      resetDate
+      resetDate,
     };
   } catch (error) {
     logger.error(`[RateLimit] Error checking migration limit for shop ${shopId}:`, error);
@@ -61,10 +63,7 @@ async function canMigrate(shopId) {
  */
 async function isProShop(shopId) {
   try {
-    const result = await pool.query(
-      'SELECT tier FROM shops WHERE id = $1',
-      [shopId]
-    );
+    const result = await pool.query('SELECT tier FROM shops WHERE id = $1', [shopId]);
 
     if (result.rows.length === 0) {
       return false;
@@ -72,7 +71,7 @@ async function isProShop(shopId) {
 
     const isPro = result.rows[0].tier === 'pro';
     logger.info(`[RateLimit] Shop ${shopId} tier: ${result.rows[0].tier}`);
-    
+
     return isPro;
   } catch (error) {
     logger.error(`[RateLimit] Error checking PRO tier for shop ${shopId}:`, error);
@@ -93,7 +92,7 @@ async function validateMigration(shopId) {
       return {
         valid: false,
         error: 'UPGRADE_REQUIRED',
-        message: 'Channel migration is a PRO feature. Upgrade to PRO to unlock this feature.'
+        message: 'Channel migration is a PRO feature. Upgrade to PRO to unlock this feature.',
       };
     }
 
@@ -104,13 +103,13 @@ async function validateMigration(shopId) {
         valid: false,
         error: 'LIMIT_EXCEEDED',
         message: `You have reached the maximum of ${limitStatus.limit} migrations per month. Resets on ${limitStatus.resetDate.toLocaleDateString()}.`,
-        data: limitStatus
+        data: limitStatus,
       };
     }
 
     return {
       valid: true,
-      data: limitStatus
+      data: limitStatus,
     };
   } catch (error) {
     logger.error(`[RateLimit] Error validating migration for shop ${shopId}:`, error);
@@ -142,9 +141,4 @@ async function getMigrationHistory(shopId, limit = 10) {
   }
 }
 
-export {
-  canMigrate,
-  isProShop,
-  validateMigration,
-  getMigrationHistory
-};
+export { canMigrate, isProShop, validateMigration, getMigrationHistory };

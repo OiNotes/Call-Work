@@ -1,6 +1,6 @@
 /**
  * Subscription Checker Cron Jobs
- * 
+ *
  * Automated tasks for subscription management:
  * 1. Check expired subscriptions every hour
  * 2. Send expiration reminders daily
@@ -22,19 +22,20 @@ export function startExpirationChecker() {
   }
 
   // Run immediately on start
-  checkExpiredSubscriptions().catch(err => 
-    logger.error('Initial expiration check failed:', err)
-  );
+  checkExpiredSubscriptions().catch((err) => logger.error('Initial expiration check failed:', err));
 
   // Schedule hourly checks
-  expirationCheckInterval = setInterval(async () => {
-    try {
-      logger.info('Running hourly expiration check...');
-      await checkExpiredSubscriptions();
-    } catch (error) {
-      logger.error('Expiration check failed:', error);
-    }
-  }, 60 * 60 * 1000); // Every hour
+  expirationCheckInterval = setInterval(
+    async () => {
+      try {
+        logger.info('Running hourly expiration check...');
+        await checkExpiredSubscriptions();
+      } catch (error) {
+        logger.error('Expiration check failed:', error);
+      }
+    },
+    60 * 60 * 1000
+  ); // Every hour
 
   logger.info('Subscription expiration checker started (every 1 hour)');
 }
@@ -62,24 +63,27 @@ export function startReminderSender() {
 
   // Schedule first run at 10:00 AM
   setTimeout(() => {
-    sendExpirationReminders().catch(err => 
-      logger.error('Reminder send failed:', err)
-    );
+    sendExpirationReminders().catch((err) => logger.error('Reminder send failed:', err));
 
     // Then run daily at 10:00 AM
-    reminderInterval = setInterval(async () => {
-      try {
-        logger.info('Running daily reminder send...');
-        await sendExpirationReminders();
-      } catch (error) {
-        logger.error('Reminder send failed:', error);
-      }
-    }, 24 * 60 * 60 * 1000); // Every 24 hours
+    reminderInterval = setInterval(
+      async () => {
+        try {
+          logger.info('Running daily reminder send...');
+          await sendExpirationReminders();
+        } catch (error) {
+          logger.error('Reminder send failed:', error);
+        }
+      },
+      24 * 60 * 60 * 1000
+    ); // Every 24 hours
 
     logger.info('Subscription reminder sender started (daily at 10:00 AM)');
   }, msUntil10AM);
 
-  logger.info(`Subscription reminder sender scheduled (first run in ${Math.round(msUntil10AM / 1000 / 60)} minutes)`);
+  logger.info(
+    `Subscription reminder sender scheduled (first run in ${Math.round(msUntil10AM / 1000 / 60)} minutes)`
+  );
 }
 
 /**
@@ -109,7 +113,7 @@ async function checkExpiredSubscriptions() {
     logger.info('[SubscriptionChecker] Expiration check completed', {
       totalExpired: result.totalExpired,
       movedToGrace: result.movedToGrace,
-      deactivated: result.deactivated
+      deactivated: result.deactivated,
     });
 
     return result;
@@ -134,7 +138,7 @@ async function sendExpirationReminders() {
 
     logger.info('[SubscriptionChecker] Reminders sent', {
       sent: result.sent,
-      failed: result.failed
+      failed: result.failed,
     });
 
     return result;
@@ -153,7 +157,4 @@ export function startSubscriptionJobs() {
 }
 
 // Export individual checker functions for testing
-export {
-  checkExpiredSubscriptions,
-  sendExpirationReminders
-};
+export { checkExpiredSubscriptions, sendExpirationReminders };

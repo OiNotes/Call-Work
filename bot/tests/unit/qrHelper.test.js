@@ -7,7 +7,7 @@ import {
   generateQRWithTimeout,
   isQRTimeout,
   getQRErrorMessage,
-  QR_TIMEOUT
+  QR_TIMEOUT,
 } from '../../src/utils/qrHelper.js';
 
 describe('QR Helper', () => {
@@ -27,13 +27,11 @@ describe('QR Helper', () => {
     });
 
     it('should reject with timeout error if generation takes longer than timeout', async () => {
-      const generateFn = jest.fn(
-        () => new Promise(resolve => setTimeout(resolve, 5000))
-      );
+      const generateFn = jest.fn(() => new Promise((resolve) => setTimeout(resolve, 5000)));
 
-      await expect(
-        generateQRWithTimeout(generateFn, 1000)
-      ).rejects.toEqual(new Error('QR_GENERATION_TIMEOUT'));
+      await expect(generateQRWithTimeout(generateFn, 1000)).rejects.toEqual(
+        new Error('QR_GENERATION_TIMEOUT')
+      );
     });
 
     it('should propagate generation errors', async () => {
@@ -42,19 +40,17 @@ describe('QR Helper', () => {
         throw generateError;
       });
 
-      await expect(
-        generateQRWithTimeout(generateFn, 5000)
-      ).rejects.toEqual(generateError);
+      await expect(generateQRWithTimeout(generateFn, 5000)).rejects.toEqual(generateError);
     });
 
     it('should handle timeout error from Promise.race correctly', async () => {
       const generateFn = jest.fn(
-        () => new Promise(resolve => setTimeout(() => resolve({ success: true }), 3000))
+        () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 3000))
       );
 
-      await expect(
-        generateQRWithTimeout(generateFn, 1000)
-      ).rejects.toThrow('QR_GENERATION_TIMEOUT');
+      await expect(generateQRWithTimeout(generateFn, 1000)).rejects.toThrow(
+        'QR_GENERATION_TIMEOUT'
+      );
     });
   });
 

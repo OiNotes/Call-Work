@@ -104,6 +104,7 @@ echo "=== Design Check Complete ==="
 ## Design system rules:
 
 ### Colors:
+
 - **Primary:** `#FF6B00` (orange-primary) - brand color
 - **Background:** `#181818` (bg-dark-bg)
 - **Cards:** `#212121` (bg-dark-card)
@@ -111,18 +112,21 @@ echo "=== Design Check Complete ==="
 - **Glass:** `glass-card`, `glass-elevated` classes
 
 ### Effects:
+
 - **Glassmorphism:** `backdrop-blur-md` + `bg-white/5` or `bg-white/10`
 - **Rounded corners:** `rounded-xl` or `rounded-2xl`
 - **Borders:** `border border-white/10`
 - **Shadows:** Minimal (glassmorphism style)
 
 ### Spacing:
+
 - **Touch targets:** min `44px` (h-11 = 44px, py-3 = 48px total)
 - **Card padding:** `p-4`, `p-5`, or `p-6`
 - **Section gaps:** `gap-3`, `gap-4`, or `gap-6`
 - **Screen padding:** `p-4` or `px-4`
 
 ### Typography:
+
 - **Headings:** `font-bold tracking-tight` + `text-xl` or `text-2xl`
 - **Body:** `font-medium tracking-tight` or regular
 - **Small text:** `text-sm text-gray-400`
@@ -131,6 +135,7 @@ echo "=== Design Check Complete ==="
 ## Automatic suggestions:
 
 Claude will suggest fixes for:
+
 - ❌ Missing glassmorphism effects
 - ❌ Wrong color usage (not from design system)
 - ❌ Buttons too small (<44px)

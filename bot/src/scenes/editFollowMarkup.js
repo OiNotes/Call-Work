@@ -30,16 +30,15 @@ const showMarkupPrompt = async (ctx) => {
     logger.info('edit_markup_step:prompt', {
       userId: ctx.from.id,
       followId,
-      pendingModeSwitch
+      pendingModeSwitch,
     });
 
-    const message = pendingModeSwitch ?
-      followMessages.markupPrompt :
-      followMessages.markupPrompt;
+    const message = pendingModeSwitch ? followMessages.markupPrompt : followMessages.markupPrompt;
 
-    await ctx.reply(message, Markup.inlineKeyboard([
-      [Markup.button.callback('❌ Отмена', 'cancel_scene')]
-    ]));
+    await ctx.reply(
+      message,
+      Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'cancel_scene')]])
+    );
 
     return ctx.wizard.next();
   } catch (error) {
@@ -86,7 +85,7 @@ const handleMarkupInput = async (ctx) => {
       userId: ctx.from.id,
       followId,
       markup,
-      pendingModeSwitch
+      pendingModeSwitch,
     });
 
     await ctx.reply(followMessages.createSaving);
@@ -110,11 +109,10 @@ const handleMarkupInput = async (ctx) => {
         userId: ctx.from.id,
         followId,
         markup,
-        mode: follow.mode
+        mode: follow.mode,
       });
 
       return ctx.scene.leave();
-
     } catch (error) {
       logger.error('Error updating markup:', error);
 
@@ -132,7 +130,6 @@ const handleMarkupInput = async (ctx) => {
       await ctx.reply(message, followsMenu(Boolean(ctx.session?.hasFollows)));
       return ctx.scene.leave();
     }
-
   } catch (error) {
     logger.error('Error in handleMarkupInput step:', error);
     await ctx.reply(followMessages.switchError, followsMenu(Boolean(ctx.session?.hasFollows)));
@@ -157,32 +154,45 @@ editFollowMarkupScene.enter((ctx) => {
     return;
   }
 
-  // Check if already editing this follow (race condition protection)
-  if (ctx.session.editingFollowId === followId) {
+  const now = Date.now();
+
+  // ✅ Check if already editing this follow (with timestamp check)
+  const existingLock = ctx.session.editingFollowId;
+  const lockTimestamp = ctx.session.editingFollowTimestamp || 0;
+
+  // If same follow being edited AND lock is fresh (< 30 seconds old)
+  if (existingLock === followId && now - lockTimestamp < 30000) {
     logger.warn('Already editing follow, ignoring duplicate request', {
       userId: ctx.from.id,
-      followId
+      followId,
+      lockAge: now - lockTimestamp,
     });
     ctx.scene.leave();
     return;
   }
 
-  // Set lock
+  // ✅ Set lock with timestamp
   ctx.session.editingFollowId = followId;
+  ctx.session.editingFollowTimestamp = now;
 
   logger.info('edit_markup_scene_entered', {
     userId: ctx.from.id,
     followId,
-    pendingModeSwitch: ctx.scene.state.pendingModeSwitch || null
+    pendingModeSwitch: ctx.scene.state.pendingModeSwitch || null,
   });
 });
 
 // Handle scene leave - cleanup
 editFollowMarkupScene.leave(async (ctx) => {
-  // Clear lock
+  // ✅ Clear lock with timestamp
   delete ctx.session.editingFollowId;
+  delete ctx.session.editingFollowTimestamp;
   delete ctx.session.pendingModeSwitch;
 
+  // ✅ Clear wizard state (P1-2 fix)
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
   ctx.scene.state = {};
 
   logger.info(`User ${ctx.from?.id} left editFollowMarkup scene`);
@@ -198,7 +208,10 @@ editFollowMarkupScene.action('cancel_scene', async (ctx) => {
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     try {
-      await ctx.reply(followMessages.cancelOperationError, followsMenu(Boolean(ctx.session?.hasFollows)));
+      await ctx.reply(
+        followMessages.cancelOperationError,
+        followsMenu(Boolean(ctx.session?.hasFollows))
+      );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

@@ -98,6 +98,7 @@ fi
 ## Expected port status:
 
 When system is healthy:
+
 - ✅ Port 3000: Backend (node)
 - ✅ Port 5173: FREE (only used during webapp dev)
 - ✅ Port 5432: PostgreSQL (postgres)
@@ -115,6 +116,7 @@ When system is healthy:
 ## Common scenarios:
 
 ### Scenario 1: Backend won't start
+
 ```
 ❌ Error: listen EADDRINUSE: address already in use :::3000
 → Run "check ports" to see what's using port 3000
@@ -123,12 +125,14 @@ When system is healthy:
 ```
 
 ### Scenario 2: ngrok not running
+
 ```
 ⚠️ Port 4040 FREE - ngrok not running
 → Start everything: ./start.sh
 ```
 
 ### Scenario 3: PostgreSQL not running
+
 ```
 ⚠️ Port 5432 FREE - PostgreSQL should be running!
 → Start PostgreSQL: brew services start postgresql@14

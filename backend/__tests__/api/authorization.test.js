@@ -1,6 +1,6 @@
 /**
  * Authorization Tests
- * 
+ *
  * Tests for IDOR (Insecure Direct Object Reference) vulnerabilities
  * Ensures users can only access/modify their own resources
  */
@@ -9,12 +9,8 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
 import { config } from '../../src/config/env.js';
-import { 
-  userQueries, 
-  shopQueries, 
-  productQueries,
-  getClient 
-} from '../../src/models/db.js';
+import { userQueries, shopQueries, productQueries } from '../../src/database/queries/index.js';
+import { getClient } from '../../src/config/database.js';
 import { shopFollowQueries } from '../../src/models/shopFollowQueries.js';
 
 describe('Authorization - IDOR Prevention Tests', () => {
@@ -30,14 +26,14 @@ describe('Authorization - IDOR Prevention Tests', () => {
       telegram_id: Math.floor(Math.random() * 1000000),
       username: 'testuser1',
       first_name: 'Test',
-      last_name: 'User1'
+      last_name: 'User1',
     });
 
     user2 = await userQueries.create({
       telegram_id: Math.floor(Math.random() * 1000000),
       username: 'testuser2',
       first_name: 'Test',
-      last_name: 'User2'
+      last_name: 'User2',
     });
 
     // Generate tokens
@@ -59,7 +55,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       name: 'testshop1',
       description: 'Test Shop 1',
       subscription_tier: 'pro',
-      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
     shop2 = await shopQueries.create({
@@ -67,7 +63,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       name: 'testshop2',
       description: 'Test Shop 2',
       subscription_tier: 'pro',
-      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
     // Create products for both shops
@@ -77,7 +73,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       description: 'Description 1',
       price: 100,
       currency: 'USD',
-      stock: 10
+      stock: 10,
     });
 
     product2 = await productQueries.create({
@@ -86,7 +82,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       description: 'Description 2',
       price: 200,
       currency: 'USD',
-      stock: 20
+      stock: 20,
     });
 
     // Create follows
@@ -118,7 +114,10 @@ describe('Authorization - IDOR Prevention Tests', () => {
     // Cleanup
     const client = await getClient();
     try {
-      await client.query('DELETE FROM shop_follows WHERE follower_shop_id IN ($1, $2)', [shop1.id, shop2.id]);
+      await client.query('DELETE FROM shop_follows WHERE follower_shop_id IN ($1, $2)', [
+        shop1.id,
+        shop2.id,
+      ]);
       await client.query('DELETE FROM products WHERE shop_id IN ($1, $2)', [shop1.id, shop2.id]);
       await client.query('DELETE FROM shops WHERE id IN ($1, $2)', [shop1.id, shop2.id]);
       await client.query('DELETE FROM users WHERE id IN ($1, $2)', [user1.id, user2.id]);
@@ -137,7 +136,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       expect(response.status).toBe(200);
     });
 
-    test('Should DENY user from updating another user\'s follow markup', async () => {
+    test("Should DENY user from updating another user's follow markup", async () => {
       const response = await request(app)
         .put(`/api/shop-follows/${follow2.id}/markup`)
         .set('Authorization', `Bearer ${token1}`)
@@ -156,7 +155,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       expect(response.status).toBe(200);
     });
 
-    test('Should DENY user from switching another user\'s follow mode', async () => {
+    test("Should DENY user from switching another user's follow mode", async () => {
       const response = await request(app)
         .put(`/api/shop-follows/${follow2.id}/mode`)
         .set('Authorization', `Bearer ${token1}`)
@@ -189,7 +188,7 @@ describe('Authorization - IDOR Prevention Tests', () => {
       expect(response.status).toBe(200);
     });
 
-    test('Should DENY user from deleting another user\'s follow', async () => {
+    test("Should DENY user from deleting another user's follow", async () => {
       const response = await request(app)
         .delete(`/api/shop-follows/${follow2.id}`)
         .set('Authorization', `Bearer ${token1}`);
@@ -221,9 +220,9 @@ describe('Authorization - IDOR Prevention Tests', () => {
       const response = await request(app)
         .post(`/api/shops/${shop1.id}/migration`)
         .set('Authorization', `Bearer ${token2}`)
-        .send({ 
+        .send({
           targetChannelId: '@testchannel',
-          message: 'Test migration'
+          message: 'Test migration',
         });
 
       expect(response.status).toBe(403);
@@ -273,8 +272,8 @@ describe('Authorization - IDOR Prevention Tests', () => {
       const response = await request(app)
         .put(`/api/shops/${shop1.id}/wallets`)
         .set('Authorization', `Bearer ${token2}`)
-        .send({ 
-          walletBtc: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+        .send({
+          walletBtc: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         });
 
       expect(response.status).toBe(403);

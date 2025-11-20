@@ -18,7 +18,7 @@ const analytics = {
   commands: new Map(), // command -> { count, users: Set }
   scenes: new Map(), // scene -> { entered: count, left: count }
   errors: new Map(), // handler -> error count
-  responseTimes: [] // [{ handler, duration }]
+  responseTimes: [], // [{ handler, duration }]
 };
 
 /**
@@ -30,7 +30,7 @@ export const getAnalyticsSummary = () => {
     commandStats.push({
       command,
       count: data.count,
-      uniqueUsers: data.users.size
+      uniqueUsers: data.users.size,
     });
   }
 
@@ -40,7 +40,7 @@ export const getAnalyticsSummary = () => {
       scene,
       entered: data.entered,
       left: data.left,
-      activeNow: data.entered - data.left
+      activeNow: data.entered - data.left,
     });
   }
 
@@ -51,9 +51,10 @@ export const getAnalyticsSummary = () => {
 
   // Calculate average response times (last 100 requests)
   const recentResponseTimes = analytics.responseTimes.slice(-100);
-  const avgResponseTime = recentResponseTimes.length > 0
-    ? recentResponseTimes.reduce((sum, r) => sum + r.duration, 0) / recentResponseTimes.length
-    : 0;
+  const avgResponseTime =
+    recentResponseTimes.length > 0
+      ? recentResponseTimes.reduce((sum, r) => sum + r.duration, 0) / recentResponseTimes.length
+      : 0;
 
   return {
     commands: commandStats.sort((a, b) => b.count - a.count),
@@ -61,8 +62,8 @@ export const getAnalyticsSummary = () => {
     errors: errorStats.sort((a, b) => b.errorCount - a.errorCount),
     performance: {
       avgResponseTime: Math.round(avgResponseTime),
-      requestsTracked: recentResponseTimes.length
-    }
+      requestsTracked: recentResponseTimes.length,
+    },
   };
 };
 
@@ -113,7 +114,7 @@ export const trackError = (handler, error) => {
 
   logger.error(`[Analytics] Error in ${handlerName}:`, {
     error: error.message,
-    totalErrorsInHandler: currentCount + 1
+    totalErrorsInHandler: currentCount + 1,
   });
 };
 
@@ -135,14 +136,13 @@ export const analyticsMiddleware = async (ctx, next) => {
     const duration = Date.now() - startTime;
     analytics.responseTimes.push({
       handler: ctx.updateType,
-      duration
+      duration,
     });
 
     // Keep only last 1000 response times
     if (analytics.responseTimes.length > 1000) {
       analytics.responseTimes.shift();
     }
-
   } catch (error) {
     // Track error
     trackError(ctx.updateType, error);

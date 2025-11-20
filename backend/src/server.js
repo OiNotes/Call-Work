@@ -40,6 +40,7 @@ import workerRoutes from './routes/workers.js';
 import webhookRoutes from './routes/webhooks.js';
 import internalRoutes from './routes/internal.js';
 import aiRoutes from './routes/ai.js';
+import debugRoutes from './routes/debug.js';
 
 // Routes registration (will be added after middleware setup)
 
@@ -412,6 +413,12 @@ app.use('/api/shop-follows', followRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/webhooks', webhookRoutes); // Crypto payment webhooks
 app.use('/api/internal', internalRoutes); // Internal API for bot-backend communication
+
+// Debug routes (development only - protected by authentication)
+if (config.nodeEnv === 'development' || process.env.ENABLE_DEBUG_ROUTES === 'true') {
+  app.use('/api/debug', debugRoutes);
+  logger.info('Debug routes enabled at /api/debug');
+}
 
 /**
  * Fallback for React Router: serve index.html for non-API routes

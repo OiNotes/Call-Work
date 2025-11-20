@@ -12,9 +12,9 @@ import crypto from 'crypto';
 // Mock configuration
 const config = {
   telegram: {
-    botToken: 'TEST_BOT_TOKEN_123456:ABCdefGHIjklMNOpqrsTUVwxyz'
+    botToken: 'TEST_BOT_TOKEN_123456:ABCdefGHIjklMNOpqrsTUVwxyz',
   },
-  nodeEnv: 'development'
+  nodeEnv: 'development',
 };
 
 /**
@@ -26,14 +26,14 @@ function generateValidInitData(userId = 123456789, authDate = Math.floor(Date.no
     first_name: 'Test',
     last_name: 'User',
     username: 'testuser',
-    language_code: 'en'
+    language_code: 'en',
   });
 
   const params = new URLSearchParams({
     query_id: 'AAHdF6IQAAAAAN0XohDhrOrc',
     user: user,
     auth_date: authDate.toString(),
-    hash: '' // Will be calculated
+    hash: '', // Will be calculated
   });
 
   // Remove hash for calculation
@@ -52,10 +52,7 @@ function generateValidInitData(userId = 123456789, authDate = Math.floor(Date.no
     .digest();
 
   // Calculate hash
-  const hash = crypto
-    .createHmac('sha256', secretKey)
-    .update(dataCheckString)
-    .digest('hex');
+  const hash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
   // Add hash back
   params.set('hash', hash);
@@ -97,7 +94,7 @@ function verifyInitData(initData) {
         valid: false,
         error: 'Invalid signature',
         expected: calculatedHash.substring(0, 16),
-        received: hash.substring(0, 16)
+        received: hash.substring(0, 16),
       };
     }
 
@@ -112,7 +109,7 @@ function verifyInitData(initData) {
         valid: false,
         error: 'Expired',
         age,
-        maxAge
+        maxAge,
       };
     }
 
@@ -124,13 +121,12 @@ function verifyInitData(initData) {
       valid: true,
       user,
       age,
-      authDate
+      authDate,
     };
-
   } catch (error) {
     return {
       valid: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -160,7 +156,7 @@ console.log('Status:', !result2.valid ? '✅ PASS' : '❌ FAIL');
 
 // Test 3: Expired initData (2 days old)
 console.log('\n⏰ Test 3: Expired initData (2 days old)');
-const oldAuthDate = Math.floor(Date.now() / 1000) - (2 * 24 * 60 * 60);
+const oldAuthDate = Math.floor(Date.now() / 1000) - 2 * 24 * 60 * 60;
 const expiredInitData = generateValidInitData(123456789, oldAuthDate);
 console.log('initData:', expiredInitData.substring(0, 80) + '...');
 const result3 = verifyInitData(expiredInitData);

@@ -3,10 +3,10 @@
  */
 export const formatCurrency = (amount, currency) => {
   const decimals = {
-    'BTC': 8,
-    'ETH': 6,
-    'USDT': 2,
-    'LTC': 8
+    BTC: 8,
+    ETH: 6,
+    USDT: 2,
+    LTC: 8,
   };
 
   return parseFloat(amount).toFixed(decimals[currency] || 2);
@@ -33,10 +33,10 @@ export const generateOrderId = () => {
  */
 export const validateWalletAddress = (address, currency) => {
   const patterns = {
-    'BTC': /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/,
-    'ETH': /^0x[a-fA-F0-9]{40}$/,
-    'USDT': /^0x[a-fA-F0-9]{40}$/,
-    'LTC': /^[LM][a-km-zA-HJ-NP-Z1-9]{25,34}$|^ltc1[a-z0-9]{39,59}$/
+    BTC: /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/,
+    ETH: /^0x[a-fA-F0-9]{40}$/,
+    USDT: /^0x[a-fA-F0-9]{40}$/,
+    LTC: /^[LM][a-km-zA-HJ-NP-Z1-9]{25,34}$|^ltc1[a-z0-9]{39,59}$/,
   };
 
   return patterns[currency]?.test(address) || false;
@@ -46,12 +46,11 @@ export const validateWalletAddress = (address, currency) => {
  * Sanitize user input
  */
 export const sanitizeInput = (str) => {
-  if (typeof str !== 'string') {return str;}
+  if (typeof str !== 'string') {
+    return str;
+  }
 
-  return str
-    .trim()
-    .replace(/[<>]/g, '')
-    .substring(0, 1000);
+  return str.trim().replace(/[<>]/g, '').substring(0, 1000);
 };
 
 /**
@@ -72,7 +71,7 @@ export const successResponse = (data, message = null) => {
   return {
     success: true,
     ...(message && { message }),
-    data
+    data,
   };
 };
 
@@ -83,7 +82,7 @@ export const errorResponse = (error, details = null) => {
   return {
     success: false,
     error,
-    ...(details && { details })
+    ...(details && { details }),
   };
 };
 
@@ -92,10 +91,10 @@ export const errorResponse = (error, details = null) => {
  */
 export const generateTxHash = (currency = 'ETH') => {
   const hashLength = {
-    'BTC': 64,
-    'ETH': 66, // 0x + 64
-    'USDT': 66,
-    'LTC': 64
+    BTC: 64,
+    ETH: 66, // 0x + 64
+    USDT: 66,
+    LTC: 64,
   };
 
   const length = hashLength[currency] || 64;
@@ -115,7 +114,7 @@ export const generateTxHash = (currency = 'ETH') => {
  * Sleep/delay function
  */
 export const sleep = (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 /**
@@ -133,7 +132,9 @@ export const safeJSONParse = (str, defaultValue = null) => {
  * Calculate percentage
  */
 export const calculatePercentage = (value, total) => {
-  if (total === 0) {return 0;}
+  if (total === 0) {
+    return 0;
+  }
   return ((value / total) * 100).toFixed(2);
 };
 
@@ -149,7 +150,9 @@ export const isValidEmail = (email) => {
  * Mask sensitive data
  */
 export const maskString = (str, visibleChars = 4) => {
-  if (!str || str.length <= visibleChars * 2) {return str;}
+  if (!str || str.length <= visibleChars * 2) {
+    return str;
+  }
 
   const start = str.substring(0, visibleChars);
   const end = str.substring(str.length - visibleChars);
@@ -170,9 +173,15 @@ export const getRelativeTime = (timestamp) => {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) {return `${days} day${days > 1 ? 's' : ''} ago`;}
-  if (hours > 0) {return `${hours} hour${hours > 1 ? 's' : ''} ago`;}
-  if (minutes > 0) {return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;}
+  if (days > 0) {
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+  if (hours > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+  if (minutes > 0) {
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  }
   return `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
 };
 
@@ -191,5 +200,5 @@ export default {
   calculatePercentage,
   isValidEmail,
   maskString,
-  getRelativeTime
+  getRelativeTime,
 };

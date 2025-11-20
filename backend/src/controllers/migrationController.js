@@ -1,10 +1,12 @@
 /**
  * Migration Controller
- * 
+ *
  * Handles channel migration API endpoints for PRO shop owners
  */
 
 import pool from '../config/database.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
 import * as rateLimit from '../services/rateLimit.js';
 import * as broadcastService from '../services/broadcastService.js';
@@ -13,7 +15,7 @@ import * as broadcastService from '../services/broadcastService.js';
  * Check migration eligibility (PRO tier + rate limits)
  * GET /api/shops/:shopId/migration/check
  */
-async function checkMigrationEligibility(req, res) {
+const checkMigrationEligibility = asyncHandler(async (req, res) => {
   try {
     const shopId = parseInt(req.params.shopId, 10);
     const userId = req.user.id;
@@ -25,13 +27,13 @@ async function checkMigrationEligibility(req, res) {
     );
 
     if (shopResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Shop not found' });
+      throw new NotFoundError('Shop');
     }
 
     const shop = shopResult.rows[0];
 
     if (shop.owner_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to manage this shop' });
+      throw new UnauthorizedError('Not authorized to manage this shop');
     }
 
     // Validate migration eligibility
@@ -42,7 +44,7 @@ async function checkMigrationEligibility(req, res) {
         eligible: false,
         error: validation.error,
         message: validation.message,
-        data: validation.data
+        data: validation.data,
       });
     }
 
@@ -54,23 +56,23 @@ async function checkMigrationEligibility(req, res) {
       shop: {
         id: shop.id,
         name: shop.name,
-        tier: shop.tier
+        tier: shop.tier,
       },
       limits: validation.data,
-      subscriberCount: subscribers.length
+      subscriberCount: subscribers.length,
     });
   } catch (error) {
     logger.error('[MigrationController] Error checking eligibility:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
-}
+});
 
 /**
  * Initiate channel migration broadcast
  * POST /api/shops/:shopId/migration
  * Body: { newChannelUrl: string, oldChannelUrl?: string, botInstance: object }
  */
-async function initiateMigration(req, res) {
+const initiateMigration = asyncHandler(async (req, res) => {
   try {
     const shopId = parseInt(req.params.shopId, 10);
     const userId = req.user.id;
@@ -78,7 +80,7 @@ async function initiateMigration(req, res) {
 
     // Validate required fields
     if (!newChannelUrl) {
-      return res.status(400).json({ error: 'newChannelUrl is required' });
+      throw new ValidationError('newChannelUrl is required');
     }
 
     // Verify shop ownership
@@ -88,13 +90,13 @@ async function initiateMigration(req, res) {
     );
 
     if (shopResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Shop not found' });
+      throw new NotFoundError('Shop');
     }
 
     const shop = shopResult.rows[0];
 
     if (shop.owner_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to manage this shop' });
+      throw new UnauthorizedError('Not authorized to manage this shop');
     }
 
     // Validate migration eligibility
@@ -103,15 +105,15 @@ async function initiateMigration(req, res) {
     if (!validation.valid) {
       return res.status(403).json({
         error: validation.error,
-        message: validation.message
+        message: validation.message,
       });
     }
 
     // Check if bot instance is available
     if (!global.botInstance) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Bot service unavailable',
-        message: 'Telegram bot is not running. Please contact support.'
+        message: 'Telegram bot is not running. Please contact support.',
       });
     }
 
@@ -128,20 +130,24 @@ async function initiateMigration(req, res) {
           newChannelUrl,
           oldChannelUrl || null
         );
-        
+
         // Update shop with new channel URL after successful broadcast
-        await pool.query(
-          'UPDATE shops SET channel_url = $1, updated_at = NOW() WHERE id = $2',
-          [newChannelUrl, shopId]
+        await pool.query('UPDATE shops SET channel_url = $1, updated_at = NOW() WHERE id = $2', [
+          newChannelUrl,
+          shopId,
+        ]);
+
+        logger.info(
+          `[MigrationController] Broadcast completed for shop ${shopId}, channel_url updated`
         );
-        
-        logger.info(`[MigrationController] Broadcast completed for shop ${shopId}, channel_url updated`);
       } catch (error) {
         logger.error(`[MigrationController] Broadcast failed for shop ${shopId}:`, error);
       }
     });
 
-    logger.info(`[MigrationController] Migration initiated for shop ${shopId}, ${subscribers.length} subscribers`);
+    logger.info(
+      `[MigrationController] Migration initiated for shop ${shopId}, ${subscribers.length} subscribers`
+    );
 
     // Return immediately without waiting for broadcast
     res.status(202).json({
@@ -152,74 +158,68 @@ async function initiateMigration(req, res) {
       subscriberCount: subscribers.length,
       status: 'processing',
       message: `Broadcast started. ${subscribers.length} subscribers will be notified.`,
-      estimatedDuration: Math.ceil(subscribers.length * 0.1) // seconds
+      estimatedDuration: Math.ceil(subscribers.length * 0.1), // seconds
     });
   } catch (error) {
     logger.error('[MigrationController] Error initiating migration:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
-}
+});
 
 /**
  * Get migration status
  * GET /api/shops/:shopId/migration/:migrationId
  */
-async function getMigrationStatus(req, res) {
+const getMigrationStatus = asyncHandler(async (req, res) => {
   try {
     const shopId = parseInt(req.params.shopId, 10);
     const migrationId = parseInt(req.params.migrationId, 10);
     const userId = req.user.id;
 
     // Verify shop ownership
-    const shopResult = await pool.query(
-      'SELECT owner_id FROM shops WHERE id = $1',
-      [shopId]
-    );
+    const shopResult = await pool.query('SELECT owner_id FROM shops WHERE id = $1', [shopId]);
 
     if (shopResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Shop not found' });
+      throw new NotFoundError('Shop');
     }
 
     if (shopResult.rows[0].owner_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
+      throw new UnauthorizedError('Not authorized');
     }
 
     // Get migration status
     const migration = await broadcastService.getMigrationStatus(migrationId);
 
     if (!migration || migration.shop_id !== shopId) {
-      return res.status(404).json({ error: 'Migration not found' });
+      throw new NotFoundError('Migration');
     }
 
     res.json(migration);
   } catch (error) {
     logger.error('[MigrationController] Error getting migration status:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
-}
+});
 
 /**
  * Get migration history for a shop
  * GET /api/shops/:shopId/migration/history
  */
-async function getMigrationHistory(req, res) {
+const getMigrationHistory = asyncHandler(async (req, res) => {
   try {
     const shopId = parseInt(req.params.shopId, 10);
     const userId = req.user.id;
     const limit = parseInt(req.query.limit, 10) || 10;
 
     // Verify shop ownership
-    const shopResult = await pool.query(
-      'SELECT owner_id FROM shops WHERE id = $1',
-      [shopId]
-    );
+    const shopResult = await pool.query('SELECT owner_id FROM shops WHERE id = $1', [shopId]);
 
     if (shopResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Shop not found' });
+      throw new NotFoundError('Shop');
     }
 
     if (shopResult.rows[0].owner_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized' });
+      throw new UnauthorizedError('Not authorized');
     }
 
     // Get migration history
@@ -227,17 +227,12 @@ async function getMigrationHistory(req, res) {
 
     res.json({
       shopId,
-      migrations: history
+      migrations: history,
     });
   } catch (error) {
     logger.error('[MigrationController] Error getting migration history:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
-}
+});
 
-export {
-  checkMigrationEligibility,
-  initiateMigration,
-  getMigrationStatus,
-  getMigrationHistory
-};
+export { checkMigrationEligibility, initiateMigration, getMigrationStatus, getMigrationHistory };

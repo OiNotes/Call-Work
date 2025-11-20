@@ -9,8 +9,8 @@ export const mainMenu = (showWorkspace = false) => {
   const rows = [
     [
       Markup.button.callback(buttonText.buyerRole, 'role:buyer'),
-      Markup.button.callback(buttonText.sellerRole, 'role:seller')
-    ]
+      Markup.button.callback(buttonText.sellerRole, 'role:seller'),
+    ],
   ];
 
   if (showWorkspace) {
@@ -24,6 +24,6 @@ export const mainMenu = (showWorkspace = false) => {
 export const mainMenuDefault = Markup.inlineKeyboard([
   [
     Markup.button.callback(buttonText.buyerRole, 'role:buyer'),
-    Markup.button.callback(buttonText.sellerRole, 'role:seller')
-  ]
+    Markup.button.callback(buttonText.sellerRole, 'role:seller'),
+  ],
 ]);

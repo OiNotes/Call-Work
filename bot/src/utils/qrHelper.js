@@ -25,7 +25,7 @@ async function generateQRWithTimeout(generateFn, timeout = QR_TIMEOUT) {
     generateFn(),
     new Promise((_, reject) =>
       setTimeout(() => reject(new Error('QR_GENERATION_TIMEOUT')), timeout)
-    )
+    ),
   ]);
 }
 
@@ -66,9 +66,4 @@ function getQRErrorMessage(error, defaultMessage = 'Не удалось сфор
   return defaultMessage;
 }
 
-export {
-  generateQRWithTimeout,
-  isQRTimeout,
-  getQRErrorMessage,
-  QR_TIMEOUT
-};
+export { generateQRWithTimeout, isQRTimeout, getQRErrorMessage, QR_TIMEOUT };

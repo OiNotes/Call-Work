@@ -16,6 +16,7 @@ disable-model-invocation: true
 **Status Stock** - Telegram E-Commerce платформа для цифровых магазинов с криптовалютными платежами.
 
 **Основная документация:**
+
 - 📖 Общее описание: @README.md
 - 🤖 Правила Claude Code: @CLAUDE.md
 - ⚡ Development cheatsheet: @DEV_CHEATSHEET.md
@@ -25,6 +26,7 @@ disable-model-invocation: true
 ## 🏗 Architecture (3 сервиса)
 
 ### 1. Backend - Express + PostgreSQL + WebSocket
+
 - 📄 Документация: @backend/README.md
 - 🗄️ Database schema: @backend/database/schema.sql
 - 🚪 Entry point: @backend/src/index.js
@@ -33,6 +35,7 @@ disable-model-invocation: true
 - ⚙️ Services: @backend/src/services/
 
 **Технологии:**
+
 - Express.js (REST API)
 - PostgreSQL (без ORM, чистый SQL)
 - JWT authentication
@@ -41,6 +44,7 @@ disable-model-invocation: true
 ---
 
 ### 2. Bot - Telegram Bot (Telegraf.js)
+
 - 📄 Документация: @bot/README.md
 - 🚪 Entry point: @bot/src/index.js
 - 🎬 Scenes: @bot/src/scenes/
@@ -48,6 +52,7 @@ disable-model-invocation: true
 - ⌨️ Keyboards: @bot/src/keyboards/
 
 **Технологии:**
+
 - Telegraf.js framework
 - Session-based state management
 - Scene wizard для многошаговых диалогов
@@ -56,6 +61,7 @@ disable-model-invocation: true
 ---
 
 ### 3. WebApp - React Telegram Mini App
+
 - 📄 Документация: @webapp/README.md
 - 🚪 Entry point: @webapp/src/App.jsx
 - 🧩 Components: @webapp/src/components/
@@ -63,6 +69,7 @@ disable-model-invocation: true
 - 📦 State: @webapp/src/store/ (Zustand in-memory)
 
 **Технологии:**
+
 - React 18 + Vite
 - TailwindCSS (glassmorphism design)
 - Framer Motion (animations)
@@ -75,39 +82,39 @@ disable-model-invocation: true
 
 Используй **Task tool** для делегирования задач:
 
-| Субагент | Когда использовать |
-|----------|-------------------|
-| **telegram-bot-expert** | Работа с Telegraf.js: handlers, scenes, keyboards, sessions, webhooks |
-| **backend-architect** | API design, Express endpoints, архитектура, идемпотентность |
-| **database-designer** | PostgreSQL: schema, миграции, индексы, SQL запросы, constraints |
-| **frontend-developer** | React компоненты, TailwindCSS, Telegram Mini App UI/UX, animations |
-| **debug-master** | Debugging, поиск багов, исправление ошибок, тесты |
-| **crypto-integration-specialist** | Blockchain APIs, payment verification, wallet validation |
-| **design-researcher** | UI/UX research, design trends, glassmorphism, visual inspiration |
+| Субагент                          | Когда использовать                                                    |
+| --------------------------------- | --------------------------------------------------------------------- |
+| **telegram-bot-expert**           | Работа с Telegraf.js: handlers, scenes, keyboards, sessions, webhooks |
+| **backend-architect**             | API design, Express endpoints, архитектура, идемпотентность           |
+| **database-designer**             | PostgreSQL: schema, миграции, индексы, SQL запросы, constraints       |
+| **frontend-developer**            | React компоненты, TailwindCSS, Telegram Mini App UI/UX, animations    |
+| **debug-master**                  | Debugging, поиск багов, исправление ошибок, тесты                     |
+| **crypto-integration-specialist** | Blockchain APIs, payment verification, wallet validation              |
+| **design-researcher**             | UI/UX research, design trends, glassmorphism, visual inspiration      |
 
 **Примеры делегирования:**
 
 ```javascript
 // Работа с ботом
 Task({
-  subagent_type: "telegram-bot-expert",
-  description: "Add button handler",
-  prompt: "Add callback handler for 'delete_product' button"
-})
+  subagent_type: 'telegram-bot-expert',
+  description: 'Add button handler',
+  prompt: "Add callback handler for 'delete_product' button",
+});
 
 // Работа с БД
 Task({
-  subagent_type: "database-designer",
-  description: "Create migration",
-  prompt: "Add index on products.shop_id for faster lookups"
-})
+  subagent_type: 'database-designer',
+  description: 'Create migration',
+  prompt: 'Add index on products.shop_id for faster lookups',
+});
 
 // Debug
 Task({
-  subagent_type: "debug-master",
-  description: "Fix failing tests",
-  prompt: "Fix 3 failing integration tests in bot/tests/"
-})
+  subagent_type: 'debug-master',
+  description: 'Fix failing tests',
+  prompt: 'Fix 3 failing integration tests in bot/tests/',
+});
 ```
 
 **Детали:** См. `.claude/agents/*.md` для полного описания каждого субагента.
@@ -119,28 +126,34 @@ Task({
 **Используй SKILLS вместо ручных команд!** Просто называй их в чате.
 
 ### 🚀 Development (запуск/мониторинг)
+
 - **`quick-start`** - Моментальный запуск всех сервисов + проверки
 - **`health-check`** - Комплексная проверка Backend/Bot/WebApp/PostgreSQL
 - **`restart-all`** - Безопасный перезапуск всех сервисов
 
 ### 🐛 Debug (поиск/исправление ошибок)
+
 - **`analyze-logs`** - Умный анализ error логов с категоризацией
 - **`fix-errors`** - Автофикс частых ошибок (порты, БД, зависимости)
 - **`check-ports`** - Управление портами 3000, 5173, 5432
 
 ### 🧪 Testing (тестирование)
+
 - **`run-tests`** - Запуск всех тестов Backend + Bot с coverage
 - **`test-integration`** - Integration тесты бота
 
 ### 🎨 Design (UI/UX качество)
+
 - **`ui-check`** - Валидация glassmorphism, цветов, spacing
 - **`animation-check`** - Проверка Framer Motion на performance
 
 ### 🗄️ Database (работа с БД)
+
 - **`db-migrate`** - Безопасные миграции с автобэкапом
 - **`db-query`** - Быстрые SQL запросы + статистика
 
 **Как использовать:**
+
 ```
 ❌ НЕПРАВИЛЬНО:
 Bash("cd backend && npm start")
@@ -159,9 +172,11 @@ Bash("lsof -ti:3000")
 ## 📚 Key Rules из CLAUDE.md (КРИТИЧНО!)
 
 ### 1. Роль: Orchestrator (Оркестратор)
+
 **НЕ делай сам → делегируй субагентам!**
 
 **Правильный процесс:**
+
 1. **Plan Mode** - анализ через MCP FS
 2. **ExitPlanMode** - показать план
 3. **Wait Approval** - дождаться подтверждения
@@ -170,6 +185,7 @@ Bash("lsof -ti:3000")
 6. **Report** - устно в чат (НЕ .md файлы!)
 
 ### 2. MCP File System обязателен
+
 **ВСЕГДА используй MCP FS для файловых операций:**
 
 ```javascript
@@ -187,11 +203,13 @@ Bash("find . -name '*.js'")
 ```
 
 **Bash разрешён ТОЛЬКО для:**
+
 - `npm run dev`, `npm test`, `npm start`
 - `psql -c "SELECT ..."` (read-only SQL)
 - Проверка логов (`tail -f`, `docker logs`)
 
 ### 3. Используй SKILLS проактивно
+
 **Вместо ручных команд → SKILLS!**
 
 ```
@@ -202,7 +220,9 @@ Bash("find . -name '*.js'")
 ```
 
 ### 4. После запуска → проверяй логи
+
 **ВСЕГДА после запуска сервиса:**
+
 ```bash
 tail -f backend/logs/combined.log  # Backend
 tail -f bot/logs/bot.log           # Bot
@@ -210,12 +230,14 @@ npm run dev                         # Смотреть вывод
 ```
 
 **Критерии здоровья:**
+
 - ✅ Нет `[error]` после старта
 - ✅ "Server started" / "Bot started"
 - ✅ "Database: Connected ✓"
 - ❌ Если ошибки → остановить, исправить, перезапустить
 
 ### 5. Safety Rules (КРИТИЧНО!)
+
 - ❌ НЕ редактировать `.env` файлы
 - ❌ НЕ ломать API контракты (backward compatible)
 - ❌ НЕ создавать .md отчёты после задач
@@ -245,16 +267,19 @@ npm run dev                         # Смотреть вывод
 ## 🚀 Quick Start
 
 **Запустить всё:**
+
 ```bash
 npm start
 ```
 
 **Или через SKILL:**
+
 ```
 "quick start"
 ```
 
 **Проверить здоровье:**
+
 ```
 "health check"
 ```
@@ -264,16 +289,19 @@ npm start
 ## 📖 Полезные ссылки
 
 ### Документация проекта
+
 - Main README: @README.md
 - Backend: @backend/README.md
 - Bot: @bot/README.md
 - WebApp: @webapp/README.md
 
 ### Database
+
 - Schema: @backend/database/schema.sql
 - Migrations: @backend/database/migrations/
 
 ### Claude Code конфиг
+
 - Правила: @CLAUDE.md
 - Субагенты: `.claude/agents/*.md`
 - SKILLS: `.claude/skills/*.md`
@@ -286,6 +314,7 @@ npm start
 **Теперь ты готов работать с Status Stock 4.0!**
 
 **Помни:**
+
 1. 🎯 **Роль:** Orchestrator (делегируй субагентам)
 2. 📂 **Файлы:** MCP File System (Read/Grep/Glob/Edit/Write)
 3. ⚡ **Типовые задачи:** SKILLS (quick-start, health-check, etc.)

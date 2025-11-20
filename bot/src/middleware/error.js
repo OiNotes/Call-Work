@@ -14,7 +14,7 @@ const errorMiddleware = async (ctx, next) => {
     logger.error('Error in handler:', {
       error: error.message,
       stack: error.stack,
-      update: ctx.update
+      update: ctx.update,
     });
 
     // User-friendly error message

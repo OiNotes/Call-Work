@@ -58,6 +58,7 @@ Build будет создан в папке `dist/`
 ## Дизайн-система
 
 ### Цвета
+
 - Background: `#0A0A0A`
 - Cards: `#1A1A1A`
 - Elevated: `#252525`
@@ -66,9 +67,11 @@ Build будет создан в папке `dist/`
 - Accent Orange: `#FFA366`
 
 ### Шрифты
+
 - Inter (400, 500, 600, 700, 800)
 
 ### Эффекты
+
 - Glassmorphism: `backdrop-blur-lg` + `bg-opacity-50`
 - Transitions: `duration-300 ease-in-out`
 - Touch targets: минимум `44px`
@@ -76,6 +79,7 @@ Build будет создан в папке `dist/`
 ## State Management
 
 **ВАЖНО:** Приложение использует только in-memory state:
+
 - React state (useState, useReducer)
 - Zustand store (без persist middleware)
 - НЕ используется localStorage/sessionStorage
@@ -107,22 +111,27 @@ const { data } = await post('/orders', orderData);
 ## Компоненты
 
 ### Layout
+
 - `Header` - Верхний header с корзиной
 - `TabBar` - Нижняя навигация (3 таба)
 
 ### Shop
+
 - `ShopCard` - Карточка магазина
 - `ShopList` - Список магазинов
 
 ### Product
+
 - `ProductCard` - Карточка товара (2-column grid)
 - `ProductGrid` - Сетка товаров
 
 ### Cart
+
 - `CartSheet` - Bottom sheet с корзиной
 - `CartItem` - Элемент корзины
 
 ### Payment
+
 - `CryptoSelector` - Выбор криптовалюты
 
 ## Страницы
@@ -134,6 +143,7 @@ const { data } = await post('/orders', orderData);
 ## Анимации
 
 Все анимации через Framer Motion:
+
 - Page transitions
 - List animations (stagger)
 - Tap animations (scale)

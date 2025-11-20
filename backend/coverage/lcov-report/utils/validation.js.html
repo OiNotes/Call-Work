@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">9.67% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/31</span>
+                <span class='fraction'>0/29</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/22</span>
+                <span class='fraction'>0/20</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/30</span>
+                <span class='fraction'>0/29</span>
             </div>
         
             
@@ -165,9 +165,7 @@
 <a name='L100'></a><a href='#L100'>100</a>
 <a name='L101'></a><a href='#L101'>101</a>
 <a name='L102'></a><a href='#L102'>102</a>
-<a name='L103'></a><a href='#L103'>103</a>
-<a name='L104'></a><a href='#L104'>104</a>
-<a name='L105'></a><a href='#L105'>105</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L103'></a><a href='#L103'>103</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -179,20 +177,18 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -221,7 +217,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -256,7 +252,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -276,45 +272,43 @@
  */
 &nbsp;
 import WAValidator from 'wallet-validator';
+import logger from './logger.js';
 &nbsp;
 /**
  * Validate crypto wallet address format
  * @param {string} address - Wallet address
- * @param {string} crypto - Cryptocurrency type (BTC, ETH, USDT, TON)
+ * @param {string} crypto - Cryptocurrency type (BTC, ETH, USDT, LTC)
  * @returns {boolean} - True if valid format
  */
-export const validateCryptoAddress = <span class="fstat-no" title="function not covered" >(a</span>ddress, crypto) =&gt; {
+export const validateCryptoAddress = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(a</span>ddress, crypto) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  try {</span>
-<span class="cstat-no" title="statement not covered" >    if (!address || typeof address !== 'string') <span class="cstat-no" title="statement not covered" >return false;</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!address || typeof address !== 'string') {</span>
+<span class="cstat-no" title="statement not covered" >      return false;</span>
+    }
 &nbsp;
     const currency = <span class="cstat-no" title="statement not covered" >crypto.toLowerCase();</span>
 &nbsp;
-    // TON is not supported by wallet-validator, use regex
-<span class="cstat-no" title="statement not covered" >    if (currency === 'ton') {</span>
-      // TON: starts with EQ or UQ, followed by 46-48 base64url characters
-<span class="cstat-no" title="statement not covered" >      return /^(EQ|UQ)[A-Za-z0-9_-]{46,48}$/.test(address);</span>
-    }
-&nbsp;
     // Map crypto names to wallet-validator currency names
     const currencyMap = <span class="cstat-no" title="statement not covered" >{</span>
-      'btc': 'bitcoin',
-      'eth': 'ethereum',
-      'usdt': 'tron'      // USDT uses Tron TRC-20 (TR... addresses)
+      btc: 'bitcoin',
+      eth: 'ethereum',
+      usdt: 'tron', // USDT uses Tron TRC-20 (TR... addresses)
+      ltc: 'litecoin',
     };
 &nbsp;
     const validatorCurrency = <span class="cstat-no" title="statement not covered" >currencyMap[currency];</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    if (!validatorCurrency) {</span>
-<span class="cstat-no" title="statement not covered" >      console.warn('Unknown cryptocurrency type:', crypto);</span>
+<span class="cstat-no" title="statement not covered" >      logger.warn('Unknown cryptocurrency type', { crypto });</span>
 <span class="cstat-no" title="statement not covered" >      return false;</span>
     }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    return WAValidator.validate(address, validatorCurrency);</span>
   } catch (error) {
-<span class="cstat-no" title="statement not covered" >    console.error('Error validating crypto address:', {</span>
+<span class="cstat-no" title="statement not covered" >    logger.error('Error validating crypto address', {</span>
       error: error.message,
-      address: address.substring(0, 10) + '...',
-      crypto
+      addressPreview: address.substring(0, 10) + '...',
+      crypto,
     });
 <span class="cstat-no" title="statement not covered" >    return false;</span>
   }
@@ -323,9 +317,9 @@ export const validateCryptoAddress = <span class="fstat-no" title="function not 
 /**
  * Detect cryptocurrency type from address format
  * @param {string} address - Wallet address
- * @returns {string|null} - Detected crypto type (BTC, ETH, USDT, TON) or null
+ * @returns {string|null} - Detected crypto type (BTC, ETH, USDT, LTC) or null
  */
-export const detectCryptoType = <span class="fstat-no" title="function not covered" >(a</span>ddress) =&gt; {
+export const detectCryptoType = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(a</span>ddress) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  if (!address || typeof address !== 'string') {</span>
 <span class="cstat-no" title="statement not covered" >    return null;</span>
   }
@@ -347,9 +341,9 @@ export const detectCryptoType = <span class="fstat-no" title="function not cover
 <span class="cstat-no" title="statement not covered" >    return 'USDT';</span>
   }
 &nbsp;
-  // TON: starts with EQ or UQ
-<span class="cstat-no" title="statement not covered" >  if (/^(EQ|UQ)[A-Za-z0-9_-]{46,48}$/.test(trimmed)) {</span>
-<span class="cstat-no" title="statement not covered" >    return 'TON';</span>
+  // LTC: starts with L, M, or ltc1
+<span class="cstat-no" title="statement not covered" >  if (/^(L|M|ltc1)[a-zA-Z0-9]{25,62}$/.test(trimmed)) {</span>
+<span class="cstat-no" title="statement not covered" >    return 'LTC';</span>
   }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return null;</span>
@@ -360,12 +354,12 @@ export const detectCryptoType = <span class="fstat-no" title="function not cover
  * @param {string} crypto - Cryptocurrency type
  * @returns {string} - Error message
  */
-export const getCryptoValidationError = <span class="fstat-no" title="function not covered" >(c</span>rypto) =&gt; {
+export const getCryptoValidationError = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(c</span>rypto) =&gt; {</span>
   const errors = <span class="cstat-no" title="statement not covered" >{</span>
     BTC: 'Invalid BTC address format. Must be Legacy (1xxx), P2SH (3xxx), or Bech32 (bc1xxx)',
     ETH: 'Invalid ETH address format. Must be 0x followed by 40 hex characters',
     USDT: 'Invalid USDT address format. Must be TRC-20 Tron address (TRxxx...)',
-    TON: 'Invalid TON address format. Must start with EQ or UQ followed by 46 characters'
+    LTC: 'Invalid LTC address format. Must be Legacy (Lxxx), P2SH (Mxxx), or Bech32 (ltc1xxx)',
   };
 <span class="cstat-no" title="statement not covered" >  return errors[crypto.toUpperCase()] || 'Invalid crypto address format';</span>
 };
@@ -373,7 +367,7 @@ export const getCryptoValidationError = <span class="fstat-no" title="function n
 export default {
   validateCryptoAddress,
   getCryptoValidationError,
-  detectCryptoType
+  detectCryptoType,
 };
 &nbsp;</pre></td></tr></table></pre>
 
@@ -382,7 +376,7 @@ export default {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-25T13:57:17.732Z
+                at 2025-11-08T16:48:59.457Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -32,7 +32,10 @@ class PaymentErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(10, 10, 10, 0.95)' }}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(10, 10, 10, 0.95)' }}
+        >
           <div className="text-center max-w-md p-6">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-white text-xl font-bold mb-2">Ошибка оплаты</h1>

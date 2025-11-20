@@ -11,7 +11,7 @@ const ConfirmDialog = ({
   message,
   confirmText = 'Подтвердить',
   cancelText = 'Отмена',
-  danger = false
+  danger = false,
 }) => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
@@ -100,11 +100,11 @@ const ConfirmDialog = ({
                 className="flex-1 bg-gradient-to-r from-red-600 to-red-500 text-white py-3.5 rounded-xl font-semibold shadow-lg"
                 whileHover={{
                   scale: 1.02,
-                  boxShadow: '0 8px 24px rgba(220, 38, 38, 0.3)'
+                  boxShadow: '0 8px 24px rgba(220, 38, 38, 0.3)',
                 }}
                 whileTap={{
                   scale: 0.98,
-                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)',
                 }}
                 transition={controlSpring}
               >
@@ -119,11 +119,11 @@ const ConfirmDialog = ({
                 className="flex-1 bg-gradient-to-r from-orange-primary to-orange-light text-white py-3.5 rounded-xl font-semibold shadow-lg"
                 whileHover={{
                   scale: 1.02,
-                  boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)'
+                  boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)',
                 }}
                 whileTap={{
                   scale: 0.98,
-                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+                  boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)',
                 }}
                 transition={controlSpring}
               >

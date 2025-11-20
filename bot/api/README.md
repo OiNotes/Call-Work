@@ -19,20 +19,24 @@ api/
 ## Возможности
 
 ### ✅ Retry Logic
+
 - Автоматические повторные попытки при ошибках сервера (500+)
 - Экспоненциальная задержка: 1s, 2s, 4s
 - Максимум 3 попытки на запрос
 
 ### ✅ Error Handling
+
 - Обработка всех типов HTTP ошибок
 - User-friendly сообщения на русском
 - Логирование всех ошибок
 
 ### ✅ JWT Authentication
+
 - Автоматическое добавление токена в заголовки
 - Управление токенами через `tokenManager`
 
 ### ✅ Timeout
+
 - 10 секунд на запрос (настраивается через `API_TIMEOUT`)
 
 ## Использование
@@ -58,7 +62,7 @@ const profile = await authApi.getProfile(token);
 // Обновить профиль
 await authApi.updateProfile(token, {
   firstName: 'Иван',
-  lastName: 'Петров'
+  lastName: 'Петров',
 });
 ```
 
@@ -71,7 +75,7 @@ const token = getToken(ctx);
 const shop = await shopsApi.create(token, {
   name: 'Мой магазин',
   description: 'Описание',
-  currency: 'BTC'
+  currency: 'BTC',
 });
 
 // Получить мои магазины
@@ -85,7 +89,7 @@ const shops = await shopsApi.search('electronics');
 
 // Обновить магазин
 await shopsApi.update(token, shopId, {
-  description: 'Новое описание'
+  description: 'Новое описание',
 });
 
 // Удалить магазин
@@ -104,7 +108,7 @@ const product = await productsApi.create(token, {
   description: 'Latest iPhone',
   price: 999.99,
   stock: 10,
-  imageUrl: 'https://...'
+  imageUrl: 'https://...',
 });
 
 // Список товаров магазина
@@ -112,7 +116,7 @@ const result = await productsApi.list({
   shopId: 1,
   inStock: true,
   page: 1,
-  limit: 20
+  limit: 20,
 });
 
 // Получить товар
@@ -121,7 +125,7 @@ const product = await productsApi.getById(productId);
 // Обновить товар
 await productsApi.update(token, productId, {
   price: 899.99,
-  stock: 15
+  stock: 15,
 });
 
 // Удалить товар
@@ -136,18 +140,16 @@ const token = getToken(ctx);
 // Создать заказ
 const order = await ordersApi.create(token, {
   shopId: 1,
-  items: [
-    { productId: 1, quantity: 2, price: 999.99 }
-  ],
+  items: [{ productId: 1, quantity: 2, price: 999.99 }],
   shippingAddress: '123 Main St',
-  paymentMethod: 'BTC'
+  paymentMethod: 'BTC',
 });
 
 // Мои заказы
 const result = await ordersApi.getMyOrders(token, {
   status: 'pending',
   page: 1,
-  limit: 10
+  limit: 10,
 });
 
 // Получить заказ
@@ -168,7 +170,7 @@ await subscriptionsApi.subscribe(token, shopId);
 // Мои подписки
 const result = await subscriptionsApi.getMySubscriptions(token, {
   page: 1,
-  limit: 20
+  limit: 20,
 });
 
 // Проверить подписку
@@ -221,14 +223,14 @@ console.log(result);
 
 ### Типы ошибок
 
-| Код | Сообщение |
-|-----|-----------|
-| 401 | 🔐 Ошибка авторизации. Попробуйте войти заново. |
-| 403 | 🔐 Доступ запрещен. |
-| 404 | 🔍 Ресурс не найден. |
-| 429 | ⏱️ Слишком много запросов. Попробуйте позже. |
-| 500+ | ⚠️ Ошибка сервера. Попробуйте позже. |
-| Network | ⚠️ Ошибка сети. Проверьте подключение. |
+| Код     | Сообщение                                       |
+| ------- | ----------------------------------------------- |
+| 401     | 🔐 Ошибка авторизации. Попробуйте войти заново. |
+| 403     | 🔐 Доступ запрещен.                             |
+| 404     | 🔍 Ресурс не найден.                            |
+| 429     | ⏱️ Слишком много запросов. Попробуйте позже.    |
+| 500+    | ⚠️ Ошибка сервера. Попробуйте позже.            |
+| Network | ⚠️ Ошибка сети. Проверьте подключение.          |
 
 ## Token Management
 
@@ -238,7 +240,7 @@ import {
   setToken,
   clearToken,
   isAuthenticated,
-  requireAuth
+  requireAuth,
 } from '../utils/tokenManager.js';
 
 // Проверка авторизации
@@ -299,10 +301,7 @@ LOG_LEVEL=INFO  # DEBUG, INFO, WARN, ERROR
 const shops = await shopsApi.getMyShops(token);
 
 // ✅ Хорошо
-const shops = await handleApiCall(
-  ctx,
-  async () => await shopsApi.getMyShops(token)
-);
+const shops = await handleApiCall(ctx, async () => await shopsApi.getMyShops(token));
 if (!shops) return;
 ```
 
@@ -343,7 +342,7 @@ import { authApi } from './api/index.js';
 // Мокирование для тестов
 jest.mock('./api/client.js', () => ({
   post: jest.fn(),
-  get: jest.fn()
+  get: jest.fn(),
 }));
 
 test('should login user', async () => {
@@ -372,10 +371,7 @@ if (!result.success) {
 import { authApi, shopsApi } from '../api/index.js';
 import { handleApiCall, getToken } from '../utils/index.js';
 
-const result = await handleApiCall(
-  ctx,
-  async () => await authApi.login(ctx.from)
-);
+const result = await handleApiCall(ctx, async () => await authApi.login(ctx.from));
 if (!result) return;
 
 setToken(ctx, result.token);
@@ -414,7 +410,7 @@ import { retryOperation } from '../utils/errorHandler.js';
 
 const result = await retryOperation(
   async () => await shopsApi.getById(shopId),
-  3,  // max retries
+  3, // max retries
   1000 // delay
 );
 ```

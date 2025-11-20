@@ -15,7 +15,7 @@ import {
   cleanupTestData,
   createTestUser,
   createTestShop,
-  createTestProduct
+  createTestProduct,
 } from '../helpers/testDb.js';
 
 // Create minimal test app
@@ -54,70 +54,63 @@ describe('Shop Follow Controller - Integration Tests', () => {
     freeUser = await createTestUser({
       telegramId: '9000002001',
       username: 'freeuser',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create PRO tier user
     proUser = await createTestUser({
       telegramId: '9000002002',
       username: 'prouser',
-      selectedRole: 'seller'
+      selectedRole: 'seller',
     });
 
     // Create shops for FREE user
     freeShop = await createTestShop(freeUser.id, {
       name: 'Free User Shop',
-      description: 'FREE tier follower shop'
+      description: 'FREE tier follower shop',
     });
 
     // Create shops for PRO user
     proShop = await createTestShop(proUser.id, {
       name: 'Pro User Shop',
-      description: 'PRO tier follower shop'
+      description: 'PRO tier follower shop',
     });
 
     // Upgrade PRO shop to PRO tier
-    await pool.query(
-      `UPDATE shops SET tier = 'pro' WHERE id = $1`,
-      [proShop.id]
-    );
+    await pool.query(`UPDATE shops SET tier = 'pro' WHERE id = $1`, [proShop.id]);
 
     // Create source shops to follow
     const sourceUser = await createTestUser({
       telegramId: '9000002003',
-      username: 'sourceowner'
+      username: 'sourceowner',
     });
 
     sourceShop1 = await createTestShop(sourceUser.id, {
-      name: 'Source Shop 1'
+      name: 'Source Shop 1',
     });
 
     sourceShop2 = await createTestShop(sourceUser.id, {
-      name: 'Source Shop 2'
+      name: 'Source Shop 2',
     });
 
     sourceShop3 = await createTestShop(sourceUser.id, {
-      name: 'Source Shop 3'
+      name: 'Source Shop 3',
     });
 
     sourceProduct1 = await createTestProduct(sourceShop1.id, {
       name: 'Source Gadget',
       price: '50.00',
-      stock_quantity: 7
+      stock_quantity: 7,
     });
 
     // Generate JWT tokens
-    freeToken = jwt.sign(
-      { id: freeUser.id, telegramId: freeUser.telegram_id },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    freeToken = jwt.sign({ id: freeUser.id, telegramId: freeUser.telegram_id }, config.jwt.secret, {
+      expiresIn: config.jwt.expiresIn,
+    });
 
-    proToken = jwt.sign(
-      { id: proUser.id, telegramId: proUser.telegram_id },
-      config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
-    );
+    proToken = jwt.sign({ id: proUser.id, telegramId: proUser.telegram_id }, config.jwt.secret, {
+      expiresIn: config.jwt.expiresIn,
+    });
   });
 
   afterAll(async () => {
@@ -140,7 +133,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           remaining: null, // null = unlimited
           reached: false,
           canFollow: true,
-          tier: 'PRO'
+          tier: 'PRO',
         });
       });
 
@@ -157,7 +150,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           remaining: 2,
           reached: false,
           canFollow: true,
-          tier: 'FREE'
+          tier: 'FREE',
         });
       });
 
@@ -181,7 +174,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           remaining: 1,
           reached: false,
           canFollow: true,
-          tier: 'FREE'
+          tier: 'FREE',
         });
       });
 
@@ -205,7 +198,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           remaining: 0,
           reached: true,
           canFollow: false,
-          tier: 'FREE'
+          tier: 'FREE',
         });
       });
 
@@ -231,7 +224,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           remaining: null,
           reached: false,
           canFollow: true,
-          tier: 'PRO'
+          tier: 'PRO',
         });
       });
     });
@@ -246,7 +239,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: sourceShop1.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(201);
 
@@ -254,14 +247,13 @@ describe('Shop Follow Controller - Integration Tests', () => {
           follower_shop_id: freeShop.id,
           source_shop_id: sourceShop1.id,
           mode: 'monitor',
-          status: 'active'
+          status: 'active',
         });
 
         // Verify in database
-        const follows = await pool.query(
-          'SELECT * FROM shop_follows WHERE follower_shop_id = $1',
-          [freeShop.id]
-        );
+        const follows = await pool.query('SELECT * FROM shop_follows WHERE follower_shop_id = $1', [
+          freeShop.id,
+        ]);
         expect(follows.rows).toHaveLength(1);
       });
 
@@ -279,13 +271,13 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: sourceShop2.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(201);
 
         expect(response.body.data).toMatchObject({
           follower_shop_id: freeShop.id,
-          source_shop_id: sourceShop2.id
+          source_shop_id: sourceShop2.id,
         });
       });
 
@@ -303,7 +295,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: sourceShop3.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(402); // 402 Payment Required
 
@@ -313,14 +305,13 @@ describe('Shop Follow Controller - Integration Tests', () => {
           count: 2,
           remaining: 0,
           reached: true,
-          canFollow: false
+          canFollow: false,
         });
 
         // Verify third follow was NOT created
-        const follows = await pool.query(
-          'SELECT * FROM shop_follows WHERE follower_shop_id = $1',
-          [freeShop.id]
-        );
+        const follows = await pool.query('SELECT * FROM shop_follows WHERE follower_shop_id = $1', [
+          freeShop.id,
+        ]);
         expect(follows.rows).toHaveLength(2); // Still 2
       });
 
@@ -332,7 +323,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: proShop.id,
             sourceShopId: sourceShop1.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(201);
 
@@ -342,7 +333,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: proShop.id,
             sourceShopId: sourceShop2.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(201);
 
@@ -352,7 +343,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: proShop.id,
             sourceShopId: sourceShop3.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(201);
 
@@ -361,10 +352,9 @@ describe('Shop Follow Controller - Integration Tests', () => {
         expect(follow3.body.data).toMatchObject({ follower_shop_id: proShop.id });
 
         // Verify 3 follows created
-        const follows = await pool.query(
-          'SELECT * FROM shop_follows WHERE follower_shop_id = $1',
-          [proShop.id]
-        );
+        const follows = await pool.query('SELECT * FROM shop_follows WHERE follower_shop_id = $1', [
+          proShop.id,
+        ]);
         expect(follows.rows).toHaveLength(3);
       });
 
@@ -372,13 +362,13 @@ describe('Shop Follow Controller - Integration Tests', () => {
         // Create 10 source shops
         const sourceUser = await createTestUser({
           telegramId: '9000002099',
-          username: 'manysources'
+          username: 'manysources',
         });
 
         const sourceShops = [];
         for (let i = 0; i < 10; i++) {
           const shop = await createTestShop(sourceUser.id, {
-            name: `Source ${i}`
+            name: `Source ${i}`,
           });
           sourceShops.push(shop);
         }
@@ -391,16 +381,15 @@ describe('Shop Follow Controller - Integration Tests', () => {
             .send({
               followerShopId: proShop.id,
               sourceShopId: shop.id,
-              mode: 'monitor'
+              mode: 'monitor',
             })
             .expect(201);
         }
 
         // Verify 10 follows created
-        const follows = await pool.query(
-          'SELECT * FROM shop_follows WHERE follower_shop_id = $1',
-          [proShop.id]
-        );
+        const follows = await pool.query('SELECT * FROM shop_follows WHERE follower_shop_id = $1', [
+          proShop.id,
+        ]);
         expect(follows.rows.length).toBeGreaterThanOrEqual(10);
       });
     });
@@ -413,7 +402,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: 999999,
             sourceShopId: sourceShop1.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(404);
 
@@ -427,7 +416,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: 999999,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(404);
 
@@ -441,7 +430,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: freeShop.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(400);
 
@@ -462,7 +451,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: sourceShop1.id,
-            mode: 'monitor'
+            mode: 'monitor',
           })
           .expect(409);
 
@@ -476,7 +465,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
           .send({
             followerShopId: freeShop.id,
             sourceShopId: sourceShop1.id,
-            mode: 'resell'
+            mode: 'resell',
             // Missing markupPercentage
           })
           .expect(400);
@@ -492,11 +481,11 @@ describe('Shop Follow Controller - Integration Tests', () => {
             followerShopId: freeShop.id,
             sourceShopId: sourceShop1.id,
             mode: 'resell',
-            markupPercentage: 600 // Too high
+            markupPercentage: 600, // Too high
           })
           .expect(400);
 
-        expect(response.body.error).toContain('Markup must be between 1% and 500%');
+        expect(response.body.error).toContain('Markup must be between 0.1% and 200%');
       });
     });
   });
@@ -526,15 +515,15 @@ describe('Shop Follow Controller - Integration Tests', () => {
       expect(response.body.data).toHaveLength(2);
 
       // Найти follows по mode (независимо от порядка сортировки)
-      const monitorFollow = response.body.data.find(f => f.mode === 'monitor');
-      const resellFollow = response.body.data.find(f => f.mode === 'resell');
+      const monitorFollow = response.body.data.find((f) => f.mode === 'monitor');
+      const resellFollow = response.body.data.find((f) => f.mode === 'resell');
 
       expect(monitorFollow).toBeDefined();
       expect(monitorFollow).toMatchObject({
         follower_shop_id: freeShop.id,
         source_shop_id: sourceShop1.id,
         mode: 'monitor',
-        status: 'active'
+        status: 'active',
       });
 
       expect(resellFollow).toBeDefined();
@@ -543,7 +532,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
         source_shop_id: sourceShop2.id,
         mode: 'resell',
         status: 'active',
-        markup_percentage: 50
+        markup_percentage: 50,
       });
     });
   });
@@ -570,7 +559,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
       expect(response.body.data[0]).toMatchObject({
         id: followId,
         follower_shop_id: freeShop.id,
-        source_shop_id: sourceShop1.id
+        source_shop_id: sourceShop1.id,
       });
     });
   });
@@ -609,7 +598,7 @@ describe('Shop Follow Controller - Integration Tests', () => {
       const followerProduct = await createTestProduct(freeShop.id, {
         name: 'Synced Gadget',
         price: '65.00',
-        stock_quantity: 3
+        stock_quantity: 3,
       });
 
       await pool.query(

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { config } from '../config/env.js';
 import logger from '../utils/logger.js';
 import { SUPPORTED_CURRENCIES } from '../utils/constants.js';
+import * as tronService from './tronService.js';
 import { amountsMatch } from '../utils/decimal.js';
 import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 
@@ -28,15 +29,17 @@ class CryptoService {
         return await fn();
       } catch (error) {
         const isLastAttempt = attempt === maxRetries - 1;
-        
+
         if (isLastAttempt) {
           logger.error(`[Retry] All ${maxRetries} attempts failed:`, error.message);
           throw error;
         }
-        
+
         const delay = baseDelay * Math.pow(2, attempt);
-        logger.warn(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        logger.warn(
+          `[Retry] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -52,15 +55,12 @@ class CryptoService {
     try {
       // Use retry logic for blockchain API calls
       const response = await this.retryWithBackoff(async () => {
-        return await axios.get(
-          `https://blockchain.info/rawtx/${txHash}`,
-          {
-            params: {
-              apikey: this.blockchainApiKey
-            },
-            timeout: 10000
-          }
-        );
+        return await axios.get(`https://blockchain.info/rawtx/${txHash}`, {
+          params: {
+            apikey: this.blockchainApiKey,
+          },
+          timeout: 10000,
+        });
       });
 
       const tx = response.data;
@@ -69,19 +69,17 @@ class CryptoService {
       if (!tx) {
         return {
           verified: false,
-          error: 'Transaction not found'
+          error: 'Transaction not found',
         };
       }
 
       // Find output to expected address
-      const output = tx.out.find(out =>
-        out.addr === expectedAddress
-      );
+      const output = tx.out.find((out) => out.addr === expectedAddress);
 
       if (!output) {
         return {
           verified: false,
-          error: 'Address not found in transaction outputs'
+          error: 'Address not found in transaction outputs',
         };
       }
 
@@ -92,13 +90,14 @@ class CryptoService {
       if (!amountsMatchWithTolerance(amountBTC, expectedAmount, undefined, 'BTC')) {
         return {
           verified: false,
-          error: `Amount mismatch. Expected: ${expectedAmount} BTC, Received: ${amountBTC} BTC`
+          error: `Amount mismatch. Expected: ${expectedAmount} BTC, Received: ${amountBTC} BTC`,
         };
       }
 
       // Get confirmations (consider confirmed at 3+ confirmations)
-      const confirmations = tx.block_height ?
-        await this.getBitcoinBlockHeight() - tx.block_height + 1 : 0;
+      const confirmations = tx.block_height
+        ? (await this.getBitcoinBlockHeight()) - tx.block_height + 1
+        : 0;
 
       const minConfirmations = SUPPORTED_CURRENCIES.BTC.confirmations; // 3
 
@@ -107,14 +106,13 @@ class CryptoService {
         confirmations,
         amount: amountBTC,
         txHash,
-        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending',
       };
-
     } catch (error) {
       logger.error('Bitcoin verification error:', { error: error.message, stack: error.stack });
       return {
         verified: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -129,51 +127,45 @@ class CryptoService {
   async verifyEthereumTransaction(txHash, expectedAddress, expectedAmount) {
     try {
       // Get transaction receipt
-      const response = await axios.get(
-        'https://api.etherscan.io/api',
-        {
-          params: {
-            module: 'proxy',
-            action: 'eth_getTransactionByHash',
-            txhash: txHash,
-            apikey: this.etherscanApiKey
-          }
-        }
-      );
+      const response = await axios.get('https://api.etherscan.io/api', {
+        params: {
+          module: 'proxy',
+          action: 'eth_getTransactionByHash',
+          txhash: txHash,
+          apikey: this.etherscanApiKey,
+        },
+      });
 
       const tx = response.data.result;
 
       if (!tx) {
         return {
           verified: false,
-          error: 'Transaction not found'
+          error: 'Transaction not found',
         };
       }
 
       // Get transaction receipt for status
       // Get transaction receipt with retry
       const receiptResponse = await this.retryWithBackoff(async () => {
-        return await axios.get(
-          'https://api.etherscan.io/api',
-          {
-            params: {
-              module: 'proxy',
-              action: 'eth_getTransactionReceipt',
-              txhash: txHash,
-              apikey: this.etherscanApiKey
-            },
-            timeout: 10000
-          }
-        );
+        return await axios.get('https://api.etherscan.io/api', {
+          params: {
+            module: 'proxy',
+            action: 'eth_getTransactionReceipt',
+            txhash: txHash,
+            apikey: this.etherscanApiKey,
+          },
+          timeout: 10000,
+        });
       });
 
       const receipt = receiptResponse.data.result;
-      
+
       // Check if transaction was reverted
       if (!receipt || receipt.status === '0x0') {
         return {
           verified: false,
-          error: 'Transaction failed or reverted'
+          error: 'Transaction failed or reverted',
         };
       }
 
@@ -181,7 +173,7 @@ class CryptoService {
       if (tx.to.toLowerCase() !== expectedAddress.toLowerCase()) {
         return {
           verified: false,
-          error: 'Address mismatch'
+          error: 'Address mismatch',
         };
       }
 
@@ -192,7 +184,7 @@ class CryptoService {
       if (!amountsMatchWithTolerance(amountETH, expectedAmount, undefined, 'ETH')) {
         return {
           verified: false,
-          error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${amountETH} ETH`
+          error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${amountETH} ETH`,
         };
       }
 
@@ -200,49 +192,43 @@ class CryptoService {
       if (receipt.status !== '0x1') {
         return {
           verified: false,
-          error: 'Transaction was reverted or failed'
+          error: 'Transaction was reverted or failed',
         };
       }
-      
+
       // Get current block number to calculate confirmations
       const currentBlockResponse = await this.retryWithBackoff(async () => {
-        return await axios.get(
-          'https://api.etherscan.io/api',
-          {
-            params: {
-              module: 'proxy',
-              action: 'eth_blockNumber',
-              apikey: this.etherscanApiKey
-            },
-            timeout: 10000
-          }
-        );
+        return await axios.get('https://api.etherscan.io/api', {
+          params: {
+            module: 'proxy',
+            action: 'eth_blockNumber',
+            apikey: this.etherscanApiKey,
+          },
+          timeout: 10000,
+        });
       });
-      
+
       const currentBlock = parseInt(currentBlockResponse.data.result, 16);
       const txBlock = parseInt(receipt.blockNumber, 16);
       const confirmations = currentBlock - txBlock + 1;
-      
+
       const minConfirmations = SUPPORTED_CURRENCIES.ETH.confirmations; // 12
-      
+
       return {
         verified: true,
         confirmations,
         amount: amountETH,
         txHash,
-        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending',
       };
-
     } catch (error) {
       logger.error('Ethereum verification error:', { error: error.message, stack: error.stack });
       return {
         verified: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
-
-
 
   /**
    * Get current Bitcoin block height
@@ -266,122 +252,22 @@ class CryptoService {
    */
   async verifyUSDTTRC20Transaction(txHash, expectedAddress, expectedAmount) {
     try {
-      // TronGrid API endpoint
-      const response = await this.retryWithBackoff(async () => {
-        return await axios.post(
-          'https://api.trongrid.io/wallet/gettransactionbyid',
-          { value: txHash },
-          {
-            headers: {
-              'TRON-PRO-API-KEY': this.trongridApiKey || ''
-            },
-            timeout: 10000
-          }
-        );
-      });
-
-      const tx = response.data;
-
-      // Check if transaction exists
-      if (!tx || !tx.ret || tx.ret.length === 0) {
-        return {
-          verified: false,
-          error: 'Transaction not found'
-        };
+      const result = await tronService.verifyPayment(txHash, expectedAddress, expectedAmount);
+      if (!result.verified) {
+        return { verified: false, error: result.error || 'Verification failed' };
       }
-
-      // Check if transaction was successful
-      if (tx.ret[0].contractRet !== 'SUCCESS') {
-        return {
-          verified: false,
-          error: 'Transaction failed'
-        };
-      }
-
-      // USDT TRC-20 contract address on Tron
-      const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-
-      // Find TRC-20 transfer in contract data
-      const contract = tx.raw_data?.contract?.[0];
-      if (!contract || contract.type !== 'TriggerSmartContract') {
-        return {
-          verified: false,
-          error: 'Not a smart contract transaction'
-        };
-      }
-
-      const contractAddress = this.tronAddressFromHex(contract.parameter.value.contract_address);
-      if (contractAddress !== USDT_CONTRACT) {
-        return {
-          verified: false,
-          error: 'Not a USDT TRC-20 transaction'
-        };
-      }
-
-      // Decode transfer method call (first 8 characters = method signature 'a9059cbb' = transfer)
-      const data = contract.parameter.value.data;
-      if (!data || !data.startsWith('a9059cbb')) {
-        return {
-          verified: false,
-          error: 'Not a transfer transaction'
-        };
-      }
-
-      // Decode recipient address (next 64 characters, last 40 are address)
-      const recipientHex = data.substring(8, 72).substring(24);
-      const recipientAddress = this.tronAddressFromHex(recipientHex);
-
-      if (recipientAddress !== expectedAddress) {
-        return {
-          verified: false,
-          error: 'Address mismatch'
-        };
-      }
-
-      // Decode amount (next 64 characters) - USDT has 6 decimals
-      const amountHex = data.substring(72, 136);
-      const amountUSDT = parseInt(amountHex, 16) / 1e6;
-
-      // Check amount with tolerance bounds - Industry standard with validation
-      if (!amountsMatchWithTolerance(amountUSDT, expectedAmount, undefined, 'USDT_TRC20')) {
-        return {
-          verified: false,
-          error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${amountUSDT} USDT`
-        };
-      }
-
-      // Get confirmations (Tron finality is ~19 blocks)
-      const info = await this.retryWithBackoff(async () => {
-        return await axios.post(
-          'https://api.trongrid.io/wallet/gettransactioninfobyid',
-          { value: txHash },
-          {
-            headers: {
-              'TRON-PRO-API-KEY': this.trongridApiKey || ''
-            },
-            timeout: 10000
-          }
-        );
-      });
-
-      const blockNumber = info.data?.blockNumber || 0;
-      const confirmations = blockNumber > 0 ? 20 : 0; // Simplified: assume confirmed if in block
-
-      const minConfirmations = SUPPORTED_CURRENCIES.USDT.confirmations; // 19
-
       return {
         verified: true,
-        confirmations,
-        amount: amountUSDT,
+        confirmations: result.confirmations,
+        amount: result.amount,
         txHash,
-        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
+        status: result.status,
       };
-
     } catch (error) {
       logger.error('USDT TRC-20 verification error:', { error: error.message, stack: error.stack });
       return {
         verified: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -419,7 +305,7 @@ class CryptoService {
       if (!txData || !txData.transaction) {
         return {
           verified: false,
-          error: 'Transaction not found'
+          error: 'Transaction not found',
         };
       }
 
@@ -427,12 +313,12 @@ class CryptoService {
       const outputs = txData.outputs || [];
 
       // Find output to expected address
-      const output = outputs.find(out => out.recipient === expectedAddress);
+      const output = outputs.find((out) => out.recipient === expectedAddress);
 
       if (!output) {
         return {
           verified: false,
-          error: 'Address not found in transaction outputs'
+          error: 'Address not found in transaction outputs',
         };
       }
 
@@ -443,29 +329,27 @@ class CryptoService {
       if (!amountsMatchWithTolerance(amountLTC, expectedAmount, undefined, 'LTC')) {
         return {
           verified: false,
-          error: `Amount mismatch. Expected: ${expectedAmount} LTC, Received: ${amountLTC} LTC`
+          error: `Amount mismatch. Expected: ${expectedAmount} LTC, Received: ${amountLTC} LTC`,
         };
       }
 
-      // Get confirmations (Litecoin considers 6+ confirmations as confirmed)
-      const confirmations = tx.block_id ? 
-        (txData.context?.state || 0) : 0;
+      // Get confirmations (Litecoin treats 3+ confirmations as confirmed in this config)
+      const confirmations = tx.block_id ? txData.context?.state || 0 : 0;
 
-      const minConfirmations = SUPPORTED_CURRENCIES.LTC.confirmations; // 6
+      const minConfirmations = SUPPORTED_CURRENCIES.LTC.confirmations; // 3
 
       return {
         verified: true,
         confirmations,
         amount: amountLTC,
         txHash,
-        status: confirmations >= minConfirmations ? 'confirmed' : 'pending'
+        status: confirmations >= minConfirmations ? 'confirmed' : 'pending',
       };
-
     } catch (error) {
       logger.error('Litecoin verification error:', { error: error.message, stack: error.stack });
       return {
         verified: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -480,14 +364,14 @@ class CryptoService {
    */
   async verifyTransaction(txHash, address, amount, currency) {
     const supportedCurrencies = ['BTC', 'ETH', 'USDT', 'LTC'];
-    
+
     if (!supportedCurrencies.includes(currency)) {
       return {
         verified: false,
-        error: `Unsupported currency. Supported: ${supportedCurrencies.join(', ')}`
+        error: `Unsupported currency. Supported: ${supportedCurrencies.join(', ')}`,
       };
     }
-    
+
     switch (currency) {
       case 'BTC':
         return this.verifyBitcoinTransaction(txHash, address, amount);
@@ -500,7 +384,7 @@ class CryptoService {
       default:
         return {
           verified: false,
-          error: 'Unsupported currency'
+          error: 'Unsupported currency',
         };
     }
   }

@@ -1,5 +1,11 @@
 import { Markup } from 'telegraf';
-import { followsMenu, followDetailMenu, followCatalogMenu, sellerMenu, sellerMenuNoShop } from '../../keyboards/seller.js';
+import {
+  followsMenu,
+  followDetailMenu,
+  followCatalogMenu,
+  sellerMenu,
+  sellerMenuNoShop,
+} from '../../keyboards/seller.js';
 import { followApi } from '../../utils/api.js';
 import { formatFollowDetail } from '../../utils/minimalist.js';
 import logger from '../../utils/logger.js';
@@ -20,7 +26,8 @@ const buildFollowLabel = (follow) => {
   const name = follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин';
   const isResell = follow.mode === 'resell';
   const markupRaw = isResell ? Number(follow.markup_percentage ?? follow.markup ?? 0) : null;
-  const markupSuffix = isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
+  const markupSuffix =
+    isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
   const modeLabel = isResell ? 'Перепродажа' : 'Мониторинг';
   return `🏪 ${name} (${modeLabel}${markupSuffix})`;
 };
@@ -33,16 +40,18 @@ const sendOrEdit = async (ctx, text, keyboard) => {
   return ctx.reply(text, replyMarkup);
 };
 
-const formatProductLine = (index, name, price, stock) => (
-  `${index + 1}. ${name} • $${formatMoney(price)} • ${Number.isFinite(stock) ? stock : 0} шт`
-);
+const formatProductLine = (index, name, price, stock) =>
+  `${index + 1}. ${name} • $${formatMoney(price)} • ${Number.isFinite(stock) ? stock : 0} шт`;
 
 const buildCatalogMessage = (followInfo, products, mode) => {
   const lines = [];
   const shopName = followInfo.source_shop_name || followInfo.sourceShopName || 'Магазин';
   const isResell = mode === 'resell';
-  const markupRaw = isResell ? Number(followInfo.markup_percentage ?? followInfo.markup ?? 0) : null;
-  const markupSuffix = isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
+  const markupRaw = isResell
+    ? Number(followInfo.markup_percentage ?? followInfo.markup ?? 0)
+    : null;
+  const markupSuffix =
+    isResell && Number.isFinite(markupRaw) ? ` (+${Math.round(markupRaw)}%)` : '';
   const modeLabel = isResell ? `Перепродажа${markupSuffix}` : 'Мониторинг';
 
   lines.push(`🏪 ${shopName}`);
@@ -57,8 +66,10 @@ const buildCatalogMessage = (followInfo, products, mode) => {
   products.slice(0, 10).forEach((product, index) => {
     if (isResell) {
       const synced = product.synced_product || product.syncedProduct || {};
-      const name = synced.name || product.source_product?.name || product.name || `Товар #${product.id}`;
-      const price = synced.price ?? product.pricing?.expected_price ?? product.source_product?.price ?? 0;
+      const name =
+        synced.name || product.source_product?.name || product.name || `Товар #${product.id}`;
+      const price =
+        synced.price ?? product.pricing?.expected_price ?? product.source_product?.price ?? 0;
       const stock = synced.stock_quantity ?? product.source_product?.stock_quantity ?? 0;
       lines.push(formatProductLine(index, name, price, stock));
     } else {
@@ -80,10 +91,7 @@ export const handleViewFollows = async (ctx) => {
     await ctx.answerCbQuery();
 
     if (!ctx.session.shopId) {
-      await ctx.reply(
-        generalMessages.shopRequired,
-        sellerMenuNoShop
-      );
+      await ctx.reply(generalMessages.shopRequired, sellerMenuNoShop);
       return;
     }
 
@@ -107,7 +115,7 @@ export const handleViewFollows = async (ctx) => {
     }
 
     const followButtons = follows.map((follow) => [
-      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`)
+      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`),
     ]);
 
     const listText = follows
@@ -120,11 +128,7 @@ export const handleViewFollows = async (ctx) => {
     logger.info(`User ${ctx.from.id} viewed follows (${follows.length} total)`);
   } catch (error) {
     logger.error('Error fetching follows:', error);
-    await sendOrEdit(
-      ctx,
-      followMessages.loadError,
-      followsMenu(Boolean(ctx.session?.hasFollows))
-    );
+    await sendOrEdit(ctx, followMessages.loadError, followsMenu(Boolean(ctx.session?.hasFollows)));
   }
 };
 
@@ -143,10 +147,7 @@ export const handleCreateFollow = async (ctx) => {
     await ctx.scene.enter('createFollow');
   } catch (error) {
     logger.error('Error entering createFollow scene:', error);
-    await ctx.reply(
-      generalMessages.actionFailed,
-      followsMenu(Boolean(ctx.session?.hasFollows))
-    );
+    await ctx.reply(generalMessages.actionFailed, followsMenu(Boolean(ctx.session?.hasFollows)));
   }
 };
 
@@ -261,7 +262,7 @@ export const handleDeleteFollow = async (ctx) => {
     }
 
     const followButtons = follows.map((follow) => [
-      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`)
+      Markup.button.callback(buildFollowLabel(follow), `follow_detail:${follow.id}`),
     ]);
 
     const listText = follows
@@ -305,7 +306,7 @@ export const handleSwitchMode = async (ctx) => {
 
       await ctx.scene.enter('editFollowMarkup', {
         followId,
-        pendingModeSwitch: 'resell'
+        pendingModeSwitch: 'resell',
       });
       return;
     }

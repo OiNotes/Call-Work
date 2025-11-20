@@ -20,13 +20,10 @@ export default function PageHeader({ title, onBack, action }) {
     <div
       className="fixed top-0 left-0 right-0 z-40"
       style={{
-        paddingTop: 'env(safe-area-inset-top)'
+        paddingTop: 'env(safe-area-inset-top)',
       }}
     >
-      <div
-        className="flex items-center justify-between px-4"
-        style={{ height: '56px' }}
-      >
+      <div className="flex items-center justify-between px-4" style={{ height: '56px' }}>
         {/* Back Button (только если передан onBack) */}
         {onBack ? (
           <motion.button
@@ -34,12 +31,17 @@ export default function PageHeader({ title, onBack, action }) {
             className="flex items-center justify-center text-orange-primary"
             style={{
               width: '40px',
-              height: '40px'
+              height: '40px',
             }}
             whileTap={{ scale: 0.9 }}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </motion.button>
         ) : (

@@ -60,5 +60,5 @@ export const productsApi = {
    */
   async delete(token, productId) {
     return await client.delete(`/api/products/${productId}`, token);
-  }
+  },
 };

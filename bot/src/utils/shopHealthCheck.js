@@ -13,13 +13,13 @@ async function checkShopHealth(shopId, token) {
     try {
       const wallets = await walletApi.getWallets(shopId, token);
       // Проверяем есть ли хотя бы один непустой кошелек
-      hasWallets = Object.values(wallets).some(addr => addr && addr.trim() !== '');
+      hasWallets = Object.values(wallets).some((addr) => addr && addr.trim() !== '');
     } catch (err) {
       console.warn('Wallet health check failed:', err);
       // Если endpoint недоступен, считаем что кошельков нет
       hasWallets = false;
     }
-    
+
     // Проверка товаров
     let productsCount = 0;
     try {
@@ -30,17 +30,17 @@ async function checkShopHealth(shopId, token) {
       // Если endpoint недоступен, считаем что товаров нет
       productsCount = 0;
     }
-    
+
     return {
       hasWallets,
-      productsCount
+      productsCount,
     };
   } catch (error) {
     console.error('Error checking shop health:', error);
     // В случае ошибки возвращаем безопасные значения
     return {
-      hasWallets: true,  // Не показываем предупреждение если не уверены
-      productsCount: 1   // Не показываем предупреждение если не уверены
+      hasWallets: true, // Не показываем предупреждение если не уверены
+      productsCount: 1, // Не показываем предупреждение если не уверены
     };
   }
 }

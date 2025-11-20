@@ -106,6 +106,7 @@ npm run setup:botfather
 **Подробная документация:** [NGROK_SETUP.md](./NGROK_SETUP.md)
 
 **Доступные команды:**
+
 - `npm run dev:ngrok` - запустить Backend + WebApp с ngrok
 - `npm run ngrok:update-env` - обновить .env с ngrok URLs
 - `npm run ngrok:status` - показать статус туннелей
@@ -190,11 +191,13 @@ npm run build:webapp   # Build webapp для production
 #### Production с PM2
 
 **Установите PM2 глобально:**
+
 ```bash
 npm install -g pm2
 ```
 
 **Запустите в production:**
+
 ```bash
 pm2 start ecosystem.config.js
 pm2 save
@@ -202,6 +205,7 @@ pm2 startup
 ```
 
 **Управление процессами:**
+
 ```bash
 pm2 logs              # Логи всех процессов
 pm2 monit             # Мониторинг в реальном времени
@@ -245,6 +249,7 @@ pm2 delete all        # Удалить из списка PM2
 ## 🎨 Технологический стек
 
 ### Backend
+
 - **Node.js 18+** - Runtime
 - **Express.js** - Web framework
 - **PostgreSQL** - Database
@@ -252,10 +257,12 @@ pm2 delete all        # Удалить из списка PM2
 - **WebSocket** - Real-time updates
 
 ### Bot
+
 - **Telegraf.js** - Telegram Bot framework
 - **Axios** - HTTP client
 
 ### WebApp
+
 - **React 18** - UI framework
 - **Vite** - Build tool
 - **TailwindCSS** - Styling
@@ -263,6 +270,7 @@ pm2 delete all        # Удалить из списка PM2
 - **Telegram WebApp SDK** - Mini App integration
 
 ### DevOps
+
 - **Docker** - Containerization
 - **Nginx** - Web server
 - **PM2** - Process manager
@@ -304,6 +312,7 @@ make help             # Показать все команды
 ## 🔐 Настройка переменных окружения
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL=postgresql://user:pass@localhost:5432/telegram_shop
 JWT_SECRET=your-secret-key
@@ -312,6 +321,7 @@ ETHERSCAN_API_KEY=your-etherscan-api-key
 ```
 
 ### Bot (.env)
+
 ```env
 BOT_TOKEN=your-telegram-bot-token
 BACKEND_URL=http://localhost:3000
@@ -319,6 +329,7 @@ WEBAPP_URL=https://your-domain.com
 ```
 
 ### WebApp (.env)
+
 ```env
 VITE_API_URL=http://localhost:3000
 ```
@@ -328,11 +339,13 @@ VITE_API_URL=http://localhost:3000
 ### Основные endpoints
 
 **Authentication:**
+
 - `POST /api/auth/login` - Вход через Telegram
 - `POST /api/auth/register` - Регистрация
 - `GET /api/auth/profile` - Профиль пользователя
 
 **Shops:**
+
 - `POST /api/shops` - Создать магазин
 - `GET /api/shops` - Список магазинов
 - `GET /api/shops/:id` - Получить магазин
@@ -340,17 +353,20 @@ VITE_API_URL=http://localhost:3000
 - `DELETE /api/shops/:id` - Удалить магазин
 
 **Products:**
+
 - `POST /api/products` - Добавить товар
 - `GET /api/products` - Список товаров
 - `PUT /api/products/:id` - Обновить товар
 - `DELETE /api/products/:id` - Удалить товар
 
 **Orders:**
+
 - `POST /api/orders` - Создать заказ
 - `GET /api/orders/my` - Мои заказы
 - `PUT /api/orders/:id/status` - Обновить статус
 
 **Payments:**
+
 - `POST /api/payments/verify` - Проверить платеж
 
 Полная документация API: [backend/README.md](backend/README.md)
@@ -358,14 +374,16 @@ VITE_API_URL=http://localhost:3000
 ## 🎯 Дизайн-система
 
 ### Цвета
+
 ```css
---dark-bg: #0A0A0A;           /* Основной фон */
---dark-card: #1A1A1A;         /* Карточки */
---orange-primary: #FF6B00;    /* Акценты */
---orange-light: #FF8533;      /* Hover */
+--dark-bg: #0a0a0a; /* Основной фон */
+--dark-card: #1a1a1a; /* Карточки */
+--orange-primary: #ff6b00; /* Акценты */
+--orange-light: #ff8533; /* Hover */
 ```
 
 ### Эффекты
+
 - **Glassmorphism:** `backdrop-blur(10px)` + прозрачность
 - **Анимации:** Framer Motion для плавных переходов
 - **Touch-friendly:** Минимум 44px для кнопок
@@ -388,6 +406,7 @@ make prod-start
 ### PM2 deployment
 
 Для production deployment используйте PM2:
+
 ```bash
 pm2 start ecosystem.config.js
 pm2 save

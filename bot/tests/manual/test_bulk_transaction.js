@@ -1,6 +1,6 @@
 /**
  * Manual test for bulkUpdateProducts transaction behavior
- * 
+ *
  * Tests:
  * 1. Success case - all products updated atomically
  * 2. Failure case - transaction rollback on error
@@ -13,14 +13,14 @@ const API_URL = 'http://localhost:3000/api';
 // Test user credentials (adjust based on your dev setup)
 const TEST_USER = {
   telegramId: 123456789,
-  username: 'test_seller'
+  username: 'test_seller',
 };
 
 async function login() {
   try {
     const response = await axios.post(`${API_URL}/auth/login`, {
       telegramId: TEST_USER.telegramId,
-      username: TEST_USER.username
+      username: TEST_USER.username,
     });
     return response.data.token;
   } catch (error) {
@@ -32,7 +32,7 @@ async function login() {
 async function getProducts(token) {
   try {
     const response = await axios.get(`${API_URL}/products`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     return response.data.data;
   } catch (error) {
@@ -59,12 +59,12 @@ async function testSuccessCase(token, products) {
   console.log('\n📝 TEST 1: Success case - all valid updates');
   console.log('='.repeat(60));
 
-  const updates = products.slice(0, 3).map(p => ({
+  const updates = products.slice(0, 3).map((p) => ({
     productId: p.id,
     updates: {
       price: parseFloat(p.price) + 10,
-      stockQuantity: (p.stock_quantity || 0) + 5
-    }
+      stockQuantity: (p.stock_quantity || 0) + 5,
+    },
   }));
 
   console.log(`Updating ${updates.length} products...`);
@@ -88,34 +88,34 @@ async function testFailureCase(token, products) {
   const updates = [
     {
       productId: products[0].id,
-      updates: { price: 100 }
+      updates: { price: 100 },
     },
     {
       productId: 999999, // Invalid ID - should trigger rollback
-      updates: { price: 200 }
+      updates: { price: 200 },
     },
     {
       productId: products[1].id,
-      updates: { price: 300 }
-    }
+      updates: { price: 300 },
+    },
   ];
 
   console.log('Attempting to update 3 products (1 invalid)...');
   const productsBefore = await getProducts(token);
-  const product0Before = productsBefore.find(p => p.id === products[0].id);
-  const product1Before = productsBefore.find(p => p.id === products[1].id);
+  const product0Before = productsBefore.find((p) => p.id === products[0].id);
+  const product1Before = productsBefore.find((p) => p.id === products[1].id);
 
   const result = await bulkUpdate(token, updates);
 
   const productsAfter = await getProducts(token);
-  const product0After = productsAfter.find(p => p.id === products[0].id);
-  const product1After = productsAfter.find(p => p.id === products[1].id);
+  const product0After = productsAfter.find((p) => p.id === products[0].id);
+  const product1After = productsAfter.find((p) => p.id === products[1].id);
 
   console.log('\nExpected: Transaction rolled back (no products updated)');
   console.log(`Product ${products[0].id} price: ${product0Before.price} → ${product0After.price}`);
   console.log(`Product ${products[1].id} price: ${product1Before.price} → ${product1After.price}`);
 
-  const noChanges = 
+  const noChanges =
     parseFloat(product0Before.price) === parseFloat(product0After.price) &&
     parseFloat(product1Before.price) === parseFloat(product1After.price);
 
@@ -142,8 +142,8 @@ async function testAccessDenied(token, products) {
   const updates = [
     {
       productId: products[0].id,
-      updates: { price: 100 }
-    }
+      updates: { price: 100 },
+    },
   ];
 
   console.log('Note: This test requires products from different shops');
@@ -177,7 +177,6 @@ async function main() {
     console.log('\n' + '='.repeat(60));
     console.log('✅ All tests completed!');
     console.log('='.repeat(60));
-
   } catch (error) {
     console.error('\n❌ Test suite failed:', error.message);
     process.exit(1);

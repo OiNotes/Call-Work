@@ -2,12 +2,12 @@ import logger from './logger.js';
 
 /**
  * Безопасная обёртка для вызовов Backend API
- * 
+ *
  * Гарантирует корректную обработку:
  * - 200 OK с success: false в теле ответа
  * - HTTP 4xx/5xx ошибок
  * - Сетевых ошибок (timeout, connection refused)
- * 
+ *
  * @param {Function} apiFunction - Функция API для вызова
  * @param {...any} args - Аргументы для передачи в apiFunction
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
@@ -15,78 +15,77 @@ import logger from './logger.js';
 export async function safeApiCall(apiFunction, ...args) {
   try {
     const response = await apiFunction(...args);
-    
+
     // API client может вернуть два формата:
     // 1. Wrapper: { success: true, data: ... } или { success: false, error: ... }
     // 2. Unwrapped: просто данные (product, shop, etc.) - уже распакованные api.js
-    
+
     // Проверка что response - объект
     if (!response || typeof response !== 'object') {
       logger.warn('API call returned non-object response:', response);
-      return { 
-        success: false, 
-        error: 'Неожиданный формат ответа от сервера' 
+      return {
+        success: false,
+        error: 'Неожиданный формат ответа от сервера',
       };
     }
-    
+
     // Проверяем wrapper format (есть поле 'success')
     if ('success' in response) {
       // Wrapper: { success: true, data: ... }
       if (response.success && 'data' in response) {
-        return { 
-          success: true, 
-          data: response.data 
+        return {
+          success: true,
+          data: response.data,
         };
       }
-      
+
       // Wrapper: { success: false, error: ... }
       if (response.success === false) {
         const errorMessage = response.error || response.message || 'Неизвестная ошибка API';
-        logger.warn('API call returned failure status:', { 
-          error: errorMessage, 
-          response 
+        logger.warn('API call returned failure status:', {
+          error: errorMessage,
+          response,
         });
-        return { 
-          success: false, 
-          error: errorMessage 
+        return {
+          success: false,
+          error: errorMessage,
         };
       }
-      
+
       // Wrapper format но странный (success: true без data)
       logger.warn('API call returned wrapper without data field:', response);
-      return { 
-        success: false, 
-        error: 'Неожиданный формат ответа от сервера' 
+      return {
+        success: false,
+        error: 'Неожиданный формат ответа от сервера',
       };
     }
-    
+
     // Unwrapped format: API client вернул данные напрямую (product, shop, etc.)
     // Это успешный ответ, т.к. не было thrown exception
     logger.debug('API call returned unwrapped data (success):', {
       hasId: !!response.id,
       hasName: !!response.name,
-      keys: Object.keys(response).slice(0, 5)
+      keys: Object.keys(response).slice(0, 5),
     });
-    return { 
-      success: true, 
-      data: response 
+    return {
+      success: true,
+      data: response,
     };
-
   } catch (error) {
     // Обработка сетевых ошибок и HTTP ошибок (4xx, 5xx)
     logger.error('API call exception:', {
       message: error.message,
       stack: error.stack,
-      response: error.response?.data
+      response: error.response?.data,
     });
-    
+
     let errorMessage = 'Ошибка сети или сервера';
-    
+
     if (error.response) {
       // HTTP ошибка (4xx, 5xx)
       const status = error.response.status;
       const backendError = error.response.data?.error || error.response.data?.message;
-      
+
       if (status === 400) {
         errorMessage = `Неверные данные: ${backendError || 'проверьте параметры'}`;
       } else if (status === 401) {
@@ -111,10 +110,10 @@ export async function safeApiCall(apiFunction, ...args) {
     } else if (error.code === 'ENOTFOUND') {
       errorMessage = 'Сервер не найден (проверьте BACKEND_URL)';
     }
-    
-    return { 
-      success: false, 
-      error: errorMessage 
+
+    return {
+      success: false,
+      error: errorMessage,
     };
   }
 }
@@ -131,17 +130,17 @@ export function formatResultForAI(result, actionType) {
       data: {
         error: {
           code: 'API_ERROR',
-          message: result.error
-        }
-      }
+          message: result.error,
+        },
+      },
     };
   }
-  
+
   return {
     success: true,
     data: {
       action: actionType,
-      ...result.data
-    }
+      ...result.data,
+    },
   };
 }

@@ -22,18 +22,21 @@ const MAX_COMMANDS_PER_WINDOW = 10;
 const userCommandHistory = new Map();
 
 // Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [userId, timestamps] of userCommandHistory.entries()) {
-    // Remove timestamps older than window
-    const validTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
-    if (validTimestamps.length === 0) {
-      userCommandHistory.delete(userId);
-    } else {
-      userCommandHistory.set(userId, validTimestamps);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [userId, timestamps] of userCommandHistory.entries()) {
+      // Remove timestamps older than window
+      const validTimestamps = timestamps.filter((ts) => now - ts < RATE_LIMIT_WINDOW);
+      if (validTimestamps.length === 0) {
+        userCommandHistory.delete(userId);
+      } else {
+        userCommandHistory.set(userId, validTimestamps);
+      }
     }
-  }
-}, 5 * 60 * 1000);
+  },
+  5 * 60 * 1000
+);
 
 export const userRateLimitMiddleware = async (ctx, next) => {
   const userId = ctx.from?.id;
@@ -54,7 +57,7 @@ export const userRateLimitMiddleware = async (ctx, next) => {
   let timestamps = userCommandHistory.get(userId) || [];
 
   // Remove timestamps outside the window
-  timestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+  timestamps = timestamps.filter((ts) => now - ts < RATE_LIMIT_WINDOW);
 
   // Check if user exceeded limit
   if (timestamps.length >= MAX_COMMANDS_PER_WINDOW) {
@@ -65,13 +68,15 @@ export const userRateLimitMiddleware = async (ctx, next) => {
       userId,
       username: ctx.from.username,
       commandCount: timestamps.length,
-      resetIn
+      resetIn,
     });
 
-    await ctx.reply(
-      `⚠️ Превышен лимит команд.\n\nМаксимум ${MAX_COMMANDS_PER_WINDOW} команд в минуту.\nПопробуйте через ${resetIn} сек.`,
-      { reply_to_message_id: ctx.message?.message_id }
-    ).catch(() => {});
+    await ctx
+      .reply(
+        `⚠️ Превышен лимит команд.\n\nМаксимум ${MAX_COMMANDS_PER_WINDOW} команд в минуту.\nПопробуйте через ${resetIn} сек.`,
+        { reply_to_message_id: ctx.message?.message_id }
+      )
+      .catch(() => {});
 
     return; // Block further execution
   }

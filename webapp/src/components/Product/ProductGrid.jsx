@@ -13,9 +13,9 @@ const container = {
     opacity: 1,
     transition: {
       staggerChildren: 0.05,
-      delayChildren: 0.1
-    }
-  }
+      delayChildren: 0.1,
+    },
+  },
 };
 
 const ProductGrid = memo(function ProductGrid({
@@ -50,8 +50,8 @@ const ProductGrid = memo(function ProductGrid({
       show: {
         opacity: 1,
         y: 0,
-        transition: springPreset || { type: 'spring', stiffness: 400, damping: 30 }
-      }
+        transition: springPreset || { type: 'spring', stiffness: 400, damping: 30 },
+      },
     };
   }, [platform]);
 
@@ -69,17 +69,25 @@ const ProductGrid = memo(function ProductGrid({
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <div className="text-4xl mb-4">
           {emptyIcon || (
-            <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            <svg
+              className="w-16 h-16 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
             </svg>
           )}
         </div>
         <h3 className="text-lg font-semibold text-gray-300 mb-2">
           {emptyTitle || t('catalog.empty')}
         </h3>
-        <p className="text-sm text-gray-500">
-          {emptyDescription || t('catalog.emptyDesc')}
-        </p>
+        <p className="text-sm text-gray-500">{emptyDescription || t('catalog.emptyDesc')}</p>
       </div>
     );
   }
@@ -97,16 +105,8 @@ const ProductGrid = memo(function ProductGrid({
           const isWide = product.name.length > 45;
 
           return (
-            <motion.div
-              key={product.id}
-              variants={item}
-              className={isWide ? 'col-span-2' : ''}
-            >
-              <ProductCard
-                product={product}
-                onPreorder={onPreorder}
-                isWide={isWide}
-              />
+            <motion.div key={product.id} variants={item} className={isWide ? 'col-span-2' : ''}>
+              <ProductCard product={product} onPreorder={onPreorder} isWide={isWide} />
             </motion.div>
           );
         })}
@@ -146,11 +146,7 @@ const ProductGrid = memo(function ProductGrid({
               }}
             >
               <div className={`grid grid-cols-2 gap-4 ${isWide ? 'grid-cols-1' : ''}`}>
-                <ProductCard
-                  product={product}
-                  onPreorder={onPreorder}
-                  isWide={isWide}
-                />
+                <ProductCard product={product} onPreorder={onPreorder} isWide={isWide} />
               </div>
             </div>
           );

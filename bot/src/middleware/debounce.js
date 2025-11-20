@@ -32,7 +32,7 @@ const debounceMiddleware = async (ctx, next) => {
     logger.debug('Action debounced (too fast)', {
       userId: ctx.from?.id,
       timeSinceLastAction,
-      action: ctx.callbackQuery.data
+      action: ctx.callbackQuery.data,
     });
 
     // Answer callback query with "please wait" message
@@ -40,7 +40,7 @@ const debounceMiddleware = async (ctx, next) => {
       await ctx.answerCbQuery('⏳ Подождите...');
     } catch (error) {
       logger.debug('Failed to answer debounced query', {
-        error: error.message
+        error: error.message,
       });
     }
 

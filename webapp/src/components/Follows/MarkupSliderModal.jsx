@@ -45,9 +45,7 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
         >
           {/* Header */}
           <div className="mb-6">
-            <h3 className="text-white text-2xl font-bold tracking-tight mb-2">
-              Настройка наценки
-            </h3>
+            <h3 className="text-white text-2xl font-bold tracking-tight mb-2">Настройка наценки</h3>
             <p className="text-gray-400 text-sm">
               Установите процент наценки для перепродажи товаров
             </p>
@@ -55,12 +53,8 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
 
           {/* Markup Value Display */}
           <div className="text-center mb-6">
-            <div className="text-6xl font-bold text-orange-primary mb-1">
-              {markup}%
-            </div>
-            <div className="text-gray-400 text-sm">
-              Наценка
-            </div>
+            <div className="text-6xl font-bold text-orange-primary mb-1">{markup}%</div>
+            <div className="text-gray-400 text-sm">Наценка</div>
           </div>
 
           {/* Slider */}
@@ -71,10 +65,10 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
                 {/* Active Track */}
                 <motion.div
                   className="h-full bg-gradient-to-r from-orange-primary to-orange-light"
-                  style={{ width: `${(markup - 1) / 499 * 100}%` }}
+                  style={{ width: `${((markup - 1) / 499) * 100}%` }}
                   initial={false}
-                  animate={{ width: `${(markup - 1) / 499 * 100}%` }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  animate={{ width: `${((markup - 1) / 499) * 100}%` }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
                 />
               </div>
 
@@ -90,7 +84,7 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
                 style={{
                   WebkitAppearance: 'none',
                   appearance: 'none',
-                  zIndex: 10
+                  zIndex: 10,
                 }}
               />
 
@@ -98,18 +92,18 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
               <motion.div
                 className="absolute w-10 h-10 bg-white rounded-full shadow-lg cursor-grab active:cursor-grabbing"
                 style={{
-                  left: `${(markup - 1) / 499 * 100}%`,
+                  left: `${((markup - 1) / 499) * 100}%`,
                   top: '50%',
                   transform: 'translateY(-50%) translateX(-50%)',
-                  boxShadow: '0 0 0 4px rgba(255, 107, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3)'
+                  boxShadow: '0 0 0 4px rgba(255, 107, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
                 initial={false}
                 animate={{
-                  left: `${(markup - 1) / 499 * 100}%`,
-                  scale: 1
+                  left: `${((markup - 1) / 499) * 100}%`,
+                  scale: 1,
                 }}
                 whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
               />
             </div>
 
@@ -136,9 +130,14 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
                 viewBox="0 0 24 24"
                 initial={{ x: -5, opacity: 0.5 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
               </motion.svg>
 
               <div className="text-right">
@@ -192,11 +191,11 @@ const MarkupSliderModal = ({ isOpen, onClose, onConfirm, currentMarkup = 25 }) =
               className="flex-1 bg-gradient-to-r from-orange-primary to-orange-light text-white py-3 rounded-xl font-semibold shadow-lg"
               whileHover={{
                 scale: 1.02,
-                boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)'
+                boxShadow: '0 8px 24px rgba(255, 107, 0, 0.3)',
               }}
               whileTap={{
                 scale: 0.98,
-                boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)'
+                boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)',
               }}
               transition={controlSpring}
             >

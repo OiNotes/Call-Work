@@ -1,6 +1,6 @@
 /**
  * Promo Code Queries
- * 
+ *
  * Database queries for promo code management system
  * Replaces hardcoded promo code with database-driven validation
  */
@@ -10,7 +10,7 @@ import logger from '../../src/utils/logger.js';
 
 /**
  * Find promo code by code string (case-insensitive)
- * 
+ *
  * @param {string} code - Promo code to find
  * @returns {Promise<Object|null>} Promo code object or null if not found
  */
@@ -37,7 +37,7 @@ export async function findByCode(code) {
   } catch (error) {
     logger.error('[PromoCodeQueries] Error finding promo code:', {
       error: error.message,
-      code
+      code,
     });
     throw error;
   }
@@ -46,7 +46,7 @@ export async function findByCode(code) {
 /**
  * Validate promo code for usage
  * Checks: active status, expiry date, usage limits
- * 
+ *
  * @param {string} code - Promo code to validate
  * @param {string} tier - Tier to apply promo to ('basic' or 'pro')
  * @returns {Promise<{valid: boolean, error?: string, promoCode?: Object}>}
@@ -59,7 +59,7 @@ export async function validatePromoCode(code, tier) {
     if (!promoCode) {
       return {
         valid: false,
-        error: 'Invalid promo code'
+        error: 'Invalid promo code',
       };
     }
 
@@ -67,7 +67,7 @@ export async function validatePromoCode(code, tier) {
     if (!promoCode.is_active) {
       return {
         valid: false,
-        error: 'Promo code is no longer active'
+        error: 'Promo code is no longer active',
       };
     }
 
@@ -75,11 +75,11 @@ export async function validatePromoCode(code, tier) {
     if (promoCode.expires_at) {
       const now = new Date();
       const expiresAt = new Date(promoCode.expires_at);
-      
+
       if (now > expiresAt) {
         return {
           valid: false,
-          error: 'Promo code has expired'
+          error: 'Promo code has expired',
         };
       }
     }
@@ -88,7 +88,7 @@ export async function validatePromoCode(code, tier) {
     if (promoCode.tier !== tier) {
       return {
         valid: false,
-        error: `Promo code only applies to ${promoCode.tier} tier`
+        error: `Promo code only applies to ${promoCode.tier} tier`,
       };
     }
 
@@ -96,20 +96,20 @@ export async function validatePromoCode(code, tier) {
     if (promoCode.max_uses !== null && promoCode.used_count >= promoCode.max_uses) {
       return {
         valid: false,
-        error: 'Promo code has reached maximum usage limit'
+        error: 'Promo code has reached maximum usage limit',
       };
     }
 
     // All checks passed
     return {
       valid: true,
-      promoCode
+      promoCode,
     };
   } catch (error) {
     logger.error('[PromoCodeQueries] Error validating promo code:', {
       error: error.message,
       code,
-      tier
+      tier,
     });
     throw error;
   }
@@ -117,7 +117,7 @@ export async function validatePromoCode(code, tier) {
 
 /**
  * Increment usage count for promo code
- * 
+ *
  * @param {number} promoCodeId - Promo code ID
  * @returns {Promise<Object>} Updated promo code
  */
@@ -136,7 +136,7 @@ export async function incrementUsageCount(promoCodeId) {
   } catch (error) {
     logger.error('[PromoCodeQueries] Error incrementing usage count:', {
       error: error.message,
-      promoCodeId
+      promoCodeId,
     });
     throw error;
   }
@@ -144,7 +144,7 @@ export async function incrementUsageCount(promoCodeId) {
 
 /**
  * Create new promo code
- * 
+ *
  * @param {Object} data - Promo code data
  * @returns {Promise<Object>} Created promo code
  */
@@ -155,7 +155,7 @@ export async function create(data) {
     tier,
     maxUses = null,
     expiresAt = null,
-    isActive = true
+    isActive = true,
   } = data;
 
   const query = `
@@ -177,14 +177,14 @@ export async function create(data) {
       tier,
       maxUses,
       expiresAt,
-      isActive
+      isActive,
     ]);
 
     return result.rows[0];
   } catch (error) {
     logger.error('[PromoCodeQueries] Error creating promo code:', {
       error: error.message,
-      code
+      code,
     });
     throw error;
   }
@@ -192,7 +192,7 @@ export async function create(data) {
 
 /**
  * Update promo code
- * 
+ *
  * @param {number} id - Promo code ID
  * @param {Object} updates - Fields to update
  * @returns {Promise<Object>} Updated promo code
@@ -203,13 +203,7 @@ export async function update(id, updates) {
   let paramIndex = 1;
 
   // Build dynamic UPDATE query
-  const allowedFields = [
-    'discount_percentage',
-    'tier',
-    'max_uses',
-    'expires_at',
-    'is_active'
-  ];
+  const allowedFields = ['discount_percentage', 'tier', 'max_uses', 'expires_at', 'is_active'];
 
   for (const field of allowedFields) {
     if (updates[field] !== undefined) {
@@ -233,7 +227,7 @@ export async function update(id, updates) {
 
   try {
     const result = await pool.query(query, values);
-    
+
     if (result.rows.length === 0) {
       throw new Error('Promo code not found');
     }
@@ -243,7 +237,7 @@ export async function update(id, updates) {
     logger.error('[PromoCodeQueries] Error updating promo code:', {
       error: error.message,
       id,
-      updates
+      updates,
     });
     throw error;
   }
@@ -251,7 +245,7 @@ export async function update(id, updates) {
 
 /**
  * List all promo codes with optional filters
- * 
+ *
  * @param {Object} filters - Optional filters (isActive, tier)
  * @returns {Promise<Array>} List of promo codes
  */
@@ -280,7 +274,7 @@ export async function list(filters = {}) {
   } catch (error) {
     logger.error('[PromoCodeQueries] Error listing promo codes:', {
       error: error.message,
-      filters
+      filters,
     });
     throw error;
   }
@@ -288,7 +282,7 @@ export async function list(filters = {}) {
 
 /**
  * Delete promo code (soft delete by setting is_active = false)
- * 
+ *
  * @param {number} id - Promo code ID
  * @returns {Promise<Object>} Updated promo code
  */
@@ -302,7 +296,7 @@ export async function softDelete(id) {
 
   try {
     const result = await pool.query(query, [id]);
-    
+
     if (result.rows.length === 0) {
       throw new Error('Promo code not found');
     }
@@ -311,7 +305,7 @@ export async function softDelete(id) {
   } catch (error) {
     logger.error('[PromoCodeQueries] Error deleting promo code:', {
       error: error.message,
-      id
+      id,
     });
     throw error;
   }
@@ -324,5 +318,5 @@ export default {
   create,
   update,
   list,
-  softDelete
+  softDelete,
 };

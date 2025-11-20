@@ -18,7 +18,7 @@ export function setupApiMocks(axiosInstance = axios) {
   // Auth endpoints
   mock.onPost('/api/auth/login').reply(200, {
     token: testTokens.seller,
-    user: testUsers.seller
+    user: testUsers.seller,
   });
 
   mock.onGet('/api/auth/profile').reply(200, testUsers.seller);
@@ -35,30 +35,30 @@ export function setupApiMocks(axiosInstance = axios) {
     products: [testProducts.inStock, testProducts.outOfStock],
     total: 2,
     page: 1,
-    limit: 20
+    limit: 20,
   });
 
   // Orders endpoints
   mock.onPost('/api/orders').reply(201, testOrders.pending);
   mock.onGet('/api/orders/my').reply(200, {
     orders: [testOrders.pending],
-    total: 1
+    total: 1,
   });
 
   // Subscriptions endpoints
   mock.onPost('/api/subscriptions').reply(201, {
     shopId: 1,
-    subscribedAt: new Date().toISOString()
+    subscribedAt: new Date().toISOString(),
   });
   mock.onDelete(/\/api\/subscriptions\/\d+/).reply(200, {
-    message: 'Unsubscribed successfully'
+    message: 'Unsubscribed successfully',
   });
 
   // Payments endpoints
   mock.onPost('/api/payments/verify').reply(200, {
     verified: true,
     confirmations: 3,
-    amount: 0.001
+    amount: 0.001,
   });
 
   return mock;
@@ -69,10 +69,10 @@ export function setupApiMocks(axiosInstance = axios) {
  */
 export function mockEndpoint(mock, method, url, status, data) {
   const methodMap = {
-    'GET': mock.onGet,
-    'POST': mock.onPost,
-    'PUT': mock.onPut,
-    'DELETE': mock.onDelete
+    GET: mock.onGet,
+    POST: mock.onPost,
+    PUT: mock.onPut,
+    DELETE: mock.onDelete,
   };
 
   methodMap[method](url).reply(status, data);

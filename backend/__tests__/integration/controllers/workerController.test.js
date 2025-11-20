@@ -82,7 +82,11 @@ describe('WorkerController Integration Tests', () => {
     // Cleanup
     await query('DELETE FROM shop_workers WHERE shop_id IN ($1, $2)', [proShop.id, freeShop.id]);
     await query('DELETE FROM shops WHERE id IN ($1, $2)', [proShop.id, freeShop.id]);
-    await query('DELETE FROM users WHERE id IN ($1, $2, $3)', [testUser1.id, testUser2.id, testUser3.id]);
+    await query('DELETE FROM users WHERE id IN ($1, $2, $3)', [
+      testUser1.id,
+      testUser2.id,
+      testUser3.id,
+    ]);
   });
 
   describe('POST /api/shops/:shopId/workers', () => {
@@ -169,10 +173,10 @@ describe('WorkerController Integration Tests', () => {
 
     beforeEach(async () => {
       // Add worker for deletion test
-      await query(
-        'DELETE FROM shop_workers WHERE shop_id = $1 AND worker_user_id = $2',
-        [proShop.id, testUser3.id]
-      );
+      await query('DELETE FROM shop_workers WHERE shop_id = $1 AND worker_user_id = $2', [
+        proShop.id,
+        testUser3.id,
+      ]);
 
       const workerRes = await query(
         `INSERT INTO shop_workers (shop_id, worker_user_id, telegram_id, added_by)

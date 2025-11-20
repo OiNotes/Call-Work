@@ -16,56 +16,112 @@ const mockShop = {
     { id: 1, name: 'iPhone 14', price: 799, stock_quantity: 5 },
     { id: 2, name: 'iPhone 15', price: 999, stock_quantity: 3 },
     { id: 3, name: 'Samsung Galaxy S23', price: 799, stock_quantity: 8 },
-    { id: 4, name: 'MacBook Pro M3', price: 1999, stock_quantity: 2 }
-  ]
+    { id: 4, name: 'MacBook Pro M3', price: 1999, stock_quantity: 2 },
+  ],
 };
 
 // Test cases organized by category
 const testCases = {
   basicCRUD: [
-    { cmd: 'добавь iPhone 15 за 50000₽ количество 10', expected: 'addProduct', description: 'Add product with RUB currency and stock' },
-    { cmd: 'добавь AirPods Pro за $249', expected: 'addProduct', description: 'Add product with USD symbol' },
-    { cmd: 'удали iPhone', expected: 'searchProduct', description: 'Delete ambiguous product (2 iPhones)' },
+    {
+      cmd: 'добавь iPhone 15 за 50000₽ количество 10',
+      expected: 'addProduct',
+      description: 'Add product with RUB currency and stock',
+    },
+    {
+      cmd: 'добавь AirPods Pro за $249',
+      expected: 'addProduct',
+      description: 'Add product with USD symbol',
+    },
+    {
+      cmd: 'удали iPhone',
+      expected: 'searchProduct',
+      description: 'Delete ambiguous product (2 iPhones)',
+    },
     { cmd: 'удали MacBook', expected: 'deleteProduct', description: 'Delete unique product' },
-    { cmd: 'покажи все товары', expected: 'listProducts', description: 'List all products' }
+    { cmd: 'покажи все товары', expected: 'listProducts', description: 'List all products' },
   ],
 
   bulkOperations: [
-    { cmd: 'добавь 3 товара: iPhone 500$, Samsung 400$, Xiaomi 300$', expected: 'addProduct', description: 'Bulk add (should add first)' },
-    { cmd: 'удали iPhone и Samsung', expected: 'deleteProduct', description: 'Bulk delete (should handle first)' }
+    {
+      cmd: 'добавь 3 товара: iPhone 500$, Samsung 400$, Xiaomi 300$',
+      expected: 'addProduct',
+      description: 'Bulk add (should add first)',
+    },
+    {
+      cmd: 'удали iPhone и Samsung',
+      expected: 'deleteProduct',
+      description: 'Bulk delete (should handle first)',
+    },
   ],
 
   updates: [
-    { cmd: 'смени цену iPhone на 45000₽', expected: 'searchProduct', description: 'Update price (no update tool yet)' },
-    { cmd: 'смени название iPhone на iPhone 15 Pro', expected: 'searchProduct', description: 'Update name (no update tool yet)' },
-    { cmd: 'обнови iPhone: цена 48000₽, количество 5', expected: 'searchProduct', description: 'Multi-field update (no update tool yet)' }
+    {
+      cmd: 'смени цену iPhone на 45000₽',
+      expected: 'searchProduct',
+      description: 'Update price (no update tool yet)',
+    },
+    {
+      cmd: 'смени название iPhone на iPhone 15 Pro',
+      expected: 'searchProduct',
+      description: 'Update name (no update tool yet)',
+    },
+    {
+      cmd: 'обнови iPhone: цена 48000₽, количество 5',
+      expected: 'searchProduct',
+      description: 'Multi-field update (no update tool yet)',
+    },
   ],
 
   queries: [
     { cmd: 'какие товары есть?', expected: 'listProducts', description: 'Natural query for list' },
     { cmd: 'какая цена у iPhone?', expected: 'searchProduct', description: 'Price query' },
     { cmd: 'сколько осталось MacBook?', expected: 'searchProduct', description: 'Stock query' },
-    { cmd: 'есть ли Samsung?', expected: 'searchProduct', description: 'Availability query' }
+    { cmd: 'есть ли Samsung?', expected: 'searchProduct', description: 'Availability query' },
   ],
 
   salesTracking: [
-    { cmd: 'купили 2 штуки iPhone', expected: 'searchProduct', description: 'Sale tracking (no updateStock tool yet)' },
-    { cmd: 'продано 5 Samsung Galaxy', expected: 'searchProduct', description: 'Sale tracking by name' }
+    {
+      cmd: 'купили 2 штуки iPhone',
+      expected: 'searchProduct',
+      description: 'Sale tracking (no updateStock tool yet)',
+    },
+    {
+      cmd: 'продано 5 Samsung Galaxy',
+      expected: 'searchProduct',
+      description: 'Sale tracking by name',
+    },
   ],
 
   noiseFiltering: [
-    { cmd: 'привет ты тут?', expected: 'text_response', description: 'Greeting (should not call tool)' },
+    {
+      cmd: 'привет ты тут?',
+      expected: 'text_response',
+      description: 'Greeting (should not call tool)',
+    },
     { cmd: 'спасибо', expected: 'text_response', description: 'Thank you (should not call tool)' },
-    { cmd: 'как дела?', expected: 'text_response', description: 'Small talk (should not call tool)' }
+    {
+      cmd: 'как дела?',
+      expected: 'text_response',
+      description: 'Small talk (should not call tool)',
+    },
   ],
 
   edgeCases: [
-    { cmd: 'добавь   ', expected: 'text_response', description: 'Empty command after sanitization' },
-    { cmd: 'удали несуществующий товар', expected: 'deleteProduct', description: 'Delete non-existent product' },
+    {
+      cmd: 'добавь   ',
+      expected: 'text_response',
+      description: 'Empty command after sanitization',
+    },
+    {
+      cmd: 'удали несуществующий товар',
+      expected: 'deleteProduct',
+      description: 'Delete non-existent product',
+    },
     { cmd: 'iPhone', expected: 'searchProduct', description: 'Single word - search intent' },
     { cmd: 'add iphone for $1000 stock 5', expected: 'addProduct', description: 'English command' },
-    { cmd: 'list products', expected: 'listProducts', description: 'English list command' }
-  ]
+    { cmd: 'list products', expected: 'listProducts', description: 'English list command' },
+  ],
 };
 
 // Colors for terminal output
@@ -76,7 +132,7 @@ const colors = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   cyan: '\x1b[36m',
-  gray: '\x1b[90m'
+  gray: '\x1b[90m',
 };
 
 // Test result statistics
@@ -88,7 +144,7 @@ const stats = {
   totalLatency: 0,
   totalTokens: 0,
   totalCost: 0,
-  cacheHits: 0
+  cacheHits: 0,
 };
 
 /**
@@ -159,7 +215,9 @@ async function runTest(testCase, _categoryName) {
     // Print response details
     console.log(`${colors.gray}Function Called:${colors.reset} ${actual}`);
     if (functionArgs) {
-      console.log(`${colors.gray}Arguments:${colors.reset} ${JSON.stringify(functionArgs, null, 2)}`);
+      console.log(
+        `${colors.gray}Arguments:${colors.reset} ${JSON.stringify(functionArgs, null, 2)}`
+      );
     }
     if (choice.message.content) {
       console.log(`${colors.gray}AI Message:${colors.reset} ${choice.message.content}`);
@@ -168,12 +226,15 @@ async function runTest(testCase, _categoryName) {
     // Print metrics
     console.log(`${colors.gray}Metrics:${colors.reset}`);
     console.log(`  - Latency: ${latency}ms`);
-    console.log(`  - Tokens: ${usage?.total_tokens} (prompt: ${usage?.prompt_tokens}, completion: ${usage?.completion_tokens})`);
-    console.log(`  - Cache: ${cacheHit ? colors.green + 'HIT' : 'MISS'}${colors.reset} (hit: ${usage?.prompt_cache_hit_tokens || 0}, miss: ${usage?.prompt_cache_miss_tokens || 0})`);
+    console.log(
+      `  - Tokens: ${usage?.total_tokens} (prompt: ${usage?.prompt_tokens}, completion: ${usage?.completion_tokens})`
+    );
+    console.log(
+      `  - Cache: ${cacheHit ? colors.green + 'HIT' : 'MISS'}${colors.reset} (hit: ${usage?.prompt_cache_hit_tokens || 0}, miss: ${usage?.prompt_cache_miss_tokens || 0})`
+    );
     console.log(`  - Cost: $${cost.toFixed(6)}`);
 
     return { passed, actual, functionArgs, latency, usage, cost, cacheHit };
-
   } catch (error) {
     stats.errors++;
     console.log(`${colors.red}✗ ERROR${colors.reset}`);
@@ -199,7 +260,7 @@ async function runCategory(categoryName, tests) {
     results.push({ testCase, result });
 
     // Small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   return results;
@@ -235,7 +296,7 @@ function printSummary(allResults) {
   const categoryStats = {};
 
   for (const [categoryName, results] of Object.entries(allResults)) {
-    const passed = results.filter(r => r.result.passed).length;
+    const passed = results.filter((r) => r.result.passed).length;
     const total = results.length;
     const rate = ((passed / total) * 100).toFixed(0);
 
@@ -271,11 +332,15 @@ function printSummary(allResults) {
   console.log(`\n${colors.cyan}Recommendations:${colors.reset}`);
 
   if (categoryStats.updates.rate < 50) {
-    console.log(`  ${colors.yellow}!${colors.reset} Add updateProduct and updateStock tools for better update handling`);
+    console.log(
+      `  ${colors.yellow}!${colors.reset} Add updateProduct and updateStock tools for better update handling`
+    );
   }
 
   if (categoryStats.bulkOperations.rate < 50) {
-    console.log(`  ${colors.yellow}!${colors.reset} Add bulk operation tools (deleteMultiple, addMultiple)`);
+    console.log(
+      `  ${colors.yellow}!${colors.reset} Add bulk operation tools (deleteMultiple, addMultiple)`
+    );
   }
 
   if (categoryStats.salesTracking.rate < 50) {
@@ -283,19 +348,29 @@ function printSummary(allResults) {
   }
 
   if (avgLatency > 2000) {
-    console.log(`  ${colors.yellow}!${colors.reset} Latency is high (>${avgLatency}ms). Consider optimizing prompts or model.`);
+    console.log(
+      `  ${colors.yellow}!${colors.reset} Latency is high (>${avgLatency}ms). Consider optimizing prompts or model.`
+    );
   }
 
   if (cacheHitRate < 50) {
-    console.log(`  ${colors.yellow}!${colors.reset} Low cache hit rate (${cacheHitRate}%). Ensure system prompts are consistent.`);
+    console.log(
+      `  ${colors.yellow}!${colors.reset} Low cache hit rate (${cacheHitRate}%). Ensure system prompts are consistent.`
+    );
   }
 
   if (passRate >= 80) {
-    console.log(`  ${colors.green}✓${colors.reset} Overall performance is good (${passRate}% pass rate)`);
+    console.log(
+      `  ${colors.green}✓${colors.reset} Overall performance is good (${passRate}% pass rate)`
+    );
   } else if (passRate >= 60) {
-    console.log(`  ${colors.yellow}!${colors.reset} Performance is moderate (${passRate}% pass rate). Review failed tests.`);
+    console.log(
+      `  ${colors.yellow}!${colors.reset} Performance is moderate (${passRate}% pass rate). Review failed tests.`
+    );
   } else {
-    console.log(`  ${colors.red}✗${colors.reset} Performance is poor (${passRate}% pass rate). Prompts need major improvements.`);
+    console.log(
+      `  ${colors.red}✗${colors.reset} Performance is poor (${passRate}% pass rate). Prompts need major improvements.`
+    );
   }
 
   console.log();
@@ -338,7 +413,7 @@ async function main() {
 }
 
 // Run tests
-main().catch(error => {
+main().catch((error) => {
   console.error(`${colors.red}Fatal error:${colors.reset}`, error);
   process.exit(1);
 });

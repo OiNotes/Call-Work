@@ -17,13 +17,15 @@ describe('Follow Formatters', () => {
     });
 
     it('отображает одну подписку мониторинга', () => {
-      const follows = [{
-        id: 1,
-        source_shop_id: 100,
-        source_shop_name: 'SourceShop',
-        mode: 'monitor',
-        markup_percentage: 0
-      }];
+      const follows = [
+        {
+          id: 1,
+          source_shop_id: 100,
+          source_shop_name: 'SourceShop',
+          mode: 'monitor',
+          markup_percentage: 0,
+        },
+      ];
 
       const result = formatFollowsList(follows);
 
@@ -33,13 +35,15 @@ describe('Follow Formatters', () => {
     });
 
     it('отображает подписку перепродажи с наценкой', () => {
-      const follows = [{
-        id: 2,
-        source_shop_id: 200,
-        source_shop_name: 'ResellShop',
-        mode: 'resell',
-        markup_percentage: 25
-      }];
+      const follows = [
+        {
+          id: 2,
+          source_shop_id: 200,
+          source_shop_name: 'ResellShop',
+          mode: 'resell',
+          markup_percentage: 25,
+        },
+      ];
 
       const result = formatFollowsList(follows);
 
@@ -54,15 +58,15 @@ describe('Follow Formatters', () => {
           source_shop_id: 100,
           source_shop_name: 'Shop1',
           mode: 'monitor',
-          markup_percentage: 0
+          markup_percentage: 0,
         },
         {
           id: 2,
           source_shop_id: 200,
           source_shop_name: 'Shop2',
           mode: 'resell',
-          markup_percentage: 15
-        }
+          markup_percentage: 15,
+        },
       ];
 
       const result = formatFollowsList(follows);
@@ -81,7 +85,7 @@ describe('Follow Formatters', () => {
         source_shop_name: 'SourceShop',
         mode: 'monitor',
         markup_percentage: 0,
-        products_count: 3
+        products_count: 3,
       };
 
       const result = formatFollowDetail(follow);
@@ -101,7 +105,7 @@ describe('Follow Formatters', () => {
         source_shop_name: 'ResellShop',
         mode: 'resell',
         markup_percentage: 30,
-        products_count: 12
+        products_count: 12,
       };
 
       const result = formatFollowDetail(follow);
@@ -116,7 +120,7 @@ describe('Follow Formatters', () => {
     it('gracefully обрабатывает отсутствующие поля', () => {
       const follow = {
         id: 3,
-        mode: 'resell'
+        mode: 'resell',
       };
 
       const result = formatFollowDetail(follow);

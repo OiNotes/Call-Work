@@ -15,26 +15,26 @@ function OrderCard({ order }) {
       label: t('orders.status.pending'),
       color: 'text-yellow-500',
       bgColor: 'rgba(255, 204, 0, 0.1)',
-      borderColor: 'rgba(255, 204, 0, 0.2)'
+      borderColor: 'rgba(255, 204, 0, 0.2)',
     },
     paid: {
       label: t('orders.status.paid'),
       color: 'text-blue-500',
       bgColor: 'rgba(0, 122, 255, 0.1)',
-      borderColor: 'rgba(0, 122, 255, 0.2)'
+      borderColor: 'rgba(0, 122, 255, 0.2)',
     },
     completed: {
       label: t('orders.status.completed'),
       color: 'text-green-500',
       bgColor: 'rgba(52, 199, 89, 0.1)',
-      borderColor: 'rgba(52, 199, 89, 0.2)'
+      borderColor: 'rgba(52, 199, 89, 0.2)',
     },
     cancelled: {
       label: t('orders.status.cancelled'),
       color: 'text-red-500',
       bgColor: 'rgba(255, 59, 48, 0.1)',
-      borderColor: 'rgba(255, 59, 48, 0.2)'
-    }
+      borderColor: 'rgba(255, 59, 48, 0.2)',
+    },
   };
 
   const status = statusConfig[order.status] || statusConfig.pending;
@@ -51,12 +51,14 @@ function OrderCard({ order }) {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-gray-400 text-xs">{t('orders.order')} #{order.id}</p>
+            <p className="text-gray-400 text-xs">
+              {t('orders.order')} #{order.id}
+            </p>
             <p className="text-white text-sm mt-1">
               {orderDate.toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
-                year: 'numeric'
+                year: 'numeric',
               })}
             </p>
           </div>
@@ -65,7 +67,7 @@ function OrderCard({ order }) {
             style={{
               color: status.color.replace('text-', ''),
               background: status.bgColor,
-              border: `1px solid ${status.borderColor}`
+              border: `1px solid ${status.borderColor}`,
             }}
           >
             {status.label}
@@ -101,9 +103,7 @@ function OrderCard({ order }) {
                   {order.crypto === 'bitcoin' ? '₿' : order.crypto === 'ethereum' ? 'Ξ' : '₮'}
                 </span>
               </div>
-              <span className="text-gray-400 text-xs uppercase">
-                {order.crypto}
-              </span>
+              <span className="text-gray-400 text-xs uppercase">{order.crypto}</span>
             </div>
           </>
         )}
@@ -128,32 +128,35 @@ export default function OrdersModal({ isOpen, onClose }) {
 
   useBackButton(isOpen ? handleClose : null);
 
-  const loadOrders = useCallback(async (signal) => {
-    triggerHaptic('light');
+  const loadOrders = useCallback(
+    async (signal) => {
+      triggerHaptic('light');
 
-    // ✅ FIX: Use api.get directly to support signal parameter
-    const { data, error } = await get('/orders/my', { signal });
+      // ✅ FIX: Use api.get directly to support signal parameter
+      const { data, error } = await get('/orders/my', { signal });
 
-    if (signal?.aborted) return { status: 'aborted' };
+      if (signal?.aborted) return { status: 'aborted' };
 
-    if (error) {
-      setError(error);
-      return { status: 'error' };
-    } else {
-      // Backend возвращает { success: true, data: [...orders] }
-      // useApi оборачивает в { data: response.data, error: null }
-      // ✅ FIX: Safe array extraction with validation
-      const ordersList = Array.isArray(data?.data) ? data.data : [];
-      if (!Array.isArray(ordersList)) {
-        console.error('[OrdersModal] Invalid data format:', data);
-        setError('Неверный формат данных заказов');
-        setOrders([]);
+      if (error) {
+        setError(error);
         return { status: 'error' };
+      } else {
+        // Backend возвращает { success: true, data: [...orders] }
+        // useApi оборачивает в { data: response.data, error: null }
+        // ✅ FIX: Safe array extraction with validation
+        const ordersList = Array.isArray(data?.data) ? data.data : [];
+        if (!Array.isArray(ordersList)) {
+          console.error('[OrdersModal] Invalid data format:', data);
+          setError('Неверный формат данных заказов');
+          setOrders([]);
+          return { status: 'error' };
+        }
+        setOrders(ordersList);
+        return { status: 'success' };
       }
-      setOrders(ordersList);
-      return { status: 'success' };
-    }
-  }, [get, triggerHaptic]);
+    },
+    [get, triggerHaptic]
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -164,7 +167,7 @@ export default function OrdersModal({ isOpen, onClose }) {
     const controller = new AbortController();
 
     loadOrders(controller.signal)
-      .then(result => {
+      .then((result) => {
         if (!controller.signal.aborted && result?.status === 'error') {
           console.error('[OrdersModal] Failed to load orders');
         }
@@ -194,88 +197,86 @@ export default function OrdersModal({ isOpen, onClose }) {
             style={{
               paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
               paddingBottom: 'calc(var(--tabbar-total) + 24px)',
-              WebkitOverflowScrolling: 'touch'
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <div className="px-4 py-6 space-y-4">
-        {/* Loading state */}
-        {loading && (
-          <div className="flex justify-center py-12">
-            <motion.div
-              className="w-12 h-12 rounded-full border-4 border-orange-primary/20 border-t-orange-primary"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            />
-          </div>
-        )}
+              {/* Loading state */}
+              {loading && (
+                <div className="flex justify-center py-12">
+                  <motion.div
+                    className="w-12 h-12 rounded-full border-4 border-orange-primary/20 border-t-orange-primary"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  />
+                </div>
+              )}
 
-        {/* Error state */}
-        {error && !loading && (
-          <div className="text-center py-12">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-gray-400 text-sm mb-4">{error}</p>
-            <motion.button
-              onClick={loadOrders}
-              className="px-6 py-2 rounded-xl font-medium text-white"
-              style={{
-                background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {t('common.retry')}
-            </motion.button>
-          </div>
-        )}
+              {/* Error state */}
+              {error && !loading && (
+                <div className="text-center py-12">
+                  <svg
+                    className="w-16 h-16 mx-auto mb-4 text-red-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-gray-400 text-sm mb-4">{error}</p>
+                  <motion.button
+                    onClick={loadOrders}
+                    className="px-6 py-2 rounded-xl font-medium text-white"
+                    style={{
+                      background: 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {t('common.retry')}
+                  </motion.button>
+                </div>
+              )}
 
-        {/* Empty state */}
-        {!loading && !error && orders.length === 0 && (
-          <div className="text-center py-12">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-              />
-            </svg>
-            <p className="text-gray-400 text-sm">
-              {t('orders.empty')}
-            </p>
-          </div>
-        )}
+              {/* Empty state */}
+              {!loading && !error && orders.length === 0 && (
+                <div className="text-center py-12">
+                  <svg
+                    className="w-16 h-16 mx-auto mb-4 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                    />
+                  </svg>
+                  <p className="text-gray-400 text-sm">{t('orders.empty')}</p>
+                </div>
+              )}
 
-        {/* Orders list */}
-        {!loading && !error && orders.length > 0 && (
-          <div className="space-y-3">
-            {orders.map((order, index) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <OrderCard order={order} />
-              </motion.div>
-            ))}
-          </div>
-        )}
+              {/* Orders list */}
+              {!loading && !error && orders.length > 0 && (
+                <div className="space-y-3">
+                  {orders.map((order, index) => (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <OrderCard order={order} />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

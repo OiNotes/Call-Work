@@ -5,6 +5,7 @@
 ## ✅ ВСЕ SKILLS ОБНОВЛЕНЫ (November 4, 2025)
 
 Все skills были **полностью переписаны** под реальную структуру проекта:
+
 - ✅ Используют реальные пути (`/Users/sile/Documents/Status Stock 4.0`)
 - ✅ Используют существующие скрипты (`./start.sh`, `./stop.sh`)
 - ✅ Корректные пути к логам (`backend/logs/error-YYYY-MM-DD.log`, `bot/logs/error.log`)
@@ -35,6 +36,7 @@ Claude автоматически выполнит все необходимые
 ### ⚡ Development & Startup (3)
 
 **1. quick-start** - Моментальный запуск всего stack
+
 - ✅ Останавливает существующие процессы
 - ✅ Запускает ngrok tunnel
 - ✅ Обновляет .env файлы с ngrok URL
@@ -43,6 +45,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"quick start"` or `"start project"`
 
 **2. restart-all** - Безопасный перезапуск
+
 - ✅ Использует `./stop.sh`
 - ✅ Проверяет что все процессы остановлены
 - ✅ Использует `./start.sh` для нового старта
@@ -50,6 +53,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"restart all"` or `"restart services"`
 
 **3. health-check** - Комплексная проверка здоровья
+
 - ✅ Backend API health endpoint
 - ✅ Bot process status
 - ✅ **ngrok tunnel status** (критично!)
@@ -62,6 +66,7 @@ Claude автоматически выполнит все необходимые
 ### 🐛 Debug & Monitoring (3)
 
 **4. analyze-logs** - Умный анализ error логов
+
 - ✅ Backend: `backend/logs/error-YYYY-MM-DD.log`
 - ✅ Bot: `bot/logs/error.log`
 - ✅ ngrok: `logs/ngrok.log`
@@ -70,6 +75,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"analyze logs"` or `"what's wrong"`
 
 **5. fix-errors** - Автоматическое исправление ошибок
+
 - ✅ Port conflicts (EADDRINUSE)
 - ✅ Database connection (ECONNREFUSED)
 - ✅ Missing dependencies
@@ -78,6 +84,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"fix errors"` or `"auto fix"`
 
 **6. check-ports** - Управление портами
+
 - ✅ 3000 (Backend)
 - ✅ 5173 (WebApp dev)
 - ✅ 5432 (PostgreSQL)
@@ -89,12 +96,14 @@ Claude автоматически выполнит все необходимые
 ### 🧪 Testing (2)
 
 **7. run-tests** - Запуск всех тестов
+
 - ✅ Backend tests + coverage (`npm run test:coverage`)
 - ✅ Bot tests + coverage (`npm run test:coverage`)
 - ✅ Coverage summary report
 - Usage: `"run tests"` or `"test all"`
 
 **8. test-integration** - Integration тесты бота
+
 - ✅ Проверяет Backend running
 - ✅ Автостарт Backend если нужно
 - ✅ Full user flow testing
@@ -106,6 +115,7 @@ Claude автоматически выполнит все необходимые
 ### 🎨 Design & UI/UX (2)
 
 **9. ui-check** - Валидация UI дизайна
+
 - ✅ Glassmorphism effects (glass-card, glass-elevated)
 - ✅ Color palette (#FF6B00 orange, #181818 dark)
 - ✅ Touch-friendly buttons (min 44px)
@@ -113,6 +123,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"check ui"` or `"validate design"`
 
 **10. animation-check** - Проверка анимаций
+
 - ✅ Framer Motion usage
 - ✅ Performance anti-patterns detection
 - ✅ GPU-accelerated properties check
@@ -124,6 +135,7 @@ Claude автоматически выполнит все необходимые
 ### 🗄️ Database (2)
 
 **11. db-migrate** - Безопасные миграции
+
 - ✅ Auto backup before migration
 - ✅ Run migrations (`npm run db:migrate`)
 - ✅ Verify schema
@@ -131,6 +143,7 @@ Claude автоматически выполнит все необходимые
 - Usage: `"migrate db"` or `"run migrations"`
 
 **12. db-query** - Быстрые SQL запросы
+
 - ✅ Common queries (users, shops, orders)
 - ✅ Table schemas
 - ✅ Export to CSV/JSON
@@ -142,6 +155,7 @@ Claude автоматически выполнит все необходимые
 ### 🌐 ngrok Management (1) - НОВЫЙ!
 
 **13. ngrok-management** - Управление ngrok tunnel
+
 - ✅ Check ngrok status and URL
 - ✅ Restart expired tunnels
 - ✅ Update all .env files
@@ -156,6 +170,7 @@ Claude автоматически выполнит все необходимые
 ### 🚀 Deployment (1) - НОВЫЙ!
 
 **14. production-deploy** - Pre-deployment checklist
+
 - ✅ Run all tests
 - ✅ Check UI/UX compliance
 - ✅ Validate animations
@@ -170,12 +185,14 @@ Claude автоматически выполнит все необходимые
 ## 🎯 Типичные рабочие сценарии
 
 ### Утренний старт:
+
 ```
 1. "quick start"           # Запустить всё
 2. "health check"          # Проверить что работает
 ```
 
 ### Когда что-то сломалось:
+
 ```
 1. "analyze logs"          # Найти ошибки
 2. "fix errors"            # Автофикс
@@ -184,6 +201,7 @@ Claude автоматически выполнит все необходимые
 ```
 
 ### Перед коммитом:
+
 ```
 1. "run tests"             # Все тесты
 2. "check ui"              # Дизайн
@@ -192,6 +210,7 @@ Claude автоматически выполнит все необходимые
 ```
 
 ### Перед deployment:
+
 ```
 1. "production check"      # Comprehensive checklist
 2. Fix any ❌ failures
@@ -199,6 +218,7 @@ Claude автоматически выполнит все необходимые
 ```
 
 ### После system sleep/wake:
+
 ```
 1. "check ngrok"           # ngrok tunnel expires!
 2. If expired: "restart ngrok"
@@ -212,36 +232,40 @@ Claude автоматически выполнит все необходимые
 ### Комбинирование SKILLS:
 
 **Morning workflow:**
+
 ```
 "quick start" → "health check" → "analyze logs"
 ```
 
 **Before commit:**
+
 ```
 "run tests" → "check ui" → "check animations"
 ```
 
 **Emergency fix:**
+
 ```
 "analyze logs" → "fix errors" → "health check"
 ```
 
 **Weekly check:**
+
 ```
 "health check" → "analyze logs" → "production check"
 ```
 
 ### Когда использовать какой skill:
 
-| Ситуация | Skill |
-|----------|-------|
-| Первый запуск дня | quick-start |
-| После git pull | restart-all |
-| Что-то сломалось | analyze-logs → fix-errors |
+| Ситуация             | Skill                       |
+| -------------------- | --------------------------- |
+| Первый запуск дня    | quick-start                 |
+| После git pull       | restart-all                 |
+| Что-то сломалось     | analyze-logs → fix-errors   |
 | Mini App не работает | check-ngrok → restart-ngrok |
-| Перед коммитом | run-tests → ui-check |
-| Перед deploy | production-deploy |
-| Система зависла | restart-all |
+| Перед коммитом       | run-tests → ui-check        |
+| Перед deploy         | production-deploy           |
+| Система зависла      | restart-all                 |
 
 ---
 
@@ -251,6 +275,7 @@ Claude автоматически выполнит все необходимые
 **Категорий:** 7 (Development, Debug, Testing, Design, Database, ngrok, Deployment)
 
 **Охват:**
+
 - ⚡ Development: 100%
 - 🐛 Debugging: 100%
 - 🧪 Testing: Backend + Bot
@@ -264,13 +289,15 @@ Claude автоматически выполнит все необходимые
 ## 🔧 Кастомизация
 
 Вы можете редактировать любой skill файл для:
+
 - Изменения путей (если проект переместился)
 - Добавления новых команд
 - Настройки thresholds
 - Добавления своих проверок
 
 **Формат skill файла:**
-```markdown
+
+````markdown
 ---
 name: skill-name
 description: What it does + when to use
@@ -279,17 +306,22 @@ description: What it does + when to use
 # Skill Title
 
 ## What this skill does:
+
 [List of what it does]
 
 ## Usage:
+
 Say: **"trigger phrase"**
 
 ## Commands:
+
 ```bash
 # Actual bash commands
 ```
+````
 
 [Rest of documentation]
+
 ```
 
 ---
@@ -346,7 +378,8 @@ Say: **"trigger phrase"**
 
 ---
 
-**Created:** 2025-10-31  
-**Updated:** 2025-11-04  
-**Version:** 2.0 (Complete Rewrite)  
+**Created:** 2025-10-31
+**Updated:** 2025-11-04
+**Version:** 2.0 (Complete Rewrite)
 **Project:** Status Stock 4.0 - Telegram E-Commerce Platform
+```

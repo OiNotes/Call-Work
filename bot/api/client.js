@@ -15,8 +15,8 @@ class ApiClient {
       baseURL: this.baseURL,
       timeout: this.timeout,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     this._setupInterceptors();
@@ -28,7 +28,7 @@ class ApiClient {
   _setupInterceptors() {
     // Response interceptor with retry logic
     this.client.interceptors.response.use(
-      response => response,
+      (response) => response,
       async (error) => {
         const config = error.config;
 
@@ -42,7 +42,7 @@ class ApiClient {
 
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, config.retryCount - 1) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
 
           return this.client.request(config);
         }
@@ -65,13 +65,13 @@ class ApiClient {
       const config = {
         method,
         url,
-        data
+        data,
       };
 
       // Add authorization header if token provided
       if (token) {
         config.headers = {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         };
       }
 

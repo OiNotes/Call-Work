@@ -21,7 +21,7 @@ const ERROR_MESSAGES = {
   500: '⚠️ Ошибка сервера. Попробуйте позже.',
   502: '⚠️ Сервер временно недоступен.',
   503: '⚠️ Сервис временно недоступен.',
-  504: '⚠️ Превышено время ожидания сервера.'
+  504: '⚠️ Превышено время ожидания сервера.',
 };
 
 /**
@@ -63,7 +63,7 @@ export const toFriendlyError = (error) => {
   // Validation errors
   if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
     const validationErrors = error.response.data.details
-      .map(d => `• ${d.message || d.msg || d}`)
+      .map((d) => `• ${d.message || d.msg || d}`)
       .join('\n');
     return `⚠️ Ошибка валидации:\n\n${validationErrors}`;
   }

@@ -85,9 +85,18 @@ async function main() {
     const vzmConducted = Math.floor(Math.random() * 4) + 4 // 4-7
     const successfulDeals = Math.floor(Math.random() * 3) + 2 // 2-4
     const monthlySalesAmount = Math.floor(Math.random() * 100000) + 200000 // 200k-300k
-    const refusalsCount = Math.floor(Math.random() * 3) // 0-2
-    const warmingUpCount = Math.floor(Math.random() * 4) + 2 // 2-5
-    const contractReviewCount = Math.floor(Math.random() * 2) // 0-1
+
+    // Новые поля воронки
+    const refusalsCount = Math.floor(Math.random() * 3) + 1 // 1-3 отказа
+    const warmingUpCount = Math.floor(Math.random() * 8) + 5 // 5-12 в подогреве
+    const contractReviewCount = Math.floor(Math.random() * 3) + 1 // 1-3 разбора
+
+    // Причины отказов (случайный выбор)
+    const refusalReasons = ['нет денег', 'не интересно', 'думает', 'дорого', 'не сейчас']
+    const selectedReasons = refusalReasons
+      .sort(() => 0.5 - Math.random())
+      .slice(0, Math.min(refusalsCount, 2))
+      .join(', ')
 
     await prisma.report.upsert({
       where: {
@@ -103,7 +112,7 @@ async function main() {
         successfulDeals,
         monthlySalesAmount,
         refusalsCount,
-        refusalsReasons: refusalsCount > 0 ? 'Нет бюджета, Не подходит' : null,
+        refusalsReasons: selectedReasons,
         warmingUpCount,
         contractReviewCount,
         comment: 'Сгенерировано для TV Dashboard'
@@ -117,7 +126,7 @@ async function main() {
         successfulDeals,
         monthlySalesAmount,
         refusalsCount,
-        refusalsReasons: refusalsCount > 0 ? 'Нет бюджета, Не подходит' : null,
+        refusalsReasons: selectedReasons,
         warmingUpCount,
         contractReviewCount,
         comment: 'Сгенерировано для TV Dashboard'
@@ -148,6 +157,10 @@ async function main() {
   const totalCalls = allReports.reduce((sum, r) => sum + r.pzmConducted + r.vzmConducted, 0)
   const avgConversion = totalCalls > 0 ? ((totalDeals / totalCalls) * 100).toFixed(1) : 0
 
+  const totalRefusals = allReports.reduce((sum, r) => sum + r.refusalsCount, 0)
+  const totalWarmingUp = allReports.reduce((sum, r) => sum + r.warmingUpCount, 0)
+  const totalContractReviews = allReports.reduce((sum, r) => sum + r.contractReviewCount, 0)
+
   console.log('═══════════════════════════════════════════════')
   console.log('📈 ИТОГОВАЯ СТАТИСТИКА ЗА СЕГОДНЯ:')
   console.log('═══════════════════════════════════════════════')
@@ -155,6 +168,9 @@ async function main() {
   console.log(`  📞 Всего звонков: ${totalCalls}`)
   console.log(`  ✅ Всего сделок: ${totalDeals}`)
   console.log(`  📊 Средняя конверсия: ${avgConversion}%`)
+  console.log(`  ❌ Всего отказов: ${totalRefusals}`)
+  console.log(`  🔥 В подогреве: ${totalWarmingUp}`)
+  console.log(`  📄 Разбор договора: ${totalContractReviews}`)
   console.log(`  🎯 Цель на месяц: 1,500,000₽`)
   console.log(`  📈 Прогресс: ${((totalSales / 1500000) * 100).toFixed(1)}%`)
   console.log('═══════════════════════════════════════════════')

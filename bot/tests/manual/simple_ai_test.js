@@ -10,7 +10,7 @@ const BASE_URL = 'http://localhost:3000/api';
 const TEST_USER = {
   telegram_id: '999999',
   username: 'ai_test_user',
-  first_name: 'AI'
+  first_name: 'AI',
 };
 
 async function main() {
@@ -28,16 +28,20 @@ async function main() {
     let shop;
     try {
       const shopsRes = await axios.get(`${BASE_URL}/shops/my`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       shop = shopsRes.data.data?.[0];
       if (!shop) {
-        const createRes = await axios.post(`${BASE_URL}/shops`, {
-          name: 'AI_Simple_Test',
-          description: 'Simple test shop'
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const createRes = await axios.post(
+          `${BASE_URL}/shops`,
+          {
+            name: 'AI_Simple_Test',
+            description: 'Simple test shop',
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         shop = createRes.data.data || createRes.data;
       }
       console.log('✅ Shop ID:', shop.id);
@@ -49,7 +53,7 @@ async function main() {
     // 3. Get products
     console.log('\n3️⃣ Getting products...');
     const productsRes = await axios.get(`${BASE_URL}/products?shopId=${shop.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     const products = productsRes.data.data || [];
     console.log('📦 Products:', products.length);
@@ -64,7 +68,7 @@ async function main() {
       session: {},
       sendChatAction: async () => {},
       reply: async (text) => console.log('📨 Bot reply:', text.slice(0, 100)),
-      editMessageText: async (text) => console.log('✏️ Edit:', text.slice(0, 100))
+      editMessageText: async (text) => console.log('✏️ Edit:', text.slice(0, 100)),
     };
 
     // 6. Test: Add Product
@@ -74,7 +78,7 @@ async function main() {
       shopName: shop.name,
       token,
       products,
-      ctx: mockCtx
+      ctx: mockCtx,
     });
 
     console.log('\n📊 Result:', JSON.stringify(result, null, 2).slice(0, 500));
@@ -82,17 +86,19 @@ async function main() {
     // 7. Check DB
     console.log('\n6️⃣ Checking DB...');
     const checkRes = await axios.get(`${BASE_URL}/products?shopId=${shop.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     const newProducts = checkRes.data.data || [];
-    console.log('📦 Products after command:', newProducts.map(p => `${p.name}: $${p.price}`));
+    console.log(
+      '📦 Products after command:',
+      newProducts.map((p) => `${p.name}: $${p.price}`)
+    );
 
     if (newProducts.length > products.length) {
       console.log('\n✅ SUCCESS: Product added!');
     } else {
       console.log('\n❌ FAIL: Product not added');
     }
-
   } catch (error) {
     console.error('\n❌ Error:', error.message);
     if (error.response) {

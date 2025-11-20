@@ -2,14 +2,14 @@
 
 /**
  * Bulk Operations Test Suite
- * 
+ *
  * Тестирует работу AI с группой товаров (15 тестовых сценариев)
- * 
+ *
  * Используется:
  * - Реальная БД (PostgreSQL)
  * - Реальный AI (DeepSeek API)
  * - Реальный Backend API
- * 
+ *
  * Usage:
  *   node bot/tests/manual/test-bulk-operations.js
  */
@@ -40,7 +40,7 @@ const TEST_USER = {
   telegramId: 999999999,
   username: 'bulk_test_user',
   firstName: 'Bulk Test',
-  lastName: 'User'
+  lastName: 'User',
 };
 
 // Global state
@@ -68,17 +68,17 @@ function createMockContext(userId, shopId, token, shopName = 'Test Shop') {
       token,
       role: 'seller',
       shopName,
-      aiConversation: null
+      aiConversation: null,
     },
     message: { text: '' },
     sendChatAction: () => Promise.resolve(true),
     telegram: {
       editMessageText: async () => ({ message_id: 1, chat: { id: userId }, text: '' }),
-      deleteMessage: () => Promise.resolve(true)
+      deleteMessage: () => Promise.resolve(true),
     },
     reply: async (text) => ({ message_id: 1, chat: { id: userId }, text }),
     editMessageText: async (text) => ({ message_id: 1, chat: { id: userId }, text }),
-    deleteMessage: () => Promise.resolve(true)
+    deleteMessage: () => Promise.resolve(true),
   };
 }
 
@@ -87,17 +87,17 @@ function createMockContext(userId, shopId, token, shopName = 'Test Shop') {
  */
 async function sendAICommand(command, products = []) {
   const ctx = createMockContext(USER_ID, SHOP_ID, AUTH_TOKEN);
-  
+
   const result = await processProductCommand(command, {
     shopId: SHOP_ID,
     shopName: 'Bulk Test Shop',
     token: AUTH_TOKEN,
     products,
-    ctx
+    ctx,
   });
 
   // Wait for DB update
-  await new Promise(resolve => setTimeout(resolve, AI_DELAY));
+  await new Promise((resolve) => setTimeout(resolve, AI_DELAY));
 
   return result;
 }
@@ -106,10 +106,10 @@ async function sendAICommand(command, products = []) {
  * Get product by name from DB
  */
 async function getProductByName(name) {
-  const result = await pool.query(
-    'SELECT * FROM products WHERE shop_id = $1 AND name ILIKE $2',
-    [SHOP_ID, name]
-  );
+  const result = await pool.query('SELECT * FROM products WHERE shop_id = $1 AND name ILIKE $2', [
+    SHOP_ID,
+    name,
+  ]);
   return result.rows[0] || null;
 }
 
@@ -117,10 +117,9 @@ async function getProductByName(name) {
  * Get all products for current shop
  */
 async function getAllProducts() {
-  const result = await pool.query(
-    'SELECT * FROM products WHERE shop_id = $1 ORDER BY id',
-    [SHOP_ID]
-  );
+  const result = await pool.query('SELECT * FROM products WHERE shop_id = $1 ORDER BY id', [
+    SHOP_ID,
+  ]);
   return result.rows;
 }
 
@@ -150,17 +149,17 @@ async function addTestProduct(name, price, stock = 10, discount = 0) {
 function formatResult(testName, passed, error = null, details = null) {
   const icon = passed ? '✅' : '❌';
   const status = passed ? 'PASS' : 'FAIL';
-  
+
   console.log(`${icon} ${status}: ${testName}`);
-  
+
   if (!passed && error) {
     console.log(`   Error: ${error}`);
   }
-  
+
   if (details) {
     console.log(`   Details: ${JSON.stringify(details, null, 2)}`);
   }
-  
+
   console.log(''); // Empty line
 }
 
@@ -179,25 +178,29 @@ async function setup() {
     const authRes = await axios.post(`${BACKEND_URL}/api/auth/register`, TEST_USER);
     AUTH_TOKEN = authRes.data.token;
     USER_ID = authRes.data.user.id;
-    
+
     if (!AUTH_TOKEN || !USER_ID) {
       throw new Error('Failed to get auth token or user ID');
     }
 
     // 3. Get or create shop
     const shopsRes = await axios.get(`${BACKEND_URL}/api/shops/my`, {
-      headers: { Authorization: `Bearer ${AUTH_TOKEN}` }
+      headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
     });
 
     if (shopsRes.data.data?.length > 0) {
       SHOP_ID = shopsRes.data.data[0].id;
     } else {
-      const createRes = await axios.post(`${BACKEND_URL}/api/shops`, {
-        name: 'Bulk_Test_Shop',
-        description: 'Test shop for bulk operations'
-      }, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` }
-      });
+      const createRes = await axios.post(
+        `${BACKEND_URL}/api/shops`,
+        {
+          name: 'Bulk_Test_Shop',
+          description: 'Test shop for bulk operations',
+        },
+        {
+          headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        }
+      );
       SHOP_ID = createRes.data.data?.id || createRes.data.id;
     }
 
@@ -209,7 +212,6 @@ async function setup() {
     console.log(`   Shop ID: ${SHOP_ID}`);
     console.log(`   Token: ${AUTH_TOKEN.slice(0, 20)}...`);
     console.log('');
-
   } catch (error) {
     console.error('❌ Setup failed:', error.message);
     if (error.response) {
@@ -221,7 +223,7 @@ async function setup() {
 
 async function cleanup() {
   console.log('\n🧹 Cleanup: Clearing test data...');
-  
+
   try {
     await clearProducts();
     await pool.end();
@@ -256,17 +258,18 @@ async function test1_discount_two_products() {
     return false;
   }
 
-  const passed = 
-    Number(iphone.discount_percentage) === 20 &&
-    Number(macbook.discount_percentage) === 20;
+  const passed =
+    Number(iphone.discount_percentage) === 20 && Number(macbook.discount_percentage) === 20;
 
   formatResult(
     'Test 1: Скидка 20% на iPhone и MacBook',
     passed,
-    passed ? null : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%`,
-    { 
+    passed
+      ? null
+      : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%`,
+    {
       iphone: { discount: iphone.discount_percentage, price: iphone.price },
-      macbook: { discount: macbook.discount_percentage, price: macbook.price }
+      macbook: { discount: macbook.discount_percentage, price: macbook.price },
     }
   );
 
@@ -292,10 +295,8 @@ async function test2_set_price_three_products() {
     return false;
   }
 
-  const passed = 
-    Number(iphone.price) === 100 &&
-    Number(macbook.price) === 100 &&
-    Number(ipad.price) === 100;
+  const passed =
+    Number(iphone.price) === 100 && Number(macbook.price) === 100 && Number(ipad.price) === 100;
 
   formatResult(
     'Test 2: Установка цены 100 для 3 товаров',
@@ -324,9 +325,7 @@ async function test3_update_stock_two_products() {
     return false;
   }
 
-  const passed = 
-    Number(iphone.stock_quantity) === 50 &&
-    Number(samsung.stock_quantity) === 50;
+  const passed = Number(iphone.stock_quantity) === 50 && Number(samsung.stock_quantity) === 50;
 
   formatResult(
     'Test 3: Обновление остатка до 50 для iPhone и Samsung',
@@ -381,7 +380,7 @@ async function test5_different_discounts_three_products() {
     return false;
   }
 
-  const passed = 
+  const passed =
     Number(iphone.discount_percentage) === 10 &&
     Number(macbook.discount_percentage) === 20 &&
     Number(ipad.discount_percentage) === 30;
@@ -389,11 +388,13 @@ async function test5_different_discounts_three_products() {
   formatResult(
     'Test 5: Разные скидки (10%, 20%, 30%)',
     passed,
-    passed ? null : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%, iPad: ${ipad.discount_percentage}%`,
-    { 
-      iphone: iphone.discount_percentage, 
-      macbook: macbook.discount_percentage, 
-      ipad: ipad.discount_percentage 
+    passed
+      ? null
+      : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%, iPad: ${ipad.discount_percentage}%`,
+    {
+      iphone: iphone.discount_percentage,
+      macbook: macbook.discount_percentage,
+      ipad: ipad.discount_percentage,
     }
   );
 
@@ -424,10 +425,10 @@ async function test6_delete_two_products() {
     'Test 6: Удаление iPhone и MacBook',
     passed,
     passed ? null : 'Удаление не выполнено корректно',
-    { 
-      iphoneDeleted: !iphone, 
-      macbookDeleted: !macbook, 
-      ipadRemains: ipad !== null 
+    {
+      iphoneDeleted: !iphone,
+      macbookDeleted: !macbook,
+      ipadRemains: ipad !== null,
     }
   );
 
@@ -474,19 +475,22 @@ async function test8_add_three_products() {
   const macbook = await getProductByName('MacBook');
   const ipad = await getProductByName('iPad');
 
-  const passed = 
-    iphone !== null && Number(iphone.price) === 999 &&
-    macbook !== null && Number(macbook.price) === 1999 &&
-    ipad !== null && Number(ipad.price) === 799;
+  const passed =
+    iphone !== null &&
+    Number(iphone.price) === 999 &&
+    macbook !== null &&
+    Number(macbook.price) === 1999 &&
+    ipad !== null &&
+    Number(ipad.price) === 799;
 
   formatResult(
     'Test 8: Добавление 3 товаров (iPhone, MacBook, iPad)',
     passed,
     passed ? null : 'Не все товары добавлены корректно',
-    { 
+    {
       iphone: iphone ? `$${iphone.price}` : 'not found',
       macbook: macbook ? `$${macbook.price}` : 'not found',
-      ipad: ipad ? `$${ipad.price}` : 'not found'
+      ipad: ipad ? `$${ipad.price}` : 'not found',
     }
   );
 
@@ -501,9 +505,8 @@ async function test9_add_five_identical_products() {
   await sendAICommand('добавь 5 наушников по $50 каждые', products);
 
   const allProducts = await getAllProducts();
-  const headphones = allProducts.filter(p => 
-    p.name.toLowerCase().includes('наушники') || 
-    p.name.toLowerCase().includes('headphone')
+  const headphones = allProducts.filter(
+    (p) => p.name.toLowerCase().includes('наушники') || p.name.toLowerCase().includes('headphone')
   );
 
   // AI может создать либо 5 отдельных товаров, либо 1 товар с quantity=5
@@ -513,10 +516,14 @@ async function test9_add_five_identical_products() {
     'Test 9: Добавление 5 наушников по $50',
     passed,
     passed ? null : `Найдено товаров: ${headphones.length}`,
-    { 
+    {
       totalProducts: allProducts.length,
       headphonesCount: headphones.length,
-      headphones: headphones.map(p => ({ name: p.name, price: p.price, stock: p.stock_quantity }))
+      headphones: headphones.map((p) => ({
+        name: p.name,
+        price: p.price,
+        stock: p.stock_quantity,
+      })),
     }
   );
 
@@ -552,11 +559,13 @@ async function test10_update_multiple_fields() {
   formatResult(
     'Test 10: Изменение iPhone (цена, скидка, остаток)',
     passed,
-    passed ? null : `Price: $${iphone.price}, Discount: ${iphone.discount_percentage}%, Stock: ${iphone.stock_quantity}`,
-    { 
+    passed
+      ? null
+      : `Price: $${iphone.price}, Discount: ${iphone.discount_percentage}%, Stock: ${iphone.stock_quantity}`,
+    {
       price: iphone.price,
       discount: iphone.discount_percentage,
-      stock: iphone.stock_quantity
+      stock: iphone.stock_quantity,
     }
   );
 
@@ -574,18 +583,18 @@ async function test11_discount_all_products() {
   await sendAICommand('скидка 20% на все товары', products);
 
   const allProducts = await getAllProducts();
-  const allHaveDiscount = allProducts.every(p => Number(p.discount_percentage) === 20);
+  const allHaveDiscount = allProducts.every((p) => Number(p.discount_percentage) === 20);
 
   formatResult(
     'Test 11: Скидка 20% на все товары',
     allHaveDiscount,
     allHaveDiscount ? null : 'Не все товары имеют скидку 20%',
-    { 
-      products: allProducts.map(p => ({ 
-        name: p.name, 
+    {
+      products: allProducts.map((p) => ({
+        name: p.name,
         discount: p.discount_percentage,
-        price: p.price
-      }))
+        price: p.price,
+      })),
     }
   );
 
@@ -611,7 +620,7 @@ async function test12_remove_discount_two_products() {
     return false;
   }
 
-  const passed = 
+  const passed =
     (Number(iphone.discount_percentage) === 0 || iphone.discount_percentage === null) &&
     (Number(macbook.discount_percentage) === 0 || macbook.discount_percentage === null) &&
     Number(ipad.discount_percentage) === 20;
@@ -619,11 +628,13 @@ async function test12_remove_discount_two_products() {
   formatResult(
     'Test 12: Убрать скидку с iPhone и MacBook',
     passed,
-    passed ? null : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%, iPad: ${ipad.discount_percentage}%`,
-    { 
+    passed
+      ? null
+      : `iPhone: ${iphone.discount_percentage}%, MacBook: ${macbook.discount_percentage}%, iPad: ${ipad.discount_percentage}%`,
+    {
       iphone: iphone.discount_percentage,
       macbook: macbook.discount_percentage,
-      ipad: ipad.discount_percentage
+      ipad: ipad.discount_percentage,
     }
   );
 
@@ -643,12 +654,12 @@ async function test13_discount_nonexistent_product() {
   const result = await sendAICommand('скидка 20% на Samsung Galaxy', products);
 
   // AI должен либо вернуть ошибку, либо сообщить что товар не найден
-  const passed = !result.success || 
-                 (result.message && (
-                   result.message.includes('не найден') || 
-                   result.message.includes('not found') ||
-                   result.message.includes('No')
-                 ));
+  const passed =
+    !result.success ||
+    (result.message &&
+      (result.message.includes('не найден') ||
+        result.message.includes('not found') ||
+        result.message.includes('No')));
 
   formatResult(
     'Test 13: Скидка на несуществующий товар',
@@ -670,13 +681,13 @@ async function test14_update_without_action() {
   const result = await sendAICommand('обнови iPhone и MacBook', products);
 
   // AI должен либо попросить уточнить, либо вежливо отказаться
-  const passed = !result.success || 
-                 (result.message && (
-                   result.message.includes('уточни') ||
-                   result.message.includes('что') ||
-                   result.message.includes('какие') ||
-                   result.message.includes('specify')
-                 ));
+  const passed =
+    !result.success ||
+    (result.message &&
+      (result.message.includes('уточни') ||
+        result.message.includes('что') ||
+        result.message.includes('какие') ||
+        result.message.includes('specify')));
 
   formatResult(
     'Test 14: Обновление без указания что обновлять',
@@ -715,13 +726,13 @@ async function test15_add_product_empty_name() {
 
 async function runTests() {
   console.log('🚀 Bulk Operations Tests\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('');
 
   const results = {
     passed: 0,
     failed: 0,
-    total: 15
+    total: 15,
   };
 
   const tests = [
@@ -748,7 +759,7 @@ async function runTests() {
     // Группа 5: Edge cases
     { name: 'Test 13', fn: test13_discount_nonexistent_product },
     { name: 'Test 14', fn: test14_update_without_action },
-    { name: 'Test 15', fn: test15_add_product_empty_name }
+    { name: 'Test 15', fn: test15_add_product_empty_name },
   ];
 
   for (const test of tests) {
@@ -768,15 +779,15 @@ async function runTests() {
     }
 
     // Small delay between tests
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   // Final summary
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('\n📊 Результаты:');
   console.log(`   ✅ Passed: ${results.passed}/${results.total}`);
   console.log(`   ❌ Failed: ${results.failed}/${results.total}`);
-  console.log(`   📈 Success rate: ${Math.round(results.passed / results.total * 100)}%`);
+  console.log(`   📈 Success rate: ${Math.round((results.passed / results.total) * 100)}%`);
   console.log('');
 
   if (results.passed === results.total) {

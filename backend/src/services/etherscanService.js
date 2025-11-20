@@ -37,9 +37,7 @@ async function rateLimitWait() {
   const now = Date.now();
 
   // Clean old timestamps
-  requestTimestamps = requestTimestamps.filter(
-    timestamp => now - timestamp < REQUEST_WINDOW_MS
-  );
+  requestTimestamps = requestTimestamps.filter((timestamp) => now - timestamp < REQUEST_WINDOW_MS);
 
   // If we've hit the limit, wait
   if (requestTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
@@ -48,7 +46,7 @@ async function rateLimitWait() {
 
     if (waitTime > 0) {
       logger.debug(`[Etherscan] Rate limit: waiting ${waitTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
 
@@ -62,7 +60,9 @@ async function rateLimitWait() {
  */
 function getFromCache(key) {
   const cached = cache.get(key);
-  if (!cached) {return null;}
+  if (!cached) {
+    return null;
+  }
 
   const { value, timestamp } = cached;
   const age = Date.now() - timestamp;
@@ -83,8 +83,74 @@ function getFromCache(key) {
 function setCache(key, value) {
   cache.set(key, {
     value,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
+}
+
+/**
+ * Get normal transactions for address (ETH value transfers)
+ *
+ * @param {string} address - Ethereum address
+ * @param {number} startBlock - Start block (optional)
+ * @param {number} endBlock - End block (optional)
+ * @returns {Promise<Array>} Array of transactions
+ */
+export async function getAddressTransactions(address, startBlock = 0, endBlock = 99999999) {
+  try {
+    const cacheKey = `txlist:${address}:${startBlock}:${endBlock}`;
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+      logger.debug(`[Etherscan] Cache hit for txlist: ${address}`);
+      return cached;
+    }
+
+    await rateLimitWait();
+
+    logger.info(`[Etherscan] Fetching transactions for: ${address}`);
+
+    const response = await retryWithBackoff(async () => {
+      return await axios.get(ETHERSCAN_API, {
+        params: {
+          module: 'account',
+          action: 'txlist',
+          address: address,
+          startblock: startBlock,
+          endblock: endBlock,
+          sort: 'desc',
+          apikey: ETHERSCAN_KEY || '',
+        },
+        timeout: 10000,
+      });
+    });
+
+    if (response.data.status !== '1') {
+      logger.warn(`[Etherscan] txlist API error:`, {
+        message: response.data.message,
+        result: response.data.result,
+      });
+      return [];
+    }
+
+    const txs = response.data.result.map((tx) => ({
+      hash: tx.hash,
+      from: tx.from,
+      to: tx.to,
+      value: tx.value, // in wei (string)
+      timeStamp: parseInt(tx.timeStamp),
+      blockNumber: parseInt(tx.blockNumber),
+      confirmations: parseInt(tx.confirmations),
+      isError: tx.isError === '1',
+    }));
+
+    setCache(cacheKey, txs);
+    return txs;
+  } catch (error) {
+    logger.error('[Etherscan] Failed to get address transactions:', {
+      error: error.message,
+      address,
+    });
+    throw new Error(`Failed to get address transactions: ${error.message}`);
+  }
 }
 
 /**
@@ -108,14 +174,16 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
 
       if (isLastAttempt) {
         logger.error(`[Etherscan] All ${maxRetries} retry attempts failed:`, {
-          error: error.message
+          error: error.message,
         });
         throw error;
       }
 
       const delay = baseDelay * Math.pow(2, attempt);
-      logger.warn(`[Etherscan] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      logger.warn(
+        `[Etherscan] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -129,7 +197,12 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
  * @param {number} endBlock - End block (optional)
  * @returns {Promise<Array>} Array of token transfers
  */
-export async function getTokenTransfers(address, contractAddress = USDT_CONTRACT, startBlock = 0, endBlock = 99999999) {
+export async function getTokenTransfers(
+  address,
+  contractAddress = USDT_CONTRACT,
+  startBlock = 0,
+  endBlock = 99999999
+) {
   try {
     // Check cache first
     const cacheKey = `tokentx:${address}:${contractAddress}`;
@@ -153,21 +226,21 @@ export async function getTokenTransfers(address, contractAddress = USDT_CONTRACT
           startblock: startBlock,
           endblock: endBlock,
           sort: 'desc',
-          apikey: ETHERSCAN_KEY || ''
+          apikey: ETHERSCAN_KEY || '',
         },
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
     if (response.data.status !== '1') {
       logger.warn(`[Etherscan] API error:`, {
         message: response.data.message,
-        result: response.data.result
+        result: response.data.result,
       });
       return [];
     }
 
-    const transfers = response.data.result.map(tx => ({
+    const transfers = response.data.result.map((tx) => ({
       hash: tx.hash,
       from: tx.from,
       to: tx.to,
@@ -176,7 +249,7 @@ export async function getTokenTransfers(address, contractAddress = USDT_CONTRACT
       tokenDecimal: parseInt(tx.tokenDecimal),
       timestamp: parseInt(tx.timeStamp),
       blockNumber: parseInt(tx.blockNumber),
-      confirmations: parseInt(tx.confirmations)
+      confirmations: parseInt(tx.confirmations),
     }));
 
     // Cache the result
@@ -188,7 +261,7 @@ export async function getTokenTransfers(address, contractAddress = USDT_CONTRACT
   } catch (error) {
     logger.error('[Etherscan] Failed to get token transfers:', {
       error: error.message,
-      address
+      address,
     });
     throw new Error(`Failed to get token transfers: ${error.message}`);
   }
@@ -220,9 +293,9 @@ export async function getTransaction(txHash) {
           module: 'proxy',
           action: 'eth_getTransactionByHash',
           txhash: txHash,
-          apikey: ETHERSCAN_KEY || ''
+          apikey: ETHERSCAN_KEY || '',
         },
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
@@ -242,7 +315,7 @@ export async function getTransaction(txHash) {
       gas: parseInt(tx.gas, 16),
       gasPrice: parseInt(tx.gasPrice, 16),
       input: tx.input,
-      nonce: parseInt(tx.nonce, 16)
+      nonce: parseInt(tx.nonce, 16),
     };
 
     // Cache the result
@@ -252,7 +325,7 @@ export async function getTransaction(txHash) {
   } catch (error) {
     logger.error('[Etherscan] Failed to get transaction:', {
       error: error.message,
-      txHash
+      txHash,
     });
     throw new Error(`Failed to get transaction: ${error.message}`);
   }
@@ -284,9 +357,9 @@ export async function getTransactionReceipt(txHash) {
           module: 'proxy',
           action: 'eth_getTransactionReceipt',
           txhash: txHash,
-          apikey: ETHERSCAN_KEY || ''
+          apikey: ETHERSCAN_KEY || '',
         },
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
@@ -304,7 +377,7 @@ export async function getTransactionReceipt(txHash) {
       from: receipt.from,
       to: receipt.to,
       gasUsed: parseInt(receipt.gasUsed, 16),
-      logs: receipt.logs
+      logs: receipt.logs,
     };
 
     // Cache the result
@@ -314,7 +387,7 @@ export async function getTransactionReceipt(txHash) {
   } catch (error) {
     logger.error('[Etherscan] Failed to get transaction receipt:', {
       error: error.message,
-      txHash
+      txHash,
     });
     throw new Error(`Failed to get transaction receipt: ${error.message}`);
   }
@@ -334,16 +407,16 @@ export async function getCurrentBlockNumber() {
         params: {
           module: 'proxy',
           action: 'eth_blockNumber',
-          apikey: ETHERSCAN_KEY || ''
+          apikey: ETHERSCAN_KEY || '',
         },
-        timeout: 10000
+        timeout: 10000,
       });
     });
 
     return parseInt(response.data.result, 16);
   } catch (error) {
     logger.error('[Etherscan] Failed to get current block number:', {
-      error: error.message
+      error: error.message,
     });
     throw new Error(`Failed to get current block number: ${error.message}`);
   }
@@ -366,7 +439,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       return {
         verified: false,
         error: 'Transaction not found',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -375,7 +448,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       return {
         verified: false,
         error: 'Transaction failed or reverted',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -386,7 +459,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       return {
         verified: false,
         error: 'Transaction details not found',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -395,12 +468,12 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       logger.warn(`[Etherscan] Address mismatch:`, {
         expected: expectedAddress,
         actual: tx.to,
-        txHash
+        txHash,
       });
       return {
         verified: false,
         error: 'Address mismatch',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -413,7 +486,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} ETH, Received: ${actualAmount} ETH`,
         confirmations: 0,
-        amount: actualAmount
+        amount: actualAmount,
       };
     }
 
@@ -425,7 +498,7 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       txHash,
       address: expectedAddress,
       amount: actualAmount,
-      confirmations
+      confirmations,
     });
 
     return {
@@ -433,17 +506,17 @@ export async function verifyEthPayment(txHash, expectedAddress, expectedAmount) 
       confirmations,
       amount: actualAmount,
       blockNumber: receipt.blockNumber,
-      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending'
+      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending',
     };
   } catch (error) {
     logger.error('[Etherscan] ETH payment verification failed:', {
       error: error.message,
-      txHash
+      txHash,
     });
     return {
       verified: false,
       error: error.message,
-      confirmations: 0
+      confirmations: 0,
     };
   }
 }
@@ -465,7 +538,7 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       return {
         verified: false,
         error: 'Transaction not found',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -474,7 +547,7 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       return {
         verified: false,
         error: 'Transaction failed or reverted',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -483,16 +556,16 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
     // Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
     const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
-    const transferLog = receipt.logs.find(log =>
-      log.topics[0] === transferTopic &&
-      log.address.toLowerCase() === USDT_CONTRACT.toLowerCase()
+    const transferLog = receipt.logs.find(
+      (log) =>
+        log.topics[0] === transferTopic && log.address.toLowerCase() === USDT_CONTRACT.toLowerCase()
     );
 
     if (!transferLog) {
       return {
         verified: false,
         error: 'USDT Transfer event not found in transaction',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -506,12 +579,12 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       logger.warn(`[Etherscan] USDT address mismatch:`, {
         expected: expectedAddress,
         actual: toAddress,
-        txHash
+        txHash,
       });
       return {
         verified: false,
         error: 'Address mismatch',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -524,7 +597,7 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${actualAmount} USDT`,
         confirmations: 0,
-        amount: actualAmount
+        amount: actualAmount,
       };
     }
 
@@ -536,7 +609,7 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       txHash,
       address: expectedAddress,
       amount: actualAmount,
-      confirmations
+      confirmations,
     });
 
     return {
@@ -544,17 +617,17 @@ export async function verifyUsdtPayment(txHash, expectedAddress, expectedAmount)
       confirmations,
       amount: actualAmount,
       blockNumber: receipt.blockNumber,
-      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending'
+      status: confirmations >= SUPPORTED_CURRENCIES.ETH.confirmations ? 'confirmed' : 'pending',
     };
   } catch (error) {
     logger.error('[Etherscan] USDT payment verification failed:', {
       error: error.message,
-      txHash
+      txHash,
     });
     return {
       verified: false,
       error: error.message,
-      confirmations: 0
+      confirmations: 0,
     };
   }
 }
@@ -576,7 +649,9 @@ export async function verifyPayment(txHash, expectedAddress, expectedAmount, cur
   } else if (currencyUpper === 'USDT') {
     return verifyUsdtPayment(txHash, expectedAddress, expectedAmount);
   } else {
-    throw new Error(`Unsupported currency: ${currency}. Etherscan supports ETH and USDT (ERC-20) only.`);
+    throw new Error(
+      `Unsupported currency: ${currency}. Etherscan supports ETH and USDT (ERC-20) only.`
+    );
   }
 }
 
@@ -587,5 +662,5 @@ export default {
   getCurrentBlockNumber,
   verifyEthPayment,
   verifyUsdtPayment,
-  verifyPayment
+  verifyPayment,
 };

@@ -40,7 +40,7 @@ const logPoolMetrics = () => {
     active: activeCount,
     idle: idleCount,
     waiting: waitingCount,
-    utilization: totalCount > 0 ? ((activeCount / totalCount) * 100).toFixed(1) + '%' : '0%'
+    utilization: totalCount > 0 ? ((activeCount / totalCount) * 100).toFixed(1) + '%' : '0%',
   });
 
   // Warning if pool is heavily utilized
@@ -48,7 +48,7 @@ const logPoolMetrics = () => {
     logger.warn('Database pool utilization high', {
       activeCount,
       totalCount,
-      utilization: ((activeCount / totalCount) * 100).toFixed(1) + '%'
+      utilization: ((activeCount / totalCount) * 100).toFixed(1) + '%',
     });
   }
 
@@ -56,7 +56,7 @@ const logPoolMetrics = () => {
   if (waitingCount > 0) {
     logger.warn('Database pool has waiting requests', {
       waiting: waitingCount,
-      suggestion: 'Consider increasing pool.max or optimizing queries'
+      suggestion: 'Consider increasing pool.max or optimizing queries',
     });
   }
 };
@@ -100,7 +100,7 @@ export const query = async (text, params) => {
         duration: `${duration}ms`,
         query: text.substring(0, 200) + (text.length > 200 ? '...' : ''), // Truncate long queries
         rows: res.rowCount,
-        params: params ? (params.length > 5 ? `[${params.length} params]` : params) : undefined
+        params: params ? (params.length > 5 ? `[${params.length} params]` : params) : undefined,
       });
     }
 
@@ -150,5 +150,5 @@ export default {
   query,
   getClient,
   testConnection,
-  closePool
+  closePool,
 };

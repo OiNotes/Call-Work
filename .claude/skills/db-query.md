@@ -55,6 +55,7 @@ psql telegram_shop -c "SELECT pg_size_pretty(pg_database_size('telegram_shop'));
 ## Query templates:
 
 ### Users:
+
 ```sql
 -- All users
 SELECT * FROM users ORDER BY created_at DESC LIMIT 10;
@@ -67,6 +68,7 @@ SELECT telegram_id, username, created_at FROM users ORDER BY created_at DESC LIM
 ```
 
 ### Shops:
+
 ```sql
 -- All shops
 SELECT * FROM shops ORDER BY created_at DESC;
@@ -75,14 +77,15 @@ SELECT * FROM shops ORDER BY created_at DESC;
 SELECT id, name, tier, created_at FROM shops WHERE tier = 'PRO';
 
 -- Shop with product count
-SELECT s.id, s.name, s.tier, COUNT(p.id) as products 
-FROM shops s 
-LEFT JOIN products p ON s.id = p.shop_id 
-GROUP BY s.id 
+SELECT s.id, s.name, s.tier, COUNT(p.id) as products
+FROM shops s
+LEFT JOIN products p ON s.id = p.shop_id
+GROUP BY s.id
 ORDER BY products DESC;
 ```
 
 ### Products:
+
 ```sql
 -- Products in stock
 SELECT * FROM products WHERE quantity > 0 ORDER BY created_at DESC;
@@ -95,24 +98,26 @@ SELECT * FROM products WHERE price BETWEEN 10 AND 100 ORDER BY price DESC;
 ```
 
 ### Orders:
+
 ```sql
 -- Pending orders
 SELECT * FROM orders WHERE status = 'pending' ORDER BY created_at DESC;
 
 -- Completed orders today
-SELECT * FROM orders 
-WHERE status = 'completed' 
+SELECT * FROM orders
+WHERE status = 'completed'
 AND DATE(created_at) = CURRENT_DATE;
 
 -- Orders by shop
-SELECT o.id, o.status, o.total_amount, o.created_at 
-FROM orders o 
-WHERE o.shop_id = 1 
-ORDER BY o.created_at DESC 
+SELECT o.id, o.status, o.total_amount, o.created_at
+FROM orders o
+WHERE o.shop_id = 1
+ORDER BY o.created_at DESC
 LIMIT 20;
 ```
 
 ### Payments:
+
 ```sql
 -- Recent payments
 SELECT * FROM payments ORDER BY created_at DESC LIMIT 20;

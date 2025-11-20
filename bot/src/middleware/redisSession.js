@@ -1,6 +1,6 @@
 /**
  * Redis Session Middleware for Telegraf v4
- * 
+ *
  * Provides persistent session storage using Redis
  * Sessions are stored with 24h TTL
  */
@@ -32,6 +32,20 @@ export function createRedisSession(redis) {
       ctx.session = {};
     }
 
+    // Add explicit save method for handlers that need it
+    ctx.session.save = async () => {
+      try {
+        const sessionData = JSON.stringify(ctx.session);
+        await redis.setex(sessionKey, 86400, sessionData);
+        logger.debug(`Session manually saved for ${chatId}`, {
+          hasShopId: !!ctx.session?.shopId,
+          shopId: ctx.session?.shopId,
+        });
+      } catch (error) {
+        logger.error(`Failed to manually save session for ${chatId}:`, error);
+      }
+    };
+
     // Store original session for comparison
     const originalSession = JSON.stringify(ctx.session);
 
@@ -41,15 +55,15 @@ export function createRedisSession(redis) {
     // Save session back to Redis if changed
     try {
       const newSession = JSON.stringify(ctx.session);
-      
+
       if (newSession !== originalSession) {
         // Save with 24h TTL (86400 seconds)
         await redis.setex(sessionKey, 86400, newSession);
-        
+
         logger.debug(`Session saved for ${chatId}`, {
           hasShopId: !!ctx.session?.shopId,
           hasToken: !!ctx.session?.token,
-          role: ctx.session?.role
+          role: ctx.session?.role,
         });
       }
     } catch (error) {

@@ -26,35 +26,35 @@ export const syncQueue = new Queue('product-sync', {
  */
 syncQueue.process('sync-products', async (job) => {
   const { followId, sourceShopId, followerShopId } = job.data;
-  
+
   logger.info(`[SyncQueue] Starting product sync for follow ${followId}`, {
     followId,
     sourceShopId,
     followerShopId,
   });
-  
+
   try {
     // Update progress
     job.progress(10);
-    
+
     // Call existing sync logic
     const results = await syncAllProductsForFollow(followId);
-    
+
     // Update progress
     job.progress(90);
-    
+
     // Update follow record with sync results
     await shopFollowQueries.findById(followId); // Refresh cached data
-    
+
     job.progress(100);
-    
+
     logger.info(`[SyncQueue] Completed product sync for follow ${followId}`, {
       followId,
       results,
     });
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       followId,
       synced: results.synced,
       skipped: results.skipped,
@@ -120,27 +120,28 @@ export async function getSyncStatus(followId) {
       syncQueue.getJobs(['completed'], 0, 10), // Last 10 completed
       syncQueue.getJobs(['failed'], 0, 10), // Last 10 failed
     ]);
-    
+
     // Find job for this follow
     const allJobs = [...waiting, ...active, ...completed, ...failed];
-    const job = allJobs.find(j => j.data.followId === followId);
-    
+    const job = allJobs.find((j) => j.data.followId === followId);
+
     if (!job) {
       return { status: 'completed', message: 'No active sync job' };
     }
-    
+
     const state = await job.getState();
     const progress = job.progress();
-    
+
     return {
       status: state, // 'waiting', 'active', 'completed', 'failed'
       progress,
       jobId: job.id,
       createdAt: new Date(job.timestamp).toISOString(),
       ...(state === 'failed' && { error: job.failedReason }),
-      ...(state === 'completed' && job.returnvalue && { 
-        results: job.returnvalue 
-      }),
+      ...(state === 'completed' &&
+        job.returnvalue && {
+          results: job.returnvalue,
+        }),
     };
   } catch (error) {
     logger.error(`Error checking sync status for follow ${followId}:`, error);
@@ -159,33 +160,37 @@ export async function queueProductSync(followId, sourceShopId, followerShopId) {
   try {
     // Check if there's already an active job for this follow
     const existingStatus = await getSyncStatus(followId);
-    
+
     if (existingStatus.status === 'active' || existingStatus.status === 'waiting') {
       logger.info(`[SyncQueue] Sync job already queued for follow ${followId}`);
       return existingStatus;
     }
-    
+
     // Add new job to queue
-    const job = await syncQueue.add('sync-products', {
-      followId,
-      sourceShopId,
-      followerShopId,
-    }, {
-      attempts: 3, // Retry up to 3 times
-      backoff: {
-        type: 'exponential',
-        delay: 2000, // Start with 2s delay, exponentially increase
+    const job = await syncQueue.add(
+      'sync-products',
+      {
+        followId,
+        sourceShopId,
+        followerShopId,
       },
-      timeout: 120000, // 2 minutes timeout
-    });
-    
+      {
+        attempts: 3, // Retry up to 3 times
+        backoff: {
+          type: 'exponential',
+          delay: 2000, // Start with 2s delay, exponentially increase
+        },
+        timeout: 120000, // 2 minutes timeout
+      }
+    );
+
     logger.info(`[SyncQueue] Queued product sync job for follow ${followId}`, {
       jobId: job.id,
       followId,
       sourceShopId,
       followerShopId,
     });
-    
+
     return {
       status: 'queued',
       jobId: job.id,

@@ -12,9 +12,7 @@ import { useApi } from '../hooks/useApi';
 // Skeleton loader component
 function ProductCardSkeleton() {
   return (
-    <div
-      className="glass-card rounded-2xl p-4 space-y-3 animate-pulse border border-white/10"
-    >
+    <div className="glass-card rounded-2xl p-4 space-y-3 animate-pulse border border-white/10">
       {/* Image skeleton */}
       <div className="w-full aspect-square rounded-xl bg-white/5" />
       {/* Title skeleton */}
@@ -50,79 +48,66 @@ export default function Catalog() {
 
   // ✅ FIX: Stable callback with only 'get' dependency (from useApi hook)
   // Accepts AbortSignal for cleanup on unmount/re-render
-  const loadMyShop = useCallback(async (signal) => {
-    console.log('[Catalog] 🔵 START loadMyShop', { aborted: signal?.aborted });
+  const loadMyShop = useCallback(
+    async (signal) => {
+      const { data, error: apiError } = await get('/shops/my', { signal });
 
-    const { data, error: apiError } = await get('/shops/my', { signal });
+      // ✅ Check abort signal to prevent race conditions
+      if (signal?.aborted) {
+        return { status: 'aborted' };
+      }
 
-    console.log('[Catalog] 🔵 loadMyShop response:', { data, error: apiError, aborted: signal?.aborted });
+      if (apiError) {
+        console.error('[Catalog] 🔴 loadMyShop ERROR:', apiError);
+        return { status: 'error', error: apiError };
+      }
 
-    // ✅ Check abort signal to prevent race conditions
-    if (signal?.aborted) {
-      console.log('[Catalog] 🟡 loadMyShop ABORTED');
-      return { status: 'aborted' };
-    }
+      if (data?.data && data.data.length > 0) {
+        setMyShop(data.data[0]);
+        return { status: 'success', shop: data.data[0] };
+      }
 
-    if (apiError) {
-      console.error('[Catalog] 🔴 loadMyShop ERROR:', apiError);
-      return { status: 'error', error: apiError };
-    }
-
-    if (data?.data && data.data.length > 0) {
-      console.log('[Catalog] 🟢 loadMyShop SUCCESS - shop:', data.data[0]);
-      setMyShop(data.data[0]);
-      return { status: 'success', shop: data.data[0] };
-    }
-
-    console.log('[Catalog] 🟡 loadMyShop - no shop found');
-    return { status: 'success', shop: null };
-  }, [get]);
-
-
+      return { status: 'success', shop: null };
+    },
+    [get]
+  );
 
   // ✅ FIX: Stable callback with only 'get' dependency
   // Uses getState() to avoid setProducts in dependencies (prevents unnecessary re-renders)
-  const loadProducts = useCallback(async (shopId, signal) => {
-    console.log('[Catalog] 🔵 START loadProducts', { shopId, aborted: signal?.aborted });
+  const loadProducts = useCallback(
+    async (shopId, signal) => {
+      const { data, error: apiError } = await get('/products', {
+        params: { shopId },
+        signal,
+      });
 
-    const { data, error: apiError } = await get('/products', {
-      params: { shopId },
-      signal
-    });
+      // ✅ Check abort signal to prevent race conditions
+      if (signal?.aborted) {
+        return { status: 'aborted' };
+      }
 
-    console.log('[Catalog] 🔵 loadProducts response:', { data, error: apiError, aborted: signal?.aborted });
+      if (apiError) {
+        console.error('[Catalog] 🔴 loadProducts ERROR:', apiError);
+        return { status: 'error', error: 'Failed to load products' };
+      }
 
-    // ✅ Check abort signal to prevent race conditions
-    if (signal?.aborted) {
-      console.log('[Catalog] 🟡 loadProducts ABORTED');
-      return { status: 'aborted' };
-    }
+      const items = Array.isArray(data?.data) ? data.data : [];
 
-    if (apiError) {
-      console.error('[Catalog] 🔴 loadProducts ERROR:', apiError);
-      return { status: 'error', error: 'Failed to load products' };
-    }
-
-    const items = Array.isArray(data?.data) ? data.data : [];
-    console.log('[Catalog] 🟢 loadProducts SUCCESS - count:', items.length);
-
-    // ✅ FIX: Use getState() for stable reference (no dependency on setProducts)
-    useStore.getState().setProducts(items, shopId);
-    return { status: 'success' };
-  }, [get]); // ✅ FIX: Only depend on stable 'get' from useApi
+      // ✅ FIX: Use getState() for stable reference (no dependency on setProducts)
+      useStore.getState().setProducts(items, shopId);
+      return { status: 'success' };
+    },
+    [get]
+  ); // ✅ FIX: Only depend on stable 'get' from useApi
 
   // ✅ FIX: Main data loading effect with stable dependencies
   useEffect(() => {
-    console.log('[Catalog] 🔵 useEffect triggered', { token: !!token, currentShop });
-
     // ✅ Wait for token
     if (!token) {
-      console.log('[Catalog] 🟡 NO TOKEN - skipping load');
       setLoading(false);
       return;
     }
 
-    console.log('[Catalog] 🔵 Starting load with token');
     setLoading(true);
     setError(null);
 
@@ -131,42 +116,33 @@ export default function Catalog() {
 
     // Load my shop first, then load products
     loadMyShop(signal)
-      .then(result => {
-        console.log('[Catalog] 🔵 loadMyShop result:', result);
+      .then((result) => {
         if (signal.aborted || result?.status !== 'success') {
-          console.log('[Catalog] 🟡 Skipping loadProducts - aborted or failed');
           return;
         }
 
         const shop = currentShop || result.shop;
-        console.log('[Catalog] 🔵 Using shop:', shop);
+
         if (shop) return loadProducts(shop.id, signal);
       })
-      .then(result => {
-        console.log('[Catalog] 🔵 loadProducts final result:', result);
+      .then((result) => {
         if (!signal.aborted && result?.status === 'error') {
-          console.log('[Catalog] 🔴 Setting error:', result.error);
           setError(result.error);
         }
       })
       .finally(() => {
         if (!signal.aborted) {
-          console.log('[Catalog] 🟢 DONE - setLoading(false)');
           setLoading(false);
         } else {
-          console.log('[Catalog] 🟡 Aborted in finally');
         }
       });
 
     // ✅ FIX: Cleanup function aborts pending requests on unmount or deps change
     // Prevents race conditions when component unmounts or re-renders
     return () => {
-      console.log('[Catalog] 🔴 CLEANUP - aborting controller');
       controller.abort();
     };
   }, [currentShop, token, loadMyShop, loadProducts]); // ✅ Dependencies are stable (useCallback wrapped)
-
-
 
   const handleBack = useCallback(() => {
     triggerHaptic('light');
@@ -214,25 +190,22 @@ export default function Catalog() {
     };
   }, [products]);
 
-  const displayedProducts = activeSection === 'preorder'
-    ? productSections.preorder
-    : productSections.stock;
+  const displayedProducts =
+    activeSection === 'preorder' ? productSections.preorder : productSections.stock;
 
-
-
-  const handleSectionChange = useCallback((sectionId) => {
-    if (sectionId === activeSection) return;
-    triggerHaptic('light');
-    setActiveSection(sectionId);
-  }, [activeSection, triggerHaptic]);
+  const handleSectionChange = useCallback(
+    (sectionId) => {
+      if (sectionId === activeSection) return;
+      triggerHaptic('light');
+      setActiveSection(sectionId);
+    },
+    [activeSection, triggerHaptic]
+  );
 
   // Если нет магазина - показываем loading или пустой экран
   if (!displayShop) {
     return (
-      <div
-        className="pb-24"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
-      >
+      <div className="pb-24" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}>
         <Header title={t('catalog.title')} />
 
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -243,15 +216,21 @@ export default function Catalog() {
             </>
           ) : (
             <>
-              <svg className="w-20 h-20 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <svg
+                className="w-20 h-20 text-gray-600 mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
               </svg>
-              <h3 className="text-xl font-bold text-white mb-2">
-                {t('catalog.selectShop')}
-              </h3>
-              <p className="text-gray-400 mb-6">
-                {t('catalog.selectShopDesc')}
-              </p>
+              <h3 className="text-xl font-bold text-white mb-2">{t('catalog.selectShop')}</h3>
+              <p className="text-gray-400 mb-6">{t('catalog.selectShopDesc')}</p>
             </>
           )}
         </div>
@@ -260,10 +239,7 @@ export default function Catalog() {
   }
 
   return (
-    <div
-      className="pb-24"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
-    >
+    <div className="pb-24" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}>
       {/* Shop Header with Navigation */}
       <div className="bg-dark-card/80 backdrop-blur-lg p-4 sticky top-0 z-10">
         {/* Back button - показывать только если просматриваем подписку */}
@@ -274,7 +250,12 @@ export default function Catalog() {
             whileTap={{ scale: 0.95 }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             <span className="font-medium">{t('catalog.backToMyShop')}</span>
           </motion.button>
@@ -288,16 +269,21 @@ export default function Catalog() {
             whileTap={{ scale: 0.95 }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             <span className="font-medium">{t('common.back')}</span>
           </motion.button>
         )}
 
         <div className="flex items-center gap-4">
-        {displayShopLogo && (
-          <div className="w-12 h-12 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
-            <img
+          {displayShopLogo && (
+            <div className="w-12 h-12 rounded-xl bg-dark-elevated overflow-hidden flex-shrink-0">
+              <img
                 src={displayShopLogo}
                 alt={displayShop.name}
                 className="w-full h-full object-cover"
@@ -314,8 +300,7 @@ export default function Catalog() {
             <p className="text-gray-400 text-sm">
               {activeSection === 'preorder'
                 ? `${productSections.preorder.length} в предзаказе`
-                : `${productSections.stock.length} в наличии`
-              }
+                : `${productSections.stock.length} в наличии`}
             </p>
           </div>
         </div>
@@ -326,9 +311,10 @@ export default function Catalog() {
           {['stock', 'preorder'].map((sectionId) => {
             const isActive = activeSection === sectionId;
             const label = sectionId === 'stock' ? 'Наличие' : 'Предзаказ';
-            const count = sectionId === 'stock'
-              ? productSections.stock.length
-              : productSections.preorder.length;
+            const count =
+              sectionId === 'stock'
+                ? productSections.stock.length
+                : productSections.preorder.length;
 
             return (
               <button
@@ -346,10 +332,15 @@ export default function Catalog() {
                     transition={{ type: 'spring', stiffness: 320, damping: 28 }}
                   />
                 )}
-                <span className="relative z-10 text-sm font-semibold" style={{ letterSpacing: '-0.01em' }}>
+                <span
+                  className="relative z-10 text-sm font-semibold"
+                  style={{ letterSpacing: '-0.01em' }}
+                >
                   {label}
                 </span>
-                <span className={`relative z-10 ml-2 text-xs font-semibold ${isActive ? 'text-orange-primary' : 'text-white/35'}`}>
+                <span
+                  className={`relative z-10 ml-2 text-xs font-semibold ${isActive ? 'text-orange-primary' : 'text-white/35'}`}
+                >
                   {count}
                 </span>
               </button>
@@ -372,8 +363,18 @@ export default function Catalog() {
       {/* Error State */}
       {!loading && error && (
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-          <svg className="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-16 h-16 text-red-500 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <h3 className="text-lg font-semibold text-gray-400 mb-2">{error}</h3>
           <motion.button
@@ -395,10 +396,13 @@ export default function Catalog() {
         <ProductGrid
           products={displayedProducts}
           loading={loading}
-          emptyTitle={activeSection === 'preorder' ? 'Нет товаров в предзаказе' : t('catalog.empty')}
-          emptyDescription={activeSection === 'preorder'
-            ? 'Мы сообщим, как только появятся новые позиции для предзаказа'
-            : t('catalog.emptyDesc')
+          emptyTitle={
+            activeSection === 'preorder' ? 'Нет товаров в предзаказе' : t('catalog.empty')
+          }
+          emptyDescription={
+            activeSection === 'preorder'
+              ? 'Мы сообщим, как только появятся новые позиции для предзаказа'
+              : t('catalog.emptyDesc')
           }
           emptyIcon={activeSection === 'preorder' ? '🕒' : '📦'}
         />

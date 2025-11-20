@@ -25,7 +25,7 @@ describe('Auth Middleware Tests', () => {
     it('should skip non-user updates (no ctx.from)', async () => {
       const ctx = {
         session: {},
-        from: null
+        from: null,
       };
       const next = jest.fn();
 
@@ -39,8 +39,8 @@ describe('Auth Middleware Tests', () => {
       const ctx = createMockContext({
         session: {
           token: 'existing-token',
-          user: { id: 1, telegramId: '123456' }
-        }
+          user: { id: 1, telegramId: '123456' },
+        },
       });
       const next = jest.fn();
 
@@ -59,8 +59,8 @@ describe('Auth Middleware Tests', () => {
           telegramId: '123456',
           username: 'testuser',
           firstName: 'Test',
-          lastName: 'User'
-        }
+          lastName: 'User',
+        },
       });
 
       const ctx = createMockContext({
@@ -69,9 +69,9 @@ describe('Auth Middleware Tests', () => {
           username: 'testuser',
           first_name: 'Test',
           last_name: 'User',
-          language_code: 'en'
+          language_code: 'en',
         },
-        session: {}
+        session: {},
       });
       const next = jest.fn();
 
@@ -88,7 +88,7 @@ describe('Auth Middleware Tests', () => {
     it('should create basic session on auth failure', async () => {
       // Mock auth API failure
       mock.onPost('/api/auth/telegram').reply(500, {
-        error: 'Internal server error'
+        error: 'Internal server error',
       });
 
       const ctx = createMockContext({
@@ -96,9 +96,9 @@ describe('Auth Middleware Tests', () => {
           id: 123456,
           username: 'testuser',
           first_name: 'Test',
-          last_name: 'User'
+          last_name: 'User',
         },
-        session: {}
+        session: {},
       });
       const next = jest.fn();
 
@@ -117,9 +117,9 @@ describe('Auth Middleware Tests', () => {
           id: 123456,
           username: undefined, // No username
           first_name: 'Test',
-          last_name: 'User'
+          last_name: 'User',
         },
-        session: {}
+        session: {},
       });
       const next = jest.fn();
 
@@ -135,9 +135,9 @@ describe('Auth Middleware Tests', () => {
         from: {
           id: 123456,
           username: 'testuser',
-          first_name: 'Test'
+          first_name: 'Test',
         },
-        session: {}
+        session: {},
       });
       const next = jest.fn();
 
@@ -156,8 +156,8 @@ describe('Auth Middleware Tests', () => {
           user: { id: 1, telegramId: '123456' },
           shopId: 42,
           shopName: 'My Shop',
-          customData: 'preserved'
-        }
+          customData: 'preserved',
+        },
       });
       const next = jest.fn();
 
@@ -177,8 +177,8 @@ describe('Auth Middleware Tests', () => {
         from: {
           id: 123456,
           username: 'testuser',
-          first_name: 'Test'
-        }
+          first_name: 'Test',
+        },
       });
       // Remove session entirely
       delete ctx.session;
@@ -193,10 +193,10 @@ describe('Auth Middleware Tests', () => {
     it('should handle users with minimal Telegram data', async () => {
       const ctx = createMockContext({
         from: {
-          id: 123456
+          id: 123456,
           // No username, first_name, last_name, language_code
         },
-        session: {}
+        session: {},
       });
       const next = jest.fn();
 

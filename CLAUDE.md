@@ -7,11 +7,13 @@
 **Status Stock** - Telegram E-Commerce платформа для цифровых магазинов с криптовалютными платежами.
 
 **Структура:**
+
 - `backend/` - Express API + PostgreSQL + WebSocket
 - `bot/` - Telegram Bot (Telegraf.js)
 - `webapp/` - React Mini App (TailwindCSS + Framer Motion)
 
 **Технологии:**
+
 - Backend: Express, PostgreSQL (без ORM), JWT, WebSocket
 - Bot: Telegraf.js, session-based state
 - Frontend: React 18, Vite, Zustand (in-memory only), Telegram WebApp SDK
@@ -26,6 +28,7 @@
 **Claude Code работает как оркестратор** - делегирует задачи субагентам вместо самостоятельного выполнения.
 
 **Рабочий процесс:**
+
 1. **Plan Mode** - анализ через MCP File System → план → ExitPlanMode
 2. **Approval** - ждать подтверждения плана от пользователя
 3. **Delegate** - использовать Task tool для запуска субагентов
@@ -53,6 +56,7 @@ Bash("find . -name '*.js'")
 ```
 
 **Bash разрешён только для:**
+
 - `npm run dev`, `npm test` - запуск проекта/тестов
 - `psql -c "SELECT ..."` - read-only SQL запросы
 - Проверка логов (`tail -f`, `docker-compose logs`)
@@ -64,22 +68,24 @@ Bash("find . -name '*.js'")
 
 ```javascript
 Task({
-  subagent_type: "...",
+  subagent_type: '...',
   prompt: `
     КРИТИЧНО: Используй MCP File System для всех файловых операций!
     НЕ используй Read(), Edit(), Grep(), Glob(), Bash() для работы с файлами.
     
     [твоя задача здесь...]
-  `
-})
+  `,
+});
 ```
 
 **Почему это важно:**
+
 - `Read()`, `Edit()`, `Grep()`, `Glob()` - обычные tools (НЕ MCP!)
 - Субагенты должны использовать `mcp__filesystem__*` инструменты
 - Без явного запрета субагент может использовать не-MCP tools
 
 **Субагент сам разберётся какие MCP инструменты использовать:**
+
 - `mcp__filesystem__read_text_file` - чтение
 - `mcp__filesystem__edit_file` - редактирование
 - `mcp__filesystem__search_files` - поиск
@@ -102,20 +108,20 @@ Task({
 
 ### 🎯 Когда использовать Skills (ОБЯЗАТЕЛЬНО!)
 
-| Ситуация | НЕ делай так ❌ | Делай так ✅ |
-|----------|-----------------|--------------|
-| Запуск проекта | `cd backend && npm run dev` | `"quick start"` |
-| Проверка здоровья | `curl localhost:3000/health` | `"health check"` |
-| Анализ ошибок | `tail -f backend/logs/error.log` | `"analyze logs"` |
-| Исправление ошибок | Ручной дебаг | `"fix errors"` |
-| Перезапуск | `pkill node && npm run dev` | `"restart all"` |
-| Проверка портов | `lsof -ti:3000` | `"check ports"` |
-| Запуск тестов | `npm test` | `"run tests"` |
-| Проверка UI | Ручной просмотр файлов | `"check ui"` |
-| Миграции БД | `npm run db:migrate` | `"migrate db"` |
-| SQL запросы | `psql telegram_shop -c "..."` | `"query db"` |
-| Проверка ngrok | `curl localhost:4040/api/tunnels` | `"check ngrok"` |
-| Pre-deployment | Ручной чеклист | `"production check"` |
+| Ситуация           | НЕ делай так ❌                   | Делай так ✅         |
+| ------------------ | --------------------------------- | -------------------- |
+| Запуск проекта     | `cd backend && npm run dev`       | `"quick start"`      |
+| Проверка здоровья  | `curl localhost:3000/health`      | `"health check"`     |
+| Анализ ошибок      | `tail -f backend/logs/error.log`  | `"analyze logs"`     |
+| Исправление ошибок | Ручной дебаг                      | `"fix errors"`       |
+| Перезапуск         | `pkill node && npm run dev`       | `"restart all"`      |
+| Проверка портов    | `lsof -ti:3000`                   | `"check ports"`      |
+| Запуск тестов      | `npm test`                        | `"run tests"`        |
+| Проверка UI        | Ручной просмотр файлов            | `"check ui"`         |
+| Миграции БД        | `npm run db:migrate`              | `"migrate db"`       |
+| SQL запросы        | `psql telegram_shop -c "..."`     | `"query db"`         |
+| Проверка ngrok     | `curl localhost:4040/api/tunnels` | `"check ngrok"`      |
+| Pre-deployment     | Ручной чеклист                    | `"production check"` |
 
 ### 📚 Полный список Skills (14 штук)
 
@@ -124,6 +130,7 @@ Task({
 **quick-start** - Запуск всего stack  
 Триггеры: `"quick start"`, `"start project"`, `"start everything"`  
 Что делает:
+
 - Останавливает существующие процессы
 - Запускает ngrok tunnel
 - Обновляет .env файлы с ngrok URL
@@ -133,6 +140,7 @@ Task({
 **restart-all** - Перезапуск всех сервисов  
 Триггеры: `"restart all"`, `"restart services"`, `"reboot"`  
 Что делает:
+
 - `./stop.sh` для остановки всего
 - Проверка что порты освободились
 - `./start.sh` для нового старта
@@ -141,6 +149,7 @@ Task({
 **health-check** - Проверка здоровья системы  
 Триггеры: `"health check"`, `"status"`, `"are we healthy"`  
 Что делает:
+
 - Backend API health endpoint
 - Bot process status
 - **ngrok tunnel status** (критично!)
@@ -152,6 +161,7 @@ Task({
 **analyze-logs** - Анализ error логов  
 Триггеры: `"analyze logs"`, `"check errors"`, `"what's wrong"`  
 Что делает:
+
 - Backend: `backend/logs/error-YYYY-MM-DD.log`
 - Bot: `bot/logs/error.log`
 - ngrok: `logs/ngrok.log`
@@ -160,6 +170,7 @@ Task({
 **fix-errors** - Автоматическое исправление  
 Триггеры: `"fix errors"`, `"auto fix"`, `"repair"`  
 Исправляет:
+
 - Port conflicts (EADDRINUSE)
 - Database connection (ECONNREFUSED)
 - Missing dependencies
@@ -175,6 +186,7 @@ Task({
 **run-tests** - Запуск всех тестов  
 Триггеры: `"run tests"`, `"test all"`, `"check coverage"`  
 Что делает:
+
 - Backend: `npm run test:coverage`
 - Bot: `npm run test:coverage`
 - Coverage summary report
@@ -182,6 +194,7 @@ Task({
 **test-integration** - Integration тесты бота  
 Триггеры: `"test bot"`, `"integration tests"`, `"test telegram"`  
 Что делает:
+
 - Проверяет Backend running
 - Автостарт Backend если нужно
 - Full user flow testing
@@ -191,6 +204,7 @@ Task({
 **ui-check** - Валидация UI дизайна  
 Триггеры: `"check ui"`, `"validate design"`, `"design review"`  
 Проверяет:
+
 - Glassmorphism (glass-card, glass-elevated)
 - Colors (#FF6B00, #181818)
 - Touch-friendly buttons (44px)
@@ -199,6 +213,7 @@ Task({
 **animation-check** - Проверка анимаций  
 Триггеры: `"check animations"`, `"animation review"`, `"performance check"`  
 Проверяет:
+
 - Framer Motion usage
 - Performance anti-patterns
 - GPU-accelerated properties
@@ -209,6 +224,7 @@ Task({
 **db-migrate** - Безопасные миграции  
 Триггеры: `"migrate db"`, `"run migrations"`, `"update database"`  
 Что делает:
+
 - Auto backup before migration
 - Run migrations
 - Verify schema
@@ -217,6 +233,7 @@ Task({
 **db-query** - SQL запросы  
 Триггеры: `"query db"`, `"check users table"`, `"database stats"`  
 Что делает:
+
 - Common queries (users, shops, orders)
 - Table schemas
 - Export to CSV/JSON
@@ -227,6 +244,7 @@ Task({
 **ngrok-management** - Управление ngrok tunnel  
 Триггеры: `"check ngrok"`, `"restart ngrok"`, `"ngrok status"`  
 Что делает:
+
 - Check ngrok status and URL
 - Restart expired tunnels
 - Update all .env files
@@ -239,6 +257,7 @@ Task({
 **production-deploy** - Pre-deployment checklist  
 Триггеры: `"production check"`, `"deploy check"`, `"ready for prod"`  
 Проверяет:
+
 - All tests pass
 - UI/UX compliance
 - Animation performance
@@ -249,12 +268,14 @@ Task({
 ### 🔄 Типичные рабочие сценарии
 
 **Утренний старт:**
+
 ```
 1. "quick start"           # Запустить всё
 2. "health check"          # Проверить что работает
 ```
 
 **Когда что-то сломалось:**
+
 ```
 1. "analyze logs"          # Найти ошибки
 2. "fix errors"            # Автофикс
@@ -263,6 +284,7 @@ Task({
 ```
 
 **Перед коммитом:**
+
 ```
 1. "run tests"             # Все тесты
 2. "check ui"              # Дизайн
@@ -270,6 +292,7 @@ Task({
 ```
 
 **После system sleep/wake:**
+
 ```
 1. "check ngrok"           # ngrok tunnel expires!
 2. If expired: "restart ngrok"
@@ -277,6 +300,7 @@ Task({
 ```
 
 **Перед deployment:**
+
 ```
 1. "production check"      # Comprehensive checklist
 2. Fix any ❌ failures
@@ -296,47 +320,47 @@ Task({
 
 **Когда использовать Task tool:**
 
-| Субагент | Когда использовать |
-|----------|-------------------|
-| `telegram-bot-expert` | Работа с Telegraf.js: handlers, scenes, keyboards, sessions |
-| `backend-architect` | API design, endpoint создание, идемпотентность, архитектура |
-| `database-designer` | PostgreSQL: schema, миграции, индексы, SQL запросы |
-| `frontend-developer` | React компоненты, TailwindCSS, Telegram Mini App UI/UX |
-| `debug-master` | Debugging, ошибки, тесты, исправления багов |
-| `crypto-integration-specialist` | Blockchain API, payment verification, wallet validation |
-| `design-researcher` | UI/UX research, design trends, visual inspiration |
-| `internel` | Web search, API docs, library comparison, error solutions |
+| Субагент                        | Когда использовать                                          |
+| ------------------------------- | ----------------------------------------------------------- |
+| `telegram-bot-expert`           | Работа с Telegraf.js: handlers, scenes, keyboards, sessions |
+| `backend-architect`             | API design, endpoint создание, идемпотентность, архитектура |
+| `database-designer`             | PostgreSQL: schema, миграции, индексы, SQL запросы          |
+| `frontend-developer`            | React компоненты, TailwindCSS, Telegram Mini App UI/UX      |
+| `debug-master`                  | Debugging, ошибки, тесты, исправления багов                 |
+| `crypto-integration-specialist` | Blockchain API, payment verification, wallet validation     |
+| `design-researcher`             | UI/UX research, design trends, visual inspiration           |
+| `internel`                      | Web search, API docs, library comparison, error solutions   |
 
 **Примеры делегирования:**
 
 ```javascript
 // Разработка бота
 Task({
-  subagent_type: "telegram-bot-expert",
-  description: "Add new button handler",
-  prompt: "Add callback handler for 'delete_product' button in seller menu"
-})
+  subagent_type: 'telegram-bot-expert',
+  description: 'Add new button handler',
+  prompt: "Add callback handler for 'delete_product' button in seller menu",
+});
 
 // Работа с БД
 Task({
-  subagent_type: "database-designer",
-  description: "Create migration",
-  prompt: "Add index on products.shop_id for faster lookups"
-})
+  subagent_type: 'database-designer',
+  description: 'Create migration',
+  prompt: 'Add index on products.shop_id for faster lookups',
+});
 
 // Дебаг
 Task({
-  subagent_type: "debug-master",
-  description: "Fix failing tests",
-  prompt: "Fix 3 failing integration tests in bot/tests/integration/"
-})
+  subagent_type: 'debug-master',
+  description: 'Fix failing tests',
+  prompt: 'Fix 3 failing integration tests in bot/tests/integration/',
+});
 
 // Поиск информации в интернете
 Task({
-  subagent_type: "internel",
-  description: "Find solution for error",
-  prompt: "Find how to fix 'Telegram WebApp SDK initialization timeout' error"
-})
+  subagent_type: 'internel',
+  description: 'Find solution for error',
+  prompt: "Find how to fix 'Telegram WebApp SDK initialization timeout' error",
+});
 ```
 
 **Важно:** Субагенты тоже используют MCP File System.
@@ -359,6 +383,7 @@ npm run dev  # Смотреть вывод
 ```
 
 **Критерии здоровья:**
+
 - ✅ Нет `[error]` после старта
 - ✅ "Server started" / "Bot started"
 - ✅ "Database: Connected ✓"
@@ -401,6 +426,7 @@ npm run dev  # Смотреть вывод
 ### ngrok - обязателен!
 
 Этот проект использует **Telegram Mini App**, который требует HTTPS. ngrok предоставляет:
+
 - HTTPS tunnel к localhost:3000
 - Public URL для Telegram
 - WebApp serving
@@ -408,6 +434,7 @@ npm run dev  # Смотреть вывод
 **Без ngrok:** Mini App button не работает!
 
 **Skills для ngrok:**
+
 - `"check ngrok"` - проверка статуса
 - `"restart ngrok"` - перезапуск tunnel (каждые 2 часа на free tier)
 - `"quick start"` - автоматически запускает ngrok
@@ -415,14 +442,17 @@ npm run dev  # Смотреть вывод
 ### Структура логов
 
 **Backend:**
+
 - `backend/logs/error-YYYY-MM-DD.log` - ошибки (daily rotation)
 - `backend/logs/combined-YYYY-MM-DD.log` - все логи
 
 **Bot:**
+
 - `bot/logs/error.log` - ошибки (single file, может расти большим!)
 - `bot/logs/combined.log` - все логи
 
 **ngrok:**
+
 - `logs/ngrok.log` - ngrok tunnel logs
 - `logs/backend.log` - backend startup logs
 - `logs/bot.log` - bot startup logs
@@ -430,6 +460,7 @@ npm run dev  # Смотреть вывод
 ### npm команды
 
 **Backend:**
+
 ```bash
 npm run dev              # nodemon (для разработки)
 npm start                # production start
@@ -439,6 +470,7 @@ npm run lint:check       # ESLint check
 ```
 
 **Bot:**
+
 ```bash
 npm start                # production start
 npm run dev              # nodemon
@@ -449,12 +481,14 @@ npm run test:integration # integration tests only
 ```
 
 **WebApp:**
+
 ```bash
 npm run dev              # Vite dev server
 npm run build            # production build
 ```
 
 **Root:**
+
 ```bash
 npm run dev              # Backend + WebApp
 npm run dev:all          # Backend + WebApp + Bot

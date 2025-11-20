@@ -9,15 +9,17 @@ export const ORDER_STATUS = {
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
-  EXPIRED: 'expired'
+  EXPIRED: 'expired',
 };
 
 // Payment statuses (align with database constraint)
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
-  FAILED: 'failed'
+  FAILED: 'failed',
 };
+
+const LTC_CONFIRMATIONS = 3; // 3 confirmations keeps the UX snappy while staying secure.
 
 // Supported cryptocurrencies
 export const SUPPORTED_CURRENCIES = {
@@ -26,29 +28,29 @@ export const SUPPORTED_CURRENCIES = {
     symbol: 'BTC',
     decimals: 8,
     confirmations: 3,
-    network: 'bitcoin'
+    network: 'bitcoin',
   },
   ETH: {
     name: 'Ethereum',
     symbol: 'ETH',
     decimals: 18,
     confirmations: 12,
-    network: 'ethereum'
+    network: 'ethereum',
   },
   USDT: {
     name: 'Tether (TRC20)',
     symbol: 'USDT',
     decimals: 6,
     confirmations: 19,
-    network: 'tron'
+    network: 'tron',
   },
   LTC: {
     name: 'Litecoin',
     symbol: 'LTC',
     decimals: 8,
-    confirmations: 12,
-    network: 'litecoin'
-  }
+    confirmations: LTC_CONFIRMATIONS,
+    network: 'litecoin',
+  },
 };
 
 // Product categories
@@ -61,49 +63,49 @@ export const PRODUCT_CATEGORIES = [
   'Beauty',
   'Toys',
   'Food',
-  'Other'
+  'Other',
 ];
 
 // User roles (deprecated - role is now determined by shop ownership)
 // A user becomes a seller by creating a shop
 export const USER_ROLES = {
   USER: 'user',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
 };
 
 // Pagination defaults (P1-PERF-005: MAX_LIMIT reduced to 50 to prevent unbounded queries)
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 20,
-  MAX_LIMIT: 50 // P1-PERF-005: Reduced from 100 to 50 to prevent large result sets
+  MAX_LIMIT: 50, // P1-PERF-005: Reduced from 100 to 50 to prevent large result sets
 };
 
 // Rate limiting
 export const RATE_LIMITS = {
   AUTH: {
     WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 1000 // Increased for development testing
+    MAX_REQUESTS: 1000, // Increased for development testing
   },
   API: {
     WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 1000 // Increased for development testing
+    MAX_REQUESTS: 1000, // Increased for development testing
   },
   PAYMENT: {
     WINDOW_MS: 60 * 1000, // 1 minute
-    MAX_REQUESTS: 50 // Increased for development testing
+    MAX_REQUESTS: 50, // Increased for development testing
   },
   WEBHOOK: {
     WINDOW_MS: 60 * 1000, // 1 minute
-    MAX_REQUESTS: 100
+    MAX_REQUESTS: 100,
   },
   SHOP_CREATION: {
     WINDOW_MS: 60 * 60 * 1000, // 1 hour
-    MAX_REQUESTS: 5 // Max 5 shops per hour per user
+    MAX_REQUESTS: 5, // Max 5 shops per hour per user
   },
   PRODUCT_CREATION: {
     WINDOW_MS: 60 * 60 * 1000, // 1 hour
-    MAX_REQUESTS: 50 // Max 50 products per hour per user
-  }
+    MAX_REQUESTS: 50, // Max 50 products per hour per user
+  },
 };
 
 // Payment expiration time
@@ -112,7 +114,7 @@ export const PAYMENT_EXPIRATION_TIME = 30 * 60 * 1000; // 30 minutes
 // Token expiration
 export const TOKEN_EXPIRATION = {
   ACCESS: '7d',
-  REFRESH: '30d'
+  REFRESH: '30d',
 };
 
 // HTTP Status Codes
@@ -128,7 +130,7 @@ export const HTTP_STATUS = {
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
-  SERVICE_UNAVAILABLE: 503
+  SERVICE_UNAVAILABLE: 503,
 };
 
 // Blockchain explorer URLs
@@ -136,7 +138,7 @@ export const EXPLORER_URLS = {
   BTC: 'https://blockchair.com/bitcoin/transaction',
   ETH: 'https://etherscan.io/tx',
   USDT: 'https://tronscan.org/#/transaction',
-  LTC: 'https://blockchair.com/litecoin/transaction'
+  LTC: 'https://blockchair.com/litecoin/transaction',
 };
 
 // Error messages
@@ -170,7 +172,7 @@ export const ERROR_MESSAGES = {
   VALIDATION_ERROR: 'Validation error',
   INTERNAL_ERROR: 'Internal server error',
   NOT_FOUND: 'Resource not found',
-  RATE_LIMIT_EXCEEDED: 'Too many requests'
+  RATE_LIMIT_EXCEEDED: 'Too many requests',
 };
 
 // Success messages
@@ -191,7 +193,7 @@ export const SUCCESS_MESSAGES = {
   ORDER_CANCELLED: 'Order cancelled successfully',
 
   // Payments
-  PAYMENT_CONFIRMED: 'Payment confirmed successfully'
+  PAYMENT_CONFIRMED: 'Payment confirmed successfully',
 };
 
 export default {
@@ -207,5 +209,5 @@ export default {
   HTTP_STATUS,
   EXPLORER_URLS,
   ERROR_MESSAGES,
-  SUCCESS_MESSAGES
+  SUCCESS_MESSAGES,
 };

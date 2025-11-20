@@ -134,6 +134,7 @@ echo "=== Animation Check Complete ==="
 ## Animation best practices:
 
 ### ✅ GPU-Accelerated (GOOD):
+
 ```jsx
 // Transform properties
 animate={{ x: 100, y: 50, scale: 1.1, rotate: 45 }}
@@ -146,6 +147,7 @@ animate={{ blur: "10px" }}
 ```
 
 ### ❌ CPU-Bound (AVOID):
+
 ```jsx
 // Size properties
 animate={{ width: "100%", height: "200px" }}  // Slow!
@@ -158,28 +160,27 @@ animate={{ marginTop: 20 }}  // Slow!
 ```
 
 ### Optimal durations:
+
 - **Micro-interactions:** 0.15-0.2s (button hover, tap)
 - **Page transitions:** 0.3-0.5s
 - **Complex animations:** 0.5-0.8s
 
 ### Spring preset (recommended):
+
 ```jsx
 const springConfig = {
   type: 'spring',
   stiffness: 400,
-  damping: 32
+  damping: 32,
 };
 
-<motion.div
-  whileHover={{ scale: 1.02 }}
-  whileTap={{ scale: 0.98 }}
-  transition={springConfig}
-/>
+<motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={springConfig} />;
 ```
 
 ## Common patterns:
 
 ### Page transition:
+
 ```jsx
 <motion.div
   initial={{ opacity: 0, y: 20 }}
@@ -190,21 +191,16 @@ const springConfig = {
 ```
 
 ### Button feedback:
+
 ```jsx
-<motion.button
-  whileHover={{ scale: 1.02 }}
-  whileTap={{ scale: 0.98 }}
-/>
+<motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} />
 ```
 
 ### Stagger children:
+
 ```jsx
-<motion.div
-  variants={containerVariants}
-  initial="hidden"
-  animate="visible"
->
-  {items.map(item => (
+<motion.div variants={containerVariants} initial="hidden" animate="visible">
+  {items.map((item) => (
     <motion.div key={item} variants={itemVariants} />
   ))}
 </motion.div>

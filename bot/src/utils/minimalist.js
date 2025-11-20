@@ -2,7 +2,7 @@ import { messages } from '../texts/messages.js';
 
 /**
  * Minimalist Design Utilities
- * 
+ *
  * Utility functions for implementing minimalist text patterns across the bot.
  * Based on research and patterns from BOT_MINIMALIST_DESIGN_GUIDE.md
  */
@@ -10,7 +10,7 @@ import { messages } from '../texts/messages.js';
 /**
  * Format products list for seller view
  * Compresses 8 lines → 3 lines (63% reduction)
- * 
+ *
  * @param {Array} products - Array of product objects
  * @param {string} shopName - Shop name for header
  * @returns {string} Formatted message
@@ -41,7 +41,7 @@ export const formatProductsList = (products, shopName) => {
 /**
  * Format sales/orders list for seller view
  * Compresses 9 lines → 4 lines (56% reduction)
- * 
+ *
  * @param {Array} orders - Array of order objects
  * @param {string} shopName - Shop name for header
  * @returns {string} Formatted message
@@ -56,14 +56,16 @@ export const formatSalesList = (orders, shopName) => {
   const toShow = orders.slice(0, 5);
   toShow.forEach((o, i) => {
     const username = o.buyer_username
-      ? (o.buyer_username.length > 15 ? o.buyer_username.slice(0, 15) : o.buyer_username)
-      : (o.buyer_first_name || 'Покупатель');
+      ? o.buyer_username.length > 15
+        ? o.buyer_username.slice(0, 15)
+        : o.buyer_username
+      : o.buyer_first_name || 'Покупатель';
     const statusMap = {
-      'pending': 'Ожидает',
-      'completed': '✅',
-      'cancelled': 'Отменён',
-      'processing': 'Обработка',
-      'failed': 'Отменён'
+      pending: 'Ожидает',
+      completed: '✅',
+      cancelled: 'Отменён',
+      processing: 'Обработка',
+      failed: 'Отменён',
     };
     const status = statusMap[o.status] || 'Обработка';
     const price = parseFloat(o.total_price || o.totalPrice || 0).toFixed(0);
@@ -83,7 +85,7 @@ export const formatSalesList = (orders, shopName) => {
 /**
  * Format buyer orders list
  * Compresses 9 lines → 4 lines
- * 
+ *
  * @param {Array} orders - Array of order objects
  * @returns {string} Formatted message
  */
@@ -98,11 +100,11 @@ export const formatBuyerOrders = (orders) => {
   toShow.forEach((o, i) => {
     const shopName = o.shop_name || 'Магазин';
     const statusMap = {
-      'pending': 'Ожидает',
-      'completed': '✅',
-      'cancelled': 'Отменён',
-      'processing': 'Обработка',
-      'failed': 'Отменён'
+      pending: 'Ожидает',
+      completed: '✅',
+      cancelled: 'Отменён',
+      processing: 'Обработка',
+      failed: 'Отменён',
     };
     const status = statusMap[o.status] || 'Обработка';
     const price = parseFloat(o.total_price || o.totalPrice || 0).toFixed(0);
@@ -121,7 +123,7 @@ export const formatBuyerOrders = (orders) => {
 
 /**
  * Format subscriptions list
- * 
+ *
  * @param {Array} subscriptions - Array of subscription objects
  * @returns {string} Formatted message
  */
@@ -149,7 +151,7 @@ export const formatSubscriptions = (subscriptions) => {
 /**
  * Format shop info for buyer view
  * Compresses 13 lines → 7 lines (46% reduction)
- * 
+ *
  * @param {Object} shop - Shop object
  * @param {Array} products - Array of products
  * @returns {string} Formatted message
@@ -157,9 +159,10 @@ export const formatSubscriptions = (subscriptions) => {
 export const formatShopInfo = (shop, products = []) => {
   const sellerUsername = shop.seller_username
     ? `@${shop.seller_username}`
-    : (shop.seller_first_name || 'Продавец');
+    : shop.seller_first_name || 'Продавец';
 
-  const { stock: stockProducts, preorder: preorderProducts } = splitProductsByAvailability(products);
+  const { stock: stockProducts, preorder: preorderProducts } =
+    splitProductsByAvailability(products);
 
   let msg = `${shop.name} • ${sellerUsername}\n`;
 
@@ -232,9 +235,7 @@ export const formatProductSectionList = (section, shopName, products = []) => {
   const lines = products.slice(0, 8).map((product, index) => {
     const price = parseFloat(product.price).toFixed(0);
     const stockQty = product.stock_quantity ?? product.stock ?? 0;
-    const stockLabel = isPreorder
-      ? 'предзаказ'
-      : (stockQty > 0 ? 'В наличии' : 'Закончился');
+    const stockLabel = isPreorder ? 'предзаказ' : stockQty > 0 ? 'В наличии' : 'Закончился';
     return `${index + 1}. ${product.name} — $${price} (${stockLabel})`;
   });
 
@@ -245,7 +246,7 @@ export const formatProductSectionList = (section, shopName, products = []) => {
 
 /**
  * Get smart stock status text
- * 
+ *
  * @param {number} quantity - Stock quantity
  * @returns {string} Status text
  */
@@ -258,24 +259,24 @@ export const getStockStatus = (quantity) => {
 
 /**
  * Get order status emoji
- * 
+ *
  * @param {string} status - Order status
  * @returns {string} Emoji
  */
 export const getOrderStatusEmoji = (status) => {
   const map = {
-    'pending': '⏳',
-    'completed': '✅',
-    'cancelled': '❌',
-    'processing': '📦',
-    'failed': '❌'
+    pending: '⏳',
+    completed: '✅',
+    cancelled: '❌',
+    processing: '📦',
+    failed: '❌',
   };
   return map[status] || '📦';
 };
 
 /**
  * Format success message
- * 
+ *
  * @param {string} title - Success title
  * @param {string} details - Optional details
  * @returns {string} Formatted message
@@ -290,7 +291,7 @@ export const successMessage = (title, details = '') => {
 
 /**
  * Format error message
- * 
+ *
  * @param {string} action - Action that failed
  * @param {string} reason - Optional reason
  * @returns {string} Formatted message
@@ -346,7 +347,7 @@ export function formatFollowsList(follows) {
       index: index + 1,
       name: follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин',
       mode: follow.mode,
-      markup: markupValue
+      markup: markupValue,
     });
   });
   return `${header}\n\n${lines.join('\n')}\n\n${messages.follows.listManageHint}`;
@@ -361,14 +362,16 @@ export function formatFollowsList(follows) {
 export function formatFollowDetail(follow) {
   const markupRaw = follow.markup_percentage ?? follow.markup ?? 0;
   const markupValue = Number.isFinite(Number(markupRaw)) ? Number(markupRaw) : null;
-  const sourceProducts = follow.source_products_count ?? follow.products_count ?? follow.productsCount ?? 0;
-  const syncedProducts = follow.synced_products_count ?? follow.synced_count ?? follow.syncedProducts ?? sourceProducts;
+  const sourceProducts =
+    follow.source_products_count ?? follow.products_count ?? follow.productsCount ?? 0;
+  const syncedProducts =
+    follow.synced_products_count ?? follow.synced_count ?? follow.syncedProducts ?? sourceProducts;
 
   return messages.follows.detail({
     name: follow.source_shop_name || follow.name || 'Магазин',
     mode: follow.mode,
     markup: markupValue,
     sourceProducts,
-    syncedProducts
+    syncedProducts,
   });
 }

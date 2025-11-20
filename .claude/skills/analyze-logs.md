@@ -34,7 +34,7 @@ backend_log="$PROJECT_DIR/backend/logs/error-$(date +%Y-%m-%d).log"
 if [ -f "$backend_log" ]; then
   backend_count=$(tail -200 "$backend_log" | grep -c -E "(error|Error|ERROR)")
   echo "   Total: $backend_count errors"
-  
+
   if [ "$backend_count" -gt 0 ]; then
     echo "   Top 5 errors:"
     tail -200 "$backend_log" | grep -E "(error|Error|ERROR)" | \
@@ -56,7 +56,7 @@ bot_log="$PROJECT_DIR/bot/logs/error.log"
 if [ -f "$bot_log" ]; then
   bot_count=$(tail -200 "$bot_log" | grep -c -E "(error|Error|ERROR)")
   echo "   Total: $bot_count errors"
-  
+
   if [ "$bot_count" -gt 0 ]; then
     echo "   Top 5 errors:"
     tail -200 "$bot_log" | grep -E "(error|Error|ERROR)" | \
@@ -105,24 +105,28 @@ echo "=== End of Analysis ==="
 ## Error categories Claude recognizes:
 
 ### Network Errors:
+
 - **ECONNREFUSED:** Backend/Database not running
 - **ETIMEDOUT:** Request timeout (slow response)
 - **ENOTFOUND:** DNS lookup failed
 - **EADDRINUSE:** Port already in use
 
 ### Application Errors:
+
 - **Cannot find module:** Missing dependency or wrong import path
 - **undefined is not:** Runtime error (accessing property on undefined)
 - **syntax error:** Code syntax issue
 - **ValidationError:** Data validation failed
 
 ### HTTP Errors:
+
 - **401:** Unauthorized (JWT token issue)
 - **403:** Forbidden (permission denied)
 - **404:** Not found (wrong endpoint)
 - **500:** Internal server error
 
 ### Database Errors:
+
 - **SequelizeDatabaseError:** SQL query failed (but this project uses pg, not Sequelize)
 - **relation does not exist:** Table/column not found
 
@@ -139,6 +143,7 @@ echo "=== End of Analysis ==="
 ## Automatic actions:
 
 After analysis, Claude will:
+
 1. Identify the root cause
 2. Check if error is in top 5 patterns
 3. Suggest specific fixes based on error type:

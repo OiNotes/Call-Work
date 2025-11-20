@@ -45,8 +45,9 @@ router.get('/status', verifyToken, optionalTelegramAuth, paymentController.check
 /**
  * @route   POST /api/payments/qr
  * @desc    Generate QR code for payment
- * @access  Private (WebApp)
+ * @access  Private (Bot server-side)
+ * @note    No optionalTelegramAuth - Bot cannot provide x-telegram-init-data header
  */
-router.post('/qr', verifyToken, optionalTelegramAuth, paymentController.generateQR);
+router.post('/qr', verifyToken, paymentController.generateQR);
 
 export default router;

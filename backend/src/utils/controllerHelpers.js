@@ -23,12 +23,12 @@ export function handleControllerError(error, res, operation, context = {}) {
     logger.error(`${operation} - DB error`, {
       error: error.message,
       code: error.code,
-      ...context
+      ...context,
     });
     return res.status(handledError.statusCode).json({
       success: false,
       error: handledError.message,
-      ...(handledError.details ? { details: handledError.details } : {})
+      ...(handledError.details ? { details: handledError.details } : {}),
     });
   }
 
@@ -37,11 +37,11 @@ export function handleControllerError(error, res, operation, context = {}) {
     logger.error(`${operation} - API error`, {
       error: error.message,
       statusCode: error.statusCode,
-      ...context
+      ...context,
     });
     return res.status(error.statusCode).json({
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 
@@ -49,11 +49,11 @@ export function handleControllerError(error, res, operation, context = {}) {
   logger.error(`${operation} - Unexpected error`, {
     error: error.message,
     stack: error.stack,
-    ...context
+    ...context,
   });
   return res.status(500).json({
     success: false,
-    error: `Failed to ${operation.toLowerCase()}`
+    error: `Failed to ${operation.toLowerCase()}`,
   });
 }
 
@@ -79,7 +79,7 @@ export function withErrorHandling(operation) {
         return handleControllerError(error, res, operation, {
           userId: req.user?.id,
           path: req.path,
-          method: req.method
+          method: req.method,
         });
       }
     };
@@ -98,7 +98,7 @@ export function sendSuccess(res, data, statusCode = 200, message = null) {
   const response = {
     success: true,
     ...(message && { message }),
-    data
+    data,
   };
   return res.status(statusCode).json(response);
 }
@@ -117,7 +117,7 @@ export function checkOwnership(resource, userId, res, resourceName = 'resource')
   if (!resource) {
     res.status(404).json({
       success: false,
-      error: `${resourceName} not found`
+      error: `${resourceName} not found`,
     });
     return false;
   }
@@ -125,7 +125,7 @@ export function checkOwnership(resource, userId, res, resourceName = 'resource')
   if (resource.owner_id !== userId) {
     res.status(403).json({
       success: false,
-      error: `You can only access your own ${resourceName.toLowerCase()}s`
+      error: `You can only access your own ${resourceName.toLowerCase()}s`,
     });
     return false;
   }
@@ -144,10 +144,7 @@ export function parsePagination(query, options = {}) {
   const maxLimit = options.maxLimit || 100;
 
   const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.min(
-    maxLimit,
-    Math.max(1, parseInt(query.limit, 10) || defaultLimit)
-  );
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(query.limit, 10) || defaultLimit));
   const offset = (page - 1) * limit;
 
   return { page, limit, offset };
@@ -158,5 +155,5 @@ export default {
   withErrorHandling,
   sendSuccess,
   checkOwnership,
-  parsePagination
+  parsePagination,
 };

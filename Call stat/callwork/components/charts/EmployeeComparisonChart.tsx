@@ -17,7 +17,7 @@ const COLORS = ['var(--primary)', 'var(--success)', 'var(--warning)', 'var(--dan
 
 export const EmployeeComparisonChart = memo(function EmployeeComparisonChart({ data }: EmployeeComparisonChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis

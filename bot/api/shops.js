@@ -71,5 +71,5 @@ export const shopsApi = {
    */
   async delete(token, shopId) {
     return await client.delete(`/api/shops/${shopId}`, token);
-  }
+  },
 };

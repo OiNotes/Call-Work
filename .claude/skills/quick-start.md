@@ -57,6 +57,7 @@ cd "/Users/sile/Documents/Status Stock 4.0"
 ## Automatic error handling:
 
 If errors occur, Claude will:
+
 1. Read appropriate log file from logs/ directory
 2. Identify the issue (PostgreSQL, ngrok, build error, etc.)
 3. Fix it automatically (start PostgreSQL, restart ngrok, fix dependencies)

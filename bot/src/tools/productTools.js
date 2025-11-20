@@ -7,7 +7,7 @@
 export const productTools = [
   {
     type: 'function',
-    strict: true,  // DeepSeek strict mode for schema validation
+    strict: true, // DeepSeek strict mode for schema validation
     function: {
       name: 'addProduct',
       description: `Add a single product instantly.
@@ -29,22 +29,25 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
         properties: {
           name: {
             type: 'string',
-            description: 'Product name (minimum 3 characters). Examples: "iPhone 15 Pro", "Samsung Galaxy S24", "Наушники AirPods". Must be specified by user.'
+            description:
+              'Product name (minimum 3 characters). Examples: "iPhone 15 Pro", "Samsung Galaxy S24", "Наушники AirPods". Must be specified by user.',
           },
           price: {
             type: 'number',
-            description: 'Product price in USD (must be > 0). Examples: 999, 1299.99, 49.90, 0.01 (minimum). REQUIRED: If user didn\'t mention price, ask before calling function. NEVER use 0 or negative values.',
-            minimum: 0.01
+            description:
+              "Product price in USD (must be > 0). Examples: 999, 1299.99, 49.90, 0.01 (minimum). REQUIRED: If user didn't mention price, ask before calling function. NEVER use 0 or negative values.",
+            minimum: 0.01,
           },
           stock: {
             type: 'number',
-            description: 'Stock quantity. If missing, treat as 1 automatically. Examples: 1, 5, 100. Must be >= 0.'
-          }
+            description:
+              'Stock quantity. If missing, treat as 1 automatically. Examples: 1, 5, 100. Must be >= 0.',
+          },
         },
         required: ['name', 'price'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -82,34 +85,38 @@ Use it for commands вида «добавь iPhone 15 за 999», «появил
         properties: {
           products: {
             type: 'array',
-            description: 'Array of products to add. Example: [{name: "iPhone", price: 999, stock: 3}, {name: "AirPods", price: 199}]',
+            description:
+              'Array of products to add. Example: [{name: "iPhone", price: 999, stock: 3}, {name: "AirPods", price: 199}]',
             items: {
               type: 'object',
               properties: {
                 name: {
                   type: 'string',
-                  description: 'Product name (minimum 3 characters). Extract from user message. Examples: "iPhone 15", "Чехол", "red car"'
+                  description:
+                    'Product name (minimum 3 characters). Extract from user message. Examples: "iPhone 15", "Чехол", "red car"',
                 },
                 price: {
                   type: 'number',
-                  description: 'Product price in USD (must be > 0). Extract from user message: "$500", "1000$", "цена 999". Examples: 999, 49.90, 0.01 (minimum). NEVER use 0 or negative values.',
-                  minimum: 0.01
+                  description:
+                    'Product price in USD (must be > 0). Extract from user message: "$500", "1000$", "цена 999". Examples: 999, 49.90, 0.01 (minimum). NEVER use 0 or negative values.',
+                  minimum: 0.01,
                 },
                 stock: {
                   type: 'number',
-                  description: 'Stock quantity. Defaults to 1 if не указано. Extract from: "5шт", "10 pcs", "2 штуки". Must be >= 0.'
-                }
+                  description:
+                    'Stock quantity. Defaults to 1 if не указано. Extract from: "5шт", "10 pcs", "2 штуки". Must be >= 0.',
+                },
               },
               required: ['name', 'price'],
-              additionalProperties: false
+              additionalProperties: false,
             },
-            minItems: 2
-          }
+            minItems: 2,
+          },
         },
         required: ['products'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -134,13 +141,14 @@ IMPORTANT:
         properties: {
           productName: {
             type: 'string',
-            description: 'Product name to delete (fuzzy match supported). REQUIRED: If user didn\'t mention product name, ask before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will find "Чехол для Samsung"'
-          }
+            description:
+              'Product name to delete (fuzzy match supported). REQUIRED: If user didn\'t mention product name, ask before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will find "Чехол для Samsung"',
+          },
         },
         required: ['productName'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -161,9 +169,9 @@ No parameters needed - returns all products automatically.`,
         type: 'object',
         properties: {},
         required: [],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -189,13 +197,14 @@ Fuzzy match examples:
         properties: {
           query: {
             type: 'string',
-            description: 'Search query (partial match supported). Examples: "iPhone" will match "iPhone 15 Pro Max", "чехол" will match "Чехол для Samsung". Can be in any language.'
-          }
+            description:
+              'Search query (partial match supported). Examples: "iPhone" will match "iPhone 15 Pro Max", "чехол" will match "Чехол для Samsung". Can be in any language.',
+          },
         },
         required: ['query'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -229,7 +238,7 @@ Examples:
               properties: {
                 productName: {
                   type: 'string',
-                  description: 'Exact name of the product to update'
+                  description: 'Exact name of the product to update',
                 },
                 updates: {
                   type: 'object',
@@ -237,36 +246,36 @@ Examples:
                   properties: {
                     name: {
                       type: 'string',
-                      description: 'New product name'
+                      description: 'New product name',
                     },
                     price: {
                       type: 'number',
-                      description: 'New price in USD'
+                      description: 'New price in USD',
                     },
                     stock_quantity: {
                       type: 'number',
-                      description: 'New stock quantity'
+                      description: 'New stock quantity',
                     },
                     discount_percentage: {
                       type: 'number',
                       description: 'Discount percentage (0-100)',
                       minimum: 0,
-                      maximum: 100
-                    }
+                      maximum: 100,
+                    },
                   },
-                  additionalProperties: false
-                }
+                  additionalProperties: false,
+                },
               },
               required: ['productName', 'updates'],
-              additionalProperties: false
+              additionalProperties: false,
             },
-            minItems: 2
-          }
+            minItems: 2,
+          },
         },
         required: ['products'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -293,40 +302,47 @@ Examples:
         properties: {
           productName: {
             type: 'string',
-            description: 'Current product name to search (fuzzy match supported). REQUIRED: If user didn\'t mention product name, ask "Какой товар обновить?" before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will match "Чехол для Samsung"'
+            description:
+              'Current product name to search (fuzzy match supported). REQUIRED: If user didn\'t mention product name, ask "Какой товар обновить?" before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will match "Чехол для Samsung"',
           },
           updates: {
             type: 'object',
-            description: 'Fields to update (at least one required). Only include fields that user wants to change.',
+            description:
+              'Fields to update (at least one required). Only include fields that user wants to change.',
             properties: {
               name: {
                 type: 'string',
-                description: 'New product name. Only include if user wants to rename. Example: user says "переименуй iPhone в iPhone 15 Pro Max" → extract "iPhone 15 Pro Max"'
+                description:
+                  'New product name. Only include if user wants to rename. Example: user says "переименуй iPhone в iPhone 15 Pro Max" → extract "iPhone 15 Pro Max"',
               },
               price: {
                 type: 'number',
-                description: 'New price in USD. Only include if user wants to change price. Must be positive. Examples: user says "поставь цену 999" → 999, "change price to $1299" → 1299'
+                description:
+                  'New price in USD. Only include if user wants to change price. Must be positive. Examples: user says "поставь цену 999" → 999, "change price to $1299" → 1299',
               },
               stock_quantity: {
                 type: 'number',
-                description: 'New stock count. Use when user says "выстави наличие 10", "поставь остаток 5", "set stock to 20". Must be >= 0. Examples: "5 штук" → 5, "нет в наличии" → 0, "100 pcs" → 100'
+                description:
+                  'New stock count. Use when user says "выстави наличие 10", "поставь остаток 5", "set stock to 20". Must be >= 0. Examples: "5 штук" → 5, "нет в наличии" → 0, "100 pcs" → 100',
               },
               discount_percentage: {
                 type: 'number',
-                description: 'Discount percentage (0-100). Use to apply or remove a discount for this product. 0 removes the discount.'
+                description:
+                  'Discount percentage (0-100). Use to apply or remove a discount for this product. 0 removes the discount.',
               },
               discount_expires_at: {
                 type: 'string',
-                description: 'Discount expiry for the product. ISO datetime or duration phrase like "6 часов", "24h". Leave empty/null for permanent discount.'
-              }
+                description:
+                  'Discount expiry for the product. ISO datetime or duration phrase like "6 часов", "24h". Leave empty/null for permanent discount.',
+              },
             },
-            additionalProperties: false
-          }
+            additionalProperties: false,
+          },
         },
         required: ['productName', 'updates'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -367,13 +383,14 @@ Example flow:
         properties: {
           confirm: {
             type: 'boolean',
-            description: 'Confirmation flag (must be true to proceed). Set to true ONLY after user explicitly confirmed deletion of all products. Never set to true without confirmation.'
-          }
+            description:
+              'Confirmation flag (must be true to proceed). Set to true ONLY after user explicitly confirmed deletion of all products. Never set to true without confirmation.',
+          },
         },
         required: ['confirm'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -398,15 +415,16 @@ IMPORTANT: DO NOT respond with text explanation. Extract product names from user
           productNames: {
             type: 'array',
             items: {
-              type: 'string'
+              type: 'string',
             },
-            description: 'Array of product names to delete (fuzzy match supported for each). Examples: ["iPhone", "Samsung"] will match "iPhone 15 Pro" and "Samsung Galaxy S24". Extract all product names from user message.'
-          }
+            description:
+              'Array of product names to delete (fuzzy match supported for each). Examples: ["iPhone", "Samsung"] will match "iPhone 15 Pro" and "Samsung Galaxy S24". Extract all product names from user message.',
+          },
         },
         required: ['productNames'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -438,15 +456,16 @@ IMPORTANT: DO NOT respond with text explanation. Extract product names from user
           excludedProducts: {
             type: 'array',
             items: {
-              type: 'string'
+              type: 'string',
             },
-            description: 'Array of product names to KEEP (not delete). All other products will be deleted. Fuzzy match supported. Examples: ["iPad"] will keep "iPad Pro", ["iPhone", "MacBook"] will keep both. Extract from "кроме X" or "except Y".'
-          }
+            description:
+              'Array of product names to KEEP (not delete). All other products will be deleted. Fuzzy match supported. Examples: ["iPad"] will keep "iPad Pro", ["iPhone", "MacBook"] will keep both. Extract from "кроме X" or "except Y".',
+          },
         },
         required: ['excludedProducts'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -476,17 +495,19 @@ IMPORTANT: DO NOT respond with text explanation. Extract product names from user
         properties: {
           productName: {
             type: 'string',
-            description: 'Product name (fuzzy match supported). REQUIRED: If user didn\'t mention product, ask before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will match "Чехол для Samsung"'
+            description:
+              'Product name (fuzzy match supported). REQUIRED: If user didn\'t mention product, ask before calling. Examples: "iPhone" will match "iPhone 15 Pro", "Чехол" will match "Чехол для Samsung"',
           },
           quantity: {
             type: 'number',
-            description: 'Number of items sold. If omitted, assume 1 автоматически. Examples: "продал 5 штук" → 5, "продали iPhone" → 1. Must be positive number.'
-          }
+            description:
+              'Number of items sold. If omitted, assume 1 автоматически. Examples: "продал 5 штук" → 5, "продали iPhone" → 1. Must be positive number.',
+          },
         },
         required: ['productName'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -510,13 +531,14 @@ IMPORTANT: If user didn't specify product name, ask "О каком товаре?
         properties: {
           productName: {
             type: 'string',
-            description: 'Product name to get info about (fuzzy match supported). REQUIRED: If user didn\'t mention product, ask before calling. Examples: "iPhone" will find "iPhone 15 Pro", "Наушники" will find "Наушники AirPods"'
-          }
+            description:
+              'Product name to get info about (fuzzy match supported). REQUIRED: If user didn\'t mention product, ask before calling. Examples: "iPhone" will find "iPhone 15 Pro", "Наушники" will find "Наушники AirPods"',
+          },
         },
         required: ['productName'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -540,21 +562,22 @@ Duration format:
         properties: {
           productName: {
             type: 'string',
-            description: 'Name of the product to apply discount to'
+            description: 'Name of the product to apply discount to',
           },
           percentage: {
             type: 'number',
-            description: 'Discount percentage (1-99)'
+            description: 'Discount percentage (1-99)',
           },
           duration: {
             type: 'string',
-            description: 'Optional: discount duration (e.g. "6h", "2d", "1w"). If not specified - permanent discount.'
-          }
+            description:
+              'Optional: discount duration (e.g. "6h", "2d", "1w"). If not specified - permanent discount.',
+          },
         },
         required: ['productName', 'percentage'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -571,13 +594,13 @@ Examples:
         properties: {
           productName: {
             type: 'string',
-            description: 'Name of the product to remove discount from'
-          }
+            description: 'Name of the product to remove discount from',
+          },
         },
         required: ['productName'],
-        additionalProperties: false
-      }
-    }
+        additionalProperties: false,
+      },
+    },
   },
   {
     type: 'function',
@@ -603,35 +626,40 @@ Examples:
         properties: {
           percentage: {
             type: 'number',
-            description: 'Percentage to change (positive number, 0.1 to 100). Examples: user says "скидка 10%" → 10, "increase by 5%" → 5, "накрутка 15%" → 15. Extract ONLY the number.',
+            description:
+              'Percentage to change (positive number, 0.1 to 100). Examples: user says "скидка 10%" → 10, "increase by 5%" → 5, "накрутка 15%" → 15. Extract ONLY the number.',
             minimum: 0.1,
-            maximum: 100
+            maximum: 100,
           },
           operation: {
             type: 'string',
             enum: ['increase', 'decrease'],
-            description: 'Operation type. "decrease" = discount/скидка (lower prices). "increase" = накрутка/markup (raise prices). Examples: "скидка" → decrease, "подними цены" → increase, "discount" → decrease.'
+            description:
+              'Operation type. "decrease" = discount/скидка (lower prices). "increase" = накрутка/markup (raise prices). Examples: "скидка" → decrease, "подними цены" → increase, "discount" → decrease.',
           },
           discount_type: {
             type: 'string',
             enum: ['permanent', 'timer'],
-            description: 'Optional explicit discount type. Use "timer" together with duration, or "permanent" for indefinite discounts.'
+            description:
+              'Optional explicit discount type. Use "timer" together with duration, or "permanent" for indefinite discounts.',
           },
           duration: {
             type: 'string',
-            description: 'Duration for timer discount in human-readable format. Examples: "6 часов", "3 дня", "12h", "2 days", "24 hours". Заполняй только если пользователь дал длительность.'
+            description:
+              'Duration for timer discount in human-readable format. Examples: "6 часов", "3 дня", "12h", "2 days", "24 hours". Заполняй только если пользователь дал длительность.',
           },
           excludedProducts: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Product names to EXCLUDE from discount. Use when user says "кроме X", "except Y", "всем кроме Z", "без X". Example: ["MacBook", "iPhone"]. Supports partial names - "iPhone" will exclude "iPhone 12 Pro", "iPhone 13", etc. Case insensitive.'
-          }
+            description:
+              'Product names to EXCLUDE from discount. Use when user says "кроме X", "except Y", "всем кроме Z", "без X". Example: ["MacBook", "iPhone"]. Supports partial names - "iPhone" will exclude "iPhone 12 Pro", "iPhone 13", etc. Case insensitive.',
+          },
         },
         required: ['percentage', 'operation'],
-        additionalProperties: false
-      }
-    }
-  }
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export default productTools;

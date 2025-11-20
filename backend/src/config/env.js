@@ -5,12 +5,7 @@ dotenv.config();
 /**
  * Validate required environment variables
  */
-const requiredEnvVars = [
-  'PORT',
-  'DATABASE_URL',
-  'JWT_SECRET',
-  'TELEGRAM_BOT_TOKEN'
-];
+const requiredEnvVars = ['PORT', 'DATABASE_URL', 'JWT_SECRET', 'TELEGRAM_BOT_TOKEN'];
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -25,7 +20,7 @@ for (const envVar of requiredEnvVars) {
 if (process.env.JWT_SECRET.length < 32) {
   throw new Error(
     `JWT_SECRET must be at least 32 characters long for security. Current length: ${process.env.JWT_SECRET.length}. ` +
-    `Please generate a stronger secret using: openssl rand -base64 32`
+      `Please generate a stronger secret using: openssl rand -base64 32`
   );
 }
 
@@ -43,13 +38,13 @@ export const config = {
   // JWT
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
 
   // Telegram
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN,
-    webhookUrl: process.env.TELEGRAM_WEBHOOK_URL
+    webhookUrl: process.env.TELEGRAM_WEBHOOK_URL,
   },
 
   // Crypto APIs
@@ -61,7 +56,7 @@ export const config = {
     btcAddress: process.env.CRYPTO_BTC_ADDRESS,
     ethAddress: process.env.CRYPTO_ETH_ADDRESS,
     usdtAddress: process.env.CRYPTO_USDT_ADDRESS,
-    ltcAddress: process.env.CRYPTO_LTC_ADDRESS
+    ltcAddress: process.env.CRYPTO_LTC_ADDRESS,
   },
 
   // Shop
@@ -72,14 +67,14 @@ export const config = {
 
   // AI
   ai: {
-    deepseekApiKey: process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY_BACKEND
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY_BACKEND,
   },
 
   // Rate Limiting
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100
-  }
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
+  },
 };
 
 export default config;

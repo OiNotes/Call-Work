@@ -64,10 +64,10 @@ export const formatNumber = (value, maxDecimals = 2) => {
  */
 export const formatOrderStatus = (status) => {
   const statusMap = {
-    'pending': '⏳',
-    'completed': '✅',
-    'cancelled': '❌',
-    'processing': '📦'
+    pending: '⏳',
+    completed: '✅',
+    cancelled: '❌',
+    processing: '📦',
   };
 
   return statusMap[status] || '📦';

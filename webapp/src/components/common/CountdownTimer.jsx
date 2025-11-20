@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, memo } from 'react';
 
 /**
  * Live countdown timer для временных скидок
- * 
+ *
  * @param {string} expiresAt - ISO timestamp когда истекает скидка
  * @returns {JSX.Element|null} - Таймер с цветовым кодированием
- * 
+ *
  * Цветовое кодирование:
  * - Оранжевый (>3 часа): спокойный цвет
  * - Красный (1-3 часа): более яркий
@@ -47,7 +47,7 @@ const CountdownTimer = memo(function CountdownTimer({ expiresAt }) {
         hours,
         minutes,
         seconds,
-        totalHours: diff / (1000 * 60 * 60) // для цветового кодирования
+        totalHours: diff / (1000 * 60 * 60), // для цветового кодирования
       });
     };
 

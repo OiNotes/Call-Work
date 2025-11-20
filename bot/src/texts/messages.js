@@ -54,7 +54,7 @@ export const buttons = {
   modeMonitor: '🔍 Мониторинг',
   modeResell: '💰 Перепродажа',
   tierBasic: 'BASIC (бесплатно)',
-  tierPro: 'PRO — $35',
+  tierPro: 'PRO — $1',
   cryptoBTC: 'Bitcoin (BTC)',
   cryptoETH: 'Ethereum (ETH)',
   cryptoUSDT: 'USDT (TRC-20)',
@@ -66,12 +66,12 @@ export const buttons = {
   deleteWallet: 'Удалить кошелёк',
   mainMenu: 'Главное меню',
   promoCode: 'Промокод',
-  backToMenu: '« Назад в меню'
+  backToMenu: '« Назад в меню',
 };
 
 export const messages = {
   start: {
-    welcome: 'Status Stock. Выберите роль, чтобы продолжить.'
+    welcome: 'Status Stock. Выберите роль, чтобы продолжить.',
   },
   general: {
     welcomeDetailed: `Добро пожаловать в Status Stock!
@@ -89,7 +89,7 @@ Telegram-маркетплейс для продажи и покупки това
     done: 'Готово',
     processing: (subject) => `${subject}…`,
     invalidChoice: 'Неверный выбор. Попробуйте ещё раз.',
-    restartRequired: 'Произошла ошибка. Нажмите /start для перезапуска.'
+    restartRequired: 'Произошла ошибка. Нажмите /start для перезапуска.',
   },
   buyer: {
     searchContext: `🔍 Поиск магазина
@@ -127,7 +127,8 @@ Telegram-маркетплейс для продажи и покупки това
     subscriptionActive: () => 'Этот магазин уже в ваших подписках.',
     subscriptionAdded: (shop) => `✅ Подписка оформлена. Магазин: ${shop}.`,
     subscriptionRemoved: (shop) => `Подписка на ${shop} отключена.`,
-    subscriptionLimit: 'Достигнут лимит: BASIC — до двух магазинов. Перейдите на PRO, чтобы подключить больше.',
+    subscriptionLimit:
+      'Достигнут лимит: BASIC — до двух магазинов. Перейдите на PRO, чтобы подключить больше.',
     subscriptionAlreadyToast: 'Этот магазин уже в ваших подписках.',
     subscriptionOwnShop: 'Нельзя подписаться на собственный магазин.',
     subscriptionError: 'Не удалось оформить подписку.',
@@ -135,11 +136,11 @@ Telegram-маркетплейс для продажи и покупки това
     stockSectionTitle: (shop, count) => `Наличие магазина ${shop} (${count}).`,
     stockSectionEmpty: (shop) => `Наличие магазина ${shop}. Пока нет товаров.`,
     preorderSectionTitle: (shop, count) => `Предзаказ магазина ${shop} (${count}).`,
-    preorderSectionEmpty: (shop) => `Предзаказ магазина ${shop}. Пока нет товаров.`
+    preorderSectionEmpty: (shop) => `Предзаказ магазина ${shop}. Пока нет товаров.`,
   },
   buyerButtons: {
     preorderContact: 'Написать продавцу',
-    preorderClose: 'Закрыть'
+    preorderClose: 'Закрыть',
   },
   seller: {
     panel: 'Панель продавца. Доступные разделы ниже.',
@@ -152,9 +153,10 @@ Telegram-маркетплейс для продажи и покупки това
         message += `${statusBar}\n\n`;
       }
 
-      const formattedRevenue = revenue > 0
-        ? `${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-        : '$0';
+      const formattedRevenue =
+        revenue > 0
+          ? `${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+          : '$0';
 
       const ordersText = (() => {
         if (activeOrders <= 0) {
@@ -183,7 +185,8 @@ Telegram-маркетплейс для продажи и покупки това
     workersListTitle: (shop) => `Работники магазина ${shop}.`,
     workersListInstruction: 'Выберите сотрудника, чтобы отключить доступ.',
     workersMenuIntro: (shop) => `Работники магазина ${shop}. Выберите действие.`,
-    workersProOnly: 'Работники доступны на тарифе PRO. Откройте раздел «Управление подпиской», чтобы обновить тариф.',
+    workersProOnly:
+      'Работники доступны на тарифе PRO. Откройте раздел «Управление подпиской», чтобы обновить тариф.',
     workersOwnerOnly: 'Только владелец магазина может управлять работниками.',
     workerAdded: (name) => `Работник ${name} добавлен. У него есть доступ к продуктам магазина.`,
     workerRemoved: 'Доступ сотрудника отключён.',
@@ -216,8 +219,10 @@ Telegram-маркетплейс для продажи и покупки това
 • https://t.me/my_new_channel
 
 После подтверждения все покупатели получат уведомление.`,
-      invalidChannel: 'Похоже, это не похоже на корректный канал. Пример: @my_channel или https://t.me/my_channel',
-      channelAccessError: 'Не удалось проверить новый канал. Убедитесь, что бот добавлен в администраторы и попробуйте снова.',
+      invalidChannel:
+        'Похоже, это не похоже на корректный канал. Пример: @my_channel или https://t.me/my_channel',
+      channelAccessError:
+        'Не удалось проверить новый канал. Убедитесь, что бот добавлен в администраторы и попробуйте снова.',
       confirmation: ({ shopName, channel, buyersCount }) => `⚠️ Подтверждение миграции
 
 Новый канал: ${channel}
@@ -241,7 +246,7 @@ ${channel}
 • Сделать канал публичным`,
       error: 'Не удалось выполнить миграцию. Попробуйте позже.',
       accessDenied: 'Только владелец магазина может выполнять миграцию канала.',
-      cancelled: 'Миграция отменена.'
+      cancelled: 'Миграция отменена.',
     },
     workerSelectionInvalid: 'Некорректный сотрудник.',
     workerNotFound: 'Сотрудник не найден.',
@@ -258,24 +263,28 @@ ${channel}
     createShopNamePrompt: 'Введите название магазина (3–100 символов).',
     createShopNameHint: 'Используйте латинские буквы (a-z), цифры и подчёркивание.',
     createShopNameInvalidLength: 'Название должно быть от 3 до 100 символов.',
-    createShopNameInvalidChars: 'Название может содержать только латинские буквы (a-z), цифры и подчёркивание.',
+    createShopNameInvalidChars:
+      'Название может содержать только латинские буквы (a-z), цифры и подчёркивание.',
     createShopNameTaken: 'Название уже занято. Попробуйте другое.',
     createShopPromoPrompt: 'Если у вас есть промокод, отправьте его. Если нет — напишите «-».',
     createShopSaving: 'Создаём магазин…',
     createShopSuccess: (name, tier) => `Магазин «${name}» готов. Текущий тариф: ${tier}.`,
     createShopPromoSuccess: (name) => `Магазин «${name}» готов. Тариф PRO активирован промокодом.`,
     createShopError: 'Не удалось создать магазин. Попробуйте ещё раз.',
-    walletsIntroEmpty: 'Кошельки не подключены. Отправьте адрес кошелька — мы автоматически определим валюту.',
+    walletsIntroEmpty:
+      'Кошельки не подключены. Отправьте адрес кошелька — мы автоматически определим валюту.',
     walletsIntroList: (list) => `💰 Ваши кошельки\n\n${list}`,
     walletsChoosePrompt: 'Выберите валюту ниже, чтобы добавить или обновить адрес.',
-    walletsPromptReplace: (crypto, example) => `Отправьте новый адрес ${crypto}. Например\n${example}.`,
-    walletsAddPrompt: 'Отправьте адрес кошелька (BTC, ETH, USDT или LTC). Мы автоматически определим валюту.',
+    walletsPromptReplace: (crypto, example) =>
+      `Отправьте новый адрес ${crypto}. Например\n${example}.`,
+    walletsAddPrompt:
+      'Отправьте адрес кошелька (BTC, ETH, USDT или LTC). Мы автоматически определим валюту.',
     walletsAddPromptSpecific: (crypto) => {
       const examples = {
         BTC: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
         ETH: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
         USDT: 'TQamF8rf8CuCBcrS85trYW23MsKJc2FMJr',
-        LTC: 'ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxmhkny'
+        LTC: 'ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kxmhkny',
       };
       return `Отправьте адрес ${crypto}. Например:\n${examples[crypto] || 'адрес кошелька'}`;
     },
@@ -303,19 +312,23 @@ ${channel}
         : `Статус: ${statusLabel}`;
     },
     subscriptionGraceNotice: 'Продлите подписку, чтобы сохранить доступ ко всем функциям.',
-    subscriptionInactiveNotice: 'Подписка не активна. Нажмите «Оплатить подписку», чтобы продолжить.',
+    subscriptionInactiveNotice:
+      'Подписка не активна. Нажмите «Оплатить подписку», чтобы продолжить.',
     subscriptionUpgradePrompt: 'Обновитесь до PRO, чтобы открыть дополнительные возможности.',
     subscriptionProBenefits: 'PRO даёт доступ к расширенной аналитике и продвинутым инструментам.',
     subscriptionStatusError: 'Не удалось загрузить статус подписки. Попробуйте ещё раз.',
     upgrade: {
       alreadyPro: 'Ваш магазин уже на тарифе PRO.',
-      notEligible: 'Апгрейд доступен только для активных BASIC подписок. Сначала оплатите базовую подписку.',
+      notEligible:
+        'Апгрейд доступен только для активных BASIC подписок. Сначала оплатите базовую подписку.',
       chooseCrypto: (cost) => `Апгрейд на PRO: $${cost}\n\nВыберите валюту для оплаты.`,
       cancelled: 'Апгрейд отменён.',
       unknownCommand: 'Команда не распознана. Попробуйте ещё раз.',
       error: (msg) => `Не удалось выполнить апгрейд. ${msg}`,
-      confirmPrompt: (tier, amount) => `Выбран тариф: ${tier.toUpperCase()}\nСумма: $${amount}\n\nВыберите валюту для оплаты.`,
-      paymentDetails: (cost, currency, address) => `Доплата: $${cost}\nВалюта: ${currency}\nАдрес для оплаты: ${address}\n\nПосле оплаты отправьте TX hash сюда.`,
+      confirmPrompt: (tier, amount) =>
+        `Выбран тариф: ${tier.toUpperCase()}\nСумма: $${amount}\n\nВыберите валюту для оплаты.`,
+      paymentDetails: (cost, currency, address) =>
+        `Доплата: $${cost}\nВалюта: ${currency}\nАдрес для оплаты: ${address}\n\nПосле оплаты отправьте TX hash сюда.`,
       sendHashPrompt: 'Отправьте TX hash текстом.',
       hashInvalid: 'TX hash слишком короткий. Проверьте строку и попробуйте ещё раз.',
       verifying: 'Проверяем платёж… Это может занять до 30 секунд.',
@@ -323,7 +336,7 @@ ${channel}
       benefits: 'PRO включает безлимит товаров, автозакуп и уведомления подписчикам.',
       duplicateTx: 'Эта транзакция уже использована. Отправьте другой TX hash.',
       verificationFailed: 'Не удалось подтвердить платёж. Проверьте сумму и попробуйте ещё раз.',
-      verificationError: 'Не удалось проверить платёж. Попробуйте ещё раз.'
+      verificationError: 'Не удалось проверить платёж. Попробуйте ещё раз.',
     },
     aiProducts: {
       processing: 'Обрабатываю предыдущую команду. Подождите...',
@@ -344,17 +357,19 @@ ${channel}
       invalidOperation: 'Операция должна быть "увеличить" или "уменьшить".',
       operationNames: {
         decrease: 'Скидка',
-        increase: 'Повышение'
+        increase: 'Повышение',
       },
-      bulkPricePrompt: (operation, percentage, preview) => `${operation} ${percentage}%\n\n${preview}\n\n⚠️ Применить изменения для всех товаров?`
+      bulkPricePrompt: (operation, percentage, preview) =>
+        `${operation} ${percentage}%\n\n${preview}\n\n⚠️ Применить изменения для всех товаров?`,
     },
     activeOrders: {
       empty: 'Нет активных заказов.\n\nОплаченные заказы появятся здесь автоматически.',
-      title: (count) => `Активные заказы (${count})`
+      title: (count) => `Активные заказы (${count})`,
     },
     orderHistory: {
-      empty: '📋 История заказов пуста\n\nЗдесь будут отображаться завершённые заказы (статус: доставлено).',
-      title: (count) => `История заказов (${count})`
+      empty:
+        '📋 История заказов пуста\n\nЗдесь будут отображаться завершённые заказы (статус: доставлено).',
+      title: (count) => `История заказов (${count})`,
     },
     activeOrdersContext: `📦 Активные заказы
 
@@ -397,7 +412,7 @@ ${channel}
 
       return `🔔 Управление подпиской
 
-Ваш тариф: PRO ($35/мес)
+Ваш тариф: PRO ($1/мес)
 Статус: ${statusLabel}
 Следующее продление: ${renewDate}
 
@@ -439,16 +454,18 @@ ${channel}
       prompt: 'Введите номера заказов через пробел (например: 1 3 5 или 1-5)',
       confirmTitle: (count) => `Подтверждение отправки (${count})`,
       confirmList: (orders) => {
-        return orders.map((o, i) => {
-          const buyer = o.buyer_username ? `@${o.buyer_username}` : 'Покупатель';
-          return `${i + 1}. ${buyer} — ${o.product_name} (${o.quantity} шт) — $${o.total_price}`;
-        }).join('\n');
+        return orders
+          .map((o, i) => {
+            const buyer = o.buyer_username ? `@${o.buyer_username}` : 'Покупатель';
+            return `${i + 1}. ${buyer} — ${o.product_name} (${o.quantity} шт) — $${o.total_price}`;
+          })
+          .join('\n');
       },
       success: (count) => `✅ ${count} заказов отмечены как отправленные`,
       invalidInput: 'Не удалось распознать номера. Попробуйте ещё раз.',
       invalidNumbers: (invalid) => `Заказов не существует: ${invalid.join(', ')}`,
-      cancelled: 'Отметка отменена'
-    }
+      cancelled: 'Отметка отменена',
+    },
   },
   follows: {
     contextDetailed: `👀 Следить
@@ -488,10 +505,12 @@ ${channel}
 Добавьте магазин для отслеживания — выберите режим мониторинга или перепродажи.`,
     listHeader: (count) => `👀 Ваши подписки${count ? ` (${count})` : ''}`,
     listTitle: (count) => `👀 Ваши подписки (${count})`,
-    listEmpty: 'У вас пока нет активных подписок.\n\nДобавьте магазин для отслеживания — выберите режим мониторинга или перепродажи.',
+    listEmpty:
+      'У вас пока нет активных подписок.\n\nДобавьте магазин для отслеживания — выберите режим мониторинга или перепродажи.',
     listItem: ({ index, name, mode, markup }) => {
       const icon = mode === 'resell' ? '💰' : '🔍';
-      const suffix = mode === 'resell' && Number.isFinite(markup) ? `, +${Number(markup).toFixed(0)}%` : '';
+      const suffix =
+        mode === 'resell' && Number.isFinite(markup) ? `, +${Number(markup).toFixed(0)}%` : '';
       const modeText = mode === 'resell' ? 'Перепродажа' : 'Мониторинг';
       return `${index}. 🏪 ${name} (${icon} ${modeText}${suffix})`;
     },
@@ -507,7 +526,7 @@ ${channel}
         `Режим: ${modeLabel}`,
         `Наценка: ${markupValue}`,
         `Товаров в их каталоге: ${sourceProducts}`,
-        `Скопировано к вам: ${syncedProducts}`
+        `Скопировано к вам: ${syncedProducts}`,
       ];
 
       if (isResell) {
@@ -529,29 +548,24 @@ ${channel}
       return lines.join('\n');
     },
     topMonitorTitle: (count, total) => {
-      const suffix = total && total > count
-        ? ` (${count} из ${total})`
-        : count ? ` (${count})` : '';
+      const suffix =
+        total && total > count ? ` (${count} из ${total})` : count ? ` (${count})` : '';
       return `🔍 Каталог поставщика${suffix}`;
     },
     topResellTitle: (count, total) => {
-      const suffix = total && total > count
-        ? ` (${count} из ${total})`
-        : count ? ` (${count})` : '';
+      const suffix =
+        total && total > count ? ` (${count} из ${total})` : count ? ` (${count})` : '';
       return `💰 Скопированные товары${suffix}`;
     },
     monitorProductsEmpty: 'У поставщика пока нет товаров.',
-    resellProductsEmpty: 'Нет скопированных товаров. Переключитесь в режим «Перепродажа», чтобы копировать каталог.',
+    resellProductsEmpty:
+      'Нет скопированных товаров. Переключитесь в режим «Перепродажа», чтобы копировать каталог.',
     monitorProductLine: ({ index, name, price, stock }) => {
       const stockText = Number.isFinite(stock) ? `${stock} шт` : '—';
       return `${index}. ${name} — $${price} (${stockText})`;
     },
     resellProductLine: ({ index, name, sourcePrice, syncedPrice, diff }) => {
-      const diffText = diff > 0
-        ? ` (+$${diff})`
-        : diff < 0
-          ? ` (-$${Math.abs(diff)})`
-          : '';
+      const diffText = diff > 0 ? ` (+$${diff})` : diff < 0 ? ` (-$${Math.abs(diff)})` : '';
       return `${index}. ${name}\n   Поставщик: $${sourcePrice}\n   Ваш магазин: $${syncedPrice}${diffText}`;
     },
     notFound: 'Подписка не найдена.',
@@ -571,7 +585,8 @@ ${channel}
     createShopNotFound: 'Магазин не найден. Проверьте ID и попробуйте снова.',
     createCheckError: 'Не удалось проверить магазин. Попробуйте ещё раз.',
     createSelfFollow: 'Нельзя подписаться на собственный магазин.',
-    createLimitReached: (count, limit) => `Достигнут лимит подписок (${count}/${limit}). Обновите тариф, чтобы продолжить.`,
+    createLimitReached: (count, limit) =>
+      `Достигнут лимит подписок (${count}/${limit}). Обновите тариф, чтобы продолжить.`,
     createModePrompt: 'Выберите режим подписки.',
     createSaving: 'Сохраняем подписку…',
     createMonitorSuccess: 'Подписка (мониторинг) оформлена.',
@@ -583,28 +598,29 @@ ${channel}
     createError: 'Не удалось оформить подписку. Попробуйте ещё раз.',
     createCancelled: 'Создание подписки отменено.',
     limitReachedBasicToPro: 'Лимит подписок\n\nBASIC — до 2 магазинов\nPRO — безлимит ($35/мес)',
-    createCircularDetailed: 'Циклическая подписка\n\nЭтот магазин уже подписан на ваш магазин. Взаимные подписки не разрешены',
-    cancelOperationError: 'Произошла ошибка при отмене\n\nПопробуйте позже'
+    createCircularDetailed:
+      'Циклическая подписка\n\nЭтот магазин уже подписан на ваш магазин. Взаимные подписки не разрешены',
+    cancelOperationError: 'Произошла ошибка при отмене\n\nПопробуйте позже',
   },
   subscription: {
     chooseTierIntro: 'Выберите тариф.',
-    tierDescriptionBasic: 'BASIC — $25/мес\nДо 4 товаров',
-    tierDescriptionPro: 'PRO — $35/мес\nБезлимит товаров, рассылки',
-    chooseCryptoIntro: (tier, amount) => `Тариф ${tier.toUpperCase()} — ${amount}. Выберите валюту для оплаты.`,
-    paymentDetails: (tier, amount, currency, address) => (
+    tierDescriptionBasic: 'BASIC — $1/мес\nДо 4 товаров',
+    tierDescriptionPro: 'PRO — $1/мес\nБезлимит товаров, рассылки',
+    chooseCryptoIntro: (tier, amount) =>
+      `Тариф ${tier.toUpperCase()} — ${amount}. Выберите валюту для оплаты.`,
+    paymentDetails: (tier, amount, currency, address) =>
       `Тариф ${tier.toUpperCase()} — ${amount}` +
       `\nВалюта: ${currency}` +
       `\nАдрес для оплаты: ${address}` +
-      `\nПосле оплаты отправьте TX hash сюда.`
-    ),
+      `\nПосле оплаты отправьте TX hash сюда.`,
     sendHashPrompt: 'Отправьте TX hash текстом.',
     hashInvalid: 'TX hash слишком короткий. Проверьте строку и попробуйте ещё раз.',
     verifying: 'Проверяем платёж… Это может занять до 30 секунд.',
-    verificationSuccess: (tier, date, id) => (
+    verificationSuccess: (tier, date, id) =>
       `Оплата подтверждена. Тариф: ${tier.toUpperCase()}\n` +
-      `Действует до ${date}\nID подписки: ${id}`
-    ),
-    proBenefits: 'PRO включает безлимитные подписчики, рассылку при смене канала и приоритетную поддержку.',
+      `Действует до ${date}\nID подписки: ${id}`,
+    proBenefits:
+      'PRO включает безлимитные подписчики, рассылку при смене канала и приоритетную поддержку.',
     duplicateTx: 'Эта транзакция уже использована. Отправьте другой TX hash.',
     verificationFailed: 'Не удалось подтвердить платёж. Проверьте сумму и попробуйте ещё раз.',
     verificationError: 'Не удалось проверить платёж. Попробуйте ещё раз.',
@@ -612,7 +628,8 @@ ${channel}
     unknownCommand: 'Команда не распознана. Попробуйте ещё раз.',
     invalidTier: 'Неверный тариф. Попробуйте ещё раз.',
     invalidCrypto: 'Неверная криптовалюта. Выберите из списка.',
-    confirmPrompt: (tier, amount) => `Выбран тариф: ${tier.toUpperCase()}\nСумма: ${amount}\n\nВыберите валюту для оплаты.`,
+    confirmPrompt: (tier, amount) =>
+      `Выбран тариф: ${tier.toUpperCase()}\nСумма: ${amount}\n\nВыберите валюту для оплаты.`,
     promoPrompt: 'Введите промокод.',
     promoInvalid: 'Промокод слишком короткий. Попробуйте ещё раз.',
     promoAccepted: (code) => `Промокод «${code}» сохранён.`,
@@ -625,7 +642,7 @@ ${channel}
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
 
       // Display crypto amount if available, otherwise show USD with warning
@@ -636,7 +653,8 @@ ${channel}
       return (
         `💳 <b>Счёт на оплату</b>\n\n` +
         `📦 Тариф: <b>${tier.toUpperCase()}</b> (${amount}/месяц)\n` +
-        amountDisplay + `\n\n` +
+        amountDisplay +
+        `\n\n` +
         `🔗 <b>Адрес кошелька:</b>\n` +
         `<code>${address}</code>\n\n` +
         `⏰ <b>Оплатите в течение 30 минут</b>\n` +
@@ -646,7 +664,8 @@ ${channel}
       );
     },
     checkingPayment: 'Проверяем поступление платежа…',
-    paymentPending: 'Платёж ещё не поступил. Проверка происходит автоматически каждую минуту.\n\nПосле оплаты подождите несколько минут и нажмите "Обновить".',
+    paymentPending:
+      'Платёж ещё не поступил. Проверка происходит автоматически каждую минуту.\n\nПосле оплаты подождите несколько минут и нажмите "Обновить".',
     paymentExpired: 'Срок действия счёта истёк. Создайте новый счёт для оплаты.',
     invoiceError: 'Не удалось создать счёт. Попробуйте ещё раз.',
     paymentStatusError: 'Не удалось проверить статус платежа. Попробуйте ещё раз.',
@@ -654,18 +673,19 @@ ${channel}
       BTC: 'Bitcoin (BTC)',
       LTC: 'Litecoin (LTC)',
       ETH: 'Ethereum (ETH)',
-      USDT_ERC20: 'USDT (ERC-20)'
-    }
+      USDT_ERC20: 'USDT (ERC-20)',
+    },
   },
   workspace: {
     panel: 'Рабочее место. Выберите магазин.',
     noAccess: 'Функция доступна после создания магазина.',
-    noWorkerAccess: 'У вас нет доступа к workspace магазинам. Попросите владельца магазина добавить вас как работника.',
+    noWorkerAccess:
+      'У вас нет доступа к workspace магазинам. Попросите владельца магазина добавить вас как работника.',
     loadError: 'Не удалось загрузить данные. Попробуйте ещё раз.',
     selectShop: 'Рабочие места. Выберите магазин.',
     actionFailed: 'Произошла ошибка. Попробуйте позже.',
     shopNotFoundOrRevoked: 'Магазин не найден или доступ отозван.',
-    header: (shopName) => `Workspace: ${shopName}\n\n`
+    header: (shopName) => `Workspace: ${shopName}\n\n`,
   },
   search: {
     prompt: 'Введите название магазина (минимум 2 символа).',
@@ -673,50 +693,68 @@ ${channel}
     noResults: 'Магазины не найдены. Измените запрос.',
     tooShort: 'Введите минимум два символа.',
     inputRequired: 'Отправьте название магазина текстом.',
-    error: 'Не удалось выполнить поиск. Попробуйте ещё раз позже.'
+    error: 'Не удалось выполнить поиск. Попробуйте ещё раз позже.',
   },
   promo: {
     applied: 'Промокод применён. Тариф PRO активирован.',
-    invalid: 'Промокод не применён. Создайте магазин без промокода.'
-  }
+    invalid: 'Промокод не применён. Создайте магазин без промокода.',
+  },
 };
 
 export const formatters = {
-  shopList: (shops) => shops.map((shop) => {
-    const seller = shop.seller_username ? `@${shop.seller_username}` : (shop.seller_first_name || 'Продавец');
-    const mark = shop.is_subscribed ? ' — в подписках' : '';
-    return `• ${shop.name} • ${seller}${mark}`;
-  }).join('\n'),
-  orders: (orders) => orders.map((o) => {
-    const price = o.total_price || o.totalPrice;
-    const statusMap = {
-      pending: 'ожидает',
-      processing: 'в обработке',
-      completed: 'завершён',
-      cancelled: 'отменён',
-      shipped: 'отправлен'
-    };
-    const status = statusMap[o.status] || o.status;
-    const shopName = o.shop_name || 'Магазин';
-    return `• ${status} ${shopName} — $${Number(price || 0).toFixed(2)}`;
-  }).join('\n'),
-  subscriptions: (subscriptions) => subscriptions.map((sub) => {
-    const name = sub.shop_name || sub.shopName || 'Магазин';
-    return `• ${name}`;
-  }).join('\n'),
-  followsList: (follows) => follows.map((follow) => {
-    const name = follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин';
-    const mode = follow.mode === 'resell' ? 'перепродажа' : 'мониторинг';
-    const markupValue = follow.markup_percentage ?? follow.markup ?? 0;
-    const markup = Number.isFinite(Number(markupValue)) ? `${Number(markupValue).toFixed(0)}%` : `${markupValue}`;
-    const markupText = follow.mode === 'resell' ? `, наценка ${markup}` : '';
-    return `• ${name} — ${mode}${markupText}`;
-  }).join('\n'),
+  shopList: (shops) =>
+    shops
+      .map((shop) => {
+        const seller = shop.seller_username
+          ? `@${shop.seller_username}`
+          : shop.seller_first_name || 'Продавец';
+        const mark = shop.is_subscribed ? ' — в подписках' : '';
+        return `• ${shop.name} • ${seller}${mark}`;
+      })
+      .join('\n'),
+  orders: (orders) =>
+    orders
+      .map((o) => {
+        const price = o.total_price || o.totalPrice;
+        const statusMap = {
+          pending: 'ожидает',
+          processing: 'в обработке',
+          completed: 'завершён',
+          cancelled: 'отменён',
+          shipped: 'отправлен',
+        };
+        const status = statusMap[o.status] || o.status;
+        const shopName = o.shop_name || 'Магазин';
+        return `• ${status} ${shopName} — $${Number(price || 0).toFixed(2)}`;
+      })
+      .join('\n'),
+  subscriptions: (subscriptions) =>
+    subscriptions
+      .map((sub) => {
+        const name = sub.shop_name || sub.shopName || 'Магазин';
+        return `• ${name}`;
+      })
+      .join('\n'),
+  followsList: (follows) =>
+    follows
+      .map((follow) => {
+        const name = follow.source_shop_name || follow.sourceShopName || follow.name || 'Магазин';
+        const mode = follow.mode === 'resell' ? 'перепродажа' : 'мониторинг';
+        const markupValue = follow.markup_percentage ?? follow.markup ?? 0;
+        const markup = Number.isFinite(Number(markupValue))
+          ? `${Number(markupValue).toFixed(0)}%`
+          : `${markupValue}`;
+        const markupText = follow.mode === 'resell' ? `, наценка ${markup}` : '';
+        return `• ${name} — ${mode}${markupText}`;
+      })
+      .join('\n'),
   productsList: (products, shopName) => {
     if (!products.length) {
       return `Товары магазина ${shopName}. Пока товаров нет.`;
     }
-    const lines = products.slice(0, 5).map((product) => `• ${product.name} — $${Number(product.price ?? 0).toFixed(2)}`);
+    const lines = products
+      .slice(0, 5)
+      .map((product) => `• ${product.name} — $${Number(product.price ?? 0).toFixed(2)}`);
     const extra = products.length > 5 ? `\n… ещё ${products.length - 5}` : '';
     return `Товары магазина ${shopName} (${products.length}).\n${lines.join('\n')}${extra}`;
   },
@@ -725,7 +763,9 @@ export const formatters = {
       return `Заказы магазина ${shopName}. Пока нет продаж.`;
     }
     const lines = orders.slice(0, 5).map((order) => {
-      const buyer = order.buyer_username ? `@${order.buyer_username}` : (order.buyer_first_name || 'Покупатель');
+      const buyer = order.buyer_username
+        ? `@${order.buyer_username}`
+        : order.buyer_first_name || 'Покупатель';
       const status = order.status || 'processing';
       const price = Number(order.total_price || order.totalPrice || 0).toFixed(2);
       return `• ${buyer} — ${status} — $${price}`;
@@ -747,29 +787,35 @@ export const formatters = {
       ? messages.buyer.preorderSectionTitle(shopName, count)
       : messages.buyer.stockSectionTitle(shopName, count);
 
-    const lines = products.slice(0, 5).map((product) => `• ${product.name} — $${Number(product.price ?? 0).toFixed(2)}`);
+    const lines = products
+      .slice(0, 5)
+      .map((product) => `• ${product.name} — $${Number(product.price ?? 0).toFixed(2)}`);
     const extra = count > 5 ? `\n… ещё ${count - 5}` : '';
 
     return `${title}\n${lines.join('\n')}${extra}`;
   },
   shopInfo: (shop, sections) => {
-    const seller = shop.seller_username ? `@${shop.seller_username}` : (shop.seller_first_name || 'Продавец');
+    const seller = shop.seller_username
+      ? `@${shop.seller_username}`
+      : shop.seller_first_name || 'Продавец';
     const stock = sections.stock || [];
     const preorder = sections.preorder || [];
 
-    const stockLines = stock.slice(0, 3).map((p) => `• ${p.name} — $${Number(p.price || 0).toFixed(2)}`);
-    const preorderLines = preorder.slice(0, 3).map((p) => `• ${p.name} — $${Number(p.price || 0).toFixed(2)}`);
+    const stockLines = stock
+      .slice(0, 3)
+      .map((p) => `• ${p.name} — $${Number(p.price || 0).toFixed(2)}`);
+    const preorderLines = preorder
+      .slice(0, 3)
+      .map((p) => `• ${p.name} — $${Number(p.price || 0).toFixed(2)}`);
 
     const extraStock = stock.length > 3 ? `\n… ещё ${stock.length - 3}` : '';
     const extraPreorder = preorder.length > 3 ? `\n… ещё ${preorder.length - 3}` : '';
 
-    const stockSection = stock.length
-      ? `${stockLines.join('\n')}${extraStock}`
-      : '• пока пусто';
+    const stockSection = stock.length ? `${stockLines.join('\n')}${extraStock}` : '• пока пусто';
     const preorderSection = preorder.length
       ? `${preorderLines.join('\n')}${extraPreorder}`
       : '• ожидаем поставку';
 
     return `${shop.name} • ${seller}\n\nНаличие — ${stock.length || 0}\n${stockSection}\n\nПредзаказ — ${preorder.length || 0}\n${preorderSection}`;
-  }
+  },
 };

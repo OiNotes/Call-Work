@@ -31,34 +31,37 @@ const FollowDetail = () => {
   // Spring animation preset
   const controlSpring = { type: 'spring', stiffness: 400, damping: 32 };
 
-  const loadData = useCallback(async (signal) => {
-    if (!followDetailId) return { status: 'skipped' };
+  const loadData = useCallback(
+    async (signal) => {
+      if (!followDetailId) return { status: 'skipped' };
 
-    const [followData, productsData] = await Promise.all([
-      followsApi.getDetail(followDetailId, { signal }),
-      followsApi.getProducts(followDetailId, { limit: 100, signal })
-    ]);
+      const [followData, productsData] = await Promise.all([
+        followsApi.getDetail(followDetailId, { signal }),
+        followsApi.getProducts(followDetailId, { limit: 100, signal }),
+      ]);
 
-    if (signal?.aborted) return { status: 'aborted' };
+      if (signal?.aborted) return { status: 'aborted' };
 
-    if (followData.error || productsData.error) {
-      return { status: 'error', error: 'Failed to load data' };
-    }
+      if (followData.error || productsData.error) {
+        return { status: 'error', error: 'Failed to load data' };
+      }
 
-    const follow = followData?.data || followData;
-    const productsPayload = productsData?.data || productsData;
-    const productsList = productsPayload.products || [];
+      const follow = followData?.data || followData;
+      const productsPayload = productsData?.data || productsData;
+      const productsList = productsPayload.products || [];
 
-    // ✅ FIX: Use getState() for stable references
-    const { setCurrentFollow, setFollowProducts } = useStore.getState();
-    setCurrentFollow(follow);
-    setFollowProducts(productsList);
+      // ✅ FIX: Use getState() for stable references
+      const { setCurrentFollow, setFollowProducts } = useStore.getState();
+      setCurrentFollow(follow);
+      setFollowProducts(productsList);
 
-    const total = productsPayload.pagination?.total || productsList.length;
-    setHasMore(productsList.length < total);
+      const total = productsPayload.pagination?.total || productsList.length;
+      setHasMore(productsList.length < total);
 
-    return { status: 'success' };
-  }, [followDetailId, followsApi]); // ✅ FIX: Removed store setters from deps
+      return { status: 'success' };
+    },
+    [followDetailId, followsApi]
+  ); // ✅ FIX: Removed store setters from deps
 
   useEffect(() => {
     if (!followDetailId) return;
@@ -68,7 +71,7 @@ const FollowDetail = () => {
     const controller = new AbortController();
 
     loadData(controller.signal)
-      .then(result => {
+      .then((result) => {
         if (!controller.signal.aborted && result?.status === 'error') {
           triggerHaptic('error');
         }
@@ -90,7 +93,7 @@ const FollowDetail = () => {
       const currentLength = followProducts.length;
       const moreData = await followsApi.getProducts(followDetailId, {
         limit: 100,
-        offset: currentLength
+        offset: currentLength,
       });
 
       const productsPayload = moreData?.data || moreData;
@@ -100,7 +103,7 @@ const FollowDetail = () => {
       useStore.getState().setFollowProducts([...followProducts, ...newProducts]);
 
       const total = productsPayload.pagination?.total || 0;
-      setHasMore((currentLength + newProducts.length) < total);
+      setHasMore(currentLength + newProducts.length < total);
     } catch (error) {
       console.error('Error loading more products:', error);
       triggerHaptic('error');
@@ -191,7 +194,7 @@ const FollowDetail = () => {
           <motion.div
             className="w-16 h-16 border-4 border-orange-primary border-t-transparent rounded-full"
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
           <motion.div
             className="text-white text-sm"
@@ -211,7 +214,9 @@ const FollowDetail = () => {
         <div className="text-center">
           <div className="text-6xl mb-4">😔</div>
           <div className="text-white text-lg font-semibold mb-2">Подписка не найдена</div>
-          <div className="text-gray-400 text-sm mb-6">Эта подписка была удалена или не существует</div>
+          <div className="text-gray-400 text-sm mb-6">
+            Эта подписка была удалена или не существует
+          </div>
           <motion.button
             onClick={handleBack}
             className="inline-flex items-center gap-2 text-orange-primary font-semibold"
@@ -228,13 +233,14 @@ const FollowDetail = () => {
 
   const modeLabel = currentFollow.mode === 'monitor' ? 'Мониторинг' : 'Перепродажа';
   const ModeIcon = currentFollow.mode === 'monitor' ? EyeIcon : ArrowPathIcon;
-  const productsCount = currentFollow.mode === 'resell'
-    ? (currentFollow.synced_products_count || 0)
-    : (currentFollow.source_products_count || 0);
+  const productsCount =
+    currentFollow.mode === 'resell'
+      ? currentFollow.synced_products_count || 0
+      : currentFollow.source_products_count || 0;
 
   const tabs = [
     { id: 'products', label: 'Товары' },
-    { id: 'manage', label: 'Управление' }
+    { id: 'manage', label: 'Управление' },
   ];
 
   return (
@@ -259,7 +265,10 @@ const FollowDetail = () => {
           </motion.button>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-white text-xl font-bold truncate" style={{ letterSpacing: '-0.02em' }}>
+            <h1
+              className="text-white text-xl font-bold truncate"
+              style={{ letterSpacing: '-0.02em' }}
+            >
               {currentFollow.source_shop_name}
             </h1>
           </div>
@@ -288,7 +297,6 @@ const FollowDetail = () => {
 
       {/* Content with padding for fixed header */}
       <div className="px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 120px)' }}>
-
         {/* Tabs Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}

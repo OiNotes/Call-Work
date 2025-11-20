@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, memo } from 'react';
+import { useEffect, useRef, memo } from 'react';
 
 const toastIcons = {
   success: (
@@ -14,12 +14,22 @@ const toastIcons = {
   ),
   warning: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+      />
     </svg>
   ),
   info: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
     </svg>
   ),
 };
@@ -43,28 +53,37 @@ const toastStyles = {
   },
 };
 
-const Toast = memo(function Toast({ 
-  type = 'info', 
-  message, 
-  onClose,
-  duration = 3000 
-}) {
+const Toast = memo(function Toast({ type = 'info', message, onClose, duration = 3000 }) {
   const Icon = toastIcons[type];
   const styles = toastStyles[type];
-  
+  const timerRef = useRef(null);
+
   useEffect(() => {
     if (duration) {
-      const timer = setTimeout(onClose, duration);
-      return () => clearTimeout(timer);
+      timerRef.current = setTimeout(onClose, duration);
+      return () => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+      };
     }
   }, [duration, onClose]);
-  
+
+  const handleManualClose = () => {
+    // Clear auto-dismiss timer before manual close
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    onClose();
+  };
+
   return (
     <motion.div
       initial={{ scale: 0, y: 50, opacity: 0 }}
       animate={{ scale: 1, y: 0, opacity: 1 }}
       exit={{ scale: 0.8, y: -50, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[280px]"
       style={{
         background: styles.background,
@@ -74,7 +93,7 @@ const Toast = memo(function Toast({
       <motion.div
         initial={{ rotate: -180, scale: 0 }}
         animate={{ rotate: 0, scale: 1 }}
-        transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+        transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
         style={{ color: styles.icon }}
       >
         {Icon}

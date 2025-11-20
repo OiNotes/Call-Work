@@ -1,6 +1,6 @@
 /**
  * Broadcast Service for Channel Migration
- * 
+ *
  * Handles mass messaging to shop subscribers with Telegram rate limit compliance:
  * - 100ms delay between messages (max 10 msg/sec)
  * - Queue-based processing
@@ -26,35 +26,41 @@ const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
  */
 async function sendWithRetry(sendFn, maxRetries = MAX_RETRIES) {
   let lastError = null;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       await sendFn();
       return true; // Success
     } catch (error) {
       lastError = error;
-      
+
       // Don't retry for permanent errors
       if (error.response?.error_code === 403 || error.response?.error_code === 400) {
         throw error; // User blocked bot or invalid chat - no point retrying
       }
-      
+
       // Retry for rate limits (429) and temporary errors
-      if (error.response?.error_code === 429 || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+      if (
+        error.response?.error_code === 429 ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNRESET'
+      ) {
         if (attempt < maxRetries) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
-          logger.warn(`[Broadcast] Rate limit/timeout, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          logger.warn(
+            `[Broadcast] Rate limit/timeout, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
       }
-      
+
       // For other errors, throw immediately
       throw error;
     }
   }
-  
+
   // All retries exhausted
   throw lastError;
 }
@@ -157,7 +163,7 @@ async function updateMigrationStatus(migrationId, status, updates = {}) {
  */
 async function incrementCounter(migrationId, success) {
   const field = success ? 'sent_count' : 'failed_count';
-  
+
   try {
     await pool.query(
       `UPDATE channel_migrations
@@ -180,14 +186,20 @@ async function incrementCounter(migrationId, success) {
  * @param {string} oldChannelUrl - Old channel URL (optional)
  * @returns {Promise<boolean>} Success status
  */
-async function sendMigrationMessage(bot, telegramId, shopName, newChannelUrl, oldChannelUrl = null) {
+async function sendMigrationMessage(
+  bot,
+  telegramId,
+  shopName,
+  newChannelUrl,
+  oldChannelUrl = null
+) {
   try {
     let message = `🔔 <b>Важное обновление от магазина "${shopName}"</b>\n\n`;
-    
+
     if (oldChannelUrl) {
       message += `⚠️ Наш старый канал был заблокирован.\n\n`;
     }
-    
+
     message += `✅ Новый канал: ${newChannelUrl}\n\n`;
     message += `Подпишитесь, чтобы не пропустить важные обновления и новые товары!`;
 
@@ -195,7 +207,7 @@ async function sendMigrationMessage(bot, telegramId, shopName, newChannelUrl, ol
     await sendWithRetry(async () => {
       await bot.telegram.sendMessage(telegramId, message, {
         parse_mode: 'HTML',
-        disable_web_page_preview: false
+        disable_web_page_preview: false,
       });
     });
 
@@ -224,9 +236,16 @@ async function sendMigrationMessage(bot, telegramId, shopName, newChannelUrl, ol
  * @param {function} progressCallback - Optional callback for progress updates (sent, failed, total)
  * @returns {Promise<{migrationId: number, sent: number, failed: number, total: number}>}
  */
-async function broadcastMigration(bot, shopId, shopName, newChannelUrl, oldChannelUrl = null, progressCallback = null) {
+async function broadcastMigration(
+  bot,
+  shopId,
+  shopName,
+  newChannelUrl,
+  oldChannelUrl = null,
+  progressCallback = null
+) {
   let migrationId = null;
-  
+
   try {
     // Get subscribers
     const subscribers = await getShopSubscribers(shopId);
@@ -247,7 +266,7 @@ async function broadcastMigration(bot, shopId, shopName, newChannelUrl, oldChann
     // Process queue with delay
     for (let i = 0; i < subscribers.length; i++) {
       const subscriber = subscribers[i];
-      
+
       // Send message
       const success = await sendMigrationMessage(
         bot,
@@ -263,7 +282,7 @@ async function broadcastMigration(bot, shopId, shopName, newChannelUrl, oldChann
       } else {
         failed++;
       }
-      
+
       await incrementCounter(migrationId, success);
 
       // Progress callback
@@ -273,27 +292,29 @@ async function broadcastMigration(bot, shopId, shopName, newChannelUrl, oldChann
 
       // Delay before next message (except for last one)
       if (i < subscribers.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, MESSAGE_DELAY_MS));
+        await new Promise((resolve) => setTimeout(resolve, MESSAGE_DELAY_MS));
       }
     }
 
     // Mark as completed
     await updateMigrationStatus(migrationId, 'completed');
 
-    logger.info(`[Broadcast] Migration ${migrationId} completed: ${sent} sent, ${failed} failed, ${total} total`);
+    logger.info(
+      `[Broadcast] Migration ${migrationId} completed: ${sent} sent, ${failed} failed, ${total} total`
+    );
 
     return {
       migrationId,
       sent,
       failed,
-      total
+      total,
     };
   } catch (error) {
     logger.error(`[Broadcast] Broadcast failed:`, error);
-    
+
     // Mark migration as failed
     if (migrationId) {
-      await updateMigrationStatus(migrationId, 'failed').catch(err => {
+      await updateMigrationStatus(migrationId, 'failed').catch((err) => {
         logger.error(`[Broadcast] Failed to update migration status:`, err);
       });
     }
@@ -335,5 +356,5 @@ export {
   createMigrationRecord,
   updateMigrationStatus,
   getMigrationStatus,
-  sendMigrationMessage
+  sendMigrationMessage,
 };

@@ -50,5 +50,5 @@ export const ordersApi = {
    */
   async updateStatus(token, orderId, status) {
     return await client.put(`/api/orders/${orderId}/status`, { status }, token);
-  }
+  },
 };

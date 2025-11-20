@@ -8,11 +8,23 @@ import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../hooks/useToast';
 import { CRYPTO_OPTIONS } from '../../utils/paymentUtils';
 import { usePlatform } from '../../hooks/usePlatform';
-import { getSpringPreset, getSurfaceStyle, getSheetMaxHeight, isAndroid } from '../../utils/platform';
+import {
+  getSpringPreset,
+  getSurfaceStyle,
+  getSheetMaxHeight,
+  isAndroid,
+} from '../../utils/platform';
 import { useBackButton } from '../../hooks/useBackButton';
 
 export default function PaymentMethodModal() {
-  const { paymentStep, selectCrypto, setPaymentStep, currentShop, selectedCrypto, isGeneratingInvoice } = useStore();
+  const {
+    paymentStep,
+    selectCrypto,
+    setPaymentStep,
+    currentShop,
+    selectedCrypto,
+    isGeneratingInvoice,
+  } = useStore();
   const { triggerHaptic } = useTelegram();
   const { t } = useTranslation();
   const api = useApi();
@@ -28,35 +40,17 @@ export default function PaymentMethodModal() {
   const [generatingStartTime, setGeneratingStartTime] = useState(null);
   const MAX_RETRIES = 3;
 
-  const overlayStyle = useMemo(
-    () => getSurfaceStyle('overlay', platform),
-    [platform]
-  );
+  const overlayStyle = useMemo(() => getSurfaceStyle('overlay', platform), [platform]);
 
-  const sheetStyle = useMemo(
-    () => getSurfaceStyle('surfacePanel', platform),
-    [platform]
-  );
+  const sheetStyle = useMemo(() => getSurfaceStyle('surfacePanel', platform), [platform]);
 
-  const cardBaseStyle = useMemo(
-    () => getSurfaceStyle('glassCard', platform),
-    [platform]
-  );
+  const cardBaseStyle = useMemo(() => getSurfaceStyle('glassCard', platform), [platform]);
 
-  const sheetSpring = useMemo(
-    () => getSpringPreset('sheet', platform),
-    [platform]
-  );
+  const sheetSpring = useMemo(() => getSpringPreset('sheet', platform), [platform]);
 
-  const controlSpring = useMemo(
-    () => getSpringPreset('press', platform),
-    [platform]
-  );
+  const controlSpring = useMemo(() => getSpringPreset('press', platform), [platform]);
 
-  const quickSpring = useMemo(
-    () => getSpringPreset('quick', platform),
-    [platform]
-  );
+  const quickSpring = useMemo(() => getSpringPreset('quick', platform), [platform]);
 
   const isOpen = paymentStep === 'method';
 
@@ -67,7 +61,7 @@ export default function PaymentMethodModal() {
 
   const handleSelectCrypto = async (cryptoId) => {
     if (isGeneratingInvoice) return;
-    
+
     triggerHaptic('medium');
     setGeneratingStartTime(Date.now());
 
@@ -110,7 +104,7 @@ export default function PaymentMethodModal() {
     const loadWallets = async (signal) => {
       try {
         const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`, {
-          signal
+          signal,
         });
 
         if (signal?.aborted) return { status: 'aborted' };
@@ -128,7 +122,6 @@ export default function PaymentMethodModal() {
         }
 
         if (!data?.data) {
-          console.warn('[PaymentMethodModal] No wallet data in response');
           setAvailableWallets([]);
           return { status: 'success' };
         }
@@ -143,10 +136,8 @@ export default function PaymentMethodModal() {
         setAvailableWallets(currencies);
         setRetryCount(0);
         return { status: 'success' };
-
       } catch (err) {
         if (err.name === 'AbortError' || signal?.aborted) {
-          console.log('[PaymentMethodModal] Request aborted');
           return { status: 'aborted' };
         }
 
@@ -170,7 +161,7 @@ export default function PaymentMethodModal() {
     setError(null);
 
     loadWallets(controller.signal)
-      .then(result => {
+      .then((result) => {
         if (!controller.signal.aborted && result?.status === 'error') {
           setError(result.error);
           setAvailableWallets([]);
@@ -191,8 +182,6 @@ export default function PaymentMethodModal() {
   useEffect(() => {
     if (isOpen && !currentShop?.id) {
       const timeout = setTimeout(() => {
-        const toast = useToastStore.getState().addToast;
-        toast({ type: 'error', message: 'Магазин не найден', duration: 3000 });
         setPaymentStep('idle');
       }, 500);
 
@@ -214,7 +203,7 @@ export default function PaymentMethodModal() {
       return [];
     }
 
-    return CRYPTO_OPTIONS.filter(crypto => availableWallets.includes(crypto.id));
+    return CRYPTO_OPTIONS.filter((crypto) => availableWallets.includes(crypto.id));
   }, [availableWallets, loading]);
 
   // Retry loading wallets with exponential backoff and AbortController
@@ -232,9 +221,13 @@ export default function PaymentMethodModal() {
     const controller = new AbortController();
 
     try {
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = Math.pow(2, retryCount) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
+      // Increment retry count FIRST for correct exponential backoff
+      const nextRetryCount = retryCount + 1;
+      setRetryCount(nextRetryCount);
+
+      // Exponential backoff: 2s, 4s, 8s
+      const delay = Math.min(Math.pow(2, nextRetryCount) * 1000, 10000);
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       // Check if aborted during delay
       if (controller.signal.aborted) {
@@ -242,20 +235,19 @@ export default function PaymentMethodModal() {
       }
 
       const { data, error: apiError } = await api.get(`/shops/${currentShop.id}/wallets`, {
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (apiError) {
         setError(apiError);
-        setRetryCount(prev => prev + 1);
 
         // Детальные toast сообщения
         if (apiError.includes('404')) {
           toast.error('Магазин не найден');
         } else if (apiError.includes('network') || apiError.includes('timeout')) {
-          toast.error(`Нет соединения (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+          toast.error(`Нет соединения (попытка ${nextRetryCount}/${MAX_RETRIES})`);
         } else {
-          toast.error(`Не удалось загрузить (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+          toast.error(`Не удалось загрузить (попытка ${nextRetryCount}/${MAX_RETRIES})`);
         }
         setAvailableWallets([]);
         setLoading(false);
@@ -263,7 +255,6 @@ export default function PaymentMethodModal() {
       }
 
       if (!data?.data) {
-        console.warn('[PaymentMethodModal] No wallet data in response');
         setAvailableWallets([]);
         setLoading(false);
         return;
@@ -280,20 +271,19 @@ export default function PaymentMethodModal() {
       setRetryCount(0); // Reset on success
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.log('[PaymentMethodModal] Retry aborted');
         return;
       }
 
       console.error('[PaymentMethodModal] Retry failed:', err);
       const errorMsg = err.message || 'Unknown error';
       setError(errorMsg);
-      setRetryCount(prev => prev + 1);
+      // retryCount уже был увеличен в начале try блока
 
       // Детальные toast сообщения
       if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
-        toast.error(`Нет соединения (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+        toast.error(`Нет соединения (попытка ${nextRetryCount}/${MAX_RETRIES})`);
       } else {
-        toast.error(`Ошибка загрузки (попытка ${retryCount + 1}/${MAX_RETRIES})`);
+        toast.error(`Ошибка загрузки (попытка ${nextRetryCount}/${MAX_RETRIES})`);
       }
       setAvailableWallets([]);
     } finally {
@@ -326,10 +316,7 @@ export default function PaymentMethodModal() {
             exit={{ y: '100%' }}
             transition={sheetSpring}
           >
-            <div
-              className="rounded-t-[32px] flex flex-col"
-              style={sheetStyle}
-            >
+            <div className="rounded-t-[32px] flex flex-col" style={sheetStyle}>
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div>
@@ -339,22 +326,25 @@ export default function PaymentMethodModal() {
                   >
                     {t('payment.selectCrypto')}
                   </h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {t('payment.selectMethod')}
-                  </p>
+                  <p className="text-sm text-gray-400 mt-1">{t('payment.selectMethod')}</p>
                 </div>
                 <motion.button
                   onClick={handleClose}
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400"
                   style={{
                     background: android ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
                   }}
                   whileTap={{ scale: android ? 0.94 : 0.9 }}
                   transition={controlSpring}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </motion.button>
               </div>
@@ -386,7 +376,7 @@ export default function PaymentMethodModal() {
                           className="rounded-2xl p-5 animate-pulse"
                           style={{
                             background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
                           }}
                         >
                           <div className="w-12 h-12 rounded-xl bg-gray-700 mb-3" />
@@ -399,8 +389,18 @@ export default function PaymentMethodModal() {
                 ) : error ? (
                   // Error state - show retry button with attempt counter
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <svg className="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg
+                      className="w-16 h-16 text-red-500 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
                     <h3 className="text-lg font-semibold text-red-400 mb-2">
                       {t('payment.loadError') || 'Не удалось загрузить'}
@@ -431,32 +431,44 @@ export default function PaymentMethodModal() {
                           background: isRetrying
                             ? 'rgba(74, 74, 74, 0.5)'
                             : 'linear-gradient(135deg, #FF6B00 0%, #FF8F3D 100%)',
-                          boxShadow: isRetrying ? 'none' : '0 4px 12px rgba(255, 107, 0, 0.3)'
+                          boxShadow: isRetrying ? 'none' : '0 4px 12px rgba(255, 107, 0, 0.3)',
                         }}
                         whileTap={!isRetrying ? { scale: android ? 0.94 : 0.95 } : {}}
                         transition={controlSpring}
                       >
-                        {isRetrying ? 'Повторная попытка...' : (t('common.tryAgain') || 'Попробовать снова')}
+                        {isRetrying
+                          ? 'Повторная попытка...'
+                          : t('common.tryAgain') || 'Попробовать снова'}
                       </motion.button>
                     )}
                   </div>
                 ) : availableCryptoOptions.length === 0 ? (
                   // Empty state - no wallets configured
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-16 h-16 text-gray-600 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     <h3 className="text-lg font-semibold text-gray-400 mb-2">
                       {t('payment.noWallets') || 'No payment methods'}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {t('payment.noWalletsDesc') || 'This shop hasn\'t configured payment wallets yet'}
+                      {t('payment.noWalletsDesc') ||
+                        "This shop hasn't configured payment wallets yet"}
                     </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {availableCryptoOptions.map((crypto) => {
-
                       return (
                         <motion.button
                           key={crypto.id}
@@ -468,7 +480,7 @@ export default function PaymentMethodModal() {
                             background: `linear-gradient(145deg, rgba(26, 26, 26, ${android ? '0.94' : '0.9'}) 0%, rgba(20, 20, 20, ${android ? '0.96' : '0.95'}) 100%)`,
                             border: '1px solid rgba(255, 255, 255, 0.08)',
                             opacity: isGeneratingInvoice ? 0.5 : 1, // ✅ Visual feedback
-                            cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer'
+                            cursor: isGeneratingInvoice ? 'not-allowed' : 'pointer',
                           }}
                           whileHover={{ scale: android ? 1.015 : 1.02, y: android ? -1 : -2 }}
                           whileTap={{ scale: android ? 0.985 : 0.98 }}
@@ -478,7 +490,7 @@ export default function PaymentMethodModal() {
                           <motion.div
                             className="absolute inset-0 opacity-0 hover:opacity-100"
                             style={{
-                              background: `radial-gradient(600px circle at center, ${crypto.color}15, transparent 40%)`
+                              background: `radial-gradient(600px circle at center, ${crypto.color}15, transparent 40%)`,
                             }}
                             transition={{ duration: 0.3 }}
                           />
@@ -489,7 +501,7 @@ export default function PaymentMethodModal() {
                               className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold"
                               style={{
                                 background: `linear-gradient(135deg, ${crypto.gradient})`,
-                                boxShadow: `0 4px 12px ${crypto.color}40, inset 0 1px 0 rgba(255, 255, 255, 0.2)`
+                                boxShadow: `0 4px 12px ${crypto.color}40, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
                               }}
                             >
                               {crypto.icon}
@@ -513,17 +525,17 @@ export default function PaymentMethodModal() {
 
                             {/* Navigation arrow */}
                             <div className="flex justify-end">
-                              <svg 
-                                className="w-5 h-5 text-orange-primary flex-shrink-0" 
-                                fill="none" 
-                                stroke="currentColor" 
+                              <svg
+                                className="w-5 h-5 text-orange-primary flex-shrink-0"
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  strokeWidth={2.5} 
-                                  d="M9 5l7 7-7 7" 
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2.5}
+                                  d="M9 5l7 7-7 7"
                                 />
                               </svg>
                             </div>
@@ -543,7 +555,7 @@ export default function PaymentMethodModal() {
               className="fixed inset-0 z-60 flex items-center justify-center"
               style={{
                 background: 'rgba(10, 10, 10, 0.85)',
-                backdropFilter: 'blur(8px)'
+                backdropFilter: 'blur(8px)',
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -553,7 +565,7 @@ export default function PaymentMethodModal() {
                 <div className="w-16 h-16 border-4 border-orange-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-white font-semibold text-lg">Генерация счёта...</p>
                 <p className="text-gray-400 text-sm mt-2">Подождите несколько секунд</p>
-                
+
                 {generatingStartTime && Date.now() - generatingStartTime > 15000 && (
                   <motion.button
                     onClick={() => {

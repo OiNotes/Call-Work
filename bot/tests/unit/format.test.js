@@ -9,7 +9,7 @@ import {
   formatPrice,
   formatPriceFixed,
   formatNumber,
-  formatOrderStatus
+  formatOrderStatus,
 } from '../../src/utils/format.js';
 
 describe('Format Utils Tests', () => {
@@ -21,12 +21,12 @@ describe('Format Utils Tests', () => {
     });
 
     it('should format prices with .00 as whole numbers', () => {
-      expect(formatPrice(25.00)).toBe('$25');
+      expect(formatPrice(25.0)).toBe('$25');
       expect(formatPrice('25.00')).toBe('$25');
     });
 
     it('should format prices with decimals', () => {
-      expect(formatPrice(25.50)).toBe('$25.5');
+      expect(formatPrice(25.5)).toBe('$25.5');
       expect(formatPrice('25.50')).toBe('$25.5');
       expect(formatPrice(99.99)).toBe('$99.99');
     });
@@ -70,7 +70,7 @@ describe('Format Utils Tests', () => {
     });
 
     it('should keep existing 2 decimals', () => {
-      expect(formatPriceFixed(25.50)).toBe('$25.50');
+      expect(formatPriceFixed(25.5)).toBe('$25.50');
       expect(formatPriceFixed('25.50')).toBe('$25.50');
       expect(formatPriceFixed(99.99)).toBe('$99.99');
     });
@@ -115,9 +115,9 @@ describe('Format Utils Tests', () => {
     });
 
     it('should remove trailing zeros', () => {
-      expect(formatNumber(25.00)).toBe('25');
+      expect(formatNumber(25.0)).toBe('25');
       expect(formatNumber('25.00')).toBe('25');
-      expect(formatNumber(25.50)).toBe('25.5');
+      expect(formatNumber(25.5)).toBe('25.5');
     });
 
     it('should keep significant decimals', () => {
@@ -147,7 +147,7 @@ describe('Format Utils Tests', () => {
 
     it('should handle negative numbers', () => {
       expect(formatNumber(-10)).toBe('-10');
-      expect(formatNumber(-10.50)).toBe('-10.5');
+      expect(formatNumber(-10.5)).toBe('-10.5');
     });
 
     it('should handle invalid input as 0', () => {

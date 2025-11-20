@@ -29,7 +29,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ALLOWED_FILES = [
   'src/keyboards/buyer.js',
   'src/keyboards/seller.js',
-  'src/keyboards/main.js'
+  'src/keyboards/main.js',
 ];
 
 // Все файлы для проверки (кроме разрешённых)
@@ -41,7 +41,7 @@ const ALL_FILES = [
   'src/scenes/searchShop.js',
   'src/scenes/createShop.js',
   'src/scenes/addProduct.js',
-  'src/scenes/manageWallets.js'
+  'src/scenes/manageWallets.js',
 ];
 
 /**
@@ -65,7 +65,7 @@ async function checkFile(filePath) {
     violations.push({
       file: filePath,
       line: lineNum,
-      snippet: lineText.trim()
+      snippet: lineText.trim(),
     });
   }
 
@@ -131,7 +131,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Error:', err);
   process.exit(1);
 });

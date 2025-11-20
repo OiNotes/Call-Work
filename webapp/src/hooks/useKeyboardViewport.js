@@ -60,7 +60,7 @@ export function useKeyboardViewport() {
           () => window.innerHeight,
           () => html.clientHeight,
         ],
-        'max',
+        'max'
       ) || fallbackHeight;
 
     const resolveCurrent = () =>
@@ -71,7 +71,7 @@ export function useKeyboardViewport() {
           () => window.innerHeight,
           () => html.clientHeight,
         ],
-        'min',
+        'min'
       ) || fallbackHeight;
 
     if (typeof stableRef.current !== 'number') {
@@ -90,7 +90,7 @@ export function useKeyboardViewport() {
       const visualOffset = window.visualViewport
         ? Math.max(
             toNumber(window.visualViewport.offsetTop) || 0,
-            toNumber(window.visualViewport.pageTop) || 0,
+            toNumber(window.visualViewport.pageTop) || 0
           )
         : 0;
 

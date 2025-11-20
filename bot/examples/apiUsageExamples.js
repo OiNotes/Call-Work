@@ -10,7 +10,7 @@ import {
   productsApi,
   ordersApi,
   subscriptionsApi,
-  paymentsApi
+  paymentsApi,
 } from '../api/index.js';
 
 import { getToken, setToken } from '../utils/tokenManager.js';
@@ -37,10 +37,7 @@ export async function handleUserLogin(ctx) {
 
   logger.userAction('login', telegramUser.id, { username: telegramUser.username });
 
-  await safeReply(
-    ctx,
-    `✅ Добро пожаловать, ${result.user.firstName || result.user.username}!`
-  );
+  await safeReply(ctx, `✅ Добро пожаловать, ${result.user.firstName || result.user.username}!`);
 }
 
 /**
@@ -52,11 +49,12 @@ export async function handleCreateShop(ctx) {
 
   const result = await handleApiCall(
     ctx,
-    async () => await shopsApi.create(token, {
-      name: shopName,
-      description: 'Мой новый магазин',
-      currency: 'BTC'
-    }),
+    async () =>
+      await shopsApi.create(token, {
+        name: shopName,
+        description: 'Мой новый магазин',
+        currency: 'BTC',
+      }),
     'Shop creation error'
   );
 
@@ -67,8 +65,8 @@ export async function handleCreateShop(ctx) {
   await safeReply(
     ctx,
     `🎉 Магазин "${result.name}" успешно создан!\n\n` +
-    `ID: ${result.id}\n` +
-    `Статус: ${result.isActive ? 'Активен' : 'Неактивен'}`
+      `ID: ${result.id}\n` +
+      `Статус: ${result.isActive ? 'Активен' : 'Неактивен'}`
   );
 }
 
@@ -91,12 +89,15 @@ export async function handleMyShops(ctx) {
     return;
   }
 
-  const shopsList = result.map(shop =>
-    `🏪 ${shop.name}\n` +
-    `   ID: ${shop.id}\n` +
-    `   Статус: ${shop.isActive ? '✅ Активен' : '⏸️ Неактивен'}\n` +
-    `   Подписчиков: ${shop.subscribersCount || 0}`
-  ).join('\n\n');
+  const shopsList = result
+    .map(
+      (shop) =>
+        `🏪 ${shop.name}\n` +
+        `   ID: ${shop.id}\n` +
+        `   Статус: ${shop.isActive ? '✅ Активен' : '⏸️ Неактивен'}\n` +
+        `   Подписчиков: ${shop.subscribersCount || 0}`
+    )
+    .join('\n\n');
 
   await safeReply(ctx, `📦 Ваши магазины:\n\n${shopsList}`);
 }
@@ -110,14 +111,15 @@ export async function handleAddProduct(ctx) {
 
   const result = await handleApiCall(
     ctx,
-    async () => await productsApi.create(token, {
-      shopId: productData.shopId,
-      name: productData.name,
-      description: productData.description,
-      price: parseFloat(productData.price),
-      stock: parseInt(productData.stock),
-      imageUrl: productData.imageUrl
-    }),
+    async () =>
+      await productsApi.create(token, {
+        shopId: productData.shopId,
+        name: productData.name,
+        description: productData.description,
+        price: parseFloat(productData.price),
+        stock: parseInt(productData.stock),
+        imageUrl: productData.imageUrl,
+      }),
     'Product creation error'
   );
 
@@ -128,8 +130,8 @@ export async function handleAddProduct(ctx) {
   await safeReply(
     ctx,
     `✅ Товар "${result.name}" добавлен!\n\n` +
-    `💰 Цена: ${result.price} ${result.currency}\n` +
-    `📦 В наличии: ${result.stock} шт.`
+      `💰 Цена: ${result.price} ${result.currency}\n` +
+      `📦 В наличии: ${result.stock} шт.`
   );
 }
 
@@ -150,16 +152,19 @@ export async function handleListProducts(ctx, shopId) {
     return;
   }
 
-  const productsList = result.products.map(product =>
-    `📦 ${product.name}\n` +
-    `   💰 ${product.price} ${product.currency}\n` +
-    `   📊 В наличии: ${product.stock} шт.`
-  ).join('\n\n');
+  const productsList = result.products
+    .map(
+      (product) =>
+        `📦 ${product.name}\n` +
+        `   💰 ${product.price} ${product.currency}\n` +
+        `   📊 В наличии: ${product.stock} шт.`
+    )
+    .join('\n\n');
 
   await safeReply(
     ctx,
     `🛍️ Товары (${result.total}):\n\n${productsList}\n\n` +
-    `Страница ${result.page} из ${Math.ceil(result.total / result.limit)}`
+      `Страница ${result.page} из ${Math.ceil(result.total / result.limit)}`
   );
 }
 
@@ -172,16 +177,17 @@ export async function handleCreateOrder(ctx) {
 
   const result = await handleApiCall(
     ctx,
-    async () => await ordersApi.create(token, {
-      shopId: cartItems[0].shopId,
-      items: cartItems.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price
-      })),
-      shippingAddress: ctx.session.shippingAddress,
-      paymentMethod: 'BTC'
-    }),
+    async () =>
+      await ordersApi.create(token, {
+        shopId: cartItems[0].shopId,
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        shippingAddress: ctx.session.shippingAddress,
+        paymentMethod: 'BTC',
+      }),
     'Order creation error'
   );
 
@@ -192,10 +198,10 @@ export async function handleCreateOrder(ctx) {
   await safeReply(
     ctx,
     `✅ Заказ #${result.id} создан!\n\n` +
-    `💰 Сумма: ${result.totalAmount} BTC\n` +
-    `📦 Товаров: ${result.items.length}\n\n` +
-    `Отправьте ${result.totalAmount} BTC на адрес:\n` +
-    `\`${result.paymentAddress}\``
+      `💰 Сумма: ${result.totalAmount} BTC\n` +
+      `📦 Товаров: ${result.items.length}\n\n` +
+      `Отправьте ${result.totalAmount} BTC на адрес:\n` +
+      `\`${result.paymentAddress}\``
   );
 }
 
@@ -217,8 +223,7 @@ export async function handleSubscribe(ctx, shopId) {
 
   await safeReply(
     ctx,
-    `✅ Вы подписались на магазин!\n\n` +
-    `Теперь вы будете получать уведомления о новых товарах.`
+    `✅ Вы подписались на магазин!\n\n` + `Теперь вы будете получать уведомления о новых товарах.`
   );
 }
 
@@ -264,16 +269,14 @@ export async function handleVerifyPayment(ctx, orderId, txHash) {
   if (result.verified) {
     await safeReply(
       ctx,
-      `✅ Платеж подтвержден!\n\n` +
-      `Сумма: ${result.amount} BTC\n` +
-      `Статус заказа обновлен.`
+      `✅ Платеж подтвержден!\n\n` + `Сумма: ${result.amount} BTC\n` + `Статус заказа обновлен.`
     );
   } else {
     await safeReply(
       ctx,
       `⏳ Платеж еще не подтвержден.\n\n` +
-      `Требуется подтверждений: ${result.confirmationsRequired}\n` +
-      `Получено: ${result.confirmations}`
+        `Требуется подтверждений: ${result.confirmationsRequired}\n` +
+        `Получено: ${result.confirmations}`
     );
   }
 }
@@ -298,7 +301,7 @@ export async function handleUpdateOrderStatus(ctx, orderId, newStatus) {
     processing: '⚙️',
     shipped: '🚚',
     completed: '✅',
-    cancelled: '❌'
+    cancelled: '❌',
   };
 
   await safeReply(
@@ -326,17 +329,20 @@ export async function handleMyOrders(ctx, status = null) {
     return;
   }
 
-  const ordersList = result.orders.map(order =>
-    `📦 Заказ #${order.id}\n` +
-    `   Магазин: ${order.shopName}\n` +
-    `   Сумма: ${order.totalAmount} ${order.currency}\n` +
-    `   Статус: ${order.status}\n` +
-    `   Дата: ${new Date(order.createdAt).toLocaleDateString('ru-RU')}`
-  ).join('\n\n');
+  const ordersList = result.orders
+    .map(
+      (order) =>
+        `📦 Заказ #${order.id}\n` +
+        `   Магазин: ${order.shopName}\n` +
+        `   Сумма: ${order.totalAmount} ${order.currency}\n` +
+        `   Статус: ${order.status}\n` +
+        `   Дата: ${new Date(order.createdAt).toLocaleDateString('ru-RU')}`
+    )
+    .join('\n\n');
 
   await safeReply(
     ctx,
     `📋 Ваши заказы (${result.total}):\n\n${ordersList}\n\n` +
-    `Страница ${result.page} из ${Math.ceil(result.total / result.limit)}`
+      `Страница ${result.page} из ${Math.ceil(result.total / result.limit)}`
   );
 }

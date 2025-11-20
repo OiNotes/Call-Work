@@ -1,6 +1,14 @@
 import express from 'express';
 import * as blockCypherService from '../services/blockCypherService.js';
-import { paymentQueries, invoiceQueries, orderQueries, processedWebhookQueries, productQueries, shopQueries, userQueries } from '../models/db.js';
+import {
+  paymentQueries,
+  invoiceQueries,
+  orderQueries,
+  processedWebhookQueries,
+  productQueries,
+  shopQueries,
+  userQueries,
+} from '../database/queries/index.js';
 import { getClient } from '../config/database.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
@@ -24,9 +32,11 @@ async function updateOrderStatus(orderId, status) {
  * @param {object} invoice - Invoice record with subscription_id
  * @param {object} client - Database client (transaction)
  */
-async function handleSubscriptionPayment(invoice, client) {
+async function handleSubscriptionPayment(invoice, client, txHash = null) {
   try {
-    logger.info(`[Webhook] Processing subscription payment for subscription ${invoice.subscription_id}`);
+    logger.info(
+      `[Webhook] Processing subscription payment for subscription ${invoice.subscription_id}`
+    );
 
     // Get subscription details
     const subResult = await client.query(
@@ -36,7 +46,7 @@ async function handleSubscriptionPayment(invoice, client) {
 
     if (subResult.rows.length === 0) {
       logger.error('[Webhook] Subscription not found:', {
-        subscriptionId: invoice.subscription_id
+        subscriptionId: invoice.subscription_id,
       });
       // Don't throw - just mark webhook as processed
       return;
@@ -70,13 +80,13 @@ async function handleSubscriptionPayment(invoice, client) {
       [subscription.tier, periodEnd, subscription.shop_id]
     );
 
-    // Update invoice status
-    await invoiceQueries.updateStatus(invoice.id, 'paid');
+    // Update invoice status (tx_hash from webhook/polling)
+    await invoiceQueries.updateStatus(invoice.id, 'paid', txHash);
 
     logger.info('[Webhook] Subscription activated successfully', {
       subscriptionId: invoice.subscription_id,
       shopId: subscription.shop_id,
-      tier: subscription.tier
+      tier: subscription.tier,
     });
 
     try {
@@ -94,33 +104,31 @@ async function handleSubscriptionPayment(invoice, client) {
           await telegramService.notifySubscriptionActivated(owner.telegram_id, {
             shopName: owner.shop_name,
             tier: subscription.tier,
-            nextPaymentDue: periodEnd
+            nextPaymentDue: periodEnd,
           });
         }
       } else {
-        const subscriberResult = await client.query(
-          'SELECT telegram_id FROM users WHERE id = $1',
-          [subscription.user_id]
-        );
+        const subscriberResult = await client.query('SELECT telegram_id FROM users WHERE id = $1', [
+          subscription.user_id,
+        ]);
         const subscriber = subscriberResult.rows[0];
         if (subscriber?.telegram_id) {
           await telegramService.notifySubscriptionPendingSetup(subscriber.telegram_id, {
-            tier: subscription.tier
+            tier: subscription.tier,
           });
         }
       }
     } catch (notifError) {
       logger.error('[Webhook] Subscription notification error', {
         error: notifError.message,
-        subscriptionId: invoice.subscription_id
+        subscriptionId: invoice.subscription_id,
       });
     }
-
   } catch (error) {
     logger.error('[Webhook] Failed to handle subscription payment:', {
       error: error.message,
       invoiceId: invoice.id,
-      subscriptionId: invoice.subscription_id
+      subscriptionId: invoice.subscription_id,
     });
     throw error;
   }
@@ -141,7 +149,7 @@ async function sendTelegramNotification(orderId, status) {
       // Get product, shop, buyer, and seller info
       const [product, buyer] = await Promise.all([
         productQueries.findById(order.product_id),
-        userQueries.findById(order.buyer_id)
+        userQueries.findById(order.buyer_id),
       ]);
 
       const shop = await shopQueries.findById(product.shop_id);
@@ -156,12 +164,12 @@ async function sendTelegramNotification(orderId, status) {
           total_price: order.total_price,
           currency: order.currency,
           seller_username: seller.username,
-          shop_name: shop.name
+          shop_name: shop.name,
         });
       } catch (notifError) {
         logger.error('[Webhook] Buyer notification error', {
           error: notifError.message,
-          orderId
+          orderId,
         });
       }
 
@@ -174,19 +182,19 @@ async function sendTelegramNotification(orderId, status) {
           totalPrice: order.total_price,
           currency: order.currency,
           buyerUsername: buyer.username || 'Anonymous',
-          buyerTelegramId: buyer.telegram_id
+          buyerTelegramId: buyer.telegram_id,
         });
       } catch (notifError) {
         logger.error('[Webhook] Seller notification error', {
           error: notifError.message,
-          orderId
+          orderId,
         });
       }
     }
   } catch (error) {
     logger.error('[Webhook] Failed to send Telegram notification:', {
       error: error.message,
-      orderId
+      orderId,
     });
   }
 }
@@ -218,7 +226,7 @@ router.post('/blockcypher', async (req, res) => {
       if (!providedToken || providedToken !== webhookSecret) {
         logger.warn('[Webhook] BlockCypher: Invalid or missing webhook token', {
           ip: req.ip,
-          providedToken: providedToken ? '***' : 'none'
+          providedToken: providedToken ? '***' : 'none',
         });
         return res.status(401).json({ error: 'Unauthorized' });
       }
@@ -229,7 +237,7 @@ router.post('/blockcypher', async (req, res) => {
     logger.info('[Webhook] BlockCypher notification received:', {
       txHash: payload.hash,
       confirmations: payload.confirmations,
-      blockHeight: payload.block_height
+      blockHeight: payload.block_height,
     });
 
     // Parse webhook payload
@@ -242,7 +250,7 @@ router.post('/blockcypher', async (req, res) => {
     if (isAlreadyProcessed) {
       logger.warn('[Webhook] Replay attack detected - webhook already processed', {
         webhookId,
-        txHash: paymentData.txHash
+        txHash: paymentData.txHash,
       });
       return res.status(200).json({ status: 'already_processed' });
     }
@@ -256,7 +264,7 @@ router.post('/blockcypher', async (req, res) => {
         webhookId,
         source: 'blockcypher',
         txHash: paymentData.txHash,
-        payload: payload
+        payload: payload,
       });
 
       // Find invoice by checking all outputs
@@ -265,9 +273,13 @@ router.post('/blockcypher', async (req, res) => {
         if (output.addresses && output.addresses.length > 0) {
           for (const address of output.addresses) {
             invoice = await invoiceQueries.findByAddress(address);
-            if (invoice) {break;}
+            if (invoice) {
+              break;
+            }
           }
-          if (invoice) {break;}
+          if (invoice) {
+            break;
+          }
         }
       }
 
@@ -282,7 +294,9 @@ router.post('/blockcypher', async (req, res) => {
       const isSubscriptionPayment = !!invoice.subscription_id;
       const invoiceType = isOrderPayment ? 'order' : 'subscription';
 
-      logger.info(`[Webhook] Invoice found: ${invoice.id} for ${invoiceType} ${invoice.order_id || invoice.subscription_id}`);
+      logger.info(
+        `[Webhook] Invoice found: ${invoice.id} for ${invoiceType} ${invoice.order_id || invoice.subscription_id}`
+      );
 
       // SECURITY (P0-SEC-7): Always verify transaction against blockchain API
       // This prevents attackers from sending fake webhook payloads
@@ -292,7 +306,7 @@ router.post('/blockcypher', async (req, res) => {
         if (!verifiedTx) {
           logger.error('[Webhook] Transaction not found on blockchain', {
             txHash: paymentData.txHash,
-            chain
+            chain,
           });
           await client.query('COMMIT'); // Commit to mark webhook as processed
           return res.status(400).json({ error: 'Transaction not found on blockchain' });
@@ -303,7 +317,7 @@ router.post('/blockcypher', async (req, res) => {
           logger.warn('[Webhook] Confirmation count mismatch - using blockchain value', {
             webhook: payload.confirmations,
             blockchain: verifiedTx.confirmations,
-            txHash: paymentData.txHash
+            txHash: paymentData.txHash,
           });
           // Use blockchain value as source of truth
           paymentData.confirmations = verifiedTx.confirmations;
@@ -311,7 +325,7 @@ router.post('/blockcypher', async (req, res) => {
 
         // Verify amount if it's an order payment
         if (isOrderPayment) {
-          const expectedAmount = parseFloat(invoice.amount);
+          const expectedAmount = parseFloat(invoice.crypto_amount || invoice.expected_amount);
           const receivedAmount = verifiedTx.total / 100000000; // Convert satoshis to BTC/LTC
           const chain = invoice.chain.toUpperCase();
 
@@ -320,7 +334,7 @@ router.post('/blockcypher', async (req, res) => {
               expected: expectedAmount,
               received: receivedAmount,
               txHash: paymentData.txHash,
-              chain
+              chain,
             });
             await client.query('COMMIT'); // Commit to mark webhook as processed
             return res.status(400).json({ error: 'Payment amount does not match invoice' });
@@ -330,7 +344,7 @@ router.post('/blockcypher', async (req, res) => {
         logger.error('[Webhook] Blockchain verification failed', {
           error: verifyError.message,
           txHash: paymentData.txHash,
-          chain
+          chain,
         });
         await client.query('ROLLBACK');
         return res.status(500).json({ error: 'Failed to verify transaction on blockchain' });
@@ -345,21 +359,19 @@ router.post('/blockcypher', async (req, res) => {
 
       if (existingPayment) {
         // Update existing payment
-        await paymentQueries.updateStatus(
-          existingPayment.id,
-          status,
-          paymentData.confirmations
-        );
+        await paymentQueries.updateStatus(existingPayment.id, status, paymentData.confirmations);
 
         // If newly confirmed, update order or subscription
         if (status === 'confirmed' && existingPayment.status !== 'confirmed') {
           if (isSubscriptionPayment) {
-            await handleSubscriptionPayment(invoice, client);
+            await handleSubscriptionPayment(invoice, client, paymentData.txHash);
             await client.query('COMMIT');
-            logger.info(`[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`);
+            logger.info(
+              `[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`
+            );
           } else {
             await updateOrderStatus(invoice.order_id, 'confirmed');
-            await invoiceQueries.updateStatus(invoice.id, 'paid');
+            await invoiceQueries.updateStatus(invoice.id, 'paid', paymentData.txHash);
 
             // Commit transaction before sending Telegram notification
             await client.query('COMMIT');
@@ -375,25 +387,29 @@ router.post('/blockcypher', async (req, res) => {
         return res.json({
           status: 'updated',
           confirmations: paymentData.confirmations,
-          confirmed: status === 'confirmed'
+          confirmed: status === 'confirmed',
         });
       }
 
       // Handle subscription payments (no payment record needed)
       if (isSubscriptionPayment) {
         if (status === 'confirmed') {
-          await handleSubscriptionPayment(invoice, client);
+          await handleSubscriptionPayment(invoice, client, paymentData.txHash);
           await client.query('COMMIT');
-          logger.info(`[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`);
+          logger.info(
+            `[Webhook] Subscription ${invoice.subscription_id} activated via BlockCypher!`
+          );
         } else {
           await client.query('COMMIT');
-          logger.info(`[Webhook] Subscription payment pending (${paymentData.confirmations} confirmations)`);
+          logger.info(
+            `[Webhook] Subscription payment pending (${paymentData.confirmations} confirmations)`
+          );
         }
 
         return res.json({
           status: 'success',
           confirmations: paymentData.confirmations,
-          confirmed: status === 'confirmed'
+          confirmed: status === 'confirmed',
         });
       }
 
@@ -403,18 +419,20 @@ router.post('/blockcypher', async (req, res) => {
         txHash: paymentData.txHash,
         amount: paymentData.total,
         currency: invoice.currency,
-        status: status
+        status: status,
       });
 
       // Update payment with confirmations
       await paymentQueries.updateStatus(payment.id, status, paymentData.confirmations);
 
-      logger.info(`[Webhook] Payment created: ${payment.id} with ${paymentData.confirmations} confirmations`);
+      logger.info(
+        `[Webhook] Payment created: ${payment.id} with ${paymentData.confirmations} confirmations`
+      );
 
       // If already confirmed, update order
       if (status === 'confirmed') {
         await updateOrderStatus(invoice.order_id, 'confirmed');
-        await invoiceQueries.updateStatus(invoice.id, 'paid');
+        await invoiceQueries.updateStatus(invoice.id, 'paid', paymentData.txHash);
 
         // Commit transaction before sending Telegram notification
         await client.query('COMMIT');
@@ -430,7 +448,7 @@ router.post('/blockcypher', async (req, res) => {
         status: 'success',
         payment_id: payment.id,
         confirmations: paymentData.confirmations,
-        confirmed: status === 'confirmed'
+        confirmed: status === 'confirmed',
       });
     } catch (innerError) {
       // Rollback transaction on error
@@ -440,7 +458,7 @@ router.post('/blockcypher', async (req, res) => {
   } catch (error) {
     logger.error('[Webhook] Error processing BlockCypher webhook:', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     return res.status(500).json({ error: 'Internal server error' });
   } finally {

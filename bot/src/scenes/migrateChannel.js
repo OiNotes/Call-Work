@@ -36,8 +36,8 @@ const migrateChannelScene = new Scenes.WizardScene(
         text: `${sellerMessages.migration.intro}\n\n${sellerMessages.migration.confirmPrompt}`,
         keyboard: Markup.inlineKeyboard([
           [Markup.button.callback(buttonText.migrationConfirm, 'migrate:confirm')],
-          [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-        ])
+          [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+        ]),
       });
     } catch (error) {
       logger.error('Error sending migration intro:', error);
@@ -71,8 +71,8 @@ const migrateChannelScene = new Scenes.WizardScene(
       await smartMessage.send(ctx, {
         text: sellerMessages.migration.askChannel,
         keyboard: Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-        ])
+          [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+        ]),
       });
     } catch (error) {
       logger.error('Error requesting new channel:', error);
@@ -107,8 +107,8 @@ const migrateChannelScene = new Scenes.WizardScene(
       await smartMessage.send(ctx, {
         text: sellerMessages.migration.invalidChannel,
         keyboard: Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-        ])
+          [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+        ]),
       });
       return;
     }
@@ -124,7 +124,13 @@ const migrateChannelScene = new Scenes.WizardScene(
           shopName = shop.name;
           ctx.session.shopName = shop.name;
         }
-        buyersCount = shop?.buyers_count ?? shop?.buyersCount ?? shop?.subscribers_count ?? shop?.subscribersCount ?? ctx.session.migrationBuyersCount ?? 0;
+        buyersCount =
+          shop?.buyers_count ??
+          shop?.buyersCount ??
+          shop?.subscribers_count ??
+          shop?.subscribersCount ??
+          ctx.session.migrationBuyersCount ??
+          0;
         ctx.session.migrationBuyersCount = buyersCount;
       } catch (error) {
         logger.warn('Failed to fetch shop info for migration confirmation:', error.message);
@@ -140,15 +146,15 @@ const migrateChannelScene = new Scenes.WizardScene(
     const confirmationMessage = sellerMessages.migration.confirmation({
       shopName,
       channel: parsedChannel,
-      buyersCount: normalizedCount
+      buyersCount: normalizedCount,
     });
 
     await smartMessage.send(ctx, {
       text: confirmationMessage,
       keyboard: Markup.inlineKeyboard([
         [Markup.button.callback(buttonText.sendNotifications, 'migrate:send')],
-        [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-      ])
+        [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+      ]),
     });
 
     return ctx.wizard.next();
@@ -182,8 +188,8 @@ const migrateChannelScene = new Scenes.WizardScene(
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
         keyboard: Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-        ])
+          [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+        ]),
       });
       return ctx.scene.leave();
     }
@@ -204,16 +210,16 @@ const migrateChannelScene = new Scenes.WizardScene(
         text: sellerMessages.migration.success({ channel: newChannel, buyersCount: notified }),
         keyboard: Markup.inlineKeyboard([
           [Markup.button.callback(buttonText.goToTools, 'seller:tools')],
-          [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
-        ])
+          [Markup.button.callback(buttonText.backToMenu, 'seller:menu')],
+        ]),
       });
     } catch (error) {
       logger.error('Error migrating channel:', error);
       await smartMessage.send(ctx, {
         text: sellerMessages.migration.error,
         keyboard: Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.backToTools, 'seller:tools')]
-        ])
+          [Markup.button.callback(buttonText.backToTools, 'seller:tools')],
+        ]),
       });
     } finally {
       if (loadingMessage?.message_id) {

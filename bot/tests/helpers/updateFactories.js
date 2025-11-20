@@ -1,6 +1,6 @@
 /**
  * Update Factories для integration-тестов
- * 
+ *
  * Создают Telegram Update objects для bot.handleUpdate()
  * Без реального Telegram API
  */
@@ -26,8 +26,8 @@ export function textUpdate(text, options = {}) {
       date: Math.floor(Date.now() / 1000),
       text,
       from,
-      chat
-    }
+      chat,
+    },
   };
 }
 
@@ -51,10 +51,10 @@ export function callbackUpdate(data, options = {}) {
         message_id: messageId,
         date: Math.floor(Date.now() / 1000),
         chat,
-        text: 'Previous message' // Для editMessageText
+        text: 'Previous message', // Для editMessageText
       },
-      data
-    }
+      data,
+    },
   };
 }
 
@@ -67,13 +67,15 @@ export function callbackUpdate(data, options = {}) {
 export function commandUpdate(command, options = {}) {
   const text = `/${command}`;
   const update = textUpdate(text, options);
-  
+
   // Добавляем entities для команды
-  update.message.entities = [{
-    type: 'bot_command',
-    offset: 0,
-    length: text.length
-  }];
+  update.message.entities = [
+    {
+      type: 'bot_command',
+      offset: 0,
+      length: text.length,
+    },
+  ];
 
   return update;
 }
@@ -91,7 +93,7 @@ export function createUser(id, data = {}) {
     username: data.username || `user${id}`,
     first_name: data.first_name || 'Test',
     last_name: data.last_name || 'User',
-    language_code: data.language_code || 'en'
+    language_code: data.language_code || 'en',
   };
 }
 
@@ -104,7 +106,7 @@ export function createUser(id, data = {}) {
 export function createChat(id, type = 'private') {
   return {
     id,
-    type
+    type,
   };
 }
 

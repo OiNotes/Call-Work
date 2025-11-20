@@ -114,14 +114,14 @@ export const createTestUser = async (userData = {}) => {
  */
 export const createTestShop = async (ownerId, shopData = {}) => {
   const pool = getTestPool();
-  
+
   const shop = {
     name: shopData.name || 'Test Shop',
     description: shopData.description || 'Test shop description',
     owner_id: ownerId,
     is_active: shopData.is_active !== undefined ? shopData.is_active : true,
   };
-  
+
   const result = await pool.query(
     `INSERT INTO shops (name, description, owner_id, is_active)
      VALUES ($1, $2, $3, $4)
@@ -132,7 +132,7 @@ export const createTestShop = async (ownerId, shopData = {}) => {
                created_at, updated_at`,
     [shop.name, shop.description, shop.owner_id, shop.is_active]
   );
-  
+
   return result.rows[0];
 };
 
@@ -141,7 +141,7 @@ export const createTestShop = async (ownerId, shopData = {}) => {
  */
 export const createTestProduct = async (shopId, productData = {}) => {
   const pool = getTestPool();
-  
+
   const product = {
     name: productData.name || 'Test Product',
     description: productData.description || 'Test product description',
@@ -157,7 +157,14 @@ export const createTestProduct = async (shopId, productData = {}) => {
      RETURNING id, shop_id, name, description, price, currency,
                stock_quantity, reserved_quantity, is_active,
                created_at, updated_at`,
-    [product.shop_id, product.name, product.description, product.price, product.currency, product.stock_quantity]
+    [
+      product.shop_id,
+      product.name,
+      product.description,
+      product.price,
+      product.currency,
+      product.stock_quantity,
+    ]
   );
 
   return result.rows[0];
@@ -168,10 +175,7 @@ export const createTestProduct = async (shopId, productData = {}) => {
  */
 export const getUserByTelegramId = async (telegramId) => {
   const pool = getTestPool();
-  const result = await pool.query(
-    'SELECT * FROM users WHERE telegram_id = $1',
-    [telegramId]
-  );
+  const result = await pool.query('SELECT * FROM users WHERE telegram_id = $1', [telegramId]);
   return result.rows[0];
 };
 
@@ -180,10 +184,7 @@ export const getUserByTelegramId = async (telegramId) => {
  */
 export const getShopById = async (shopId) => {
   const pool = getTestPool();
-  const result = await pool.query(
-    'SELECT * FROM shops WHERE id = $1',
-    [shopId]
-  );
+  const result = await pool.query('SELECT * FROM shops WHERE id = $1', [shopId]);
   return result.rows[0];
 };
 
@@ -214,7 +215,7 @@ export const createTestOrder = async (buyerId, productId, shopId, orderData = {}
     quantity: orderData.quantity || 1,
     total_price: orderData.total_price || '99.99',
     currency: orderData.currency || 'USD',
-    status: orderData.status || 'pending'
+    status: orderData.status || 'pending',
   };
 
   const result = await pool.query(
@@ -223,7 +224,14 @@ export const createTestOrder = async (buyerId, productId, shopId, orderData = {}
      RETURNING id, buyer_id, product_id, quantity, total_price, currency,
                delivery_address, payment_hash, payment_address, status,
                created_at, updated_at, paid_at, completed_at`,
-    [order.buyer_id, order.product_id, order.quantity, order.total_price, order.currency, order.status]
+    [
+      order.buyer_id,
+      order.product_id,
+      order.quantity,
+      order.total_price,
+      order.currency,
+      order.status,
+    ]
   );
 
   return result.rows[0];
@@ -241,7 +249,7 @@ export const createTestInvoice = async (orderId, invoiceData = {}) => {
     chain: invoiceData.chain || 'btc',
     expected_amount: invoiceData.expected_amount || 0.001,
     address: invoiceData.address || invoiceData.payment_address || 'bc1test123456789',
-    status: invoiceData.status || 'pending'
+    status: invoiceData.status || 'pending',
   };
 
   const result = await pool.query(
@@ -250,7 +258,14 @@ export const createTestInvoice = async (orderId, invoiceData = {}) => {
      RETURNING id, order_id, chain, address, address_index, expected_amount,
                currency, tatum_subscription_id, status, expires_at,
                created_at, updated_at`,
-    [invoice.order_id, invoice.currency, invoice.chain, invoice.expected_amount, invoice.address, invoice.status]
+    [
+      invoice.order_id,
+      invoice.currency,
+      invoice.chain,
+      invoice.expected_amount,
+      invoice.address,
+      invoice.status,
+    ]
   );
 
   return result.rows[0];

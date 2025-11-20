@@ -12,24 +12,14 @@ const router = express.Router();
  * @desc    Create new shop
  * @access  Private (Any authenticated user can create a shop)
  */
-router.post(
-  '/',
-  verifyToken,
-  shopCreationLimiter,
-  shopValidation.create,
-  shopController.create
-);
+router.post('/', verifyToken, shopCreationLimiter, shopValidation.create, shopController.create);
 
 /**
  * @route   GET /api/shops/my
  * @desc    Get current user's shops
  * @access  Private (Any authenticated user)
  */
-router.get(
-  '/my',
-  verifyToken,
-  shopController.getMyShops
-);
+router.get('/my', verifyToken, shopController.getMyShops);
 
 /**
  * @route   GET /api/shops/active
@@ -43,42 +33,14 @@ router.get('/active', shopController.listActive);
  * @desc    Search active shops by name
  * @access  Public (auth optional to include subscription flag)
  */
-router.get(
-  '/search',
-  optionalAuth,
-  shopController.search
-);
-
-/**
- * @route   GET /api/shops/:id/wallets/test
- * @desc    Test route without middleware
- * @access  Public
- */
-router.get('/:id/wallets/test', (req, res) => {
-  res.json({ success: true, message: 'Test route works!', shopId: req.params.id });
-});
-
-/**
- * @route   GET /api/shops/:id/wallets/auth-test
- * @desc    Test route with only verifyToken
- * @access  Private
- */
-router.get('/:id/wallets/auth-test', verifyToken, (req, res) => {
-  res.json({ success: true, message: 'Auth works!', shopId: req.params.id, userId: req.user?.id });
-});
+router.get('/search', optionalAuth, shopController.search);
 
 /**
  * @route   GET /api/shops/:id/wallets
  * @desc    Get shop wallets (for payments - any authenticated user can view)
  * @access  Private (Any authenticated user)
  */
-router.get(
-  '/:id/wallets',
-  verifyToken,
-  // TEMP: Skip validation to test
-  // shopValidation.getById,
-  shopController.getWallets
-);
+router.get('/:id/wallets', verifyToken, shopValidation.getById, shopController.getWallets);
 
 /**
  * @route   GET /api/shops/:id
@@ -92,38 +54,21 @@ router.get('/:id', optionalAuth, shopValidation.getById, shopController.getById)
  * @desc    Update shop
  * @access  Private (Shop owner only)
  */
-router.put(
-  '/:id',
-  verifyToken,
-  requireShopOwner,
-  shopValidation.update,
-  shopController.update
-);
+router.put('/:id', verifyToken, requireShopOwner, shopValidation.update, shopController.update);
 
 /**
  * @route   DELETE /api/shops/:id
  * @desc    Delete shop
  * @access  Private (Shop owner only)
  */
-router.delete(
-  '/:id',
-  verifyToken,
-  requireShopOwner,
-  shopValidation.getById,
-  shopController.delete
-);
+router.delete('/:id', verifyToken, requireShopOwner, shopValidation.getById, shopController.delete);
 
 /**
  * @route   PUT /api/shops/:id/wallets
  * @desc    Update shop wallets
  * @access  Private (Shop owner only)
  */
-router.put(
-  '/:id/wallets',
-  verifyToken,
-  requireShopOwner,
-  shopController.updateWallets
-);
+router.put('/:id/wallets', verifyToken, requireShopOwner, shopController.updateWallets);
 
 /**
  * @route   GET /api/shops/:shopId/migration/check

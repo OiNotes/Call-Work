@@ -59,55 +59,49 @@ export default function AnalyticsModal({ isOpen, onClose }) {
   }, [period, customRange]);
 
   // Fetch analytics data
-  const fetchAnalytics = useCallback(async (signal) => {
-    const range = getDateRange();
-    if (!range) {
-      console.warn('[AnalyticsModal] Пропущен запрос — кастомный период без дат', {
-        period,
-        customRange,
-      });
-      return { status: 'skipped' };
-    }
-
-    const { from, to } = range;
-
-    console.info('[AnalyticsModal] fetch start', { from, to, period });
-
-    try {
-      const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`, {
-        signal,
-        timeout: 10000  // 10 second timeout to prevent infinite loading
-      });
-
-      if (signal?.aborted) return { status: 'aborted' };
-
-      if (error) {
-        console.error('Analytics fetch error:', error);
-        return { status: 'error', error };
-      } else if (data?.success && data?.data) {
-        // ✅ FIX: Validate analytics data structure
-        const analyticsData = data.data;
-        if (!analyticsData || typeof analyticsData !== 'object') {
-          console.error('Invalid analytics data format:', analyticsData);
-          return { status: 'error', error: 'Неверный формат данных статистики' };
-        }
-        console.info('[AnalyticsModal] fetch success', {
-          totalOrders: analyticsData.summary?.totalOrders,
-          topProducts: analyticsData.topProducts?.length,
-        });
-        setAnalytics(analyticsData);
-        return { status: 'success' };
-      } else {
-        console.error('Unexpected API response:', data);
-        return { status: 'error', error: 'Не удалось загрузить статистику' };
+  const fetchAnalytics = useCallback(
+    async (signal) => {
+      const range = getDateRange();
+      if (!range) {
+        return { status: 'skipped' };
       }
-    } catch (err) {
-      if (signal?.aborted) return { status: 'aborted' };
 
-      console.error('[AnalyticsModal] fetch exception', err);
-      return { status: 'error', error: err.message || 'Ошибка загрузки данных' };
-    }
-  }, [get, getDateRange, period, customRange]);
+      const { from, to } = range;
+
+      try {
+        const { data, error } = await get(`/orders/analytics?from=${from}&to=${to}`, {
+          signal,
+          timeout: 10000, // 10 second timeout to prevent infinite loading
+        });
+
+        if (signal?.aborted) return { status: 'aborted' };
+
+        if (error) {
+          console.error('Analytics fetch error:', error);
+          return { status: 'error', error };
+        } else if (data?.success && data?.data) {
+          // ✅ FIX: Validate analytics data structure
+          const analyticsData = data.data;
+          if (!analyticsData || typeof analyticsData !== 'object') {
+            console.error('Invalid analytics data format:', analyticsData);
+            return { status: 'error', error: 'Неверный формат данных статистики' };
+          }
+
+          setAnalytics(analyticsData);
+          return { status: 'success' };
+        } else {
+          console.error('Unexpected API response:', data);
+          return { status: 'error', error: 'Не удалось загрузить статистику' };
+        }
+      } catch (err) {
+        if (signal?.aborted) return { status: 'aborted' };
+
+        console.error('[AnalyticsModal] fetch exception', err);
+        return { status: 'error', error: err.message || 'Ошибка загрузки данных' };
+      }
+    },
+    [get, getDateRange, period, customRange]
+  );
 
   // Fetch on mount and period change
   useEffect(() => {
@@ -119,13 +113,12 @@ export default function AnalyticsModal({ isOpen, onClose }) {
     const controller = new AbortController();
 
     fetchAnalytics(controller.signal)
-      .then(result => {
+      .then((result) => {
         if (!controller.signal.aborted) {
           if (result?.status === 'error') {
             console.error('Failed to fetch analytics:', result.error);
             setError(result.error);
           }
-          console.info('[AnalyticsModal] fetch finished');
         }
       })
       .finally(() => {
@@ -170,7 +163,13 @@ export default function AnalyticsModal({ isOpen, onClose }) {
             exit={{ opacity: 0 }}
           >
             <PageHeader title="Статистика" onBack={handleClose} />
-            <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)', paddingBottom: 'var(--tabbar-total)' }} className="px-4">
+            <div
+              style={{
+                paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+                paddingBottom: 'var(--tabbar-total)',
+              }}
+              className="px-4"
+            >
               {/* Hero skeleton */}
               <div className="glass-card p-6 mt-4 animate-pulse">
                 <div className="h-4 bg-gray-700 rounded w-1/3 mb-4" />
@@ -186,7 +185,7 @@ export default function AnalyticsModal({ isOpen, onClose }) {
               </div>
 
               {/* Products skeleton */}
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3].map((i) => (
                 <div key={i} className="glass-card p-4 mt-3 animate-pulse">
                   <div className="h-4 bg-gray-700 rounded w-2/3 mb-2" />
                   <div className="h-2 bg-gray-700 rounded w-full mb-2" />
@@ -212,9 +211,15 @@ export default function AnalyticsModal({ isOpen, onClose }) {
             exit={{ opacity: 0 }}
           >
             <PageHeader title="Статистика" onBack={handleClose} />
-            <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }} className="px-4 py-8 text-center">
+            <div
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)' }}
+              className="px-4 py-8 text-center"
+            >
               <p className="text-red-500 mb-4">{error}</p>
-              <button onClick={fetchAnalytics} className="bg-orange-primary text-white px-6 py-3 rounded-xl">
+              <button
+                onClick={fetchAnalytics}
+                className="bg-orange-primary text-white px-6 py-3 rounded-xl"
+              >
                 Попробовать снова
               </button>
             </div>
@@ -239,7 +244,13 @@ export default function AnalyticsModal({ isOpen, onClose }) {
           >
             <PageHeader title="Статистика" onBack={handleClose} />
 
-            <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 56px)', paddingBottom: 'var(--tabbar-total)' }} className="px-4 overflow-y-auto h-full">
+            <div
+              style={{
+                paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
+                paddingBottom: 'var(--tabbar-total)',
+              }}
+              className="px-4 overflow-y-auto h-full"
+            >
               {/* Hero Card */}
               <motion.div
                 className="glass-card p-6 mt-4"
@@ -252,7 +263,8 @@ export default function AnalyticsModal({ isOpen, onClose }) {
                   {formatUSD(summary?.totalRevenue)}
                 </h1>
                 <p className="text-sm text-gray-400">
-                  {summary?.completedOrders || 0} заказов • Средний чек: {formatUSD(summary?.avgOrderValue)}
+                  {summary?.completedOrders || 0} заказов • Средний чек:{' '}
+                  {formatUSD(summary?.avgOrderValue)}
                 </p>
               </motion.div>
 
@@ -347,7 +359,9 @@ export default function AnalyticsModal({ isOpen, onClose }) {
                     <input
                       type="date"
                       value={customRange.from}
-                      onChange={(e) => setCustomRange(prev => ({ ...prev, from: e.target.value }))}
+                      onChange={(e) =>
+                        setCustomRange((prev) => ({ ...prev, from: e.target.value }))
+                      }
                       className="w-full bg-dark-bg text-white px-4 py-3 rounded-xl border border-gray-700 focus:border-orange-primary outline-none"
                     />
                   </div>
@@ -357,7 +371,7 @@ export default function AnalyticsModal({ isOpen, onClose }) {
                     <input
                       type="date"
                       value={customRange.to}
-                      onChange={(e) => setCustomRange(prev => ({ ...prev, to: e.target.value }))}
+                      onChange={(e) => setCustomRange((prev) => ({ ...prev, to: e.target.value }))}
                       className="w-full bg-dark-bg text-white px-4 py-3 rounded-xl border border-gray-700 focus:border-orange-primary outline-none"
                     />
                   </div>

@@ -22,7 +22,7 @@ const authMiddleware = async (ctx, next) => {
       username: ctx.from.username,
       firstName: ctx.from.first_name,
       lastName: ctx.from.last_name,
-      languageCode: ctx.from.language_code
+      languageCode: ctx.from.language_code,
     };
 
     // Authenticate with backend
@@ -32,13 +32,17 @@ const authMiddleware = async (ctx, next) => {
       throw new Error('Invalid authentication response from backend');
     }
 
-    // Store in session
+    // Store in session (preserve existing shopId/role if they exist)
     ctx.session = ctx.session || {};
+    const existingShopId = ctx.session.shopId;
+    const existingShopName = ctx.session.shopName;
+    const existingRole = ctx.session.role;
+
     ctx.session.token = authData.token;
     ctx.session.user = authData.user;
-    ctx.session.role = null;
-    ctx.session.shopId = null; // Will be set after shop is created
-    ctx.session.shopName = null;
+    ctx.session.role = existingRole || null;
+    ctx.session.shopId = existingShopId || null; // Preserve if exists
+    ctx.session.shopName = existingShopName || null;
 
     logger.info(`User authenticated: ${ctx.from.id} (@${ctx.from.username})`);
 
@@ -46,16 +50,21 @@ const authMiddleware = async (ctx, next) => {
   } catch (error) {
     logger.error('Auth middleware error:', error);
 
-    // Create basic session even if auth failed
+    // Create basic session even if auth failed (preserve existing data)
     ctx.session = ctx.session || {};
+    const existingShopId = ctx.session.shopId;
+    const existingShopName = ctx.session.shopName;
+    const existingRole = ctx.session.role;
+
     ctx.session.user = {
       telegramId: ctx.from.id,
       username: ctx.from.username,
-      firstName: ctx.from.first_name
+      firstName: ctx.from.first_name,
     };
     ctx.session.token = null; // No token, will retry on next request
-    ctx.session.shopId = null;
-    ctx.session.shopName = null;
+    ctx.session.shopId = existingShopId || null; // Preserve if exists
+    ctx.session.shopName = existingShopName || null;
+    ctx.session.role = existingRole || null;
 
     logger.warn(`Auth failed for user ${ctx.from.id}, created basic session`);
 

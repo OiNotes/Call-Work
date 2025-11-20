@@ -2,7 +2,7 @@
 
 /**
  * Test bulkUpdateProducts function recognition by AI
- * 
+ *
  * This test verifies that AI correctly chooses bulkUpdateProducts
  * when user mentions multiple specific products in one command.
  */
@@ -13,7 +13,7 @@ console.log('🧪 Testing bulkUpdateProducts function availability\n');
 
 // Test 1: Check if bulkUpdateProducts exists in tools
 console.log('1️⃣ Checking if bulkUpdateProducts is in productTools...');
-const bulkUpdateTool = productTools.find(t => t.function?.name === 'bulkUpdateProducts');
+const bulkUpdateTool = productTools.find((t) => t.function?.name === 'bulkUpdateProducts');
 
 if (!bulkUpdateTool) {
   console.error('❌ FAIL: bulkUpdateProducts not found in productTools');
@@ -32,12 +32,10 @@ const requiredKeywords = [
   'iPhone и MacBook',
   'bulkUpdateProducts',
   'IMPORTANT',
-  'DO NOT call updateProduct'
+  'DO NOT call updateProduct',
 ];
 
-const missingKeywords = requiredKeywords.filter(keyword => 
-  !description.includes(keyword)
-);
+const missingKeywords = requiredKeywords.filter((keyword) => !description.includes(keyword));
 
 if (missingKeywords.length > 0) {
   console.error('❌ FAIL: Description missing keywords:', missingKeywords);
@@ -48,8 +46,8 @@ console.log('✅ PASS: Description contains all required keywords');
 
 // Test 3: Check function order (bulkUpdateProducts should come BEFORE updateProduct)
 console.log('\n3️⃣ Checking function order...');
-const bulkUpdateIndex = productTools.findIndex(t => t.function?.name === 'bulkUpdateProducts');
-const updateProductIndex = productTools.findIndex(t => t.function?.name === 'updateProduct');
+const bulkUpdateIndex = productTools.findIndex((t) => t.function?.name === 'bulkUpdateProducts');
+const updateProductIndex = productTools.findIndex((t) => t.function?.name === 'updateProduct');
 
 if (bulkUpdateIndex === -1 || updateProductIndex === -1) {
   console.error('❌ FAIL: Cannot find both functions');
@@ -99,16 +97,16 @@ console.log('\n6️⃣ Checking for anti-patterns in description...');
 const antiPatterns = [
   { pattern: 'for each', issue: 'Suggests iterating instead of bulk operation' },
   { pattern: 'one by one', issue: 'Suggests sequential calls instead of bulk' },
-  { pattern: 'call updateProduct', issue: 'May confuse AI to use wrong function' }
+  { pattern: 'call updateProduct', issue: 'May confuse AI to use wrong function' },
 ];
 
-const foundAntiPatterns = antiPatterns.filter(ap => 
+const foundAntiPatterns = antiPatterns.filter((ap) =>
   description.toLowerCase().includes(ap.pattern)
 );
 
 if (foundAntiPatterns.length > 0) {
   console.warn('⚠️  WARNING: Found potential anti-patterns:');
-  foundAntiPatterns.forEach(ap => {
+  foundAntiPatterns.forEach((ap) => {
     console.warn(`   - "${ap.pattern}": ${ap.issue}`);
   });
 } else {

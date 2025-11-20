@@ -15,94 +15,88 @@ export default function Subscriptions() {
   const { t } = useTranslation();
   const token = useStore((state) => state.token);
 
-  const loadSubscriptions = useCallback(async (signal) => {
-    console.log('[Subscriptions] 🔵 START loadSubscriptions', { signal: signal?.aborted });
+  const loadSubscriptions = useCallback(
+    async (signal) => {
+      const { data, error } = await get('/subscriptions/my-shops', { signal });
 
-    const { data, error } = await get('/subscriptions/my-shops', { signal });
+      if (signal?.aborted) {
+        return { status: 'aborted' };
+      }
 
-    console.log('[Subscriptions] 🔵 API response:', { data, error, aborted: signal?.aborted });
+      if (error) {
+        console.error('[Subscriptions] 🔴 ERROR:', error);
+        return { status: 'error', error: 'Failed to load subscriptions' };
+      }
 
-    if (signal?.aborted) {
-      console.log('[Subscriptions] 🟡 ABORTED');
-      return { status: 'aborted' };
-    }
+      const subscriptionsList = data?.data || [];
 
-    if (error) {
-      console.error('[Subscriptions] 🔴 ERROR:', error);
-      return { status: 'error', error: 'Failed to load subscriptions' };
-    }
+      if (!Array.isArray(subscriptionsList)) {
+        console.error('[Subscriptions] 🔴 INVALID FORMAT:', data);
+        return { status: 'error', error: 'Invalid data format from server' };
+      }
 
-    const subscriptionsList = data?.data || [];
-    console.log('[Subscriptions] 🔵 Subscriptions list:', subscriptionsList);
+      const validSubscriptions = subscriptionsList.filter((sub) => sub && sub.id && sub.shop_name);
 
-    if (!Array.isArray(subscriptionsList)) {
-      console.error('[Subscriptions] 🔴 INVALID FORMAT:', data);
-      return { status: 'error', error: 'Invalid data format from server' };
-    }
+      // Normalize data for shop subscriptions (payment tier data)
+      const normalized = validSubscriptions.map((item) => ({
+        id: item.id,
+        shopId: item.shop_id,
+        shopName: item.shop_name,
+        tier: item.tier,
+        amount: item.amount,
+        currency: item.currency,
+        periodStart: item.period_start,
+        periodEnd: item.period_end,
+        status: item.status,
+        createdAt: item.created_at,
+        verifiedAt: item.verified_at,
+      }));
 
-    const validSubscriptions = subscriptionsList.filter(sub =>
-      sub && sub.id && sub.shop_name
-    );
-    console.log('[Subscriptions] 🔵 Valid subscriptions count:', validSubscriptions.length);
-
-    // Normalize data for shop subscriptions (payment tier data)
-    const normalized = validSubscriptions.map((item) => ({
-      id: item.id,
-      shopId: item.shop_id,
-      shopName: item.shop_name,
-      tier: item.tier,
-      amount: item.amount,
-      currency: item.currency,
-      periodStart: item.period_start,
-      periodEnd: item.period_end,
-      status: item.status,
-      createdAt: item.created_at,
-      verifiedAt: item.verified_at,
-    }));
-
-    console.log('[Subscriptions] 🟢 SUCCESS - setting subscriptions:', normalized);
-    setSubscriptions(normalized);
-    return { status: 'success' };
-  }, [get]);
+      setSubscriptions(normalized);
+      return { status: 'success' };
+    },
+    [get]
+  );
 
   useEffect(() => {
-    console.log('[Subscriptions] 🔵 useEffect triggered', { token: !!token });
-
     // ✅ Wait for token before loading
     if (!token) {
-      console.log('[Subscriptions] 🟡 NO TOKEN - skipping load');
       setLoading(false);
       return;
     }
 
-    console.log('[Subscriptions] 🔵 Starting load with token');
     setLoading(true);
     setError(null);
 
     const controller = new AbortController();
 
     loadSubscriptions(controller.signal)
-      .then(result => {
-        console.log('[Subscriptions] 🔵 Load result:', result);
+      .then((result) => {
         if (!controller.signal.aborted && result?.status === 'error') {
-          console.log('[Subscriptions] 🔴 Setting error:', result.error);
           setError(result.error);
         }
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          console.log('[Subscriptions] 🟢 DONE - setLoading(false)');
           setLoading(false);
         } else {
-          console.log('[Subscriptions] 🟡 Aborted in finally');
         }
       });
 
-    return () => {
-      console.log('[Subscriptions] 🔴 CLEANUP - aborting controller');
-      controller.abort();
+    // ✅ Listen for WebSocket subscription payment confirmations
+    const handleSubscriptionConfirmed = (event) => {
+      console.log('[Subscriptions] 🎉 Payment confirmed via WebSocket:', event.detail);
+      // Reload subscriptions to show updated status
+      loadSubscriptions();
     };
-  }, [token, loadSubscriptions]);
+
+    window.addEventListener('subscription_confirmed', handleSubscriptionConfirmed);
+
+    return () => {
+      controller.abort();
+      window.removeEventListener('subscription_confirmed', handleSubscriptionConfirmed);
+    };
+  }, [token, loadSubscriptions]); // Added loadSubscriptions
 
   const handleShopClick = (subscription) => {
     triggerHaptic('medium');
@@ -117,8 +111,6 @@ export default function Subscriptions() {
     setActiveTab('catalog');
   };
 
-
-
   const hasSubscriptions = useMemo(() => subscriptions.length > 0, [subscriptions]);
 
   return (
@@ -126,7 +118,7 @@ export default function Subscriptions() {
       className="h-screen overflow-y-auto"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top) + 56px)',
-        paddingBottom: 'calc(var(--tabbar-total) + 20px)'
+        paddingBottom: 'calc(var(--tabbar-total) + 20px)',
       }}
     >
       <Header title={t('subscriptions.title')} />
@@ -138,8 +130,18 @@ export default function Subscriptions() {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <svg className="w-16 h-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-16 h-16 text-red-500 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <h3 className="text-lg font-semibold text-gray-400 mb-2">{error}</h3>
             <motion.button
@@ -152,8 +154,18 @@ export default function Subscriptions() {
           </div>
         ) : !hasSubscriptions ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            <svg
+              className="w-16 h-16 text-gray-600 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
             </svg>
             <h3 className="text-lg font-semibold text-gray-400 mb-2">{t('subscriptions.empty')}</h3>
             <p className="text-sm text-gray-500">{t('subscriptions.emptyDesc')}</p>
@@ -166,18 +178,18 @@ export default function Subscriptions() {
                 FREE: {
                   bg: 'bg-gray-500/20',
                   text: 'text-gray-400',
-                  label: 'FREE'
+                  label: 'FREE',
                 },
                 BASIC: {
                   bg: 'bg-blue-500/20',
                   text: 'text-blue-400',
-                  label: 'BASIC'
+                  label: 'BASIC',
                 },
                 PRO: {
                   bg: 'bg-orange-500/20',
                   text: 'text-orange-400',
-                  label: 'PRO'
-                }
+                  label: 'PRO',
+                },
               };
 
               const tier = subscription.tier?.toUpperCase() || 'FREE';
@@ -199,20 +211,29 @@ export default function Subscriptions() {
                     {/* Left side - main information */}
                     <div className="flex-1 space-y-2">
                       {/* Shop name */}
-                      <h3 className="text-xl font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
+                      <h3
+                        className="text-xl font-bold text-white"
+                        style={{ letterSpacing: '-0.01em' }}
+                      >
                         {subscription.shopName}
                       </h3>
 
                       {/* Tier badge + Status indicator */}
                       <div className="flex items-center gap-2">
                         {/* Tier badge */}
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${config.bg} ${config.text}`}>
+                        <span
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${config.bg} ${config.text}`}
+                        >
                           {config.label}
                         </span>
 
                         {/* Status indicator */}
-                        <span className={`flex items-center gap-1.5 text-xs font-medium ${isActive ? 'text-green-400' : 'text-gray-500'}`}>
-                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                        <span
+                          className={`flex items-center gap-1.5 text-xs font-medium ${isActive ? 'text-green-400' : 'text-gray-500'}`}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-400' : 'bg-gray-500'}`}
+                          ></span>
                           {isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>

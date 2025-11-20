@@ -24,7 +24,7 @@ export const processedWebhookQueries = {
     } catch (error) {
       logger.error('[ProcessedWebhookQueries] Error checking if processed', {
         error: error.message,
-        webhookId
+        webhookId,
       });
       throw error;
     }
@@ -52,7 +52,7 @@ export const processedWebhookQueries = {
         webhookId,
         source,
         txHash,
-        payload ? JSON.stringify(payload) : null
+        payload ? JSON.stringify(payload) : null,
       ]);
 
       return result.rows[0] || null;
@@ -61,7 +61,7 @@ export const processedWebhookQueries = {
         error: error.message,
         webhookId,
         source,
-        txHash
+        txHash,
       });
       throw error;
     }
@@ -85,7 +85,7 @@ export const processedWebhookQueries = {
     } catch (error) {
       logger.error('[ProcessedWebhookQueries] Error finding by tx hash', {
         error: error.message,
-        txHash
+        txHash,
       });
       throw error;
     }
@@ -103,17 +103,17 @@ export const processedWebhookQueries = {
       const deletedCount = result.rows[0]?.cleanup_old_webhooks || 0;
 
       logger.info('[ProcessedWebhookQueries] Cleaned up old webhooks', {
-        deletedCount
+        deletedCount,
       });
 
       return deletedCount;
     } catch (error) {
       logger.error('[ProcessedWebhookQueries] Error cleaning up old webhooks', {
-        error: error.message
+        error: error.message,
       });
       throw error;
     }
-  }
+  },
 };
 
 export default processedWebhookQueries;

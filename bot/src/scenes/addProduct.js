@@ -23,7 +23,7 @@ const enterName = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: sellerMessages.addProductNamePrompt,
-      keyboard: cancelButton
+      keyboard: cancelButton,
     });
 
     return ctx.wizard.next();
@@ -59,7 +59,7 @@ const enterPrice = async (ctx) => {
 
     logger.info('product_add_step:price', {
       userId: ctx.from.id,
-      productName: productName
+      productName: productName,
     });
 
     await smartMessage.send(ctx, { text: sellerMessages.addProductPricePrompt });
@@ -98,7 +98,7 @@ const complete = async (ctx) => {
 
     logger.info('product_add_step:confirm', {
       userId: ctx.from.id,
-      price: price
+      price: price,
     });
 
     const { name } = ctx.wizard.state;
@@ -107,11 +107,11 @@ const complete = async (ctx) => {
     if (!ctx.session.shopId) {
       logger.error('No shopId in session when creating product', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
       await smartMessage.send(ctx, {
         text: generalMessages.shopRequired,
-        keyboard: successButtons
+        keyboard: successButtons,
       });
       return await ctx.scene.leave();
     }
@@ -119,11 +119,11 @@ const complete = async (ctx) => {
     if (!ctx.session.token) {
       logger.error('Missing auth token when creating product', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
       await smartMessage.send(ctx, {
         text: generalMessages.authorizationRequired,
-        keyboard: successButtons
+        keyboard: successButtons,
       });
       return await ctx.scene.leave();
     }
@@ -131,13 +131,16 @@ const complete = async (ctx) => {
     // Create product via backend
     await smartMessage.send(ctx, { text: sellerMessages.addProductSaving });
 
-    const product = await productApi.createProduct({
-      name,
-      price,
-      currency: 'USD',
-      shopId: ctx.session.shopId,
-      stockQuantity: 0
-    }, ctx.session.token);
+    const product = await productApi.createProduct(
+      {
+        name,
+        price,
+        currency: 'USD',
+        shopId: ctx.session.shopId,
+        stockQuantity: 0,
+      },
+      ctx.session.token
+    );
 
     // Validate product object
     if (!product || !product.id) {
@@ -149,12 +152,12 @@ const complete = async (ctx) => {
       productId: product.id,
       productName: product.name,
       shopId: ctx.session.shopId,
-      userId: ctx.from.id
+      userId: ctx.from.id,
     });
 
     await smartMessage.send(ctx, {
       text: sellerMessages.addProductSuccess(name, formatPrice(price)),
-      keyboard: successButtons
+      keyboard: successButtons,
     });
 
     // Leave scene
@@ -163,24 +166,19 @@ const complete = async (ctx) => {
     logger.error('Error creating product:', error);
     await smartMessage.send(ctx, {
       text: sellerMessages.addProductError,
-      keyboard: successButtons
+      keyboard: successButtons,
     });
     return await ctx.scene.leave();
   }
 };
 
 // Create wizard scene
-const addProductScene = new Scenes.WizardScene(
-  'addProduct',
-  enterName,
-  enterPrice,
-  complete
-);
+const addProductScene = new Scenes.WizardScene('addProduct', enterName, enterPrice, complete);
 
 // Handle scene leave
 addProductScene.leave(async (ctx) => {
   // FIX BUG #1: Delete user messages (name, price inputs)
-  const userMsgIds = ctx.wizard.state.userMessageIds || [];
+  const userMsgIds = ctx.wizard?.state?.userMessageIds || [];
   for (const msgId of userMsgIds) {
     try {
       await ctx.deleteMessage(msgId);
@@ -190,7 +188,11 @@ addProductScene.leave(async (ctx) => {
     }
   }
 
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left addProduct scene`);
 });
 
@@ -206,10 +208,7 @@ addProductScene.action('cancel_scene', async (ctx) => {
     logger.error('Error in cancel_scene handler:', error);
     // Local error handling - don't throw to avoid infinite spinner
     try {
-      await ctx.editMessageText(
-        generalMessages.actionFailed,
-        successButtons
-      );
+      await ctx.editMessageText(generalMessages.actionFailed, successButtons);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

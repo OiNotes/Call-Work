@@ -1,7 +1,7 @@
 /**
  * Payments Controller Tests
  * Tests for payment validation and NULL address prevention (P0-1)
- * 
+ *
  * Note: Blockchain verification tests are excluded due to ESM mocking limitations
  * Focus is on input validation which is the critical security fix
  */
@@ -14,7 +14,7 @@ import {
   cleanupTestData,
   createTestUser,
   createTestShop,
-  createTestProduct
+  createTestProduct,
 } from './helpers/testDb.js';
 
 const app = createTestApp();
@@ -141,7 +141,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         orderId: 1,
-        
+
         txHash: 'some_hash',
         currency: 'INVALID_CRYPTO', // Invalid crypto type
       })
@@ -155,7 +155,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       .post('/api/payments/verify')
       .send({
         orderId: 1,
-        
+
         txHash: 'btc_tx_hash',
         currency: 'BTC',
       })
@@ -178,7 +178,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         orderId: 999999, // Non-existent order
-        
+
         txHash: 'btc_tx_hash',
         currency: 'BTC',
       })
@@ -201,7 +201,7 @@ describe('POST /api/payments/verify - Validation Tests', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         orderId: 1,
-        
+
         // tx_hash missing
         currency: 'BTC',
       })

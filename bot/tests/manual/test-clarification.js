@@ -20,7 +20,7 @@ function createMockContext(userId, shopId, token) {
       token,
       role: 'seller',
       shopName: 'Test Shop',
-      aiConversation: null
+      aiConversation: null,
     },
     message: { text: '' },
     sendChatAction: () => Promise.resolve(true),
@@ -33,7 +33,7 @@ function createMockContext(userId, shopId, token) {
       deleteMessage: () => {
         console.log('🗑️ Delete message');
         return Promise.resolve(true);
-      }
+      },
     },
     reply: async (text) => {
       console.log('💬 Reply:', text);
@@ -46,7 +46,7 @@ function createMockContext(userId, shopId, token) {
     deleteMessage: () => {
       console.log('🗑️ Delete message (ctx)');
       return Promise.resolve(true);
-    }
+    },
   };
 }
 
@@ -61,7 +61,7 @@ async function testUpdateWithClarification() {
   const mockProducts = [
     { id: 1, name: 'iPhone 12', price: 1000, stock_quantity: 10 },
     { id: 2, name: 'iPhone 13', price: 1200, stock_quantity: 5 },
-    { id: 3, name: 'iPhone 14', price: 1400, stock_quantity: 3 }
+    { id: 3, name: 'iPhone 14', price: 1400, stock_quantity: 3 },
   ];
 
   console.log('📦 Mock products:', mockProducts);
@@ -74,14 +74,14 @@ async function testUpdateWithClarification() {
     shopName: ctx.session.shopName,
     token: ctx.session.token,
     products: mockProducts,
-    ctx
+    ctx,
   });
 
   console.log('Result:', {
     success: result1.success,
     needsClarification: result1.needsClarification,
     message: result1.message,
-    data: result1.data
+    data: result1.data,
   });
 
   if (!result1.needsClarification) {
@@ -98,7 +98,7 @@ async function testUpdateWithClarification() {
   console.log('✅ Clarification stored:', {
     operation: ctx.session.pendingAI.operation,
     options: ctx.session.pendingAI.options?.length,
-    originalCommand: ctx.session.pendingAI.originalCommand
+    originalCommand: ctx.session.pendingAI.originalCommand,
   });
 
   // Step 2: User selects product
@@ -107,11 +107,11 @@ async function testUpdateWithClarification() {
 
   // Mock handleAISelection call
   console.log('Calling handleAISelection...');
-  
+
   // Since we can't easily call handleAISelection directly (needs full Telegraf setup),
   // we'll simulate what it does:
   const selectedProductId = parseInt(ctx.match[1]);
-  const selectedProduct = ctx.session.pendingAI.options.find(p => p.id === selectedProductId);
+  const selectedProduct = ctx.session.pendingAI.options.find((p) => p.id === selectedProductId);
   const originalCommand = ctx.session.pendingAI.originalCommand;
 
   console.log('Selected product:', selectedProduct);
@@ -129,14 +129,14 @@ async function testUpdateWithClarification() {
     products: mockProducts,
     ctx,
     clarifiedProductId: selectedProductId,
-    clarifiedProductName: selectedProduct.name
+    clarifiedProductName: selectedProduct.name,
   });
 
   console.log('\nFinal result:', {
     success: result2.success,
     message: result2.message,
     data: result2.data,
-    operation: result2.operation
+    operation: result2.operation,
   });
 
   if (result2.success) {
@@ -170,7 +170,7 @@ async function testDeleteWithClarification() {
     shopName: ctx.session.shopName,
     token: ctx.session.token,
     products: mockProducts,
-    ctx
+    ctx,
   });
 
   if (!result1.needsClarification) {
@@ -183,7 +183,7 @@ async function testDeleteWithClarification() {
   // Step 2: Select product
   ctx.match = ['ai_select:1', '1'];
   const selectedProductId = parseInt(ctx.match[1]);
-  const selectedProduct = ctx.session.pendingAI.options.find(p => p.id === selectedProductId);
+  const selectedProduct = ctx.session.pendingAI.options.find((p) => p.id === selectedProductId);
   const originalCommand = ctx.session.pendingAI.originalCommand;
 
   delete ctx.session.pendingAI;
@@ -196,12 +196,12 @@ async function testDeleteWithClarification() {
     products: mockProducts,
     ctx,
     clarifiedProductId: selectedProductId,
-    clarifiedProductName: selectedProduct.name
+    clarifiedProductName: selectedProduct.name,
   });
 
   console.log('\nFinal result:', {
     success: result2.success,
-    message: result2.message
+    message: result2.message,
   });
 
   if (result2.success) {
@@ -215,12 +215,12 @@ async function testDeleteWithClarification() {
 (async () => {
   try {
     console.log('\n🧪 Starting AI Clarification Tests...\n');
-    
+
     await testUpdateWithClarification();
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait between tests
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait between tests
+
     await testDeleteWithClarification();
-    
+
     console.log('\n✅ All tests completed\n');
   } catch (error) {
     console.error('\n❌ Test error:', error);

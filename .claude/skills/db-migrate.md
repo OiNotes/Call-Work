@@ -40,7 +40,7 @@ if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
   echo "Starting PostgreSQL..."
   brew services start postgresql@14
   sleep 3
-  
+
   if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
     echo "✅ PostgreSQL started"
   else
@@ -78,7 +78,7 @@ else
   echo "❌ Migrations failed"
   echo ""
   echo "Rolling back from backup..."
-  
+
   if psql telegram_shop < "$BACKUP_FILE" >/dev/null 2>&1; then
     echo "✅ Database restored from backup"
   else
@@ -94,7 +94,7 @@ if [ -n "$MIGRATION_SUCCESS" ]; then
   echo "4. Verifying schema..."
   echo "   Current tables:"
   psql telegram_shop -c "\dt" -t | sed 's/^/     /'
-  
+
   # Check core tables exist
   CORE_TABLES="users shops products orders payments"
   for table in $CORE_TABLES; do
@@ -134,6 +134,7 @@ fi
 ## Tables in database:
 
 Core tables:
+
 - `users` - User accounts
 - `shops` - Shop information
 - `products` - Product listings

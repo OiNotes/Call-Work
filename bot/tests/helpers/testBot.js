@@ -1,6 +1,6 @@
 /**
  * Test Bot Factory для integration-тестов
- * 
+ *
  * Создаёт настоящий Telegraf bot instance без launch()
  * С моками Telegram API и перехватом вызовов
  */
@@ -40,7 +40,7 @@ import { createCallsCaptor } from './callsCaptor.js';
  */
 export function createTestBot(options = {}) {
   const bot = new Telegraf('TEST_BOT_TOKEN', {
-    handlerTimeout: 10000
+    handlerTimeout: 10000,
   });
 
   // Мокаем Telegram API (чтобы не слать реальные запросы)
@@ -50,7 +50,7 @@ export function createTestBot(options = {}) {
       message_id: Math.floor(Math.random() * 10000),
       chat: { id: data?.chat_id || 123 },
       text: data?.text || '',
-      date: Math.floor(Date.now() / 1000)
+      date: Math.floor(Date.now() / 1000),
     };
 
     if (method === 'sendMessage' || method === 'editMessageText') {
@@ -58,11 +58,11 @@ export function createTestBot(options = {}) {
       // Поэтому mock должен возвращать УЖЕ распакованный result (БЕЗ обёртки)
       return Promise.resolve(mockMessage);
     }
-    
+
     if (method === 'answerCbQuery') {
-      return Promise.resolve(true);  // ✅ answerCbQuery возвращает boolean
+      return Promise.resolve(true); // ✅ answerCbQuery возвращает boolean
     }
-    
+
     // Default для всех остальных методов (getMe, getUpdates, etc.)
     return Promise.resolve(mockMessage);
   });
@@ -72,13 +72,13 @@ export function createTestBot(options = {}) {
     message_id: Math.floor(Math.random() * 10000),
     chat: { id: 123 },
     text: 'Mocked message',
-    date: Math.floor(Date.now() / 1000)
+    date: Math.floor(Date.now() / 1000),
   };
   bot.telegram.sendMessage = jest.fn().mockResolvedValue(fallbackMockMessage);
   bot.telegram.editMessageText = jest.fn().mockResolvedValue(fallbackMockMessage);
   bot.telegram.answerCbQuery = jest.fn().mockResolvedValue({ ok: true });
   bot.telegram.deleteMessage = jest.fn().mockResolvedValue(true);
-  bot.telegram.sendChatAction = jest.fn().mockResolvedValue(true);  // AI handler uses this
+  bot.telegram.sendChatAction = jest.fn().mockResolvedValue(true); // AI handler uses this
 
   // Создаём captor для перехвата вызовов
   const captor = createCallsCaptor();
@@ -93,7 +93,7 @@ export function createTestBot(options = {}) {
     createFollowScene,
     paySubscriptionScene,
     upgradeShopScene,
-    markOrdersShippedScene
+    markOrdersShippedScene,
   ]);
 
   // ✅ FIX: Controlled session storage (same as session() middleware but with direct access)
@@ -151,7 +151,7 @@ export function createTestBot(options = {}) {
   setupFollowHandlers(bot);
   setupBuyerHandlers(bot);
   setupCommonHandlers(bot);
-  
+
   // AI Product Management (must be registered last to handle text messages)
   setupAIProductHandlers(bot);
 
@@ -161,7 +161,7 @@ export function createTestBot(options = {}) {
   const handleUpdate = async (update) => {
     await bot.handleUpdate(update);
     // Даём время на асинхронные операции
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
   };
 
   /**
@@ -186,7 +186,7 @@ export function createTestBot(options = {}) {
   const getLastReplyKeyboard = () => {
     const lastReply = captor.getLastReply();
     if (!lastReply?.markup) return null;
-    
+
     // Extract inline_keyboard from markup
     return lastReply.markup.inline_keyboard || lastReply.markup;
   };
@@ -233,7 +233,8 @@ export function createTestBot(options = {}) {
    */
   const setSessionState = (state, chatId = DEFAULT_CHAT_ID) => {
     // Get existing session or create new one
-    const existingSession = sessionStorage.get(chatId) || (options.mockSession ? { ...options.mockSession } : {});
+    const existingSession =
+      sessionStorage.get(chatId) || (options.mockSession ? { ...options.mockSession } : {});
 
     // Merge new state into existing session
     const mergedSession = { ...existingSession, ...state };
@@ -265,17 +266,17 @@ export function createTestBot(options = {}) {
         from: {
           id: DEFAULT_CHAT_ID,
           first_name: 'Test',
-          username: 'testuser'
+          username: 'testuser',
         },
         message: {
           message_id: Math.floor(Math.random() * 10000),
           chat: { id: DEFAULT_CHAT_ID, type: 'private' },
           date: Math.floor(Date.now() / 1000),
-          text: 'Previous message'
+          text: 'Previous message',
         },
         chat_instance: String(Math.floor(Math.random() * 100000)),
-        data: '__enter_scene__' // Fake callback data
-      }
+        data: '__enter_scene__', // Fake callback data
+      },
     };
 
     // Process the update through bot middleware to initialize context
@@ -285,7 +286,7 @@ export function createTestBot(options = {}) {
     if (lastContext && lastContext.scene) {
       await lastContext.scene.enter(sceneName, sceneState);
       // Give time for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
     } else {
       throw new Error('Failed to enter scene: context.scene is not available');
     }
@@ -303,11 +304,11 @@ export function createTestBot(options = {}) {
     wasCallbackAnswered,
     getReplies,
     getSession,
-    setSessionState,  // ← NEW METHOD
-    enterScene,  // ← NEW METHOD for entering scenes programmatically
+    setSessionState, // ← NEW METHOD
+    enterScene, // ← NEW METHOD for entering scenes programmatically
     // Raw access
     telegram: bot.telegram,
-    calls: captor.calls
+    calls: captor.calls,
   };
 }
 
@@ -318,9 +319,9 @@ export function createTestBot(options = {}) {
  */
 export function createTestBotWithMockedApi(_mockApi) {
   const testBot = createTestBot();
-  
+
   // mockApi будет управлять axios запросами через axios-mock-adapter
   // в тестах: mock.onPost('/api/shops').reply(201, {...})
-  
+
   return testBot;
 }

@@ -24,6 +24,7 @@ ADD COLUMN IF NOT EXISTS channel_url VARCHAR(255);
 ```
 
 **Параметры:**
+
 - `VARCHAR(255)` - достаточно для Telegram URL (`@channel_name` или `https://t.me/channel_name`)
 - `NULL` allowed - старые магазины могут не иметь канала
 - Индекс для faster lookups
@@ -33,21 +34,23 @@ ADD COLUMN IF NOT EXISTS channel_url VARCHAR(255);
 Обновлён `migrationController.js`:
 
 **Изменения:**
+
 1. SELECT теперь возвращает `channel_url`
 2. После успешного broadcast → UPDATE `channel_url`
 3. Response включает `oldChannelUrl` из БД
 
 **Код:**
+
 ```javascript
 // After broadcast success:
-await pool.query(
-  'UPDATE shops SET channel_url = $1, updated_at = NOW() WHERE id = $2',
-  [newChannelUrl, shopId]
-);
+await pool.query('UPDATE shops SET channel_url = $1, updated_at = NOW() WHERE id = $2', [
+  newChannelUrl,
+  shopId,
+]);
 
 // Response:
 {
-  oldChannelUrl: shop.channel_url || oldChannelUrl || null
+  oldChannelUrl: shop.channel_url || oldChannelUrl || null;
 }
 ```
 
@@ -69,12 +72,12 @@ psql telegram_shop -f backend/database/migrations/009_add_channel_url.sql
 
 ```sql
 -- Проверить что колонка добавлена
-SELECT column_name, data_type, character_maximum_length 
-FROM information_schema.columns 
+SELECT column_name, data_type, character_maximum_length
+FROM information_schema.columns
 WHERE table_name = 'shops' AND column_name = 'channel_url';
 
 -- Проверить индекс
-SELECT indexname FROM pg_indexes 
+SELECT indexname FROM pg_indexes
 WHERE tablename = 'shops' AND indexname = 'idx_shops_channel_url';
 ```
 
@@ -91,6 +94,7 @@ ALTER TABLE shops DROP COLUMN IF EXISTS channel_url;
 ## Backward Compatibility
 
 ✅ **Полностью backward compatible:**
+
 - Колонка `NULL` by default
 - Существующие shops не ломаются
 - IF NOT EXISTS для идемпотентности
@@ -105,10 +109,12 @@ ALTER TABLE shops DROP COLUMN IF EXISTS channel_url;
 ## Зависимости
 
 **Required:**
+
 - PostgreSQL 12+
 - shops table exists
 
 **Modified files:**
+
 - `backend/database/migrations/009_add_channel_url.sql` (NEW)
 - `backend/src/controllers/migrationController.js` (MODIFIED)
 - `backend/database/schema.sql` (to be updated)

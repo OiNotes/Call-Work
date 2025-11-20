@@ -45,8 +45,14 @@ const rippleVariants = {
 };
 
 function InteractiveListItem(
-  { as = MotionButton, children, className = '', rippleColor = 'rgba(255, 140, 66, 0.35)', ...props },
-  ref,
+  {
+    as = MotionButton,
+    children,
+    className = '',
+    rippleColor = 'rgba(255, 140, 66, 0.35)',
+    ...props
+  },
+  ref
 ) {
   const Component = as;
 
@@ -67,7 +73,9 @@ function InteractiveListItem(
 
       <motion.span
         className="absolute inset-0 pointer-events-none"
-        style={{ background: `radial-gradient(circle at center, ${rippleColor} 0%, transparent 70%)` }}
+        style={{
+          background: `radial-gradient(circle at center, ${rippleColor} 0%, transparent 70%)`,
+        }}
         variants={rippleVariants}
       />
 

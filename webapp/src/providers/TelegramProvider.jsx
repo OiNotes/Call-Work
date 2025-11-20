@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import axios from 'axios';
 import { useStore } from '../store/useStore';
 import {
@@ -9,7 +17,7 @@ import {
   hideBackButton,
   hapticFeedback,
   showPopup,
-  closeApp
+  closeApp,
 } from '../utils/telegram';
 
 const TelegramContext = createContext(null);
@@ -27,17 +35,14 @@ export function TelegramProvider({ children }) {
 
   const waitForTelegramSDK = useCallback(async (maxRetries = 10, delay = 200) => {
     for (let i = 0; i < maxRetries; i++) {
-      console.log(`Attempt ${i + 1}/${maxRetries}: Checking for Telegram SDK...`);
-
       if (window.Telegram?.WebApp) {
-        console.log('✅ Telegram SDK found!');
         const data = initTelegramApp();
         if (data) {
           return data;
         }
       }
 
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
     console.error('❌ Telegram SDK not found after', maxRetries, 'retries');
@@ -54,8 +59,8 @@ export function TelegramProvider({ children }) {
         {
           headers: {
             'Content-Type': 'application/json',
-            'x-telegram-init-data': initData
-          }
+            'x-telegram-init-data': initData,
+          },
         }
       );
 
@@ -66,9 +71,7 @@ export function TelegramProvider({ children }) {
       setUser(user);
       setToken(token);
 
-      console.log('✅ Telegram authentication successful:', user);
       setError(null);
-
     } catch (err) {
       console.error('❌ Telegram auth validation failed:', err);
       const errorMessage = err.response?.data?.error || err.message;
@@ -78,11 +81,8 @@ export function TelegramProvider({ children }) {
   }, []); // Stable forever
 
   useEffect(() => {
-    console.log('🔄 Initializing Telegram WebApp...');
-
     // ✅ CRITICAL: Prevent multiple initializations across components
     if (initializationRef.current) {
-      console.log('⏭️ Already initialized, skipping...');
       return;
     }
 
@@ -98,20 +98,13 @@ export function TelegramProvider({ children }) {
         }
 
         setTelegramData(data);
-        console.log('✅ Telegram SDK loaded successfully', {
-          hasInitData: !!data?.tg?.initData,
-          platform: data?.platform,
-          version: data?.version
-        });
 
         // Validate initData with backend
         if (data?.tg?.initData) {
-          console.log('🔐 Validating initData with backend...');
           await validateTelegramAuth(data.tg.initData);
         } else {
           // Development mode or missing initData
           if (import.meta.env.DEV) {
-            console.warn('⚠️ No Telegram initData - running in dev mode');
             setError(null);
           } else {
             console.error('❌ No initData available');
@@ -172,8 +165,8 @@ export function TelegramProvider({ children }) {
       message,
       buttons: [
         { id: 'ok', type: 'ok', text: 'Да' },
-        { id: 'cancel', type: 'cancel', text: 'Отмена' }
-      ]
+        { id: 'cancel', type: 'cancel', text: 'Отмена' },
+      ],
     });
     return result === 'ok';
   }, []);
@@ -183,46 +176,49 @@ export function TelegramProvider({ children }) {
     await showPopup({
       title,
       message,
-      buttons: [{ id: 'ok', type: 'close', text: 'OK' }]
+      buttons: [{ id: 'ok', type: 'close', text: 'OK' }],
     });
   }, []);
 
   // ✅ CRITICAL: Memoize value to prevent re-renders
-  const value = useMemo(() => ({
-    // Data
-    user: telegramData?.user,
-    tg: telegramData?.tg,
-    platform: telegramData?.platform,
-    version: telegramData?.version,
-    isReady,
-    isValidating,
-    error,
+  const value = useMemo(
+    () => ({
+      // Data
+      user: telegramData?.user,
+      tg: telegramData?.tg,
+      platform: telegramData?.platform,
+      version: telegramData?.version,
+      isReady,
+      isValidating,
+      error,
 
-    // Methods (all stable via useCallback)
-    setMainButton,
-    removeMainButton,
-    setBackButton,
-    removeBackButton,
-    triggerHaptic,
-    openPopup,
-    confirm,
-    alert,
-    close,
-  }), [
-    telegramData,
-    isReady,
-    isValidating,
-    error,
-    setMainButton,
-    removeMainButton,
-    setBackButton,
-    removeBackButton,
-    triggerHaptic,
-    openPopup,
-    confirm,
-    alert,
-    close,
-  ]);
+      // Methods (all stable via useCallback)
+      setMainButton,
+      removeMainButton,
+      setBackButton,
+      removeBackButton,
+      triggerHaptic,
+      openPopup,
+      confirm,
+      alert,
+      close,
+    }),
+    [
+      telegramData,
+      isReady,
+      isValidating,
+      error,
+      setMainButton,
+      removeMainButton,
+      setBackButton,
+      removeBackButton,
+      triggerHaptic,
+      openPopup,
+      confirm,
+      alert,
+      close,
+    ]
+  );
 
   return <TelegramContext.Provider value={value}>{children}</TelegramContext.Provider>;
 }

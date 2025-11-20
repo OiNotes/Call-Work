@@ -10,7 +10,7 @@ export async function reply(ctx, text, options = {}) {
   } catch (error) {
     logger.error('cleanReply.reply failed', {
       userId: ctx.from?.id,
-      error: error.message
+      error: error.message,
     });
     throw error;
   }
@@ -39,7 +39,7 @@ export async function replyPhoto(ctx, photo, options = {}) {
   } catch (error) {
     logger.error('cleanReply.replyPhoto failed', {
       userId: ctx.from?.id,
-      error: error.message
+      error: error.message,
     });
     throw error;
   }
@@ -49,5 +49,5 @@ export default {
   reply,
   replyHTML,
   replyMarkdown,
-  replyPhoto
+  replyPhoto,
 };

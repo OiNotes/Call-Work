@@ -23,7 +23,7 @@ describe('followApi - Unit Tests', () => {
     it('успешный запрос → вернуть список подписок', async () => {
       const mockFollows = [
         { id: 1, source_shop_id: 100, mode: 'monitor' },
-        { id: 2, source_shop_id: 200, mode: 'resell', markup_percentage: 20 }
+        { id: 2, source_shop_id: 200, mode: 'resell', markup_percentage: 20 },
       ];
 
       mock.onGet('/follows/my').reply(200, { data: mockFollows });
@@ -47,9 +47,7 @@ describe('followApi - Unit Tests', () => {
     it('API error (500) → пробросить ошибку', async () => {
       mock.onGet('/follows/my').reply(500, { error: 'Server error' });
 
-      await expect(
-        followApi.getMyFollows(1, 'test-token')
-      ).rejects.toThrow();
+      await expect(followApi.getMyFollows(1, 'test-token')).rejects.toThrow();
     });
 
     it('response format: data.data → unwrap correctly', async () => {
@@ -86,7 +84,9 @@ describe('followApi - Unit Tests', () => {
     });
 
     it('передача shopId в params', async () => {
-      mock.onGet('/follows/check-limit').reply(200, { data: { reached: false, count: 0, limit: 2 } });
+      mock
+        .onGet('/follows/check-limit')
+        .reply(200, { data: { reached: false, count: 0, limit: 2 } });
 
       await followApi.checkFollowLimit(999, 'test-token');
 
@@ -98,7 +98,7 @@ describe('followApi - Unit Tests', () => {
     it('создание Monitor подписки → вернуть follow объект', async () => {
       const followData = {
         sourceShopId: 100,
-        mode: 'monitor'
+        mode: 'monitor',
       };
 
       const mockResponse = {
@@ -106,7 +106,7 @@ describe('followApi - Unit Tests', () => {
         source_shop_id: 100,
         target_shop_id: 1,
         mode: 'monitor',
-        markup_percentage: 0
+        markup_percentage: 0,
       };
 
       mock.onPost('/follows').reply(201, { data: mockResponse });
@@ -125,7 +125,7 @@ describe('followApi - Unit Tests', () => {
       const followData = {
         sourceShopId: 200,
         mode: 'resell',
-        markupPercentage: 25
+        markupPercentage: 25,
       };
 
       const mockResponse = {
@@ -133,7 +133,7 @@ describe('followApi - Unit Tests', () => {
         source_shop_id: 200,
         target_shop_id: 1,
         mode: 'resell',
-        markup_percentage: 25
+        markup_percentage: 25,
       };
 
       mock.onPost('/follows').reply(201, { data: mockResponse });
@@ -167,7 +167,7 @@ describe('followApi - Unit Tests', () => {
     it('обновление markup → вернуть обновлённый follow', async () => {
       const mockResponse = {
         id: 10,
-        markup_percentage: 30
+        markup_percentage: 30,
       };
 
       mock.onPut('/follows/10/markup').reply(200, { data: mockResponse });
@@ -205,7 +205,7 @@ describe('followApi - Unit Tests', () => {
       const mockResponse = {
         id: 30,
         mode: 'monitor',
-        markup_percentage: 0
+        markup_percentage: 0,
       };
 
       mock.onPut('/follows/30/mode').reply(200, { data: mockResponse });
@@ -223,7 +223,7 @@ describe('followApi - Unit Tests', () => {
       const mockResponse = {
         id: 40,
         mode: 'resell',
-        markup_percentage: 20
+        markup_percentage: 20,
       };
 
       mock.onPut('/follows/40/mode').reply(200, { data: mockResponse });
@@ -273,17 +273,13 @@ describe('followApi - Unit Tests', () => {
     it('API error (404) → пробросить ошибку', async () => {
       mock.onDelete('/follows/999').reply(404, { error: 'Follow not found' });
 
-      await expect(
-        followApi.deleteFollow(999, 'test-token')
-      ).rejects.toThrow();
+      await expect(followApi.deleteFollow(999, 'test-token')).rejects.toThrow();
     });
 
     it('API error (500) → пробросить ошибку', async () => {
       mock.onDelete('/follows/90').reply(500, { error: 'Cannot delete' });
 
-      await expect(
-        followApi.deleteFollow(90, 'test-token')
-      ).rejects.toThrow();
+      await expect(followApi.deleteFollow(90, 'test-token')).rejects.toThrow();
     });
   });
 

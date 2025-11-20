@@ -3,6 +3,7 @@
 ## Overview
 
 The order status update system now implements:
+
 1. **State Machine Validation** - enforces valid status transitions
 2. **Idempotent Operations** - safe retry semantics for duplicate requests
 3. **Atomic Bulk Updates** - transaction-safe multi-order updates with state validation
@@ -39,7 +40,7 @@ const ORDER_STATE_MACHINE = {
   shipped: ['delivered'],
   delivered: [],
   cancelled: [],
-  expired: []
+  expired: [],
 };
 ```
 
@@ -92,6 +93,7 @@ When the same status is requested (already in target status):
 ```
 
 **Key differences:**
+
 - HTTP 200 (same as normal update)
 - Response includes `"idempotent": true` flag
 - Original data is returned (timestamps unchanged)
@@ -168,6 +170,7 @@ When the same status is requested (already in target status):
 ```
 
 **Key points:**
+
 - `updated_count`: Orders actually updated in database
 - `idempotent_count`: Orders already in target status (not updated)
 - `total_processed`: Total orders processed
@@ -210,20 +213,24 @@ An operation is **idempotent** if performing it multiple times produces the same
 #### Scenario 1: Network Retry (Duplicate Request)
 
 **First Request:**
+
 ```bash
 PATCH /api/orders/123/status
 { "status": "shipped" }
 ```
+
 → Order transitions from `confirmed` to `shipped`
 → Response: `{ "success": true, "data": { status: "shipped" } }`
 
 **Network timeout - client retries...**
 
 **Second Request (identical):**
+
 ```bash
 PATCH /api/orders/123/status
 { "status": "shipped" }
 ```
+
 → Order is already `shipped`
 → Response: `{ "success": true, "idempotent": true, ... }`
 
@@ -373,7 +380,7 @@ describe('Order Status Update - Idempotency', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         order_ids: [confirmedOrderId, alreadyShippedOrderId],
-        status: 'shipped'
+        status: 'shipped',
       });
 
     expect(res.status).toBe(200);
@@ -391,13 +398,14 @@ describe('Order Status Update - Idempotency', () => {
 ### For API Clients
 
 1. **Always implement retry logic with exponential backoff**
+
    ```javascript
    async function updateOrderStatus(orderId, status, maxRetries = 3) {
      for (let attempt = 0; attempt < maxRetries; attempt++) {
        try {
          const response = await fetch(`/api/orders/${orderId}/status`, {
            method: 'PATCH',
-           body: JSON.stringify({ status })
+           body: JSON.stringify({ status }),
          });
 
          if (response.ok) {
@@ -421,6 +429,7 @@ describe('Order Status Update - Idempotency', () => {
    ```
 
 2. **Check idempotent flag in webhook handlers**
+
    ```javascript
    app.post('/webhook/order-update', async (req, res) => {
      const { orderId, status } = req.body;
@@ -446,11 +455,12 @@ describe('Order Status Update - Idempotency', () => {
 ### For Sellers (Telegram Bot)
 
 1. **Safe bulk operations**
+
    ```javascript
    // Can safely call this multiple times (idempotent)
    const result = await ctx.api.orders.bulkUpdateStatus({
      order_ids: [123, 124, 125],
-     status: 'shipped'
+     status: 'shipped',
    });
 
    // Even if network fails and you retry, no duplicates
@@ -470,21 +480,25 @@ describe('Order Status Update - Idempotency', () => {
 ### Log Messages
 
 **Successful transition:**
+
 ```
 INFO: Updated order status: 123 (confirmed → shipped)
 ```
 
 **Idempotent update:**
+
 ```
 INFO: Idempotent status update for order 123: already in status shipped
 ```
 
 **Invalid transition:**
+
 ```
 WARN: Invalid state transition: delivered → pending for order 125
 ```
 
 **Bulk validation failure:**
+
 ```
 WARN: Bulk update rejected due to invalid transitions: [
   { order_id: 125, current_status: 'delivered', requested_status: 'pending', ... }
@@ -505,6 +519,7 @@ WARN: Bulk update rejected due to invalid transitions: [
 ### From Previous Implementation
 
 **Before:**
+
 ```javascript
 // No state machine validation
 await updateStatus(orderId, 'invalid_status'); // Succeeds with bad data
@@ -512,6 +527,7 @@ await updateStatus(orderId, 'shipped'); // Duplicate succeeds twice
 ```
 
 **After:**
+
 ```javascript
 // State machine enforced
 await updateStatus(orderId, 'invalid_status'); // 422 error

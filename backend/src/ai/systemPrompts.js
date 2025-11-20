@@ -12,26 +12,25 @@ export function generateProductAIPrompt(shopName, products = [], options = {}) {
   const productsToShow = products.slice(-50);
   const totalCount = products.length;
 
-  const productsList = productsToShow.length > 0
-    ? productsToShow
-        .map((product, index) => {
-          const priceText = formatPrice(product.price ?? 0);
-          const stock = product.stock_quantity ?? 0;
-          const discount = Number(product.discount_percentage ?? 0);
+  const productsList =
+    productsToShow.length > 0
+      ? productsToShow
+          .map((product, index) => {
+            const priceText = formatPrice(product.price ?? 0);
+            const stock = product.stock_quantity ?? 0;
+            const discount = Number(product.discount_percentage ?? 0);
 
-          if (discount > 0) {
-            const discountText = formatPrice(discount);
-            return `${index + 1}. ${product.name} — ${priceText} (скидка ${discountText}%, остаток ${stock})`;
-          }
+            if (discount > 0) {
+              const discountText = formatPrice(discount);
+              return `${index + 1}. ${product.name} — ${priceText} (скидка ${discountText}%, остаток ${stock})`;
+            }
 
-          return `${index + 1}. ${product.name} — ${priceText} (остаток ${stock})`;
-        })
-        .join('\n')
-    : 'Каталог пуст — добавь первый товар.';
+            return `${index + 1}. ${product.name} — ${priceText} (остаток ${stock})`;
+          })
+          .join('\n')
+      : 'Каталог пуст — добавь первый товар.';
 
-  const summary = totalCount > 50
-    ? `\nВсего товаров: ${totalCount} (показаны последние 50)\n`
-    : '';
+  const summary = totalCount > 50 ? `\nВсего товаров: ${totalCount} (показаны последние 50)\n` : '';
 
   const focusLine = sessionContext.lastProductName
     ? `\n=== Фокус ===\n• Последний товар: ${sessionContext.lastProductName}`
@@ -52,5 +51,5 @@ export function sanitizeUserInput(text) {
 
 export default {
   generateProductAIPrompt,
-  sanitizeUserInput
+  sanitizeUserInput,
 };

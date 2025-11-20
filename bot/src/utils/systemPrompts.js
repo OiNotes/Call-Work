@@ -7,7 +7,7 @@
 /**
  * Generate system prompt for product management
  * Optimized structure: CATALOG → OPERATIONS → RULES → EXAMPLES → ANTI-PATTERNS
- * 
+ *
  * @param {string} shopName - Shop name
  * @param {Array} products - Array of products {id, name, price, stock_quantity}
  * @returns {string} System prompt
@@ -18,7 +18,7 @@ export function generateProductAIPrompt(shopName, products = [], options = {}) {
   const productsToShow = products.slice(-50);
   const totalCount = products.length;
 
-  const formatPrice = price => {
+  const formatPrice = (price) => {
     const num = parseFloat(price);
     if (Number.isNaN(num)) {
       return '0';
@@ -29,12 +29,12 @@ export function generateProductAIPrompt(shopName, products = [], options = {}) {
   const formatProduct = (p, index) => {
     const stock = p.stock_quantity ?? 0;
     let line = `${index + 1}. ${p.name} — ${formatPrice(p.price)}`;
-    
+
     // ВСЕГДА показывать скидку если discount_percentage > 0
     if (p.discount_percentage && Number(p.discount_percentage) > 0) {
       const discountValue = formatPrice(p.discount_percentage);
       line += ` (-${discountValue}%`;
-      
+
       // Дата окончания скидки
       if (p.discount_expires_at) {
         const expiresDate = new Date(p.discount_expires_at);
@@ -42,29 +42,31 @@ export function generateProductAIPrompt(shopName, products = [], options = {}) {
           day: '2-digit',
           month: '2-digit',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
         });
         line += `, до ${formatted}`;
       } else {
         line += `, постоянная`;
       }
-      
+
       line += `)`;
     }
-    
+
     // Остаток
     line += ` — остаток ${stock} шт`;
-    
+
     return line;
   };
 
-  const productsList = productsToShow.length > 0
-    ? productsToShow.map(formatProduct).join('\n')
-    : 'Каталог пока пустой — самое время добавить первый товар.';
+  const productsList =
+    productsToShow.length > 0
+      ? productsToShow.map(formatProduct).join('\n')
+      : 'Каталог пока пустой — самое время добавить первый товар.';
 
-  const summary = totalCount > 50
-    ? `\nВсего товаров: ${totalCount} (показаны последние 50 для экономии контекста)\n`
-    : '';
+  const summary =
+    totalCount > 50
+      ? `\nВсего товаров: ${totalCount} (показаны последние 50 для экономии контекста)\n`
+      : '';
 
   let contextHints = '';
   if (sessionContext && (sessionContext.lastProductName || sessionContext.recentProducts?.length)) {
@@ -273,7 +275,6 @@ System: Executes deletion, shows result
 Будь смелым помощником: действуй мгновенно, отвечай естественно и помогай владельцу магазина достигать целей.`.trim();
 }
 
-
 /**
  * Sanitize user input to prevent prompt injection
  * @param {string} text - User input
@@ -282,19 +283,21 @@ System: Executes deletion, shows result
 export function sanitizeUserInput(text) {
   if (!text || typeof text !== 'string') return '';
 
-  return text
-    // Remove potential system/assistant role injections
-    .replace(/system:|assistant:|user:/gi, '')
-    // Remove thinking tags (DeepSeek R1 specific)
-    .replace(/<think>.*?<\/think>/gi, '')
-    .replace(/<\/think>/gi, '')
-    .replace(/<think>/gi, '')
-    // Trim to max 500 chars
-    .slice(0, 500)
-    .trim();
+  return (
+    text
+      // Remove potential system/assistant role injections
+      .replace(/system:|assistant:|user:/gi, '')
+      // Remove thinking tags (DeepSeek R1 specific)
+      .replace(/<think>.*?<\/think>/gi, '')
+      .replace(/<\/think>/gi, '')
+      .replace(/<think>/gi, '')
+      // Trim to max 500 chars
+      .slice(0, 500)
+      .trim()
+  );
 }
 
 export default {
   generateProductAIPrompt,
-  sanitizeUserInput
+  sanitizeUserInput,
 };

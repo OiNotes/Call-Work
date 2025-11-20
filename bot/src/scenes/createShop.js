@@ -36,7 +36,7 @@ const enterShopName = async (ctx) => {
       logger.info('[CreateShop] Entering with paid subscription - verifying payment', {
         userId: ctx.from.id,
         subscriptionId,
-        tier
+        tier,
       });
 
       const token = ctx.session.token;
@@ -60,16 +60,14 @@ const enterShopName = async (ctx) => {
           logger.error('[CreateShop] Subscription not paid yet!', {
             userId: ctx.from.id,
             subscriptionId,
-            status: paymentStatus.status
+            status: paymentStatus.status,
           });
 
           const { Markup } = await import('telegraf');
           await cleanReply(
             ctx,
             '❌ Подписка ещё не оплачена. Пожалуйста, завершите оплату сначала.',
-            Markup.inlineKeyboard([
-              [Markup.button.callback('🔙 Назад', 'cancel_scene')]
-            ])
+            Markup.inlineKeyboard([[Markup.button.callback('🔙 Назад', 'cancel_scene')]])
           );
           return ctx.scene.leave();
         }
@@ -77,9 +75,8 @@ const enterShopName = async (ctx) => {
         logger.info('[CreateShop] Payment verified successfully', {
           userId: ctx.from.id,
           subscriptionId,
-          tier
+          tier,
         });
-
       } catch (verifyError) {
         logger.error('[CreateShop] Failed to verify payment status:', verifyError);
 
@@ -87,9 +84,7 @@ const enterShopName = async (ctx) => {
         await cleanReply(
           ctx,
           '❌ Не удалось проверить статус оплаты. Попробуйте позже.',
-          Markup.inlineKeyboard([
-            [Markup.button.callback('🔙 Назад', 'cancel_scene')]
-          ])
+          Markup.inlineKeyboard([[Markup.button.callback('🔙 Назад', 'cancel_scene')]])
         );
         return ctx.scene.leave();
       }
@@ -97,7 +92,7 @@ const enterShopName = async (ctx) => {
       // PROMO CODE FLOW - no payment verification needed
       logger.info('[CreateShop] Entering with promo code (no payment required)', {
         userId: ctx.from.id,
-        tier
+        tier,
       });
     }
 
@@ -105,7 +100,7 @@ const enterShopName = async (ctx) => {
       userId: ctx.from.id,
       tier: ctx.wizard.state.tier,
       hasPromo: !!ctx.wizard.state.promoCode,
-      hasPaidSubscription: !!ctx.wizard.state.paidSubscription
+      hasPaidSubscription: !!ctx.wizard.state.paidSubscription,
     });
 
     const message = ctx.wizard.state.paidSubscription
@@ -140,13 +135,19 @@ const handleShopNameAndCreate = async (ctx) => {
 
     // Validation: length 3-100 characters
     if (shopName.length < 3 || shopName.length > 100) {
-      await cleanReply(ctx, `${sellerMessages.createShopNameInvalidLength}\n${sellerMessages.createShopNameHint}`);
+      await cleanReply(
+        ctx,
+        `${sellerMessages.createShopNameInvalidLength}\n${sellerMessages.createShopNameHint}`
+      );
       return;
     }
 
     const validNamePattern = /^[a-zA-Z0-9_]+$/u;
     if (!validNamePattern.test(shopName)) {
-      await cleanReply(ctx, `${sellerMessages.createShopNameInvalidChars}\n${sellerMessages.createShopNameHint}`);
+      await cleanReply(
+        ctx,
+        `${sellerMessages.createShopNameInvalidChars}\n${sellerMessages.createShopNameHint}`
+      );
       return;
     }
 
@@ -157,7 +158,7 @@ const handleShopNameAndCreate = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: sellerMessages.createShopError,
-      keyboard: successButtons
+      keyboard: successButtons,
     });
 
     return await ctx.scene.leave();
@@ -177,7 +178,7 @@ const createShop = async (ctx, shopName) => {
     if (!tier) {
       logger.error('Missing tier when creating shop', {
         userId: ctx.from.id,
-        wizardState: ctx.wizard.state
+        wizardState: ctx.wizard.state,
       });
       throw new Error('Tier is required to create a shop. Please select a plan first.');
     }
@@ -187,20 +188,16 @@ const createShop = async (ctx, shopName) => {
       shopName,
       tier,
       promoProvided: Boolean(promoCode),
-      subscriptionId: subscriptionId
+      subscriptionId: subscriptionId,
     });
 
     if (!ctx.session.token) {
       logger.error('Missing auth token when creating shop', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
 
-      await cleanReply(
-        ctx,
-        generalMessages.authorizationRequired,
-        successButtons
-      );
+      await cleanReply(ctx, generalMessages.authorizationRequired, successButtons);
       return await ctx.scene.leave();
     }
 
@@ -209,7 +206,7 @@ const createShop = async (ctx, shopName) => {
     const payload = {
       name: shopName,
       description: `Магазин ${shopName}`,
-      tier: tier
+      tier: tier,
     };
 
     // Add subscriptionId if present (paid subscription flow)
@@ -243,7 +240,7 @@ const createShop = async (ctx, shopName) => {
       await authApi.updateRole('seller', ctx.session.token);
       logger.info('Auto-switched to seller role after shop creation', {
         userId: ctx.from.id,
-        shopId: shop.id
+        shopId: shop.id,
       });
     } catch (roleError) {
       logger.error('Failed to save seller role to DB:', roleError);
@@ -254,7 +251,7 @@ const createShop = async (ctx, shopName) => {
       shopId: shop.id,
       shopName: shop.name,
       userId: ctx.from.id,
-      tier: shop.tier
+      tier: shop.tier,
     });
 
     try {
@@ -270,7 +267,7 @@ const createShop = async (ctx, shopName) => {
 
     await smartMessage.send(ctx, {
       text: successText,
-      keyboard: successButtons
+      keyboard: successButtons,
     });
 
     return await ctx.scene.leave();
@@ -312,9 +309,11 @@ const createShop = async (ctx, shopName) => {
         return;
       default:
         // Handle "Shop name already taken" by error message text (fallback)
-        if (errorMsg.toLowerCase().includes('already taken') ||
-            errorMsg.toLowerCase().includes('уже занято') ||
-            errorMsg.toLowerCase().includes('already exists')) {
+        if (
+          errorMsg.toLowerCase().includes('already taken') ||
+          errorMsg.toLowerCase().includes('уже занято') ||
+          errorMsg.toLowerCase().includes('already exists')
+        ) {
           await cleanReply(ctx, sellerMessages.createShopNameTaken, cancelButton);
           return;
         }
@@ -325,7 +324,7 @@ const createShop = async (ctx, shopName) => {
     // Generic error - leave scene
     await smartMessage.send(ctx, {
       text: userMessage,
-      keyboard: successButtons
+      keyboard: successButtons,
     });
 
     return await ctx.scene.leave();
@@ -342,7 +341,7 @@ const createShopScene = new Scenes.WizardScene(
 // Handle scene leave
 createShopScene.leave(async (ctx) => {
   // Delete user messages (shop name input)
-  const userMsgIds = ctx.wizard.state.userMessageIds || [];
+  const userMsgIds = ctx.wizard?.state?.userMessageIds || [];
   for (const msgId of userMsgIds) {
     try {
       await ctx.deleteMessage(msgId);
@@ -352,7 +351,11 @@ createShopScene.leave(async (ctx) => {
     }
   }
 
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left createShop scene`);
 });
 
@@ -372,7 +375,7 @@ createShopScene.action('cancel_scene', async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: successButtons
+        keyboard: successButtons,
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

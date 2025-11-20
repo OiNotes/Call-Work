@@ -20,14 +20,14 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 // Initialize DeepSeek
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY
+  apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
 // Mock products
 const products = [
   { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 },
   { id: 2, name: 'MacBook Pro', price: 2499, currency: 'USD', stock_quantity: 5 },
-  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 }
+  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 },
 ];
 
 // Interactive testing
@@ -35,7 +35,7 @@ async function interactiveTest() {
   console.log('\n🎮 Interactive DeepSeek AI Testing');
   console.log('=========================================\n');
   console.log('Текущие товары:');
-  products.forEach(p => console.log(`  - ${p.name} | $${p.price} | ${p.stock_quantity} шт`));
+  products.forEach((p) => console.log(`  - ${p.name} | $${p.price} | ${p.stock_quantity} шт`));
   console.log('\n💡 Попробуй запутать AI! Примеры:');
   console.log('  • "добавь 5 айфонов за 999" (неоднозначно)');
   console.log('  • "подними все цены на 10%" (нет такой функции)');
@@ -47,7 +47,7 @@ async function interactiveTest() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: '🤖 Команда: '
+    prompt: '🤖 Команда: ',
   });
 
   rl.prompt();
@@ -71,12 +71,12 @@ async function interactiveTest() {
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
+          { role: 'user', content: userMessage },
         ],
         tools: productTools,
         tool_choice: 'auto',
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 500,
       });
 
       const message = response.choices[0].message;
@@ -109,7 +109,9 @@ async function interactiveTest() {
               console.log(`   → Продажа: ${args.quantity || 1} шт "${args.productName}"`);
               break;
             case 'bulkDeleteByNames':
-              console.log(`   → Удаление ${args.productNames.length} товаров: ${args.productNames.join(', ')}`);
+              console.log(
+                `   → Удаление ${args.productNames.length} товаров: ${args.productNames.join(', ')}`
+              );
               break;
             case 'bulkDeleteAll':
               console.log(`   → Будут удалены ВСЕ ${products.length} товаров!`);
@@ -127,9 +129,10 @@ async function interactiveTest() {
         console.log('⚠️ AI вернул пустой ответ');
       }
 
-      console.log(`\n📊 Токены: ${response.usage.total_tokens} (prompt: ${response.usage.prompt_tokens}, completion: ${response.usage.completion_tokens})`);
+      console.log(
+        `\n📊 Токены: ${response.usage.total_tokens} (prompt: ${response.usage.prompt_tokens}, completion: ${response.usage.completion_tokens})`
+      );
       console.log('='.repeat(60) + '\n');
-
     } catch (error) {
       console.error('\n❌ Ошибка:', error.message);
     }
@@ -149,7 +152,7 @@ if (!process.env.DEEPSEEK_API_KEY) {
   process.exit(1);
 }
 
-interactiveTest().catch(error => {
+interactiveTest().catch((error) => {
   console.error('❌ Fatal error:', error);
   process.exit(1);
 });

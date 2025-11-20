@@ -18,12 +18,12 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 const mockProducts = [
   { id: 1, name: 'iPhone 15 Pro', price: 999, currency: 'USD', stock_quantity: 10 },
   { id: 2, name: 'MacBook Pro', price: 2499, currency: 'USD', stock_quantity: 5 },
-  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 }
+  { id: 3, name: 'AirPods Pro', price: 249, currency: 'USD', stock_quantity: 20 },
 ];
 
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY
+  apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
 async function testCommand(userMessage) {
@@ -38,19 +38,19 @@ async function testCommand(userMessage) {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+        { role: 'user', content: userMessage },
       ],
       tools: productTools,
       tool_choice: 'auto',
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 500,
     });
 
     const message = response.choices[0].message;
 
     if (message.tool_calls && message.tool_calls.length > 0) {
       console.log('✅ AI RESPONSE: Function Call');
-      message.tool_calls.forEach(call => {
+      message.tool_calls.forEach((call) => {
         console.log(`   Function: ${call.function.name}`);
         console.log(`   Arguments: ${call.function.arguments}`);
         try {
@@ -72,12 +72,8 @@ async function testCommand(userMessage) {
 
 async function runTests() {
   console.log('\n🚀 Testing Discount Functions\n');
-  
-  const tests = [
-    'сделай скидку 30% на iPhone',
-    'убери скидку с MacBook',
-    'подними цены на 10%'
-  ];
+
+  const tests = ['сделай скидку 30% на iPhone', 'убери скидку с MacBook', 'подними цены на 10%'];
 
   for (const test of tests) {
     await testCommand(test);

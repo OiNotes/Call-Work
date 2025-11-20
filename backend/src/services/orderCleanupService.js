@@ -1,5 +1,5 @@
 import { query } from '../config/database.js';
-import { productQueries } from '../models/db.js';
+import { productQueries } from '../database/queries/index.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -47,7 +47,6 @@ async function cancelUnpaidOrders() {
     }
 
     logger.info(`Successfully cancelled ${orders.length} unpaid orders`);
-
   } catch (error) {
     logger.error('Error in cancelUnpaidOrders:', error);
   }
@@ -69,15 +68,14 @@ async function expireOldOrders() {
     );
 
     if (result.rowCount > 0) {
-      const orderIds = result.rows.map(r => r.id);
+      const orderIds = result.rows.map((r) => r.id);
       logger.info(`[expireOldOrders] Expired ${result.rowCount} old orders`, {
         orderIds,
-        totalExpired: result.rowCount
+        totalExpired: result.rowCount,
       });
     }
 
     return result.rows;
-
   } catch (error) {
     logger.error('[expireOldOrders] Error:', error);
     throw error;

@@ -1,10 +1,10 @@
 /**
  * Token Refresh Callback Module
- * 
+ *
  * Breaks circular dependency between useApi and useStore:
  * - useApi needs to refresh tokens without importing useStore
  * - App.jsx initializes the callback on mount
- * 
+ *
  * Pattern: Dependency Injection via callback registration
  */
 
@@ -19,9 +19,8 @@ export function setTokenRefreshCallback(callback) {
     console.error('[tokenRefresh] Invalid callback - must be a function');
     return;
   }
-  
+
   tokenRefreshCallback = callback;
-  console.log('[tokenRefresh] Callback registered successfully');
 }
 
 /**
@@ -35,11 +34,9 @@ export async function refreshAuthToken() {
     console.error('[tokenRefresh]', error);
     throw new Error(error);
   }
-  
+
   try {
-    console.log('[tokenRefresh] Refreshing token...');
     await tokenRefreshCallback();
-    console.log('[tokenRefresh] Token refreshed successfully');
   } catch (error) {
     console.error('[tokenRefresh] Failed to refresh token:', error);
     throw error;

@@ -11,7 +11,7 @@ export const settingsHandlers = [
   // GET /api/wallets/:shopId - кошельки магазина
   http.get(`${BASE_URL}/api/wallets/:shopId`, ({ params }) => {
     const shopId = Number(params.shopId);
-    const wallets = walletsData.filter(w => w.shop_id === shopId && w.is_active);
+    const wallets = walletsData.filter((w) => w.shop_id === shopId && w.is_active);
 
     return HttpResponse.json({ success: true, data: wallets });
   }),
@@ -28,7 +28,7 @@ export const settingsHandlers = [
     return HttpResponse.json({
       success: true,
       data: { shopId, wallets: updatedWallets },
-      message: 'Wallets updated successfully'
+      message: 'Wallets updated successfully',
     });
   }),
 
@@ -42,7 +42,7 @@ export const settingsHandlers = [
     return HttpResponse.json({
       success: true,
       data: { shopId, wallets: updatedWallets },
-      message: 'Wallets updated successfully'
+      message: 'Wallets updated successfully',
     });
   }),
 
@@ -51,33 +51,27 @@ export const settingsHandlers = [
     const body = await request.json();
 
     const newWallet = {
-      id: Math.max(...walletsData.map(w => w.id)) + 1,
+      id: Math.max(...walletsData.map((w) => w.id)) + 1,
       shop_id: body.shop_id,
       currency: body.currency,
       address: body.address,
       is_active: true,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     walletsData.push(newWallet);
     storage.addWallet(newWallet);
 
-    return HttpResponse.json(
-      { success: true, data: newWallet },
-      { status: 201 }
-    );
+    return HttpResponse.json({ success: true, data: newWallet }, { status: 201 });
   }),
 
   // DELETE /api/wallets/:id - удалить кошелек
   http.delete(`${BASE_URL}/api/wallets/:id`, ({ params }) => {
-    const walletIndex = walletsData.findIndex(w => w.id === Number(params.id));
+    const walletIndex = walletsData.findIndex((w) => w.id === Number(params.id));
 
     if (walletIndex === -1) {
-      return HttpResponse.json(
-        { error: 'Wallet not found' },
-        { status: 404 }
-      );
+      return HttpResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
     const wallet = walletsData[walletIndex];
@@ -86,14 +80,14 @@ export const settingsHandlers = [
     walletsData[walletIndex] = {
       ...wallet,
       is_active: false,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     storage.removeWallet(wallet.address);
 
     return HttpResponse.json({
       success: true,
-      message: 'Wallet deleted successfully'
+      message: 'Wallet deleted successfully',
     });
   }),
 
@@ -105,13 +99,10 @@ export const settingsHandlers = [
     const shopId = url.searchParams.get('shopId') || url.searchParams.get('shop_id');
 
     if (!shopId) {
-      return HttpResponse.json(
-        { error: 'shopId is required' },
-        { status: 400 }
-      );
+      return HttpResponse.json({ error: 'shopId is required' }, { status: 400 });
     }
 
-    const workers = workersData.filter(w => w.shop_id === Number(shopId));
+    const workers = workersData.filter((w) => w.shop_id === Number(shopId));
 
     return HttpResponse.json({ success: true, data: workers });
   }),
@@ -121,7 +112,7 @@ export const settingsHandlers = [
     const body = await request.json();
 
     const newWorker = {
-      id: Math.max(...workersData.map(w => w.id), 0) + 1,
+      id: Math.max(...workersData.map((w) => w.id), 0) + 1,
       shop_id: body.shop_id,
       telegram_id: body.telegram_id,
       username: body.username || null,
@@ -131,28 +122,22 @@ export const settingsHandlers = [
       is_active: true,
       invited_by: 1, // Mock user
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     workersData.push(newWorker);
     storage.addWorker(newWorker);
 
-    return HttpResponse.json(
-      { success: true, data: newWorker },
-      { status: 201 }
-    );
+    return HttpResponse.json({ success: true, data: newWorker }, { status: 201 });
   }),
 
   // PUT /api/workers/:id - обновить работника
   http.put(`${BASE_URL}/api/workers/:id`, async ({ params, request }) => {
     const body = await request.json();
-    const workerIndex = workersData.findIndex(w => w.id === Number(params.id));
+    const workerIndex = workersData.findIndex((w) => w.id === Number(params.id));
 
     if (workerIndex === -1) {
-      return HttpResponse.json(
-        { error: 'Worker not found' },
-        { status: 404 }
-      );
+      return HttpResponse.json({ error: 'Worker not found' }, { status: 404 });
     }
 
     const worker = workersData[workerIndex];
@@ -162,7 +147,7 @@ export const settingsHandlers = [
       role: body.role !== undefined ? body.role : worker.role,
       permissions: body.permissions !== undefined ? body.permissions : worker.permissions,
       is_active: body.is_active !== undefined ? body.is_active : worker.is_active,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     workersData[workerIndex] = updatedWorker;
@@ -172,13 +157,10 @@ export const settingsHandlers = [
 
   // DELETE /api/workers/:id - удалить работника
   http.delete(`${BASE_URL}/api/workers/:id`, ({ params }) => {
-    const workerIndex = workersData.findIndex(w => w.id === Number(params.id));
+    const workerIndex = workersData.findIndex((w) => w.id === Number(params.id));
 
     if (workerIndex === -1) {
-      return HttpResponse.json(
-        { error: 'Worker not found' },
-        { status: 404 }
-      );
+      return HttpResponse.json({ error: 'Worker not found' }, { status: 404 });
     }
 
     // Удаляем работника (hard delete в данном случае)
@@ -188,7 +170,7 @@ export const settingsHandlers = [
 
     return HttpResponse.json({
       success: true,
-      message: 'Worker removed successfully'
+      message: 'Worker removed successfully',
     });
-  })
+  }),
 ];

@@ -16,7 +16,7 @@ describe('Create Shop E2E Flow', () => {
     // Mock logger to prevent console spam
     _mockLogger = {
       info: jest.fn(),
-      error: jest.fn()
+      error: jest.fn(),
     };
   });
 
@@ -28,15 +28,15 @@ describe('Create Shop E2E Flow', () => {
     // Step 1: Simulate entering shop name
     const ctx = createTextMessageContext('My Test Shop', {
       session: {
-        token: 'mock-jwt-token'
+        token: 'mock-jwt-token',
       },
       wizard: {
         state: {},
-        next: jest.fn()
+        next: jest.fn(),
       },
       scene: {
-        leave: jest.fn()
-      }
+        leave: jest.fn(),
+      },
     });
 
     // Verify context structure for wizard
@@ -50,8 +50,8 @@ describe('Create Shop E2E Flow', () => {
     // User clicks cancel button
     const ctx = createCallbackContext('cancel_scene', {
       scene: {
-        leave: jest.fn()
-      }
+        leave: jest.fn(),
+      },
     });
 
     // Cancel handler would be called

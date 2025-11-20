@@ -34,7 +34,7 @@ cd "$PROJECT_DIR/backend"
 # Run with coverage
 if npm run test:coverage; then
   echo "  ✅ All backend tests passed"
-  
+
   # Show coverage if available
   if [ -f "coverage/coverage-summary.json" ]; then
     echo "  📊 Coverage:"
@@ -54,7 +54,7 @@ cd "$PROJECT_DIR/bot"
 # Run with coverage
 if npm run test:coverage; then
   echo "  ✅ All bot tests passed"
-  
+
   # Show coverage if available
   if [ -f "coverage/coverage-summary.json" ]; then
     echo "  📊 Coverage:"
@@ -86,6 +86,7 @@ fi
 ## Test types covered:
 
 ### Backend Tests:
+
 - **Unit tests:** Controllers, services, models
 - **Integration tests:** API endpoints with supertest
 - **Database tests:** Queries, transactions
@@ -93,6 +94,7 @@ fi
 Located in: `backend/__tests__/`
 
 ### Bot Tests:
+
 - **Unit tests:** Handlers, helpers, tools
 - **Integration tests:** Full user flows
 - **Mock tests:** Telegram API mocking
@@ -102,6 +104,7 @@ Located in: `bot/tests/`
 ## Available test commands:
 
 ### Backend:
+
 ```bash
 npm test                    # Run all tests
 npm run test:coverage       # Run with coverage
@@ -110,6 +113,7 @@ npm run test:ci             # CI mode (with migrations)
 ```
 
 ### Bot:
+
 ```bash
 npm test                    # Run all tests
 npm run test:coverage       # Run with coverage
@@ -122,6 +126,7 @@ npm run test:e2e            # E2E tests only
 ## Automatic actions:
 
 If tests fail, Claude will:
+
 1. Show failed test details
 2. Read test file to understand what's being tested
 3. Identify the issue (logic error, outdated test, API change)

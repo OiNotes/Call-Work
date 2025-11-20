@@ -101,7 +101,7 @@
     "source_product": {
       "id": 13,
       "name": "NordVPN 2 Years Premium",
-      "price": 89.00,
+      "price": 89.0,
       "stock_quantity": 156,
       "currency": "USD"
     },
@@ -124,14 +124,14 @@
     "source_product": {
       "id": 6,
       "name": "Steam Gift Card $50",
-      "price": 50.00,
+      "price": 50.0,
       "stock_quantity": 245,
       "currency": "USD"
     },
     "synced_product": {
       "id": 106,
       "name": "Steam Gift Card $50",
-      "price": 87.50,
+      "price": 87.5,
       "stock_quantity": 245,
       "currency": "USD"
     },
@@ -239,14 +239,14 @@
     "source_product": {
       "id": 19,
       "name": "Business Audiobook Collection",
-      "price": 79.00,
+      "price": 79.0,
       "stock_quantity": 999999,
       "currency": "EUR"
     },
     "synced_product": {
       "id": 111,
       "name": "Business Audiobook Collection",
-      "price": 237.00,
+      "price": 237.0,
       "stock_quantity": 999999,
       "currency": "EUR"
     },
@@ -308,14 +308,14 @@
     "source_product": {
       "id": 16,
       "name": "Serum Wavetable Synthesizer",
-      "price": 189.00,
+      "price": 189.0,
       "stock_quantity": 45,
       "currency": "USD"
     },
     "synced_product": {
       "id": 114,
       "name": "Serum Wavetable Synthesizer",
-      "price": 283.50,
+      "price": 283.5,
       "stock_quantity": 45,
       "currency": "USD"
     },
@@ -354,14 +354,14 @@
     "source_product": {
       "id": 6,
       "name": "Steam Gift Card $50",
-      "price": 50.00,
+      "price": 50.0,
       "stock_quantity": 245,
       "currency": "USD"
     },
     "synced_product": {
       "id": 201,
       "name": "Steam Gift Card $50",
-      "price": 65.00,
+      "price": 65.0,
       "stock_quantity": 245,
       "currency": "USD"
     },
@@ -400,14 +400,14 @@
     "source_product": {
       "id": 13,
       "name": "NordVPN 2 Years Premium",
-      "price": 89.00,
+      "price": 89.0,
       "stock_quantity": 156,
       "currency": "USD"
     },
     "synced_product": {
       "id": 203,
       "name": "NordVPN 2 Years Premium",
-      "price": 133.50,
+      "price": 133.5,
       "stock_quantity": 156,
       "currency": "USD"
     },

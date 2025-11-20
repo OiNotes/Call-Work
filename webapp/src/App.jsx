@@ -46,12 +46,12 @@ function App() {
   // Инициализация i18n
   useEffect(() => {
     const loadLanguage = async () => {
-      const lang = getLanguage()
-      await initI18n()
-      useStore.getState().setLanguage(lang)
-    }
-    loadLanguage()
-  }, [])
+      const lang = getLanguage();
+      await initI18n();
+      useStore.getState().setLanguage(lang);
+    };
+    loadLanguage();
+  }, []);
 
   // Инициализация Telegram WebApp
   useEffect(() => {
@@ -80,46 +80,68 @@ function App() {
       return;
     }
 
+    const controller = new AbortController();
+
     const checkFollows = async () => {
       try {
-        const { data: shopsResponse } = await get('/shops/my');
+        const { data: shopsResponse } = await get('/shops/my', { signal: controller.signal });
+
+        // Only update state if NOT aborted
+        if (controller.signal.aborted) return;
+
         const shops = Array.isArray(shopsResponse?.data) ? shopsResponse.data : [];
 
         if (!shops.length) {
           // ✅ FIX: Use getState() for stable reference
           useStore.getState().setHasFollows(false);
+          setFollowsChecked(true);
           return;
         }
 
         const primaryShop = shops[0];
         const { data: followsResponse } = await get('/shop-follows', {
-          params: { shop_id: primaryShop.id }
+          params: { shop_id: primaryShop.id },
+          signal: controller.signal,
         });
 
-        const list = Array.isArray(followsResponse?.data) ? followsResponse.data : followsResponse || [];
+        // Only update state if NOT aborted
+        if (controller.signal.aborted) return;
+
+        const list = Array.isArray(followsResponse?.data)
+          ? followsResponse.data
+          : followsResponse || [];
         // ✅ FIX: Use getState() for stable reference
         useStore.getState().setHasFollows(list.length > 0);
       } catch (fetchError) {
+        // Ignore abort errors
+        if (fetchError.name === 'AbortError') return;
         // Silent failure – tab will appear once пользователь откроет раздел вручную
       } finally {
-        setFollowsChecked(true);
+        if (!controller.signal.aborted) {
+          setFollowsChecked(true);
+        }
       }
     };
 
     checkFollows();
+
+    // Cleanup
+    return () => {
+      controller.abort();
+    };
   }, [isReady, token, followsChecked, hasFollows, get]); // ✅ FIX: Removed setHasFollows from deps
 
   // Page transition variants
   const pageVariants = {
     initial: { opacity: 0, x: -20 },
     enter: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 20 }
+    exit: { opacity: 0, x: 20 },
   };
 
   const pageTransition = {
-    type: "spring",
+    type: 'spring',
     stiffness: 380,
-    damping: 30
+    damping: 30,
   };
 
   const renderPage = () => {
@@ -176,62 +198,60 @@ function App() {
         className="fixed inset-0 flex flex-col overflow-hidden min-h-0"
         style={{ height: 'var(--vh-dynamic)' }}
       >
-      <div
-        className="fixed inset-0 z-0"
-        style={{
-          background: 'linear-gradient(180deg, #0A0A0A 0%, #17212b 100%)'
-        }}
-      />
+        <div
+          className="fixed inset-0 z-0"
+          style={{
+            background: 'linear-gradient(180deg, #0A0A0A 0%, #17212b 100%)',
+          }}
+        />
 
-      <div
-        className="fixed inset-0 z-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(circle at 50% 20%, rgba(255, 107, 0, 0.03), transparent 60%)`,
-          opacity: 0.6
-        }}
-      />
+        <div
+          className="fixed inset-0 z-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 20%, rgba(255, 107, 0, 0.03), transparent 60%)`,
+            opacity: 0.6,
+          }}
+        />
 
-      {import.meta.env.DEV && (
-        <div className="fixed top-2 right-2 z-50">
-          <div
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-              isConnected
-                ? 'bg-green-500/20 text-green-400'
-                : 'bg-red-500/20 text-red-400'
-            }`}
-          >
-            {isConnected ? '🟢 WS Connected' : '🔴 WS Disconnected'}
-          </div>
-        </div>
-      )}
-
-      <div
-        className="scroll-container relative z-10 flex-1 min-h-0 overflow-y-auto"
-        data-platform={platform}
-      >
-        <Suspense fallback={<PageLoader />}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial="initial"
-              animate="enter"
-              exit="exit"
-              variants={pageVariants}
-              transition={pageTransition}
+        {import.meta.env.DEV && (
+          <div className="fixed top-2 right-2 z-50">
+            <div
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                isConnected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+              }`}
             >
-              {renderPage()}
-            </motion.div>
-          </AnimatePresence>
-        </Suspense>
-      </div>
+              {isConnected ? '🟢 WS Connected' : '🔴 WS Disconnected'}
+            </div>
+          </div>
+        )}
 
-      <div className="relative z-20">
-        <TabBarPortal />
-        <CartSheet />
-        <PaymentFlowManager />
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
-        <OfflineBanner />
-      </div>
+        <div
+          className="scroll-container relative z-10 flex-1 min-h-0 overflow-y-auto"
+          data-platform={platform}
+        >
+          <Suspense fallback={<PageLoader />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial="initial"
+                animate="enter"
+                exit="exit"
+                variants={pageVariants}
+                transition={pageTransition}
+              >
+                {renderPage()}
+              </motion.div>
+            </AnimatePresence>
+          </Suspense>
+        </div>
+
+        <div className="relative z-20">
+          <TabBarPortal />
+          <CartSheet />
+          <PaymentFlowManager />
+          <ToastContainer toasts={toasts} removeToast={removeToast} />
+          <OfflineBanner />
+        </div>
       </div>
     </LazyMotion>
   );

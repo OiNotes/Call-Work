@@ -1,17 +1,17 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-const dropConsole = process.env.DROP_CONSOLE === 'true'
+const dropConsole = process.env.DROP_CONSOLE === 'true';
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true,
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,  // Enable source maps for debugging minified code
+    sourcemap: true, // Enable source maps for debugging minified code
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -29,9 +29,9 @@ export default defineConfig({
         manualChunks: {
           // Vendor chunks for better caching
           'react-vendor': ['react', 'react-dom'],
-          'animation': ['framer-motion'],
-          'state': ['zustand'],
-          'telegram': ['@telegram-apps/sdk'],
+          animation: ['framer-motion'],
+          state: ['zustand'],
+          telegram: ['@telegram-apps/sdk'],
           // QR code now lazy-loaded, remove from vendor chunk
         },
       },
@@ -41,4 +41,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'framer-motion', 'zustand'],
   },
-})
+});

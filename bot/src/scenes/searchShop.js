@@ -22,7 +22,7 @@ const enterShopName = async (ctx) => {
 
     await smartMessage.send(ctx, {
       text: searchMessages.prompt,
-      keyboard: cancelButton
+      keyboard: cancelButton,
     });
 
     return ctx.wizard.next();
@@ -38,7 +38,7 @@ const showResults = async (ctx) => {
     // Get shop name from message
     if (!ctx.message || !ctx.message.text) {
       await smartMessage.send(ctx, {
-        text: searchMessages.inputRequired
+        text: searchMessages.inputRequired,
       });
       return;
     }
@@ -54,18 +54,18 @@ const showResults = async (ctx) => {
 
     if (query.length < 2) {
       await smartMessage.send(ctx, {
-        text: searchMessages.tooShort
+        text: searchMessages.tooShort,
       });
       return;
     }
 
     logger.info('shop_search_step:query', {
       userId: ctx.from.id,
-      query: query
+      query: query,
     });
 
     await smartMessage.send(ctx, {
-      text: searchMessages.searching
+      text: searchMessages.searching,
     });
 
     // Search shops via backend
@@ -74,7 +74,7 @@ const showResults = async (ctx) => {
     if (!shops || shops.length === 0) {
       await smartMessage.send(ctx, {
         text: searchMessages.noResults,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
       return await ctx.scene.leave();
     }
@@ -85,13 +85,13 @@ const showResults = async (ctx) => {
     logger.info('shop_search_found', {
       count: shops.length,
       query: query,
-      userId: ctx.from.id
+      userId: ctx.from.id,
     });
 
     // Show ALL results in ONE message
     await smartMessage.send(ctx, {
       text: `${buyerMessages.searchResultsTitle(shops.length)}\n${shopList}`,
-      keyboard: shopResultsKeyboard(shops)
+      keyboard: shopResultsKeyboard(shops),
     });
 
     // Leave scene
@@ -100,22 +100,22 @@ const showResults = async (ctx) => {
     logger.error('Error searching shops:', error);
     await smartMessage.send(ctx, {
       text: searchMessages.error,
-      keyboard: buyerMenu
+      keyboard: buyerMenu,
     });
     return await ctx.scene.leave();
   }
 };
 
 // Create wizard scene
-const searchShopScene = new Scenes.WizardScene(
-  'searchShop',
-  enterShopName,
-  showResults
-);
+const searchShopScene = new Scenes.WizardScene('searchShop', enterShopName, showResults);
 
 // Handle scene leave
 searchShopScene.leave(async (ctx) => {
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left searchShop scene`);
 });
 
@@ -134,7 +134,7 @@ searchShopScene.action('cancel_scene', async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: buyerMenu
+        keyboard: buyerMenu,
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

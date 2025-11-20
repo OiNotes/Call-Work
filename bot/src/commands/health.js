@@ -19,8 +19,8 @@ import logger from '../utils/logger.js';
 // Admin user IDs (from environment or config)
 const ADMIN_IDS = (process.env.ADMIN_IDS || '')
   .split(',')
-  .map(id => parseInt(id.trim(), 10))
-  .filter(id => !isNaN(id));
+  .map((id) => parseInt(id.trim(), 10))
+  .filter((id) => !isNaN(id));
 
 const BOT_START_TIME = Date.now();
 
@@ -90,7 +90,7 @@ export const handleHealthCommand = async (ctx) => {
 
     // Commands
     lines.push('💬 Команды (топ-5):');
-    analytics.commands.slice(0, 5).forEach(cmd => {
+    analytics.commands.slice(0, 5).forEach((cmd) => {
       lines.push(`${cmd.command}: ${cmd.count} раз, ${cmd.uniqueUsers} польз.`);
     });
     if (analytics.commands.length === 0) {
@@ -100,19 +100,19 @@ export const handleHealthCommand = async (ctx) => {
 
     // Scenes
     lines.push('🎭 Сцены:');
-    analytics.scenes.forEach(scene => {
+    analytics.scenes.forEach((scene) => {
       if (scene.activeNow > 0) {
         lines.push(`${scene.scene}: ${scene.activeNow} активных`);
       }
     });
-    if (analytics.scenes.filter(s => s.activeNow > 0).length === 0) {
+    if (analytics.scenes.filter((s) => s.activeNow > 0).length === 0) {
       lines.push('Нет активных');
     }
     lines.push('');
 
     // Errors
     lines.push('❌ Ошибки (топ-3):');
-    analytics.errors.slice(0, 3).forEach(err => {
+    analytics.errors.slice(0, 3).forEach((err) => {
       lines.push(`${err.handler}: ${err.errorCount} ошибок`);
     });
     if (analytics.errors.length === 0) {
@@ -128,7 +128,6 @@ export const handleHealthCommand = async (ctx) => {
     const healthReport = lines.join('\n');
 
     await ctx.reply(healthReport);
-
   } catch (error) {
     logger.error('Error in /health command:', error);
     await ctx.reply('❌ Ошибка при получении статуса бота.');

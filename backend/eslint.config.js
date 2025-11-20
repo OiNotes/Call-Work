@@ -9,28 +9,31 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.node,
-        ...globals.jest
-      }
+        ...globals.jest,
+      },
     },
     rules: {
       'no-console': 'off',
-      'no-unused-vars': ['error', {
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_'
-      }],
-      'eqeqeq': ['error', 'always'],
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      eqeqeq: ['error', 'always'],
       'prefer-const': 'error',
       'no-var': 'error',
       'no-eval': 'error',
       'no-implied-eval': 'error',
-      'curly': ['error', 'all'],
-      'no-throw-literal': 'error'
-    }
+      curly: ['error', 'all'],
+      'no-throw-literal': 'error',
+    },
   },
   {
     files: ['__tests__/**/*.js', '**/*.test.js'],
     rules: {
-      'no-unused-expressions': 'off'
-    }
-  }
+      'no-unused-expressions': 'off',
+    },
+  },
 ];

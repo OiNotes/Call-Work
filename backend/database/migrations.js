@@ -61,12 +61,11 @@ async function runMigration() {
     `);
 
     console.log('\n✅ Tables created:');
-    result.rows.forEach(row => {
+    result.rows.forEach((row) => {
       console.log(`   - ${row.table_name}`);
     });
 
     console.log('\n✅ Database setup complete!\n');
-
   } catch (error) {
     console.error('❌ Migration failed:');
     console.error(error.message);

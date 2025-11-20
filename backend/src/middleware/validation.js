@@ -16,16 +16,16 @@ export const validate = (req, res, next) => {
       path: req.path,
       method: req.method,
       body: req.body,
-      errors: errors.array()
+      errors: errors.array(),
     });
-    
+
     return res.status(400).json({
       success: false,
       error: 'Validation failed',
-      details: errors.array().map(err => ({
+      details: errors.array().map((err) => ({
         field: err.path,
-        message: err.msg
-      }))
+        message: err.msg,
+      })),
     });
   }
 
@@ -37,19 +37,13 @@ export const validate = (req, res, next) => {
  */
 export const authValidation = {
   login: [
-    body('telegramId')
-      .isInt({ min: 1 })
-      .withMessage('Valid Telegram ID is required'),
-    body('initData')
-      .notEmpty()
-      .withMessage('Telegram init data is required'),
-    validate
+    body('telegramId').isInt({ min: 1 }).withMessage('Valid Telegram ID is required'),
+    body('initData').notEmpty().withMessage('Telegram init data is required'),
+    validate,
   ],
 
   register: [
-    body('telegramId')
-      .isInt({ min: 1 })
-      .withMessage('Valid Telegram ID is required'),
+    body('telegramId').isInt({ min: 1 }).withMessage('Valid Telegram ID is required'),
     body('username')
       .optional()
       .isLength({ min: 3, max: 32 })
@@ -58,15 +52,13 @@ export const authValidation = {
       .notEmpty()
       .isLength({ max: 64 })
       .withMessage('First name is required (max 64 characters)'),
-    validate
+    validate,
   ],
 
   updateRole: [
-    body('role')
-      .isIn(['buyer', 'seller'])
-      .withMessage('Role must be either "buyer" or "seller"'),
-    validate
-  ]
+    body('role').isIn(['buyer', 'seller']).withMessage('Role must be either "buyer" or "seller"'),
+    validate,
+  ],
 };
 
 /**
@@ -99,13 +91,11 @@ export const shopValidation = {
       .trim()
       .isLength({ min: 0, max: 32 })
       .withMessage('Promo code must not exceed 32 characters'),
-    validate
+    validate,
   ],
 
   update: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
+    param('id').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
     body('name')
       .optional()
       .trim()
@@ -128,19 +118,11 @@ export const shopValidation = {
         }
         return true;
       }),
-    body('isActive')
-      .optional()
-      .isBoolean()
-      .withMessage('isActive must be a boolean'),
-    validate
+    body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
+    validate,
   ],
 
-  getById: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
-    validate
-  ]
+  getById: [param('id').isInt({ min: 1 }).withMessage('Valid shop ID is required'), validate],
 };
 
 /**
@@ -148,9 +130,7 @@ export const shopValidation = {
  */
 export const productValidation = {
   create: [
-    body('shopId')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
+    body('shopId').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
     body('name')
       .trim()
       .isLength({ min: 3, max: 200 })
@@ -160,9 +140,7 @@ export const productValidation = {
       .trim()
       .isLength({ max: 1000 })
       .withMessage('Description must not exceed 1000 characters'),
-    body('price')
-      .isFloat({ min: 0.01 })
-      .withMessage('Price must be greater than 0'),
+    body('price').isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('currency')
       .optional()
       .isIn(['BTC', 'ETH', 'USDT', 'LTC', 'USD'])
@@ -171,34 +149,20 @@ export const productValidation = {
       .optional()
       .isInt({ min: 0 })
       .withMessage('stockQuantity must be a non-negative integer'),
-    body('stock')
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage('stock must be a non-negative integer'),
-    body('images')
-      .optional()
-      .isArray()
-      .withMessage('Images must be an array'),
-    body('images.*')
-      .optional()
-      .isURL()
-      .withMessage('Each image must be a valid URL'),
+    body('stock').optional().isInt({ min: 0 }).withMessage('stock must be a non-negative integer'),
+    body('images').optional().isArray().withMessage('Images must be an array'),
+    body('images.*').optional().isURL().withMessage('Each image must be a valid URL'),
     body('category')
       .optional()
       .trim()
       .isLength({ max: 100 })
       .withMessage('Category must not exceed 100 characters'),
-    body('is_preorder')
-      .optional()
-      .isBoolean()
-      .withMessage('is_preorder must be a boolean value'),
-    validate
+    body('is_preorder').optional().isBoolean().withMessage('is_preorder must be a boolean value'),
+    validate,
   ],
 
   update: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid product ID is required'),
+    param('id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
     body('name')
       .optional()
       .trim()
@@ -209,76 +173,47 @@ export const productValidation = {
       .trim()
       .isLength({ max: 1000 })
       .withMessage('Description must not exceed 1000 characters'),
-    body('price')
-      .optional()
-      .isFloat({ min: 0.01 })
-      .withMessage('Price must be greater than 0'),
+    body('price').optional().isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('stockQuantity')
       .optional()
       .isInt({ min: 0 })
       .withMessage('stockQuantity must be a non-negative integer'),
-    body('stock')
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage('stock must be a non-negative integer'),
-    body('isActive')
-      .optional()
-      .isBoolean()
-      .withMessage('isActive must be a boolean'),
-    body('is_preorder')
-      .optional()
-      .isBoolean()
-      .withMessage('is_preorder must be a boolean value'),
-    validate
+    body('stock').optional().isInt({ min: 0 }).withMessage('stock must be a non-negative integer'),
+    body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
+    body('is_preorder').optional().isBoolean().withMessage('is_preorder must be a boolean value'),
+    validate,
   ],
 
-  getById: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid product ID is required'),
-    validate
-  ],
+  getById: [param('id').isInt({ min: 1 }).withMessage('Valid product ID is required'), validate],
 
   list: [
-    query('page')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Page must be a positive integer'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
       .isInt({ min: 1, max: PAGINATION.MAX_LIMIT })
       .withMessage(`Limit must be between 1 and ${PAGINATION.MAX_LIMIT}`),
-    query('shopId')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Shop ID must be a positive integer'),
+    query('shopId').optional().isInt({ min: 1 }).withMessage('Shop ID must be a positive integer'),
     query('category')
       .optional()
       .trim()
       .isLength({ max: 100 })
       .withMessage('Category must not exceed 100 characters'),
-    validate
+    validate,
   ],
 
   bulkDeleteAll: [
-    body('shopId')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
-    validate
+    body('shopId').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
+    validate,
   ],
 
   bulkDeleteByIds: [
-    body('shopId')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
-    body('productIds')
-      .isArray({ min: 1 })
-      .withMessage('productIds must be a non-empty array'),
+    body('shopId').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
+    body('productIds').isArray({ min: 1 }).withMessage('productIds must be a non-empty array'),
     body('productIds.*')
       .isInt({ min: 1 })
       .withMessage('Each product ID must be a positive integer'),
-    validate
-  ]
+    validate,
+  ],
 };
 
 /**
@@ -287,10 +222,7 @@ export const productValidation = {
 export const orderValidation = {
   create: [
     // Support new multi-item format
-    body('items')
-      .optional()
-      .isArray({ min: 1 })
-      .withMessage('items must be a non-empty array'),
+    body('items').optional().isArray({ min: 1 }).withMessage('items must be a non-empty array'),
     body('items.*.productId')
       .optional()
       .isInt({ min: 1 })
@@ -299,68 +231,50 @@ export const orderValidation = {
       .optional()
       .isInt({ min: 1 })
       .withMessage('Each item must have quantity >= 1'),
-    
+
     // Support legacy single-item format (backward compatible)
-    body('productId')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Valid product ID is required'),
-    body('quantity')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Quantity must be at least 1'),
-    
+    body('productId').optional().isInt({ min: 1 }).withMessage('Valid product ID is required'),
+    body('quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
+
     // Common fields
     body('deliveryAddress')
       .optional()
       .trim()
       .isLength({ max: 500 })
       .withMessage('Delivery address must not exceed 500 characters'),
-    
+
     // Custom validator: ensure either items or productId+quantity provided
-    body()
-      .custom((body) => {
-        const hasItems = body.items && Array.isArray(body.items) && body.items.length > 0;
-        const hasLegacy = body.productId && body.quantity;
-        
-        if (!hasItems && !hasLegacy) {
-          throw new Error('Either items array or productId+quantity required');
-        }
-        return true;
-      }),
-    
-    validate
+    body().custom((body) => {
+      const hasItems = body.items && Array.isArray(body.items) && body.items.length > 0;
+      const hasLegacy = body.productId && body.quantity;
+
+      if (!hasItems && !hasLegacy) {
+        throw new Error('Either items array or productId+quantity required');
+      }
+      return true;
+    }),
+
+    validate,
   ],
 
-  getById: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid order ID is required'),
-    validate
-  ],
+  getById: [param('id').isInt({ min: 1 }).withMessage('Valid order ID is required'), validate],
 
   updateStatus: [
-    param('id')
-      .isInt({ min: 1 })
-      .withMessage('Valid order ID is required'),
+    param('id').isInt({ min: 1 }).withMessage('Valid order ID is required'),
     body('status')
       .isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
       .withMessage('Invalid order status'),
-    validate
+    validate,
   ],
 
   bulkUpdateStatus: [
-    body('order_ids')
-      .isArray({ min: 1 })
-      .withMessage('order_ids must be a non-empty array'),
-    body('order_ids.*')
-      .isInt({ min: 1 })
-      .withMessage('Each order ID must be a positive integer'),
+    body('order_ids').isArray({ min: 1 }).withMessage('order_ids must be a non-empty array'),
+    body('order_ids.*').isInt({ min: 1 }).withMessage('Each order ID must be a positive integer'),
     body('status')
       .isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
       .withMessage('Invalid order status'),
-    validate
-  ]
+    validate,
+  ],
 };
 
 /**
@@ -368,25 +282,18 @@ export const orderValidation = {
  */
 export const paymentValidation = {
   verify: [
-    body('orderId')
-      .isInt({ min: 1 })
-      .withMessage('Valid order ID is required'),
-    body('txHash')
-      .notEmpty()
-      .trim()
-      .withMessage('Transaction hash is required'),
+    body('orderId').isInt({ min: 1 }).withMessage('Valid order ID is required'),
+    body('txHash').notEmpty().trim().withMessage('Transaction hash is required'),
     body('currency')
       .isIn(['BTC', 'ETH', 'USDT', 'LTC'])
       .withMessage('Currency must be BTC, ETH, USDT, or LTC'),
-    validate
+    validate,
   ],
 
   getByOrder: [
-    param('orderId')
-      .isInt({ min: 1 })
-      .withMessage('Valid order ID is required'),
-    validate
-  ]
+    param('orderId').isInt({ min: 1 }).withMessage('Valid order ID is required'),
+    validate,
+  ],
 };
 
 /**
@@ -394,16 +301,12 @@ export const paymentValidation = {
  */
 export const walletValidation = {
   getWallets: [
-    param('shopId')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
-    validate
+    param('shopId').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
+    validate,
   ],
 
   updateWallets: [
-    param('shopId')
-      .isInt({ min: 1 })
-      .withMessage('Valid shop ID is required'),
+    param('shopId').isInt({ min: 1 }).withMessage('Valid shop ID is required'),
     body('walletBtc')
       .optional()
       .trim()
@@ -440,8 +343,8 @@ export const walletValidation = {
         }
         return true;
       }),
-    validate
-  ]
+    validate,
+  ],
 };
 
 /**
@@ -465,7 +368,7 @@ export const validateBulkOperation = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('Each order ID must be a positive integer'),
-  validate
+  validate,
 ];
 
 /**
@@ -478,16 +381,13 @@ export const aiValidation = {
       .trim()
       .isLength({ min: 1, max: 1000 })
       .withMessage('Message must be between 1 and 1000 characters'),
-    body('shopId')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('Shop ID must be a positive integer'),
+    body('shopId').optional().isInt({ min: 1 }).withMessage('Shop ID must be a positive integer'),
     body('conversationHistory')
       .optional()
       .isArray({ max: 50 })
       .withMessage('Conversation history cannot exceed 50 messages'),
-    validate
-  ]
+    validate,
+  ],
 };
 
 /**
@@ -495,20 +395,14 @@ export const aiValidation = {
  * Enforces MAX_LIMIT globally to prevent unbounded queries
  */
 export const validateQueryParams = [
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit')
     .optional()
     .isInt({ min: 1, max: PAGINATION.MAX_LIMIT })
     .withMessage(`Limit must be between 1 and ${PAGINATION.MAX_LIMIT}`)
     .customSanitizer((value) => Math.min(parseInt(value, 10), PAGINATION.MAX_LIMIT)),
-  query('offset')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('Offset must be a non-negative integer'),
-  validate
+  query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be a non-negative integer'),
+  validate,
 ];
 
 export default {
@@ -521,5 +415,5 @@ export default {
   walletValidation,
   validateBulkOperation,
   aiValidation,
-  validateQueryParams
+  validateQueryParams,
 };

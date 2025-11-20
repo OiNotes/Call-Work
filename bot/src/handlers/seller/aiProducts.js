@@ -1,5 +1,9 @@
 import { Markup } from 'telegraf';
-import { processProductCommand, saveToConversationHistory, noteProductContext } from '../../services/productAI.js';
+import {
+  processProductCommand,
+  saveToConversationHistory,
+  noteProductContext,
+} from '../../services/productAI.js';
 import { productApi } from '../../utils/api.js';
 import { sellerMenu } from '../../keyboards/seller.js';
 import { isNoiseCommand } from '../../utils/fuzzyMatch.js';
@@ -7,7 +11,9 @@ import logger from '../../utils/logger.js';
 import { reply as cleanReply } from '../../utils/cleanReply.js';
 import * as smartMessage from '../../utils/smartMessage.js';
 import { messages } from '../../texts/messages.js';
-const { seller: { aiProducts: aiMessages } } = messages;
+const {
+  seller: { aiProducts: aiMessages },
+} = messages;
 
 /**
  * AI Product Management Handler
@@ -53,22 +59,22 @@ export async function handleAIProductCommand(ctx) {
         logger.info('Auto-cancelling expired pendingAI operation', {
           userId: ctx.from?.id,
           operation: ctx.session.pendingAI.operation,
-          age: operationAge
+          age: operationAge,
         });
 
         delete ctx.session.pendingAI;
 
         await smartMessage.send(ctx, {
           text: '⏱ Предыдущая операция устарела и отменена.\n\nМожете начать заново.',
-          parseMode: 'HTML'
+          parseMode: 'HTML',
         });
       } else {
         await smartMessage.send(ctx, {
           text: '⚠️ У вас есть незавершенная операция.\n\nВыберите действие:',
           keyboard: Markup.inlineKeyboard([
             [Markup.button.callback('❌ Отменить и начать заново', 'ai_cancel')],
-            [Markup.button.callback('↩️ Вернуться к выбору', 'ai_back_to_selection')]
-          ])
+            [Markup.button.callback('↩️ Вернуться к выбору', 'ai_back_to_selection')],
+          ]),
         });
         return;
       }
@@ -79,7 +85,7 @@ export async function handleAIProductCommand(ctx) {
       // Ignore silently - don't waste tokens on "привет" or "спасибо"
       logger.debug('ai_noise_filtered', {
         userId: ctx.from.id,
-        message: userMessage.slice(0, 50)
+        message: userMessage.slice(0, 50),
       });
       return;
     }
@@ -88,7 +94,7 @@ export async function handleAIProductCommand(ctx) {
     if (ctx.session.aiProcessing) {
       logger.debug('ai_concurrent_blocked', {
         userId: ctx.from.id,
-        message: userMessage.slice(0, 50)
+        message: userMessage.slice(0, 50),
       });
       await smartMessage.send(ctx, { text: aiMessages.processing });
       return;
@@ -101,10 +107,10 @@ export async function handleAIProductCommand(ctx) {
     if (!ctx.session.aiCommands) {
       ctx.session.aiCommands = [];
     }
-    
+
     // Clean old timestamps (older than 1 minute)
     ctx.session.aiCommands = ctx.session.aiCommands.filter(
-      timestamp => Date.now() - timestamp < 60000
+      (timestamp) => Date.now() - timestamp < 60000
     );
 
     // Check rate limit
@@ -134,7 +140,7 @@ export async function handleAIProductCommand(ctx) {
       shopName: ctx.session.shopName,
       token: ctx.session.token,
       products,
-      ctx  // Pass ctx for progress updates and confirmation prompts
+      ctx, // Pass ctx for progress updates and confirmation prompts
     });
 
     // Handle result
@@ -142,7 +148,7 @@ export async function handleAIProductCommand(ctx) {
       // Bulk operation needs confirmation
       await smartMessage.send(ctx, {
         text: result.message,
-        keyboard: result.keyboard
+        keyboard: result.keyboard,
       });
       return;
     }
@@ -157,7 +163,7 @@ export async function handleAIProductCommand(ctx) {
       // AI unavailable - show menu
       await smartMessage.send(ctx, {
         text: result.message,
-        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
       });
       return;
     }
@@ -187,9 +193,8 @@ export async function handleAIProductCommand(ctx) {
       hadPendingOperation: !!ctx.session.pendingAI,
       messagePreview: userMessage.slice(0, 100),
       needsConfirmation: result.needsConfirmation || false,
-      needsClarification: result.needsClarification || false
+      needsClarification: result.needsClarification || false,
     });
-
   } catch (error) {
     logger.error('AI product command handler error:', {
       error: error.message,
@@ -197,14 +202,14 @@ export async function handleAIProductCommand(ctx) {
       userId: ctx.from?.id,
       shopId: ctx.session?.shopId,
       command: userMessage?.substring(0, 100),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Determine error type and provide specific message
     let userErrorMessage = '❌ Произошла ошибка';
     let suggestion = 'Попробуйте ещё раз или используйте меню.';
     let retryButton = null;
-    
+
     if (error.message?.includes('timeout')) {
       userErrorMessage = '⏱ Превышено время ожидания';
       suggestion = 'Попробуйте упростить запрос или повторите позже.';
@@ -220,19 +225,19 @@ export async function handleAIProductCommand(ctx) {
       userErrorMessage = '🔐 Проблема с авторизацией';
       suggestion = 'Перезапустите бота командой /start';
     }
-    
+
     // Graceful error handling
     try {
-      const keyboard = retryButton 
+      const keyboard = retryButton
         ? Markup.inlineKeyboard([
             [retryButton],
-            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+            [Markup.button.callback('↩️ В меню', 'seller:menu')],
           ])
         : sellerMenu(0, { hasFollows: ctx.session?.hasFollows });
-      
+
       await smartMessage.send(ctx, {
         text: `${userErrorMessage}\n\n${suggestion}`,
-        keyboard
+        keyboard,
       });
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -255,26 +260,30 @@ async function handleClarification(ctx, result) {
   ctx.session.pendingAI = {
     operation,
     options,
-    originalCommand: ctx.message?.text,  // Save original user command for re-processing
-    timestamp: Date.now()
+    originalCommand: ctx.message?.text, // Save original user command for re-processing
+    timestamp: Date.now(),
   };
 
   // Create inline keyboard with options
   const keyboard = {
     inline_keyboard: [
-      ...options.map(opt => [{
-        text: `${opt.name} ($${opt.price})`,
-        callback_data: `ai_select:${opt.id}`
-      }]),
-      [{
-        text: '◀️ Назад',
-        callback_data: 'ai_cancel'
-      }]
-    ]
+      ...options.map((opt) => [
+        {
+          text: `${opt.name} ($${opt.price})`,
+          callback_data: `ai_select:${opt.id}`,
+        },
+      ]),
+      [
+        {
+          text: '◀️ Назад',
+          callback_data: 'ai_cancel',
+        },
+      ],
+    ],
   };
 
   await cleanReply(ctx, message, {
-    reply_markup: keyboard
+    reply_markup: keyboard,
   });
 }
 
@@ -291,9 +300,7 @@ export async function handleAISelection(ctx) {
     if (!ctx.session.pendingAI) {
       await ctx.editMessageText(
         '⏳ Операция устарела. Попробуйте снова.',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('↩️ В меню', 'seller:menu')]
-        ])
+        Markup.inlineKeyboard([[Markup.button.callback('↩️ В меню', 'seller:menu')]])
       );
       return;
     }
@@ -301,13 +308,11 @@ export async function handleAISelection(ctx) {
     const { operation, options, originalCommand } = ctx.session.pendingAI;
 
     // Find selected product
-    const selectedProduct = options.find(p => p.id === productId);
+    const selectedProduct = options.find((p) => p.id === productId);
     if (!selectedProduct) {
       await ctx.editMessageText(
         '❌ Товар не найден',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('↩️ В меню', 'seller:menu')]
-        ])
+        Markup.inlineKeyboard([[Markup.button.callback('↩️ В меню', 'seller:menu')]])
       );
       delete ctx.session.pendingAI;
       return;
@@ -329,8 +334,8 @@ export async function handleAISelection(ctx) {
       token: ctx.session.token,
       products,
       ctx,
-      clarifiedProductId: productId,  // Pass selected product ID
-      clarifiedProductName: selectedProduct.name  // Pass selected product name for logging
+      clarifiedProductId: productId, // Pass selected product ID
+      clarifiedProductName: selectedProduct.name, // Pass selected product name for logging
     });
 
     // Handle result - delete processing message first
@@ -349,12 +354,12 @@ export async function handleAISelection(ctx) {
     if (result.needsConfirmation) {
       await smartMessage.send(ctx, {
         text: result.message,
-        keyboard: result.keyboard
+        keyboard: result.keyboard,
       });
     } else if (result.fallbackToMenu) {
       await smartMessage.send(ctx, {
         text: result.message,
-        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+        keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
       });
     } else {
       await cleanReply(ctx, result.message);
@@ -366,17 +371,14 @@ export async function handleAISelection(ctx) {
       operation,
       productId,
       productName: selectedProduct.name,
-      success: result.success
+      success: result.success,
     });
-
   } catch (error) {
     logger.error('AI selection handler error:', error);
     try {
       await ctx.editMessageText(
         '❌ Ошибка обработки. Попробуйте снова.',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('↩️ В меню', 'seller:menu')]
-        ])
+        Markup.inlineKeyboard([[Markup.button.callback('↩️ В меню', 'seller:menu')]])
       );
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -390,25 +392,25 @@ export async function handleAISelection(ctx) {
 export async function handleAICancel(ctx) {
   try {
     await ctx.answerCbQuery();
-    
+
     // Clear pending operation
     delete ctx.session.pendingAI;
-    
+
     // Delete message and show menu
     try {
       await ctx.deleteMessage();
     } catch {
       // Ignore - message might be already deleted
     }
-    
+
     await smartMessage.send(ctx, {
       text: '❌ Операция отменена',
-      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
     });
-    
+
     logger.info('ai_operation_cancelled', {
       userId: ctx.from.id,
-      shopId: ctx.session?.shopId
+      shopId: ctx.session?.shopId,
     });
   } catch (error) {
     logger.error('AI cancel handler error:', error);
@@ -421,22 +423,22 @@ export async function handleAICancel(ctx) {
 export async function handleAIRetry(ctx) {
   try {
     await ctx.answerCbQuery();
-    
+
     // Delete error message
     try {
       await ctx.deleteMessage();
     } catch {
       // Ignore
     }
-    
+
     await smartMessage.send(ctx, {
       text: '💬 Отправьте команду заново:',
-      parseMode: 'HTML'
+      parseMode: 'HTML',
     });
-    
+
     logger.info('ai_retry_requested', {
       userId: ctx.from.id,
-      shopId: ctx.session?.shopId
+      shopId: ctx.session?.shopId,
     });
   } catch (error) {
     logger.error('AI retry handler error:', error);
@@ -449,39 +451,41 @@ export async function handleAIRetry(ctx) {
 export async function handleAIBackToSelection(ctx) {
   try {
     await ctx.answerCbQuery();
-    
+
     const pending = ctx.session.pendingAI;
     if (!pending || !pending.options) {
       await ctx.editMessageText(
         '⏳ Операция устарела. Попробуйте снова.',
-        Markup.inlineKeyboard([
-          [Markup.button.callback('↩️ В меню', 'seller:menu')]
-        ])
+        Markup.inlineKeyboard([[Markup.button.callback('↩️ В меню', 'seller:menu')]])
       );
       delete ctx.session.pendingAI;
       return;
     }
-    
+
     // Recreate selection keyboard
     const keyboard = {
       inline_keyboard: [
-        ...pending.options.map(opt => [{
-          text: `${opt.name} (${opt.price})`,
-          callback_data: `ai_select:${opt.id}`
-        }]),
-        [{
-          text: '◀️ Назад',
-          callback_data: 'ai_cancel'
-        }]
-      ]
+        ...pending.options.map((opt) => [
+          {
+            text: `${opt.name} (${opt.price})`,
+            callback_data: `ai_select:${opt.id}`,
+          },
+        ]),
+        [
+          {
+            text: '◀️ Назад',
+            callback_data: 'ai_cancel',
+          },
+        ],
+      ],
     };
-    
+
     await ctx.editMessageReplyMarkup(keyboard);
-    
+
     logger.info('ai_back_to_selection', {
       userId: ctx.from.id,
       shopId: ctx.session?.shopId,
-      optionsCount: pending.options.length
+      optionsCount: pending.options.length,
     });
   } catch (error) {
     logger.error('AI back to selection handler error:', error);
@@ -494,7 +498,7 @@ const RANDOM_SELECTION_PATTERNS = [
   /\bрандомн\w*\s+товар/iu,
   /\bлюбой\s+товар/iu,
   /\bchoose\s+(?:any|one)/i,
-  /\bpick\s+(?:any|one|random)/i
+  /\bpick\s+(?:any|one|random)/i,
 ];
 
 function shouldSelectRandomProduct(text) {
@@ -503,7 +507,7 @@ function shouldSelectRandomProduct(text) {
   }
 
   const normalized = text.trim().toLowerCase();
-  return RANDOM_SELECTION_PATTERNS.some(pattern => pattern.test(normalized));
+  return RANDOM_SELECTION_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function formatUsdPrice(value) {
@@ -520,12 +524,12 @@ async function handleRandomProductSelection(ctx, userMessage, products) {
     await cleanReply(ctx, replyText);
     saveToConversationHistory(ctx, [
       { role: 'user', content: userMessage },
-      { role: 'assistant', content: replyText }
+      { role: 'assistant', content: replyText },
     ]);
 
     logger.info('ai_random_product_selection_empty', {
       userId: ctx.from.id,
-      shopId: ctx.session.shopId
+      shopId: ctx.session.shopId,
     });
     return;
   }
@@ -542,9 +546,9 @@ async function handleRandomProductSelection(ctx, userMessage, products) {
     : '';
 
   const openers = [
-    name => `Поймал ${name}`,
-    name => `Выберу ${name}`,
-    name => `Давай возьмём ${name}`
+    (name) => `Поймал ${name}`,
+    (name) => `Выберу ${name}`,
+    (name) => `Давай возьмём ${name}`,
   ];
   const opener = openers[Math.floor(Math.random() * openers.length)](product.name);
   const replyText = `${opener}${priceText ? ` за ${priceText}` : ''}${stockInfo}. Что делаем?`;
@@ -552,19 +556,19 @@ async function handleRandomProductSelection(ctx, userMessage, products) {
   await cleanReply(ctx, replyText);
   saveToConversationHistory(ctx, [
     { role: 'user', content: userMessage },
-    { role: 'assistant', content: replyText }
+    { role: 'assistant', content: replyText },
   ]);
 
   noteProductContext(ctx, product, {
     action: 'random_selection',
-    command: userMessage
+    command: userMessage,
   });
 
   logger.info('ai_random_product_selected', {
     userId: ctx.from.id,
     shopId: ctx.session.shopId,
     productId: product.id,
-    productName: product.name
+    productName: product.name,
   });
 }
 
@@ -574,45 +578,45 @@ async function handleRandomProductSelection(ctx, userMessage, products) {
 export async function handleBulkDeleteAllConfirm(ctx) {
   try {
     await ctx.answerCbQuery();
-    
+
     // Delete confirmation message with buttons
     try {
       await ctx.deleteMessage();
     } catch {
       // Ignore if message already deleted
     }
-    
+
     // Show processing message
-    await smartMessage.send(ctx, { 
-      text: '⏳ Удаляю все товары...' 
+    await smartMessage.send(ctx, {
+      text: '⏳ Удаляю все товары...',
     });
-    
+
     // Execute deletion via API
     const shopId = ctx.session?.shopId;
     const token = ctx.session?.token;
-    
+
     if (!shopId || !token) {
       throw new Error('Missing shopId or token in session');
     }
-    
+
     const result = await productApi.bulkDeleteAll(shopId, token);
-    
+
     // Show success message
     await smartMessage.send(ctx, {
       text: `✅ Удалено товаров: ${result.deletedCount}`,
-      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
     });
-    
+
     logger.info('bulk_delete_all_confirmed', {
       userId: ctx.from.id,
       shopId: ctx.session.shopId,
-      deletedCount: result.deletedCount
+      deletedCount: result.deletedCount,
     });
   } catch (error) {
     logger.error('Bulk delete all confirmation error:', error);
     await smartMessage.send(ctx, {
       text: '❌ Ошибка удаления товаров\n\n' + (error.message || 'Попробуйте позже'),
-      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows })
+      keyboard: sellerMenu(0, { hasFollows: ctx.session?.hasFollows }),
     });
   }
 }
@@ -637,5 +641,5 @@ export function setupAIProductHandlers(bot) {
 
 export default {
   handleAIProductCommand,
-  setupAIProductHandlers
+  setupAIProductHandlers,
 };

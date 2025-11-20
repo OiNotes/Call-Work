@@ -21,10 +21,10 @@ const enterTelegramId = async (ctx) => {
 
     // Show context + prompt
     const message = `${sellerMessages.workersContext}\n\n${sellerMessages.workerPrompt}`;
-    
+
     await smartMessage.send(ctx, {
       text: message,
-      keyboard: cancelButton
+      keyboard: cancelButton,
     });
 
     return ctx.wizard.next();
@@ -54,7 +54,7 @@ const confirmAndAdd = async (ctx) => {
       const usernameRegex = /^[a-zA-Z0-9_]{5,32}$/;
       if (!usernameInput || !usernameRegex.test(usernameInput)) {
         await smartMessage.send(ctx, {
-          text: '❌ Некорректный username.\n\nUsername должен:\n• Длина 5-32 символа\n• Только буквы, цифры и _\n\nПример: @john_doe'
+          text: '❌ Некорректный username.\n\nUsername должен:\n• Длина 5-32 символа\n• Только буквы, цифры и _\n\nПример: @john_doe',
         });
         return;
       }
@@ -72,12 +72,12 @@ const confirmAndAdd = async (ctx) => {
         logger.info('manage_workers_lookup_username', {
           requester: ctx.from.id,
           lookup: input,
-          resolvedId: telegramId
+          resolvedId: telegramId,
         });
       } catch (lookupError) {
         logger.warn('Failed to resolve username for worker', {
           lookup: input,
-          error: lookupError.message
+          error: lookupError.message,
         });
         await smartMessage.send(ctx, { text: sellerMessages.workerAddNotFound });
         return;
@@ -98,17 +98,17 @@ const confirmAndAdd = async (ctx) => {
     logger.info('manage_workers_step:confirm', {
       userId: ctx.from.id,
       telegramId,
-      username: usernameInput || null
+      username: usernameInput || null,
     });
 
     if (!ctx.session.shopId) {
       logger.error('No shopId in session when adding worker', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
       await smartMessage.send(ctx, {
         text: generalMessages.shopRequired,
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
       return await ctx.scene.leave();
     }
@@ -116,11 +116,11 @@ const confirmAndAdd = async (ctx) => {
     if (!ctx.session.token) {
       logger.error('Missing auth token when adding worker', {
         userId: ctx.from.id,
-        session: ctx.session
+        session: ctx.session,
       });
       await smartMessage.send(ctx, {
         text: generalMessages.authorizationRequired,
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
       return await ctx.scene.leave();
     }
@@ -133,10 +133,18 @@ const confirmAndAdd = async (ctx) => {
       ctx.session.workerList = existingWorkers;
     }
 
-    if (existingWorkers?.some((worker) => worker.telegram_id === telegramId || (usernameInput && worker.username && worker.username.toLowerCase() === usernameInput.toLowerCase()))) {
+    if (
+      existingWorkers?.some(
+        (worker) =>
+          worker.telegram_id === telegramId ||
+          (usernameInput &&
+            worker.username &&
+            worker.username.toLowerCase() === usernameInput.toLowerCase())
+      )
+    ) {
       await smartMessage.send(ctx, {
         text: sellerMessages.workerAddAlready,
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
       return await ctx.scene.leave();
     }
@@ -148,7 +156,7 @@ const confirmAndAdd = async (ctx) => {
         ctx.session.shopId,
         {
           telegram_id: telegramId,
-          username: usernameInput ? `@${usernameInput}` : undefined
+          username: usernameInput ? `@${usernameInput}` : undefined,
         },
         ctx.session.token
       );
@@ -157,10 +165,12 @@ const confirmAndAdd = async (ctx) => {
         workerId: worker.id,
         telegramId,
         shopId: ctx.session.shopId,
-        addedBy: ctx.from.id
+        addedBy: ctx.from.id,
       });
 
-      const workerName = worker.username ? `@${worker.username}` : worker.first_name || `ID:${telegramId}`;
+      const workerName = worker.username
+        ? `@${worker.username}`
+        : worker.first_name || `ID:${telegramId}`;
 
       if (Array.isArray(existingWorkers)) {
         ctx.session.workerList = [...existingWorkers, worker];
@@ -168,9 +178,8 @@ const confirmAndAdd = async (ctx) => {
 
       await smartMessage.send(ctx, {
         text: sellerMessages.workerAdded(workerName),
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
-
     } catch (error) {
       logger.error('Error adding worker:', error);
 
@@ -190,32 +199,31 @@ const confirmAndAdd = async (ctx) => {
 
       await smartMessage.send(ctx, {
         text: errorMessage,
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
     }
 
     return await ctx.scene.leave();
-
   } catch (error) {
     logger.error('Error in confirmAndAdd step:', error);
     await smartMessage.send(ctx, {
       text: sellerMessages.workerLookupError,
-      keyboard: manageWorkersMenu()
+      keyboard: manageWorkersMenu(),
     });
     return await ctx.scene.leave();
   }
 };
 
 // Create wizard scene
-const manageWorkersScene = new Scenes.WizardScene(
-  'manageWorkers',
-  enterTelegramId,
-  confirmAndAdd
-);
+const manageWorkersScene = new Scenes.WizardScene('manageWorkers', enterTelegramId, confirmAndAdd);
 
 // Handle scene leave
 manageWorkersScene.leave(async (ctx) => {
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left manageWorkers scene`);
 });
 
@@ -229,10 +237,7 @@ manageWorkersScene.action('cancel_scene', async (ctx) => {
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     try {
-      await ctx.editMessageText(
-        generalMessages.actionFailed,
-        manageWorkersMenu()
-      );
+      await ctx.editMessageText(generalMessages.actionFailed, manageWorkersMenu());
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -250,7 +255,7 @@ manageWorkersScene.action('seller:tools', async (ctx) => {
     try {
       await smartMessage.send(ctx, {
         text: generalMessages.actionFailed,
-        keyboard: manageWorkersMenu()
+        keyboard: manageWorkersMenu(),
       });
     } catch (replyError) {
       logger.error('Failed to send fallback message:', replyError);

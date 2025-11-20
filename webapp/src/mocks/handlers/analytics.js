@@ -11,54 +11,51 @@ export const analyticsHandlers = [
     const shopId = url.searchParams.get('shopId') || url.searchParams.get('shop_id');
 
     if (!shopId) {
-      return HttpResponse.json(
-        { error: 'shopId is required' },
-        { status: 400 }
-      );
+      return HttpResponse.json({ error: 'shopId is required' }, { status: 400 });
     }
 
     const id = Number(shopId);
 
     // Заказы магазина
-    const shopOrders = ordersData.filter(o => o.shop_id === id);
+    const shopOrders = ordersData.filter((o) => o.shop_id === id);
 
     // Товары магазина
-    const shopProducts = productsData.filter(p => p.shop_id === id);
+    const shopProducts = productsData.filter((p) => p.shop_id === id);
 
     // Активные товары
-    const activeProducts = shopProducts.filter(p => p.is_active);
+    const activeProducts = shopProducts.filter((p) => p.is_active);
 
     // Общая выручка (только delivered заказы)
     const totalRevenue = shopOrders
-      .filter(o => o.status === 'delivered')
+      .filter((o) => o.status === 'delivered')
       .reduce((sum, o) => sum + o.total_price, 0);
 
     // Pending заказы
-    const pendingOrders = shopOrders.filter(o => o.status === 'pending').length;
+    const pendingOrders = shopOrders.filter((o) => o.status === 'pending').length;
 
     // Confirmed заказы
-    const confirmedOrders = shopOrders.filter(o => o.status === 'confirmed').length;
+    const confirmedOrders = shopOrders.filter((o) => o.status === 'confirmed').length;
 
     // Shipped заказы
-    const shippedOrders = shopOrders.filter(o => o.status === 'shipped').length;
+    const shippedOrders = shopOrders.filter((o) => o.status === 'shipped').length;
 
     // Delivered заказы
-    const deliveredOrders = shopOrders.filter(o => o.status === 'delivered').length;
+    const deliveredOrders = shopOrders.filter((o) => o.status === 'delivered').length;
 
     // Cancelled заказы
-    const cancelledOrders = shopOrders.filter(o => o.status === 'cancelled').length;
+    const cancelledOrders = shopOrders.filter((o) => o.status === 'cancelled').length;
 
     // Топ 5 товаров по продажам
     const productSales = {};
     shopOrders
-      .filter(o => o.status === 'delivered')
-      .forEach(order => {
+      .filter((o) => o.status === 'delivered')
+      .forEach((order) => {
         if (!productSales[order.product_id]) {
           productSales[order.product_id] = {
             product_id: order.product_id,
             product_name: order.product_name,
             quantity_sold: 0,
-            revenue: 0
+            revenue: 0,
           };
         }
         productSales[order.product_id].quantity_sold += order.quantity;
@@ -77,7 +74,7 @@ export const analyticsHandlers = [
       const dateStr = date.toISOString().split('T')[0];
 
       const dayRevenue = shopOrders
-        .filter(o => {
+        .filter((o) => {
           const orderDate = new Date(o.created_at).toISOString().split('T')[0];
           return orderDate === dateStr && o.status === 'delivered';
         })
@@ -85,7 +82,7 @@ export const analyticsHandlers = [
 
       last7Days.push({
         date: dateStr,
-        revenue: dayRevenue
+        revenue: dayRevenue,
       });
     }
 
@@ -107,8 +104,8 @@ export const analyticsHandlers = [
         deliveredOrders: deliveredOrders,
         cancelledOrders: cancelledOrders,
         topProducts: topProducts,
-        revenueChart: last7Days
-      }
+        revenueChart: last7Days,
+      },
     });
   }),
 
@@ -121,33 +118,32 @@ export const analyticsHandlers = [
     const groupBy = url.searchParams.get('groupBy') || 'day'; // day, week, month
 
     if (!shopId) {
-      return HttpResponse.json(
-        { error: 'shopId is required' },
-        { status: 400 }
-      );
+      return HttpResponse.json({ error: 'shopId is required' }, { status: 400 });
     }
 
     const id = Number(shopId);
-    let filtered = ordersData.filter(o => o.shop_id === id && o.status === 'delivered');
+    let filtered = ordersData.filter((o) => o.shop_id === id && o.status === 'delivered');
 
     // Фильтрация по датам
     if (from) {
-      filtered = filtered.filter(o => new Date(o.created_at) >= new Date(from));
+      filtered = filtered.filter((o) => new Date(o.created_at) >= new Date(from));
     }
     if (to) {
-      filtered = filtered.filter(o => new Date(o.created_at) <= new Date(to));
+      filtered = filtered.filter((o) => new Date(o.created_at) <= new Date(to));
     }
 
     // Группировка
     const grouped = {};
-    filtered.forEach(order => {
+    filtered.forEach((order) => {
       let key;
       const date = new Date(order.created_at);
 
       if (groupBy === 'day') {
         key = date.toISOString().split('T')[0];
       } else if (groupBy === 'week') {
-        const weekNum = Math.ceil((date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+        const weekNum = Math.ceil(
+          (date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000)
+        );
         key = `${date.getFullYear()}-W${weekNum}`;
       } else if (groupBy === 'month') {
         key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -158,7 +154,7 @@ export const analyticsHandlers = [
           period: key,
           orders: 0,
           revenue: 0,
-          quantity: 0
+          quantity: 0,
         };
       }
 
@@ -178,8 +174,8 @@ export const analyticsHandlers = [
         sales: sales,
         totalRevenue: filtered.reduce((sum, o) => sum + o.total_price, 0),
         totalOrders: filtered.length,
-        totalQuantity: filtered.reduce((sum, o) => sum + o.quantity, 0)
-      }
+        totalQuantity: filtered.reduce((sum, o) => sum + o.quantity, 0),
+      },
     });
   }),
 
@@ -189,19 +185,16 @@ export const analyticsHandlers = [
     const shopId = url.searchParams.get('shopId') || url.searchParams.get('shop_id');
 
     if (!shopId) {
-      return HttpResponse.json(
-        { error: 'shopId is required' },
-        { status: 400 }
-      );
+      return HttpResponse.json({ error: 'shopId is required' }, { status: 400 });
     }
 
     const id = Number(shopId);
-    const shopProducts = productsData.filter(p => p.shop_id === id);
-    const shopOrders = ordersData.filter(o => o.shop_id === id && o.status === 'delivered');
+    const shopProducts = productsData.filter((p) => p.shop_id === id);
+    const shopOrders = ordersData.filter((o) => o.shop_id === id && o.status === 'delivered');
 
     // Статистика по каждому товару
-    const productStats = shopProducts.map(product => {
-      const productOrders = shopOrders.filter(o => o.product_id === product.id);
+    const productStats = shopProducts.map((product) => {
+      const productOrders = shopOrders.filter((o) => o.product_id === product.id);
       const totalSold = productOrders.reduce((sum, o) => sum + o.quantity, 0);
       const totalRevenue = productOrders.reduce((sum, o) => sum + o.total_price, 0);
 
@@ -215,7 +208,7 @@ export const analyticsHandlers = [
         is_active: product.is_active,
         total_sold: totalSold,
         total_revenue: totalRevenue,
-        orders_count: productOrders.length
+        orders_count: productOrders.length,
       };
     });
 
@@ -228,8 +221,8 @@ export const analyticsHandlers = [
         shop_id: id,
         products: productStats,
         total_products: shopProducts.length,
-        active_products: shopProducts.filter(p => p.is_active).length
-      }
+        active_products: shopProducts.filter((p) => p.is_active).length,
+      },
     });
-  })
+  }),
 ];

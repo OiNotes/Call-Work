@@ -14,7 +14,7 @@ export const authApi = {
       telegramId: telegramUser.id.toString(),
       username: telegramUser.username,
       firstName: telegramUser.first_name,
-      lastName: telegramUser.last_name
+      lastName: telegramUser.last_name,
     });
   },
 
@@ -30,7 +30,7 @@ export const authApi = {
       username: telegramUser.username,
       firstName: telegramUser.first_name,
       lastName: telegramUser.last_name,
-      initData
+      initData,
     });
   },
 
@@ -51,5 +51,5 @@ export const authApi = {
    */
   async updateProfile(token, updates) {
     return await client.put('/api/auth/profile', updates, token);
-  }
+  },
 };

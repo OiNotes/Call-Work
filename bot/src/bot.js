@@ -61,7 +61,7 @@ const redis = new Redis(config.redisUrl, {
     }
     const delay = Math.min(times * 50, 2000);
     return delay;
-  }
+  },
 });
 
 // Connect to Redis
@@ -86,7 +86,7 @@ const stage = new Scenes.Stage([
   paySubscriptionScene,
   upgradeShopScene,
   manageWorkersScene,
-  markOrdersShippedScene
+  markOrdersShippedScene,
 ]);
 
 // Configure session middleware with Redis store
@@ -103,20 +103,25 @@ bot.use((ctx, next) => {
       shopId: ctx.session?.shopId,
       role: ctx.session?.role,
       hasToken: !!ctx.session?.token,
-      updateType: ctx.updateType
+      updateType: ctx.updateType,
     });
   }
   return next();
 });
 
 // Apply middleware
-bot.use(analyticsMiddleware);       // P1-BOT-012: Track usage
-bot.use(userRateLimitMiddleware);   // P1-BOT-014: Rate limiting
-bot.use(debounceMiddleware);        // Prevent rapid clicks
-bot.use(sessionRecoveryMiddleware); // Recover session after restart
+bot.use(analyticsMiddleware); // P1-BOT-012: Track usage
+bot.use(userRateLimitMiddleware); // P1-BOT-014: Rate limiting
+bot.use(debounceMiddleware); // Prevent rapid clicks
 
-// Apply auth and error middleware
-bot.use(authMiddleware);
+// CRITICAL: SessionRecovery MUST run BEFORE authMiddleware
+// sessionRecoveryMiddleware restores shopId from backend API
+// authMiddleware then sees complete session and may skip re-authentication
+bot.use(sessionRecoveryMiddleware); // FIRST: Recover session after restart
+bot.use(authMiddleware); // THEN: Authenticate user (or skip if already authed)
+
+// Error handling
+
 bot.use(errorMiddleware);
 
 // Register commands
@@ -139,13 +144,13 @@ const shutdown = async () => {
   try {
     await bot.stop();
     logger.info('Bot stopped successfully');
-    
+
     // Close Redis connection
     if (redis && redis.status === 'ready') {
       await redis.quit();
       logger.info('Redis connection closed');
     }
-    
+
     process.exit(0);
   } catch (error) {
     logger.error('Error during shutdown:', error);
@@ -167,7 +172,7 @@ bot.catch((err, ctx) => {
       ctx.scene.leave();
       logger.info('Left corrupted scene after error', {
         userId: ctx.from?.id,
-        updateType: ctx.updateType
+        updateType: ctx.updateType,
       });
     } catch (leaveError) {
       logger.error('Failed to leave scene:', leaveError);
@@ -196,8 +201,8 @@ export async function startBot() {
         menu_button: {
           type: 'web_app',
           text: buttonText.myShop,
-          web_app: { url: webappUrl }
-        }
+          web_app: { url: webappUrl },
+        },
       });
       logger.info(`Menu Button configured: ${webappUrl}`);
     } catch (menuError) {
@@ -218,7 +223,8 @@ export async function startBot() {
 
 // Auto-start when run directly (not imported)
 // Check if this file is being run directly (not imported as a module)
-const isMainModule = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
+const isMainModule =
+  process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
 
 if (isMainModule || process.argv[1]?.includes('bot.js')) {
   startBot().catch((error) => {

@@ -26,14 +26,14 @@ export default function SegmentedControl({
   value,
   onChange,
   className = '',
-  size = 'md'
+  size = 'md',
 }) {
   const { triggerHaptic } = useTelegram();
 
   const sizeClasses = {
     sm: 'h-8 text-xs px-3',
     md: 'h-11 text-sm px-4',
-    lg: 'h-12 text-base px-5'
+    lg: 'h-12 text-base px-5',
   };
 
   const handleSelect = (newValue) => {
@@ -53,31 +53,32 @@ export default function SegmentedControl({
     >
       {/* Background sliding pill */}
       <AnimatePresence mode="wait">
-        {options.map((option) => (
-          option.value === value && (
-            <motion.div
-              key={`pill-${option.value}`}
-              layoutId="segmented-pill"
-              className="absolute rounded-full bg-gradient-to-r from-orange-700 to-orange-500 shadow-glow-orange-sm"
-              style={{
-                left: `${(options.findIndex(o => o.value === value) * (100 / options.length)) + 2}%`,
-                right: `${((options.length - options.findIndex(o => o.value === value) - 1) * (100 / options.length)) + 2}%`,
-                top: '4px',
-                bottom: '4px'
-              }}
-              initial={false}
-              animate={{
-                left: `${(options.findIndex(o => o.value === value) * (100 / options.length)) + 2}%`,
-                right: `${((options.length - options.findIndex(o => o.value === value) - 1) * (100 / options.length)) + 2}%`,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 30
-              }}
-            />
-          )
-        ))}
+        {options.map(
+          (option) =>
+            option.value === value && (
+              <motion.div
+                key={`pill-${option.value}`}
+                layoutId="segmented-pill"
+                className="absolute rounded-full bg-gradient-to-r from-orange-700 to-orange-500 shadow-glow-orange-sm"
+                style={{
+                  left: `${options.findIndex((o) => o.value === value) * (100 / options.length) + 2}%`,
+                  right: `${(options.length - options.findIndex((o) => o.value === value) - 1) * (100 / options.length) + 2}%`,
+                  top: '4px',
+                  bottom: '4px',
+                }}
+                initial={false}
+                animate={{
+                  left: `${options.findIndex((o) => o.value === value) * (100 / options.length) + 2}%`,
+                  right: `${(options.length - options.findIndex((o) => o.value === value) - 1) * (100 / options.length) + 2}%`,
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 30,
+                }}
+              />
+            )
+        )}
       </AnimatePresence>
 
       {/* Buttons */}
@@ -92,10 +93,7 @@ export default function SegmentedControl({
               relative z-10 rounded-full font-semibold
               transition-colors duration-200
               ${sizeClasses[size]}
-              ${isSelected
-                ? 'text-white'
-                : 'text-gray-400 hover:text-gray-300'
-              }
+              ${isSelected ? 'text-white' : 'text-gray-400 hover:text-gray-300'}
             `}
             style={{ minWidth: `${100 / options.length - 2}%` }}
           >

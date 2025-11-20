@@ -16,7 +16,7 @@ interface WeeklyActivityChartProps {
 
 export const WeeklyActivityChart = memo(function WeeklyActivityChart({ data }: WeeklyActivityChartProps) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E7" />
         <XAxis

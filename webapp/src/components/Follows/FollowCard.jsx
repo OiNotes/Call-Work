@@ -32,7 +32,10 @@ const FollowCard = ({ follow, onClick }) => {
 
           {/* Content */}
           <div className="min-w-0 flex-1">
-            <h3 className="mb-1 truncate text-base font-bold text-white" style={{ letterSpacing: '-0.01em' }}>
+            <h3
+              className="mb-1 truncate text-base font-bold text-white"
+              style={{ letterSpacing: '-0.01em' }}
+            >
               {follow.source_shop_name}
             </h3>
 
@@ -44,14 +47,15 @@ const FollowCard = ({ follow, onClick }) => {
 
               {follow.mode === 'resell' && follow.markup_percentage && (
                 <div className="flex items-center gap-1 rounded-md bg-orange-primary/10 px-2 py-0.5">
-                  <span className="text-xs font-semibold text-orange-primary">+{follow.markup_percentage}%</span>
+                  <span className="text-xs font-semibold text-orange-primary">
+                    +{follow.markup_percentage}%
+                  </span>
                 </div>
               )}
 
               <div className="text-gray-400">
-                <span className="font-medium text-white">
-                  {follow.source_products_count || 0}
-                </span> товаров
+                <span className="font-medium text-white">{follow.source_products_count || 0}</span>{' '}
+                товаров
               </div>
             </div>
           </div>

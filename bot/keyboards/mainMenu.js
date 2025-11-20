@@ -6,7 +6,7 @@ export function mainMenuKeyboard() {
     [Markup.button.callback('🛍 Каталог магазинов', 'catalog')],
     [Markup.button.callback('⭐️ Мои подписки', 'subscriptions')],
     [Markup.button.callback('🏪 Мой магазин', 'my_shop')],
-    [Markup.button.callback('🌐 Открыть приложение', 'open_webapp')]
+    [Markup.button.callback('🌐 Открыть приложение', 'open_webapp')],
   ]);
 }
 
@@ -30,9 +30,6 @@ export function confirmationKeyboard(confirmAction, cancelAction = 'cancel') {
 // Yes/No keyboard
 export function yesNoKeyboard(yesAction, noAction) {
   return Markup.inlineKeyboard([
-    [
-      Markup.button.callback('✅ Да', yesAction),
-      Markup.button.callback('❌ Нет', noAction),
-    ],
+    [Markup.button.callback('✅ Да', yesAction), Markup.button.callback('❌ Нет', noAction)],
   ]);
 }

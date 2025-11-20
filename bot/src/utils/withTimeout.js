@@ -39,19 +39,16 @@ export const withTimeout = async (ctx, operation, options = {}) => {
     // Race between operation and timeout
     const result = await Promise.race([
       operation(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Operation timeout')), timeout)
-      )
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timeout')), timeout)),
     ]);
 
     return result;
-
   } catch (error) {
     if (error.message === 'Operation timeout') {
       logger.error('Operation timed out', {
         userId: ctx.from?.id,
         timeout,
-        operation: operation.name || 'anonymous'
+        operation: operation.name || 'anonymous',
       });
 
       // Update loading message with timeout error

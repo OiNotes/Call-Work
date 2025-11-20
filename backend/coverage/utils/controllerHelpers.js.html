@@ -222,10 +222,7 @@
 <a name='L157'></a><a href='#L157'>157</a>
 <a name='L158'></a><a href='#L158'>158</a>
 <a name='L159'></a><a href='#L159'>159</a>
-<a name='L160'></a><a href='#L160'>160</a>
-<a name='L161'></a><a href='#L161'>161</a>
-<a name='L162'></a><a href='#L162'>162</a>
-<a name='L163'></a><a href='#L163'>163</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L160'></a><a href='#L160'>160</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -372,9 +369,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -412,12 +406,12 @@ export function <span class="fstat-no" title="function not covered" >handleContr
 <span class="cstat-no" title="statement not covered" >    logger.error(`${operation} - DB error`, {</span>
       error: error.message,
       code: error.code,
-      ...context
+      ...context,
     });
 <span class="cstat-no" title="statement not covered" >    return res.status(handledError.statusCode).json({</span>
       success: false,
       error: handledError.message,
-      ...(handledError.details ? { details: handledError.details } : {})
+      ...(handledError.details ? { details: handledError.details } : {}),
     });
   }
 &nbsp;
@@ -426,11 +420,11 @@ export function <span class="fstat-no" title="function not covered" >handleContr
 <span class="cstat-no" title="statement not covered" >    logger.error(`${operation} - API error`, {</span>
       error: error.message,
       statusCode: error.statusCode,
-      ...context
+      ...context,
     });
 <span class="cstat-no" title="statement not covered" >    return res.status(error.statusCode).json({</span>
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 &nbsp;
@@ -438,11 +432,11 @@ export function <span class="fstat-no" title="function not covered" >handleContr
 <span class="cstat-no" title="statement not covered" >  logger.error(`${operation} - Unexpected error`, {</span>
     error: error.message,
     stack: error.stack,
-    ...context
+    ...context,
   });
 <span class="cstat-no" title="statement not covered" >  return res.status(500).json({</span>
     success: false,
-    error: `Failed to ${operation.toLowerCase()}`
+    error: `Failed to ${operation.toLowerCase()}`,
   });
 }
 &nbsp;
@@ -468,7 +462,7 @@ export function <span class="fstat-no" title="function not covered" >withErrorHa
 <span class="cstat-no" title="statement not covered" >        return handleControllerError(error, res, operation, {</span>
           userId: req.user?.id,
           path: req.path,
-          method: req.method
+          method: req.method,
         });
       }
     };
@@ -487,7 +481,7 @@ export function <span class="fstat-no" title="function not covered" >sendSuccess
   const response = <span class="cstat-no" title="statement not covered" >{</span>
     success: true,
     ...(message &amp;&amp; { message }),
-    data
+    data,
   };
 <span class="cstat-no" title="statement not covered" >  return res.status(statusCode).json(response);</span>
 }
@@ -506,7 +500,7 @@ export function <span class="fstat-no" title="function not covered" >checkOwners
 <span class="cstat-no" title="statement not covered" >  if (!resource) {</span>
 <span class="cstat-no" title="statement not covered" >    res.status(404).json({</span>
       success: false,
-      error: `${resourceName} not found`
+      error: `${resourceName} not found`,
     });
 <span class="cstat-no" title="statement not covered" >    return false;</span>
   }
@@ -514,7 +508,7 @@ export function <span class="fstat-no" title="function not covered" >checkOwners
 <span class="cstat-no" title="statement not covered" >  if (resource.owner_id !== userId) {</span>
 <span class="cstat-no" title="statement not covered" >    res.status(403).json({</span>
       success: false,
-      error: `You can only access your own ${resourceName.toLowerCase()}s`
+      error: `You can only access your own ${resourceName.toLowerCase()}s`,
     });
 <span class="cstat-no" title="statement not covered" >    return false;</span>
   }
@@ -533,10 +527,7 @@ export function <span class="fstat-no" title="function not covered" >parsePagina
   const maxLimit = <span class="cstat-no" title="statement not covered" >options.maxLimit || 100;</span>
 &nbsp;
   const page = <span class="cstat-no" title="statement not covered" >Math.max(1, parseInt(query.page, 10) || 1);</span>
-  const limit = <span class="cstat-no" title="statement not covered" >Math.min(</span>
-    maxLimit,
-    Math.max(1, parseInt(query.limit, 10) || defaultLimit)
-  );
+  const limit = <span class="cstat-no" title="statement not covered" >Math.min(maxLimit, Math.max(1, parseInt(query.limit, 10) || defaultLimit));</span>
   const offset = <span class="cstat-no" title="statement not covered" >(page - 1) * limit;</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return { page, limit, offset };</span>
@@ -547,7 +538,7 @@ export default {
   withErrorHandling,
   sendSuccess,
   checkOwnership,
-  parsePagination
+  parsePagination,
 };
 &nbsp;</pre></td></tr></table></pre>
 
@@ -556,7 +547,7 @@ export default {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-06T08:42:15.844Z
+                at 2025-11-08T16:48:59.527Z
             </div>
         <script src="../prettify.js"></script>
         <script>

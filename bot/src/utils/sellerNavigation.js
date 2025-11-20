@@ -22,7 +22,7 @@ export const showSellerMainMenu = async (ctx) => {
     if (!ctx.session.token) {
       await smartMessage.send(ctx, {
         text: generalMessages.authorizationRequired,
-        keyboard: sellerMenuNoShop
+        keyboard: sellerMenuNoShop,
       });
       return false;
     }
@@ -35,7 +35,7 @@ export const showSellerMainMenu = async (ctx) => {
       if (!Array.isArray(shops) || shops.length === 0) {
         await smartMessage.send(ctx, {
           text: sellerMessages.noShop,
-          keyboard: sellerMenuNoShop
+          keyboard: sellerMenuNoShop,
         });
         return false;
       }
@@ -63,7 +63,7 @@ export const showSellerMainMenu = async (ctx) => {
       weekRevenue = analytics?.summary?.totalRevenue || 0;
     } catch (analyticsError) {
       logger.warn('Failed to fetch weekly analytics for seller menu', {
-        error: analyticsError.message
+        error: analyticsError.message,
       });
     }
 
@@ -72,7 +72,7 @@ export const showSellerMainMenu = async (ctx) => {
       activeCount = await orderApi.getActiveOrdersCount(shopId, ctx.session.token);
     } catch (countError) {
       logger.warn('Failed to fetch active orders count for seller menu', {
-        error: countError.message
+        error: countError.message,
       });
     }
 
@@ -83,22 +83,26 @@ export const showSellerMainMenu = async (ctx) => {
       hasFollows = Array.isArray(follows) && follows.length > 0;
     } catch (followError) {
       logger.warn('Failed to fetch follows for seller menu', {
-        error: followError.message
+        error: followError.message,
       });
     }
     ctx.session.hasFollows = hasFollows;
 
-    const header = sellerMessages.shopPanelWithStats(shopName || 'Магазин', weekRevenue, activeCount);
+    const header = sellerMessages.shopPanelWithStats(
+      shopName || 'Магазин',
+      weekRevenue,
+      activeCount
+    );
     await smartMessage.send(ctx, {
       text: header,
-      keyboard: sellerMenu(activeCount, { hasFollows })
+      keyboard: sellerMenu(activeCount, { hasFollows }),
     });
     return true;
   } catch (error) {
     logger.error('Error showing seller main menu:', error);
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: sellerMenuNoShop
+      keyboard: sellerMenuNoShop,
     });
     return false;
   }
@@ -109,14 +113,14 @@ export const showSellerToolsMenu = async (ctx, isOwnerOverride = null) => {
     const isOwner = isOwnerOverride ?? ctx.session.isShopOwner ?? false;
     await smartMessage.send(ctx, {
       text: sellerMessages.toolsIntro,
-      keyboard: sellerToolsMenu(isOwner)
+      keyboard: sellerToolsMenu(isOwner),
     });
     return true;
   } catch (error) {
     logger.error('Error showing seller tools menu:', error);
     await smartMessage.send(ctx, {
       text: generalMessages.actionFailed,
-      keyboard: sellerMenuNoShop
+      keyboard: sellerMenuNoShop,
     });
     return false;
   }

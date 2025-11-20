@@ -19,14 +19,14 @@ describe('Subscriptions Tests', () => {
         info: jest.fn(),
         error: jest.fn(),
         warn: jest.fn(),
-        debug: jest.fn()
+        debug: jest.fn(),
       };
 
       // Mock subscription API
       mockSubscriptionApi = {
         subscribe: jest.fn(),
         unsubscribe: jest.fn(),
-        checkSubscription: jest.fn()
+        checkSubscription: jest.fn(),
       };
 
       // Mock Telegraf context
@@ -34,10 +34,10 @@ describe('Subscriptions Tests', () => {
         from: { id: 123456, username: 'testuser' },
         callbackQuery: null,
         session: {
-          token: 'mock-token'
+          token: 'mock-token',
         },
         answerCbQuery: jest.fn().mockResolvedValue(true),
-        editMessageReplyMarkup: jest.fn().mockResolvedValue({ message_id: 123 })
+        editMessageReplyMarkup: jest.fn().mockResolvedValue({ message_id: 123 }),
       };
     });
 
@@ -51,7 +51,7 @@ describe('Subscriptions Tests', () => {
 
           mockLogger.info('subscription_subscribe', {
             userId: ctx.from.id,
-            shopId: shopId
+            shopId: shopId,
           });
 
           await mockSubscriptionApi.subscribe(shopId, ctx.session.token);
@@ -61,7 +61,7 @@ describe('Subscriptions Tests', () => {
 
           mockLogger.info('subscription_subscribed', {
             userId: ctx.from.id,
-            shopId: shopId
+            shopId: shopId,
           });
         } catch (error) {
           mockLogger.error('Error subscribing:', error);
@@ -86,7 +86,7 @@ describe('Subscriptions Tests', () => {
 
           mockLogger.info('subscription_unsubscribe', {
             userId: ctx.from.id,
-            shopId: shopId
+            shopId: shopId,
           });
 
           await mockSubscriptionApi.unsubscribe(shopId, ctx.session.token);
@@ -96,7 +96,7 @@ describe('Subscriptions Tests', () => {
 
           mockLogger.info('subscription_unsubscribed', {
             userId: ctx.from.id,
-            shopId: shopId
+            shopId: shopId,
           });
         } catch (error) {
           mockLogger.error('Error unsubscribing:', error);
@@ -130,7 +130,7 @@ describe('Subscriptions Tests', () => {
     it('should handle subscribe error when already subscribed', async () => {
       mockCtx.callbackQuery = { data: 'subscribe:1' };
       mockSubscriptionApi.subscribe.mockRejectedValue({
-        response: { data: { error: 'Already subscribed' } }
+        response: { data: { error: 'Already subscribed' } },
       });
 
       const handleSubscribe = async (ctx) => {
@@ -159,7 +159,7 @@ describe('Subscriptions Tests', () => {
     it('should handle subscribe error when subscribing to own shop', async () => {
       mockCtx.callbackQuery = { data: 'subscribe:1' };
       mockSubscriptionApi.subscribe.mockRejectedValue({
-        response: { data: { error: 'Cannot subscribe to your own shop' } }
+        response: { data: { error: 'Cannot subscribe to your own shop' } },
       });
 
       const handleSubscribe = async (ctx) => {

@@ -1,8 +1,8 @@
 /**
  * Pay Subscription Scene
- * 
+ *
  * Multi-step wizard for paying monthly shop subscription
- * 
+ *
  * Steps:
  * 1. Show pricing and select tier (basic $25 or pro $35)
  * 2. Select cryptocurrency
@@ -12,7 +12,7 @@
  */
 
 import { Scenes, Markup } from 'telegraf';
-import { subscriptionApi, walletApi } from '../utils/api.js';
+import { subscriptionApi, walletApi, shopApi } from '../utils/api.js';
 import logger from '../utils/logger.js';
 import * as smartMessage from '../utils/smartMessage.js';
 import { reply as cleanReply, replyHTML as cleanReplyHTML } from '../utils/cleanReply.js';
@@ -27,12 +27,12 @@ const CHAIN_MAPPINGS = {
   BTC: 'BTC',
   LTC: 'LTC',
   ETH: 'ETH',
-  USDT: 'USDT_TRC20'
+  USDT: 'USDT_TRC20',
 };
 
 const paySubscriptionScene = new Scenes.WizardScene(
   'pay_subscription',
-  
+
   // Step 1: Show pricing and tier selection
   async (ctx) => {
     try {
@@ -47,20 +47,22 @@ const paySubscriptionScene = new Scenes.WizardScene(
         if (!subscriptionId) {
           logger.error('[PaySubscription] Missing subscriptionId!', {
             userId: ctx.from.id,
-            sceneState: ctx.scene.state
+            sceneState: ctx.scene.state,
           });
 
           await cleanReply(ctx, '❌ Ошибка: не удалось создать подписку. Попробуйте снова.');
           return ctx.scene.leave();
         }
 
-        logger.info(`[PaySubscription] Entered with tier: ${enteredWithTier}, subscriptionId: ${subscriptionId}`);
+        logger.info(
+          `[PaySubscription] Entered with tier: ${enteredWithTier}, subscriptionId: ${subscriptionId}`
+        );
 
         // Save to wizard state
         ctx.wizard.state.tier = enteredWithTier;
         ctx.wizard.state.subscriptionId = subscriptionId;
         ctx.wizard.state.createShopAfter = createShopAfter;
-        const amount = enteredWithTier === 'pro' ? '$35' : '$25';
+        const amount = enteredWithTier === 'pro' ? '$1' : '$1';
         ctx.wizard.state.amount = amount;
 
         // Skip to crypto selection (Step 3)
@@ -74,7 +76,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
             [Markup.button.callback('Ł Litecoin (LTC)', 'subscription:crypto:LTC')],
             [Markup.button.callback('Ξ Ethereum (ETH)', 'subscription:crypto:ETH')],
             [Markup.button.callback('₮ Tether USDT (TRC20)', 'subscription:crypto:USDT')],
-            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')],
           ])
         );
 
@@ -102,7 +104,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const message = [
         subMessages.chooseTierIntro,
         subMessages.tierDescriptionBasic,
-        subMessages.tierDescriptionPro
+        subMessages.tierDescriptionPro,
       ].join('\n\n');
 
       await cleanReplyHTML(
@@ -111,7 +113,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
         Markup.inlineKeyboard([
           [Markup.button.callback(buttonText.tierBasic, 'subscription:tier:basic')],
           [Markup.button.callback(buttonText.tierPro, 'subscription:tier:pro')],
-          [Markup.button.callback(buttonText.cancel, 'seller:menu')]
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')],
         ])
       );
 
@@ -127,12 +129,14 @@ const paySubscriptionScene = new Scenes.WizardScene(
       return ctx.wizard.next();
     } catch (error) {
       logger.error('[PaySubscription] Step 1 error:', error);
-      
+
       const errorMsg = error.response?.data?.error || error.message;
-      await cleanReply(ctx, `❌ Ошибка: ${errorMsg}`, Markup.inlineKeyboard([
-        [Markup.button.callback(buttonText.backToMenu, 'seller:menu')]
-      ]));
-      
+      await cleanReply(
+        ctx,
+        `❌ Ошибка: ${errorMsg}`,
+        Markup.inlineKeyboard([[Markup.button.callback(buttonText.backToMenu, 'seller:menu')]])
+      );
+
       return ctx.scene.leave();
     }
   },
@@ -166,25 +170,22 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
     await ctx.answerCbQuery();
 
-    const amount = tier === 'pro' ? '$35' : '$25';
+    const amount = tier === 'pro' ? '$1' : '$1';
     ctx.wizard.state.tier = tier;
     ctx.wizard.state.amount = amount;
 
     const message = subMessages.confirmPrompt(tier, amount);
 
-    await ctx.editMessageText(
-      message,
-      {
-        parse_mode: 'HTML',
-        ...Markup.inlineKeyboard([
-          [Markup.button.callback(buttonText.cryptoBTC, 'subscription:crypto:BTC')],
-          [Markup.button.callback(buttonText.cryptoLTC, 'subscription:crypto:LTC')],
-          [Markup.button.callback(buttonText.cryptoETH, 'subscription:crypto:ETH')],
-          [Markup.button.callback(buttonText.cryptoUSDT, 'subscription:crypto:USDT')],
-          [Markup.button.callback(buttonText.back, 'subscription:back')]
-        ])
-      }
-    );
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback(buttonText.cryptoBTC, 'subscription:crypto:BTC')],
+        [Markup.button.callback(buttonText.cryptoLTC, 'subscription:crypto:LTC')],
+        [Markup.button.callback(buttonText.cryptoETH, 'subscription:crypto:ETH')],
+        [Markup.button.callback(buttonText.cryptoUSDT, 'subscription:crypto:USDT')],
+        [Markup.button.callback(buttonText.back, 'subscription:back')],
+      ]),
+    });
 
     return ctx.wizard.next();
   },
@@ -227,10 +228,7 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
     try {
       // Show loading message
-      await ctx.editMessageText(
-        subMessages.generatingInvoice,
-        { parse_mode: 'HTML' }
-      );
+      await ctx.editMessageText(subMessages.generatingInvoice, { parse_mode: 'HTML' });
 
       const { tier, amount, subscriptionId } = ctx.wizard.state;
       const token = ctx.session.token;
@@ -245,11 +243,12 @@ const paySubscriptionScene = new Scenes.WizardScene(
         token
       );
 
-      // Save invoice details
+      // Save invoice details (support both snake_case and camelCase from API)
       ctx.wizard.state.currency = currency;
       ctx.wizard.state.invoiceId = invoice.invoiceId;
       ctx.wizard.state.address = invoice.address;
-      ctx.wizard.state.expectedAmount = invoice.expectedAmount;
+      ctx.wizard.state.expectedAmount = invoice.expectedAmount; // USD amount
+      ctx.wizard.state.cryptoAmount = invoice.cryptoAmount || invoice.crypto_amount; // Exact crypto amount
       ctx.wizard.state.expiresAt = invoice.expiresAt;
 
       // Display currency name for user
@@ -258,11 +257,15 @@ const paySubscriptionScene = new Scenes.WizardScene(
       // P0-BOT-8 FIX: Generate QR code via backend (non-blocking)
       // Backend generates QR, bot just fetches it with timeout protection
       const qrResponse = await generateQRWithTimeout(
-        () => walletApi.generateQR({
-          address: invoice.address,
-          amount: 0,
-          currency: currency
-        }, token),
+        () =>
+          walletApi.generateQR(
+            {
+              address: invoice.address,
+              amount: invoice.crypto_amount || invoice.cryptoAmount || invoice.expectedAmount,
+              currency: currency,
+            },
+            token
+          ),
         10000 // 10 second timeout
       );
 
@@ -274,15 +277,15 @@ const paySubscriptionScene = new Scenes.WizardScene(
       const base64Data = qrResponse.data.qrCode.replace(/^data:image\/png;base64,/, '');
       const qrCodeBuffer = Buffer.from(base64Data, 'base64');
 
-      // Prepare message with crypto amount if available
-      const cryptoAmount = invoice.cryptoAmount || null;
+      // Prepare message with crypto amount from wizard state
+      const cryptoAmount = ctx.wizard.state.cryptoAmount || null;
       const message = subMessages.invoiceGenerated(
         tier,
         amount,
         currencyDisplayName,
         invoice.address,
         invoice.expiresAt,
-        cryptoAmount
+        cryptoAmount  // Exact crypto amount to send
       );
 
       // Delete loading message and send QR code with caption
@@ -298,9 +301,10 @@ const paySubscriptionScene = new Scenes.WizardScene(
           caption: message,
           parse_mode: 'HTML',
           ...Markup.inlineKeyboard([
-            [Markup.button.callback('✅ Я оплатил', 'subscription:paid')],
-            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-          ])
+            [Markup.button.callback('🔗 Ввести TX Hash', 'subscription:paid')],
+            [Markup.button.callback('🔄 Проверить статус', 'subscription:status')],
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')],
+          ]),
         }
       );
 
@@ -313,28 +317,132 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
       // Check if error is QR generation timeout
       if (error.message === 'QR_GENERATION_TIMEOUT') {
-        errorMessage = 'QR код генерируется слишком долго. Попробуйте выбрать другую криптовалюту или попробуйте позже.';
+        errorMessage =
+          'QR код генерируется слишком долго. Попробуйте выбрать другую криптовалюту или попробуйте позже.';
       } else if (errorData?.error) {
         errorMessage += `\n\n${errorData.error}`;
       }
 
-      await ctx.editMessageText(
-        errorMessage,
-        {
-          parse_mode: 'HTML',
-          ...Markup.inlineKeyboard([
-            [Markup.button.callback(buttonText.back, 'subscription:back')],
-            [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-          ])
-        }
-      );
+      await ctx.editMessageText(errorMessage, {
+        parse_mode: 'HTML',
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback(buttonText.back, 'subscription:back')],
+          [Markup.button.callback(buttonText.cancel, 'seller:menu')],
+        ]),
+      });
 
       return;
     }
   },
 
-  // Step 4: Handle "I paid" button and verify payment
+  // Step 4: Handle "I paid" button and manual tx-hash confirmation
   async (ctx) => {
+    // If waiting for tx hash and user sends text
+    if (ctx.wizard.state.awaitingTxHash && ctx.message?.text) {
+      const txHash = ctx.message.text.trim();
+      const { subscriptionId } = ctx.wizard.state;
+      const token = ctx.session.token;
+
+      try {
+        await cleanReply(ctx, subMessages.checkingPayment);
+
+        const result = await subscriptionApi.confirmSubscriptionPayment(
+          subscriptionId,
+          txHash,
+          token
+        );
+
+        const status =
+          result.status ||
+          (result.confirmed ? 'confirmed' : result.confirmed === false ? 'pending' : null);
+        const confirmations = result.confirmations || 0;
+        const { tier, createShopAfter } = ctx.wizard.state;
+
+        if (status === 'confirmed' || status === 'paid') {
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + 30);
+          const formattedDate = endDate.toLocaleDateString('ru-RU');
+
+          let hasShop = Boolean(ctx.session.shopId);
+          if (!hasShop && token) {
+            try {
+              const myShops = await shopApi.getMyShop(token);
+              if (Array.isArray(myShops) && myShops.length > 0) {
+                const [primaryShop] = myShops;
+                ctx.session.shopId = primaryShop.id;
+                ctx.session.shopName = primaryShop.name || ctx.session.shopName;
+                ctx.session.shopTier = primaryShop.tier || ctx.session.shopTier;
+                hasShop = true;
+              }
+            } catch (shopError) {
+              logger.warn('[PaySubscription] Failed to fetch user shops after payment', {
+                userId: ctx.from.id,
+                error: shopError.message,
+              });
+            }
+          }
+
+          const shouldCreateShop = createShopAfter && subscriptionId && !hasShop;
+          let successMessage = subMessages.verificationSuccess(tier, formattedDate, subscriptionId);
+          if (tier === 'pro') {
+            successMessage += `\n\n${subMessages.proBenefits}`;
+          }
+
+          if (shouldCreateShop) {
+            await ctx.reply(`✅ ${successMessage}\n\n📝 Теперь создайте свой магазин:`, {
+              parse_mode: 'HTML',
+            });
+            await ctx.scene.leave();
+            await ctx.scene.enter('createShop', {
+              tier,
+              subscriptionId,
+              paidSubscription: true,
+            });
+            ctx.wizard.state.awaitingTxHash = false;
+            return;
+          }
+
+          await ctx.reply(successMessage, {
+            parse_mode: 'HTML',
+            ...Markup.inlineKeyboard([[Markup.button.callback(buttonText.mainMenu, 'seller:menu')]]),
+          });
+
+          ctx.wizard.state.awaitingTxHash = false;
+          await ctx.scene.leave();
+          const { showSellerMainMenu } = await import('../handlers/seller/index.js');
+          await showSellerMainMenu(ctx);
+          return;
+        }
+
+        // Pending confirmations
+        await ctx.reply(
+          `Оплата найдена, ждём подтверждений (есть ${confirmations}). Нажмите "Проверить позже".`,
+          {
+            ...Markup.inlineKeyboard([
+              [Markup.button.callback('🔄 Проверить позже', 'subscription:paid')],
+              [Markup.button.callback(buttonText.cancel, 'seller:menu')],
+            ]),
+          }
+        );
+        ctx.wizard.state.awaitingTxHash = false;
+        return;
+      } catch (error) {
+        logger.error('[PaySubscription] Manual tx confirm failed', error);
+        const msg =
+          error.response?.data?.error ||
+          'Не удалось проверить транзакцию. Проверьте хэш и попробуйте снова.';
+        await ctx.reply(`❌ ${msg}`, {
+          parse_mode: 'HTML',
+          ...Markup.inlineKeyboard([
+            [Markup.button.callback('🔄 Попробовать снова', 'subscription:paid')],
+            [Markup.button.callback(buttonText.cancel, 'seller:menu')],
+          ]),
+        });
+        ctx.wizard.state.awaitingTxHash = false;
+        return;
+      }
+    }
+
     if (!ctx.callbackQuery) {
       return;
     }
@@ -349,137 +457,44 @@ const paySubscriptionScene = new Scenes.WizardScene(
       return;
     }
 
-    // Handle "I paid" button
-    if (data === 'subscription:paid') {
+    // Handle "check status" without tx hash (legacy)
+    if (data === 'subscription:status') {
       await ctx.answerCbQuery();
-
       try {
-        // Show checking message
-        await ctx.editMessageText(
-          subMessages.checkingPayment,
-          { parse_mode: 'HTML' }
-        );
-
         const { subscriptionId } = ctx.wizard.state;
         const token = ctx.session.token;
-
-        // Get payment status from Backend
         const paymentStatus = await subscriptionApi.getSubscriptionPaymentStatus(
           subscriptionId,
           token
         );
 
         if (paymentStatus.status === 'paid') {
-          // Payment confirmed!
-          const { tier, createShopAfter } = ctx.wizard.state;
-          const endDate = new Date(paymentStatus.paidAt);
-          endDate.setDate(endDate.getDate() + 30); // Add 30 days
-          const formattedDate = endDate.toLocaleDateString('ru-RU');
-
-          let successMessage = subMessages.verificationSuccess(tier, formattedDate, subscriptionId);
-          if (tier === 'pro') {
-            successMessage += `\n\n${subMessages.proBenefits}`;
-          }
-
-          // If creating first shop - redirect to createShop scene
-          if (createShopAfter && subscriptionId) {
-            logger.info(`[PaySubscription] Redirecting to createShop scene with subscriptionId: ${subscriptionId}`);
-
-            await ctx.editMessageText(
-              `✅ ${successMessage}\n\n📝 Теперь создайте свой магазин:`,
-              { parse_mode: 'HTML' }
-            );
-
-            await ctx.scene.leave();
-            await ctx.scene.enter('createShop', {
-              tier: tier,
-              subscriptionId: subscriptionId,
-              paidSubscription: true
-            });
-            return;
-          }
-
-          // Default: show success and return to seller menu
-          await ctx.editMessageText(
-            successMessage,
-            {
-              parse_mode: 'HTML',
-              ...Markup.inlineKeyboard([
-                [Markup.button.callback(buttonText.mainMenu, 'seller:menu')]
-              ])
-            }
-          );
-
-          await ctx.scene.leave();
-
-          // Return to seller menu
-          const { showSellerMainMenu } = await import('../handlers/seller/index.js');
-          await showSellerMainMenu(ctx);
-          return;
-
-        } else if (paymentStatus.status === 'expired') {
-          // Invoice expired
-          await ctx.editMessageText(
-            subMessages.paymentExpired,
-            {
-              parse_mode: 'HTML',
-              ...Markup.inlineKeyboard([
-                [Markup.button.callback(buttonText.retry, 'subscription:retry')],
-                [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-              ])
-            }
-          );
-          return;
-
-        } else {
-          // Payment pending - still waiting
-          const { tier, amount, currency, address, expiresAt } = ctx.wizard.state;
-          const currencyDisplayName = subMessages.chainMappings[CHAIN_MAPPINGS[currency]] || currency;
-
-          const reminderMessage = subMessages.invoiceGenerated(
-            tier,
-            amount,
-            currencyDisplayName,
-            address,
-            expiresAt
-          ) + `\n\n${subMessages.paymentPending}`;
-
-          await ctx.editMessageText(
-            reminderMessage,
-            {
-              parse_mode: 'HTML',
-              ...Markup.inlineKeyboard([
-                [Markup.button.callback('🔄 Обновить', 'subscription:paid')],
-                [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-              ])
-            }
-          );
+          await cleanReply(ctx, '✅ Оплата уже подтверждена. Если магазин не активировался, напишите поддержку.');
           return;
         }
 
-      } catch (error) {
-        logger.error('[PaySubscription] Payment verification error:', error);
-
-        const errorData = error.response?.data;
-        let errorMessage = subMessages.paymentStatusError;
-
-        if (errorData?.error) {
-          errorMessage += `\n\n${errorData.error}`;
-        }
-
-        await ctx.editMessageText(
-          errorMessage,
-          {
-            parse_mode: 'HTML',
-            ...Markup.inlineKeyboard([
-              [Markup.button.callback(buttonText.retry, 'subscription:paid')],
-              [Markup.button.callback(buttonText.cancel, 'seller:menu')]
-            ])
-          }
+        await cleanReply(
+          ctx,
+          `Пока нет подтверждения. Статус: ${paymentStatus.status || 'pending'}. Если оплатили, отправьте TX hash.`
         );
-
+        ctx.wizard.state.awaitingTxHash = true;
+        return;
+      } catch (err) {
+        logger.error('[PaySubscription] Status check failed', err);
+        await cleanReply(ctx, 'Не удалось проверить статус. Отправьте TX hash или попробуйте позже.');
         return;
       }
+    }
+
+    // Handle "I paid" button -> ask for tx hash
+    if (data === 'subscription:paid') {
+      await ctx.answerCbQuery();
+      await cleanReply(
+        ctx,
+        'Отправьте хэш транзакции, по которой оплачивали. Мы автоматически проверим оплату в блокчейне.'
+      );
+      ctx.wizard.state.awaitingTxHash = true;
+      return;
     }
 
     // Handle retry (go back to crypto selection)
@@ -492,7 +507,11 @@ const paySubscriptionScene = new Scenes.WizardScene(
 
 // Leave handler
 paySubscriptionScene.leave(async (ctx) => {
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info('[PaySubscription] Scene left');
 });
 

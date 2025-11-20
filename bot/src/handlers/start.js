@@ -27,7 +27,7 @@ function createFakeCallbackContext(ctx) {
     from: ctx.from,
     message: ctx.message,
     chat: ctx.chat,
-    session: ctx.session
+    session: ctx.session,
   };
 }
 
@@ -37,6 +37,12 @@ function createFakeCallbackContext(ctx) {
 export const handleStart = async (ctx) => {
   try {
     logger.info(`/start command from user ${ctx.from.id}`);
+
+    // КРИТИЧНО: Выйти из любой активной сцены
+    if (ctx.scene && ctx.scene.current) {
+      logger.info(`User ${ctx.from.id} forced to leave scene ${ctx.scene.current} via /start`);
+      await ctx.scene.leave();
+    }
 
     // Clear conversation history on /start
     delete ctx.session.aiConversation;
@@ -49,14 +55,20 @@ export const handleStart = async (ctx) => {
 
         if (shops && Array.isArray(shops) && shops.length > 0) {
           logger.info(`User ${ctx.from.id} has shop, auto-selecting seller role`);
+          const primaryShop = shops[0];
+          ctx.session.shopId = primaryShop.id;
+          ctx.session.shopName = primaryShop.name || ctx.session.shopName;
+          ctx.session.shopTier = primaryShop.tier || ctx.session.shopTier;
           ctx.session.role = 'seller';
+
+          // Persist seller role in session user
+          if (ctx.session.user) {
+            ctx.session.user.selectedRole = 'seller';
+          }
 
           // Save seller role to database
           try {
             await authApi.updateRole('seller', ctx.session.token);
-            if (ctx.session.user) {
-              ctx.session.user.selectedRole = 'seller';
-            }
             logger.info(`User ${ctx.from.id} role saved to DB: seller`);
           } catch (error) {
             logger.error('Failed to save seller role to DB:', error);
@@ -109,7 +121,7 @@ export const handleStart = async (ctx) => {
         // Expected for new users or users without worker access
         logger.debug('Workspace check gracefully failed (expected for non-workers)', {
           userId: ctx.from.id,
-          status: error.response?.status
+          status: error.response?.status,
         });
         // Continue without workspace button
       }
@@ -118,7 +130,7 @@ export const handleStart = async (ctx) => {
     // Send welcome message using smartMessage (edit if exists, else send new)
     await smartMessage.send(ctx, {
       text: messages.start.welcome,
-      keyboard: mainMenu(showWorkspace)
+      keyboard: mainMenu(showWorkspace),
     });
   } catch (error) {
     logger.error('Error in /start handler:', error);

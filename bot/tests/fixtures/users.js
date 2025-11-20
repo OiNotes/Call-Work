@@ -9,7 +9,7 @@ export const testUsers = {
     username: 'test_buyer',
     firstName: 'Test',
     lastName: 'Buyer',
-    role: 'buyer'
+    role: 'buyer',
   },
 
   seller: {
@@ -20,7 +20,7 @@ export const testUsers = {
     lastName: 'Seller',
     role: 'seller',
     shopId: 1,
-    shopName: 'Test Shop'
+    shopName: 'Test Shop',
   },
 
   admin: {
@@ -29,12 +29,12 @@ export const testUsers = {
     username: 'test_admin',
     firstName: 'Admin',
     lastName: 'User',
-    role: 'admin'
-  }
+    role: 'admin',
+  },
 };
 
 export const testTokens = {
   buyer: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTExMTExfQ.buyer_token',
   seller: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjIyMjIyfQ.seller_token',
-  admin: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzMzMzMzfQ.admin_token'
+  admin: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzMzMzMzfQ.admin_token',
 };

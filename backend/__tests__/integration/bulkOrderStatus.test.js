@@ -76,11 +76,7 @@ describe('POST /api/orders/bulk-status', () => {
       [otherUserId, productId]
     );
 
-    orderIds = [
-      order1.rows[0].id,
-      order2.rows[0].id,
-      order3.rows[0].id
-    ];
+    orderIds = [order1.rows[0].id, order2.rows[0].id, order3.rows[0].id];
 
     // Generate real JWT tokens
     testUserToken = jwt.sign(
@@ -111,7 +107,7 @@ describe('POST /api/orders/bulk-status', () => {
         .post('/api/orders/bulk-status')
         .send({
           order_ids: [1, 2],
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(401);
@@ -125,7 +121,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', 'Bearer invalid_token')
         .send({
           order_ids: [1, 2],
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(401);
@@ -140,7 +136,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [],
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(400);
@@ -154,7 +150,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: 'not-an-array',
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(400);
@@ -167,7 +163,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [1, 'abc', -5],
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(400);
@@ -180,7 +176,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [1, 2],
-          status: 'invalid_status'
+          status: 'invalid_status',
         });
 
       expect(response.status).toBe(400);
@@ -197,7 +193,7 @@ describe('POST /api/orders/bulk-status', () => {
           .set('Authorization', `Bearer ${testUserToken}`)
           .send({
             order_ids: orderIds,
-            status
+            status,
           });
 
         // Should not be validation error (400)
@@ -214,7 +210,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [999999, 999998],
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(404);
@@ -228,7 +224,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${otherUserToken}`)
         .send({
           order_ids: orderIds,
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(403);
@@ -244,7 +240,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: orderIds,
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(200);
@@ -255,7 +251,7 @@ describe('POST /api/orders/bulk-status', () => {
       expect(response.body.data.orders).toHaveLength(orderIds.length);
 
       // Verify each order in response
-      response.body.data.orders.forEach(order => {
+      response.body.data.orders.forEach((order) => {
         expect(order).toHaveProperty('id');
         expect(order).toHaveProperty('status', 'shipped');
         expect(order).toHaveProperty('product_name', 'Test Product');
@@ -273,17 +269,16 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: orderIds,
-          status: 'delivered'
+          status: 'delivered',
         });
 
       // Verify in database
-      const result = await client.query(
-        'SELECT id, status FROM orders WHERE id = ANY($1::int[])',
-        [orderIds]
-      );
+      const result = await client.query('SELECT id, status FROM orders WHERE id = ANY($1::int[])', [
+        orderIds,
+      ]);
 
       expect(result.rows).toHaveLength(orderIds.length);
-      result.rows.forEach(row => {
+      result.rows.forEach((row) => {
         expect(row.status).toBe('delivered');
       });
     });
@@ -297,7 +292,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: partialIds,
-          status: 'confirmed'
+          status: 'confirmed',
         });
 
       expect(response.status).toBe(200);
@@ -311,7 +306,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: [orderIds[0]],
-          status: 'pending'
+          status: 'pending',
         });
 
       expect(response.status).toBe(200);
@@ -329,7 +324,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: duplicateIds,
-          status: 'confirmed'
+          status: 'confirmed',
         });
 
       expect(response.status).toBe(404);
@@ -344,7 +339,7 @@ describe('POST /api/orders/bulk-status', () => {
         .set('Authorization', `Bearer ${testUserToken}`)
         .send({
           order_ids: mixedIds,
-          status: 'shipped'
+          status: 'shipped',
         });
 
       expect(response.status).toBe(404);

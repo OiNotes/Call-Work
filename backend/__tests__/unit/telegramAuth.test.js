@@ -30,16 +30,10 @@ describe('Telegram initData Validation Security', () => {
       .join('\n');
 
     // 2. Create secret_key = HMAC-SHA256("WebAppData", bot_token)
-    const secretKey = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(BOT_TOKEN)
-      .digest();
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
 
     // 3. Calculate hash = HMAC-SHA256(data_check_string, secret_key)
-    const hash = crypto
-      .createHmac('sha256', secretKey)
-      .update(dataCheckString)
-      .digest('hex');
+    const hash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
     params.set('hash', hash);
 
@@ -65,10 +59,7 @@ describe('Telegram initData Validation Security', () => {
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
 
-      const secretKey = crypto
-        .createHmac('sha256', 'WebAppData')
-        .update(botToken)
-        .digest();
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
 
       const calculatedHash = crypto
         .createHmac('sha256', secretKey)
@@ -84,7 +75,6 @@ describe('Telegram initData Validation Security', () => {
       }
 
       return crypto.timingSafeEqual(hashBuffer, calculatedHashBuffer);
-
     } catch (error) {
       return false;
     }
@@ -97,7 +87,7 @@ describe('Telegram initData Validation Security', () => {
         username: 'testuser',
         first_name: 'Test',
         last_name: 'User',
-        language_code: 'en'
+        language_code: 'en',
       };
 
       const initData = createValidInitData(user);
@@ -109,7 +99,7 @@ describe('Telegram initData Validation Security', () => {
     it('should validate initData with minimal user fields', () => {
       const user = {
         id: 987654321,
-        first_name: 'John'
+        first_name: 'John',
       };
 
       const initData = createValidInitData(user);
@@ -123,7 +113,7 @@ describe('Telegram initData Validation Security', () => {
         id: 555555555,
         username: 'alice',
         first_name: 'Alice',
-        last_name: 'Wonderland'
+        last_name: 'Wonderland',
       };
 
       const initData = createValidInitData(user);
@@ -159,10 +149,7 @@ describe('Telegram initData Validation Security', () => {
       // Need to decode URL-encoded user parameter first
       const params = new URLSearchParams(initData);
       const originalUserJson = params.get('user');
-      const tamperedUserJson = originalUserJson.replace(
-        /"id":123456789/,
-        '"id":999999999'
-      );
+      const tamperedUserJson = originalUserJson.replace(/"id":123456789/, '"id":999999999');
       params.set('user', tamperedUserJson);
 
       // Keep original hash (which was valid for original data)
@@ -226,15 +213,9 @@ describe('Telegram initData Validation Security', () => {
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
 
-      const secretKey = crypto
-        .createHmac('sha256', 'WebAppData')
-        .update(BOT_TOKEN)
-        .digest();
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
 
-      const hash = crypto
-        .createHmac('sha256', secretKey)
-        .update(dataCheckString)
-        .digest('hex');
+      const hash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
       params.set('hash', hash);
 
@@ -252,7 +233,7 @@ describe('Telegram initData Validation Security', () => {
   describe('Security: Expiration check', () => {
     it('should REJECT expired initData (older than 24 hours)', () => {
       const user = { id: 123456789, username: 'testuser' };
-      const oldAuthDate = Math.floor(Date.now() / 1000) - (25 * 60 * 60); // 25 hours ago
+      const oldAuthDate = Math.floor(Date.now() / 1000) - 25 * 60 * 60; // 25 hours ago
 
       const initData = createValidInitData(user, oldAuthDate);
 
@@ -270,7 +251,7 @@ describe('Telegram initData Validation Security', () => {
 
     it('should ACCEPT recent initData (within 24 hours)', () => {
       const user = { id: 123456789, username: 'testuser' };
-      const recentAuthDate = Math.floor(Date.now() / 1000) - (1 * 60 * 60); // 1 hour ago
+      const recentAuthDate = Math.floor(Date.now() / 1000) - 1 * 60 * 60; // 1 hour ago
 
       const initData = createValidInitData(user, recentAuthDate);
 
@@ -332,7 +313,7 @@ describe('Telegram initData Validation Security', () => {
       const user = {
         id: 123456789,
         username: 'user_with-special.chars',
-        first_name: 'Test'
+        first_name: 'Test',
       };
 
       const initData = createValidInitData(user);
@@ -344,7 +325,7 @@ describe('Telegram initData Validation Security', () => {
     it('should handle user without username (optional field)', () => {
       const user = {
         id: 123456789,
-        first_name: 'Anonymous'
+        first_name: 'Anonymous',
       };
 
       const initData = createValidInitData(user);
@@ -358,7 +339,7 @@ describe('Telegram initData Validation Security', () => {
         id: 123456789,
         username: 'иван',
         first_name: 'Иван',
-        last_name: 'Петров'
+        last_name: 'Петров',
       };
 
       const initData = createValidInitData(user);

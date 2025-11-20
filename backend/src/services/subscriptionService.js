@@ -11,24 +11,13 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import * as cryptoService from './crypto.js';
-
-// Subscription pricing (monthly)
-const SUBSCRIPTION_PRICES = {
-  basic: 25.00,
-  pro: 35.00
-};
-
-// Yearly subscription pricing (with ~17% discount)
-const SUBSCRIPTION_PRICES_YEARLY = {
-  basic: 250.00,  // $25/month * 12 = $300, discounted to $250 (17% off)
-  pro: 350.00     // $35/month * 12 = $420, discounted to $350 (17% off)
-};
-
-// Grace period in days
-const GRACE_PERIOD_DAYS = 2;
-
-// Subscription period in days
-const SUBSCRIPTION_PERIOD_DAYS = 30;
+import {
+  SUBSCRIPTION_PRICES,
+  SUBSCRIPTION_PRICES_YEARLY,
+  SUBSCRIPTION_PERIOD_DAYS,
+  GRACE_PERIOD_DAYS,
+  calculateProratedUpgrade as calculateUpgradeAmountFromConfig,
+} from '../config/subscriptionPricing.js';
 
 function addDays(date, days) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -37,7 +26,7 @@ function addDays(date, days) {
 /**
  * Process subscription payment
  * Verifies crypto transaction and creates subscription record
- * 
+ *
  * @param {number} shopId - Shop ID
  * @param {string} tier - Subscription tier ('basic' or 'pro')
  * @param {string} txHash - Blockchain transaction hash
@@ -47,58 +36,59 @@ function addDays(date, days) {
  */
 async function processSubscriptionPayment(shopId, tier, txHash, currency, expectedAddress) {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Validate tier
     if (!['basic', 'pro'].includes(tier)) {
       throw new Error('Invalid subscription tier. Use "basic" or "pro"');
     }
-    
+
     const amount = SUBSCRIPTION_PRICES[tier];
-    
+
     // Verify transaction on blockchain
     logger.info(`[Subscription] Verifying ${currency} transaction ${txHash}`);
     const verification = await cryptoService.verifyTransaction(
       txHash,
+      expectedAddress,
       amount,
-      currency,
-      expectedAddress
+      currency
     );
-    
+
     if (!verification.verified) {
       logger.error(`[Subscription] Transaction verification failed: ${verification.error}`);
       throw new Error(verification.error || 'Transaction verification failed');
     }
-    
-    // Check for duplicate tx_hash
-    const duplicateCheck = await client.query(
-      'SELECT id FROM shop_subscriptions WHERE tx_hash = $1',
-      [txHash]
-    );
-    
-    if (duplicateCheck.rows.length > 0) {
-      throw new Error('Transaction already processed');
-    }
-    
+
     // Calculate subscription period
     const now = new Date();
     const periodStart = now;
     const periodEnd = new Date(now.getTime() + SUBSCRIPTION_PERIOD_DAYS * 24 * 60 * 60 * 1000);
     const nextPaymentDue = periodEnd;
-    
-    // Create subscription record
+
+    // Create subscription record with idempotency (ON CONFLICT)
+    // If tx_hash already exists and status is 'pending', activate it
+    // If tx_hash already exists and status is already 'active', return existing record (idempotent)
     const subscriptionResult = await client.query(
-      `INSERT INTO shop_subscriptions 
+      `INSERT INTO shop_subscriptions
        (shop_id, tier, amount, tx_hash, currency, period_start, period_end, status, verified_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+       ON CONFLICT (tx_hash) DO UPDATE
+       SET status = CASE
+         WHEN shop_subscriptions.status = 'pending' THEN 'active'
+         ELSE shop_subscriptions.status
+       END,
+       verified_at = CASE
+         WHEN shop_subscriptions.status = 'pending' THEN NOW()
+         ELSE shop_subscriptions.verified_at
+       END
        RETURNING *`,
       [shopId, tier, amount, txHash, currency, periodStart, periodEnd]
     );
-    
+
     const subscription = subscriptionResult.rows[0];
-    
+
     // Update shop record
     await client.query(
       `UPDATE shops 
@@ -112,11 +102,13 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
        WHERE id = $3`,
       [tier, nextPaymentDue, shopId]
     );
-    
+
     await client.query('COMMIT');
-    
-    logger.info(`[Subscription] Subscription created for shop ${shopId}, tier: ${tier}, period: ${periodStart.toISOString()} - ${periodEnd.toISOString()}`);
-    
+
+    logger.info(
+      `[Subscription] Subscription created for shop ${shopId}, tier: ${tier}, period: ${periodStart.toISOString()} - ${periodEnd.toISOString()}`
+    );
+
     return subscription;
   } catch (error) {
     // CRITICAL: Catch rollback errors to prevent connection leak
@@ -136,7 +128,7 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
 /**
  * Upgrade shop from free to PRO tier
  * Calculates prorated amount based on remaining time
- * 
+ *
  * @param {number} shopId - Shop ID
  * @param {string} txHash - Blockchain transaction hash for upgrade payment
  * @param {string} currency - Cryptocurrency
@@ -145,26 +137,23 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
  */
 async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Get current shop and subscription
-    const shopResult = await client.query(
-      'SELECT * FROM shops WHERE id = $1',
-      [shopId]
-    );
-    
+    const shopResult = await client.query('SELECT * FROM shops WHERE id = $1', [shopId]);
+
     if (shopResult.rows.length === 0) {
       throw new Error('Shop not found');
     }
-    
+
     const shop = shopResult.rows[0];
-    
+
     if (shop.tier === 'pro') {
       throw new Error('Shop is already PRO tier');
     }
-    
+
     // Get current active subscription
     const currentSubResult = await client.query(
       `SELECT * FROM shop_subscriptions 
@@ -175,13 +164,13 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
        LIMIT 1`,
       [shopId]
     );
-    
+
     if (currentSubResult.rows.length === 0) {
       throw new Error('No active subscription found. Please renew subscription first.');
     }
-    
+
     const currentSub = currentSubResult.rows[0];
-    
+
     // Calculate prorated upgrade amount
     const upgradeAmount = calculateUpgradeAmount(
       currentSub.period_start,
@@ -189,31 +178,31 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
       SUBSCRIPTION_PRICES.basic,
       SUBSCRIPTION_PRICES.pro
     );
-    
+
     logger.info(`[Subscription] Upgrade amount calculated: $${upgradeAmount} (prorated)`);
-    
+
     // Verify transaction
     const verification = await cryptoService.verifyTransaction(
       txHash,
+      expectedAddress,
       upgradeAmount,
-      currency,
-      expectedAddress
+      currency
     );
-    
+
     if (!verification.verified) {
       throw new Error(verification.error || 'Transaction verification failed');
     }
-    
+
     // Check for duplicate tx_hash
     const duplicateCheck = await client.query(
       'SELECT id FROM shop_subscriptions WHERE tx_hash = $1',
       [txHash]
     );
-    
+
     if (duplicateCheck.rows.length > 0) {
       throw new Error('Transaction already processed');
     }
-    
+
     // Create PRO subscription record (replaces current subscription period)
     const subscriptionResult = await client.query(
       `INSERT INTO shop_subscriptions 
@@ -222,9 +211,9 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
        RETURNING *`,
       [shopId, upgradeAmount, txHash, currency, currentSub.period_start, currentSub.period_end]
     );
-    
+
     const newSubscription = subscriptionResult.rows[0];
-    
+
     // Mark old subscription as cancelled
     await client.query(
       `UPDATE shop_subscriptions 
@@ -232,7 +221,7 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
        WHERE id = $1`,
       [currentSub.id]
     );
-    
+
     // Update shop to PRO tier
     await client.query(
       `UPDATE shops 
@@ -241,11 +230,11 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
        WHERE id = $1`,
       [shopId]
     );
-    
+
     await client.query('COMMIT');
-    
+
     logger.info(`[Subscription] Shop ${shopId} upgraded to PRO tier`);
-    
+
     return newSubscription;
   } catch (error) {
     // CRITICAL: Catch rollback errors to prevent connection leak
@@ -264,7 +253,7 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
 
 /**
  * Calculate prorated upgrade amount
- * 
+ * @deprecated Use calculateProratedUpgrade from config/subscriptionPricing.js
  * @param {Date} periodStart - Subscription period start
  * @param {Date} periodEnd - Subscription period end
  * @param {number} oldPrice - Old tier price
@@ -275,11 +264,11 @@ function calculateUpgradeAmount(periodStart, periodEnd, oldPrice, newPrice) {
   const now = new Date();
   const totalDays = Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24));
   const remainingDays = Math.ceil((periodEnd - now) / (1000 * 60 * 60 * 24));
-  
+
   // Prorated difference
   const dailyDifference = (newPrice - oldPrice) / totalDays;
   const upgradeAmount = dailyDifference * remainingDays;
-  
+
   // Round to 2 decimal places
   return Math.max(0.01, Math.round(upgradeAmount * 100) / 100);
 }
@@ -287,17 +276,17 @@ function calculateUpgradeAmount(periodStart, periodEnd, oldPrice, newPrice) {
 /**
  * Check for expired subscriptions and update shop status
  * Run via cron job every hour
- * 
+ *
  * @returns {Promise<{expired: number, gracePeriod: number, deactivated: number}>}
  */
 async function checkExpiredSubscriptions() {
   const client = await pool.connect();
-  
+
   try {
     const now = new Date();
-    
+
     logger.info('[Subscription] Checking for expired subscriptions...');
-    
+
     // Get shops with payment due
     const shopsResult = await client.query(
       `SELECT id, name, tier, next_payment_due, grace_period_until, subscription_status
@@ -306,18 +295,20 @@ async function checkExpiredSubscriptions() {
        AND subscription_status != 'inactive'`,
       [now]
     );
-    
+
     let expired = 0;
     let gracePeriod = 0;
     let deactivated = 0;
-    
+
     for (const shop of shopsResult.rows) {
       const { id, name, next_payment_due, grace_period_until, subscription_status } = shop;
-      
+
       // Case 1: Active subscription expired → Start grace period
       if (subscription_status === 'active') {
-        const gracePeriodEnd = new Date(next_payment_due.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-        
+        const gracePeriodEnd = new Date(
+          next_payment_due.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
+        );
+
         await client.query(
           `UPDATE shops 
            SET subscription_status = 'grace_period',
@@ -326,19 +317,25 @@ async function checkExpiredSubscriptions() {
            WHERE id = $2`,
           [gracePeriodEnd, id]
         );
-        
-        logger.warn(`[Subscription] Shop ${id} (${name}) entered grace period until ${gracePeriodEnd.toISOString()}`);
+
+        logger.warn(
+          `[Subscription] Shop ${id} (${name}) entered grace period until ${gracePeriodEnd.toISOString()}`
+        );
         gracePeriod++;
       }
-      
+
       // Case 2: Grace period expired → Deactivate
-      else if (subscription_status === 'grace_period' && grace_period_until && grace_period_until < now) {
+      else if (
+        subscription_status === 'grace_period' &&
+        grace_period_until &&
+        grace_period_until < now
+      ) {
         await deactivateShop(id, client);
         logger.error(`[Subscription] Shop ${id} (${name}) deactivated after grace period expiry`);
         deactivated++;
       }
     }
-    
+
     // Mark expired subscription records
     const expiredSubsResult = await client.query(
       `UPDATE shop_subscriptions
@@ -348,11 +345,13 @@ async function checkExpiredSubscriptions() {
        RETURNING id`,
       [now]
     );
-    
+
     expired = expiredSubsResult.rowCount || 0;
-    
-    logger.info(`[Subscription] Check complete: ${expired} subscriptions expired, ${gracePeriod} in grace period, ${deactivated} deactivated`);
-    
+
+    logger.info(
+      `[Subscription] Check complete: ${expired} subscriptions expired, ${gracePeriod} in grace period, ${deactivated} deactivated`
+    );
+
     return { expired, gracePeriod, deactivated };
   } catch (error) {
     logger.error('[Subscription] Error checking expired subscriptions:', error);
@@ -364,7 +363,7 @@ async function checkExpiredSubscriptions() {
 
 /**
  * Deactivate shop after grace period
- * 
+ *
  * @param {number} shopId - Shop ID
  * @param {object} client - Database client (optional, for transactions)
  */
@@ -373,7 +372,7 @@ async function deactivateShop(shopId, client = null) {
   if (!client) {
     client = await pool.connect();
   }
-  
+
   try {
     await client.query(
       `UPDATE shops 
@@ -383,7 +382,7 @@ async function deactivateShop(shopId, client = null) {
        WHERE id = $1`,
       [shopId]
     );
-    
+
     logger.warn(`[Subscription] Shop ${shopId} deactivated`);
   } catch (error) {
     logger.error(`[Subscription] Error deactivating shop ${shopId}:`, error);
@@ -411,7 +410,10 @@ async function activatePromoSubscription(shopId, userId, promoCode) {
       throw new Error('Promo code already used by this user');
     }
 
-    const shopRes = await client.query('SELECT id, tier, owner_id FROM shops WHERE id = $1 FOR UPDATE', [shopId]);
+    const shopRes = await client.query(
+      'SELECT id, tier, owner_id FROM shops WHERE id = $1 FOR UPDATE',
+      [shopId]
+    );
     if (shopRes.rows.length === 0) {
       throw new Error('Shop not found');
     }
@@ -465,26 +467,24 @@ async function activatePromoSubscription(shopId, userId, promoCode) {
   }
 }
 
-
-
 /**
  * Send expiration reminder notifications via Telegram
  * Run via cron job daily at 10:00
- * 
+ *
  * @param {object} bot - Telegram bot instance
  * @returns {Promise<{reminded: number}>}
  */
 async function sendExpirationReminders(bot) {
   const client = await pool.connect();
-  
+
   try {
     const now = new Date();
-    
+
     // Reminders: 3 days before, 1 day before, and on expiration day
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    
+
     logger.info('[Subscription] Sending expiration reminders...');
-    
+
     // Get shops needing reminders
     const shopsResult = await client.query(
       `SELECT s.id, s.name, s.tier, s.next_payment_due, u.telegram_id, u.first_name
@@ -495,9 +495,9 @@ async function sendExpirationReminders(bot) {
        AND u.telegram_id IS NOT NULL`,
       [now, threeDaysFromNow]
     );
-    
+
     let reminded = 0;
-    
+
     for (const shop of shopsResult.rows) {
       const { id, name, tier, next_payment_due, telegram_id, first_name } = shop;
       const daysUntilExpiry = Math.ceil((next_payment_due - now) / (1000 * 60 * 60 * 24));
@@ -509,7 +509,7 @@ async function sendExpirationReminders(bot) {
       message += `Магазин: <b>${name}</b>\n`;
       message += `Tier: ${tier === 'pro' ? 'PRO' : 'Free'}\n`;
       message += `Стоимость: $${SUBSCRIPTION_PRICES[tier]}/месяц\n\n`;
-      
+
       if (daysUntilExpiry <= 0) {
         message += `⚠️ <b>Подписка истекает сегодня!</b>\n`;
       } else if (daysUntilExpiry === 1) {
@@ -517,21 +517,23 @@ async function sendExpirationReminders(bot) {
       } else {
         message += `Подписка истекает через ${daysUntilExpiry} дня\n`;
       }
-      
+
       message += `\n💡 Продлите подписку чтобы избежать деактивации магазина.\n`;
       message += `Grace period: 2 дня после истечения.`;
-      
+
       try {
         await bot.telegram.sendMessage(telegram_id, message, { parse_mode: 'HTML' });
         reminded++;
-        logger.info(`[Subscription] Reminder sent to shop ${id} (${name}), ${daysUntilExpiry} days until expiry`);
+        logger.info(
+          `[Subscription] Reminder sent to shop ${id} (${name}), ${daysUntilExpiry} days until expiry`
+        );
       } catch (error) {
         logger.error(`[Subscription] Failed to send reminder to shop ${id}:`, error.message);
       }
     }
-    
+
     logger.info(`[Subscription] Reminders sent: ${reminded}`);
-    
+
     return { reminded };
   } catch (error) {
     logger.error('[Subscription] Error sending expiration reminders:', error);
@@ -543,13 +545,13 @@ async function sendExpirationReminders(bot) {
 
 /**
  * Get subscription status for a shop
- * 
+ *
  * @param {number} shopId - Shop ID
  * @returns {Promise<object>} Subscription status
  */
 async function getSubscriptionStatus(shopId) {
   const client = await pool.connect();
-  
+
   try {
     const shopResult = await client.query(
       `SELECT id, tier, subscription_status, next_payment_due, grace_period_until, is_active
@@ -557,13 +559,13 @@ async function getSubscriptionStatus(shopId) {
        WHERE id = $1`,
       [shopId]
     );
-    
+
     if (shopResult.rows.length === 0) {
       throw new Error('Shop not found');
     }
-    
+
     const shop = shopResult.rows[0];
-    
+
     // Get current subscription
     const subResult = await client.query(
       `SELECT * FROM shop_subscriptions
@@ -574,9 +576,9 @@ async function getSubscriptionStatus(shopId) {
        LIMIT 1`,
       [shopId]
     );
-    
+
     const currentSubscription = subResult.rows[0] || null;
-    
+
     return {
       shopId: shop.id,
       tier: shop.tier,
@@ -585,7 +587,7 @@ async function getSubscriptionStatus(shopId) {
       nextPaymentDue: shop.next_payment_due,
       gracePeriodUntil: shop.grace_period_until,
       currentSubscription,
-      price: SUBSCRIPTION_PRICES[shop.tier]
+      price: SUBSCRIPTION_PRICES[shop.tier],
     };
   } catch (error) {
     logger.error('[Subscription] Error getting subscription status:', error);
@@ -597,14 +599,14 @@ async function getSubscriptionStatus(shopId) {
 
 /**
  * Get subscription payment history for a shop
- * 
+ *
  * @param {number} shopId - Shop ID
  * @param {number} limit - Number of records to return
  * @returns {Promise<array>} Payment history
  */
 async function getSubscriptionHistory(shopId, limit = 10) {
   const client = await pool.connect();
-  
+
   try {
     const result = await client.query(
       `SELECT * FROM shop_subscriptions
@@ -613,7 +615,7 @@ async function getSubscriptionHistory(shopId, limit = 10) {
        LIMIT $2`,
       [shopId, limit]
     );
-    
+
     return result.rows;
   } catch (error) {
     logger.error('[Subscription] Error getting subscription history:', error);
@@ -625,32 +627,29 @@ async function getSubscriptionHistory(shopId, limit = 10) {
 
 /**
  * Calculate upgrade cost (helper for API)
- * 
+ *
  * @param {number} shopId - Shop ID
  * @returns {Promise<object>} Upgrade cost details
  */
 async function calculateUpgradeCost(shopId) {
   const client = await pool.connect();
-  
+
   try {
-    const shopResult = await client.query(
-      'SELECT tier FROM shops WHERE id = $1',
-      [shopId]
-    );
-    
+    const shopResult = await client.query('SELECT tier FROM shops WHERE id = $1', [shopId]);
+
     if (shopResult.rows.length === 0) {
       throw new Error('Shop not found');
     }
-    
+
     const shop = shopResult.rows[0];
-    
+
     if (shop.tier === 'pro') {
       return {
         alreadyPro: true,
-        amount: 0
+        amount: 0,
       };
     }
-    
+
     // Get current subscription
     const subResult = await client.query(
       `SELECT * FROM shop_subscriptions
@@ -661,20 +660,21 @@ async function calculateUpgradeCost(shopId) {
        LIMIT 1`,
       [shopId]
     );
-    
+
     if (subResult.rows.length === 0) {
       throw new Error('No active subscription found');
     }
-    
+
     const currentSub = subResult.rows[0];
-    
+
+    // Calculate prorated upgrade from basic to pro tier
     const amount = calculateUpgradeAmount(
       currentSub.period_start,
       currentSub.period_end,
-      SUBSCRIPTION_PRICES.free,
+      SUBSCRIPTION_PRICES.basic,  // Fixed: was .free (undefined), should be .basic
       SUBSCRIPTION_PRICES.pro
     );
-    
+
     return {
       alreadyPro: false,
       amount,
@@ -682,7 +682,7 @@ async function calculateUpgradeCost(shopId) {
       newTier: 'pro',
       periodStart: currentSub.period_start,
       periodEnd: currentSub.period_end,
-      remainingDays: Math.ceil((currentSub.period_end - new Date()) / (1000 * 60 * 60 * 24))
+      remainingDays: Math.ceil((currentSub.period_end - new Date()) / (1000 * 60 * 60 * 24)),
     };
   } catch (error) {
     logger.error('[Subscription] Error calculating upgrade cost:', error);
@@ -786,7 +786,4 @@ export {
   getUserSubscriptions,
   getMyShopSubscriptions,
   activatePromoSubscription,
-  SUBSCRIPTION_PRICES,
-  SUBSCRIPTION_PRICES_YEARLY,
-  GRACE_PERIOD_DAYS
 };

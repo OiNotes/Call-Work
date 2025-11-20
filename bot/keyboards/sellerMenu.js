@@ -25,10 +25,7 @@ export function shopManagementKeyboard(shopId) {
 // Product list keyboard
 export function productListKeyboard(products) {
   const buttons = products.map((product) => [
-    Markup.button.callback(
-      `${product.name} - $${product.price}`,
-      `product_detail_${product.id}`
-    ),
+    Markup.button.callback(`${product.name} - $${product.price}`, `product_detail_${product.id}`),
   ]);
 
   buttons.push([Markup.button.callback('➕ Добавить товар', 'add_product')]);

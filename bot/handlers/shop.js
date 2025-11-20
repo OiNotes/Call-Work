@@ -4,7 +4,7 @@ import {
   updateProduct,
   deleteProduct,
   getOrdersByShop,
-  updateOrderStatus
+  updateOrderStatus,
 } from '../utils/api.js';
 import {
   productListKeyboard,
@@ -12,7 +12,7 @@ import {
   editProductKeyboard,
   ordersMenuKeyboard,
   orderDetailKeyboard,
-  backToSellerMenuKeyboard
+  backToSellerMenuKeyboard,
 } from '../keyboards/sellerMenu.js';
 
 // Handle add product
@@ -29,13 +29,13 @@ export async function handleAddProduct(ctx) {
     ctx.session.state = 'adding_product_name';
     ctx.session.data = {
       shopId: ctx.session.shopId,
-      product: {}
+      product: {},
     };
 
     await ctx.editMessageText(
       `➕ Добавление товара\n\n` +
-      `Шаг 1/5: Введите название товара\n\n` +
-      `Например: "Nike Air Max 90" или "iPhone 15 Pro"`
+        `Шаг 1/5: Введите название товара\n\n` +
+        `Например: "Nike Air Max 90" или "iPhone 15 Pro"`
     );
   } catch (error) {
     console.error('Error in handleAddProduct:', error);
@@ -67,8 +67,8 @@ export async function handleProductNameInput(ctx) {
 
     await ctx.reply(
       `✅ Название: ${productName}\n\n` +
-      `Шаг 2/5: Введите описание товара\n\n` +
-      `Опишите товар подробно. Укажите особенности, характеристики, состояние.`
+        `Шаг 2/5: Введите описание товара\n\n` +
+        `Опишите товар подробно. Укажите особенности, характеристики, состояние.`
     );
   } catch (error) {
     console.error('Error in handleProductNameInput:', error);
@@ -100,8 +100,8 @@ export async function handleProductDescriptionInput(ctx) {
 
     await ctx.reply(
       `✅ Описание сохранено\n\n` +
-      `Шаг 3/5: Введите цену товара в долларах\n\n` +
-      `Например: 150 или 1499.99`
+        `Шаг 3/5: Введите цену товара в долларах\n\n` +
+        `Например: 150 или 1499.99`
     );
   } catch (error) {
     console.error('Error in handleProductDescriptionInput:', error);
@@ -134,8 +134,8 @@ export async function handleProductPriceInput(ctx) {
 
     await ctx.reply(
       `✅ Цена: $${price.toFixed(2)}\n\n` +
-      `Шаг 4/5: Введите количество товара в наличии\n\n` +
-      `Например: 10 или 1`
+        `Шаг 4/5: Введите количество товара в наличии\n\n` +
+        `Например: 10 или 1`
     );
   } catch (error) {
     console.error('Error in handleProductPriceInput:', error);
@@ -168,8 +168,8 @@ export async function handleProductStockInput(ctx) {
 
     await ctx.reply(
       `✅ Количество: ${stock}\n\n` +
-      `Шаг 5/5: Отправьте фото товара\n\n` +
-      `Отправьте изображение товара или напишите "пропустить" если хотите добавить фото позже.`
+        `Шаг 5/5: Отправьте фото товара\n\n` +
+        `Отправьте изображение товара или напишите "пропустить" если хотите добавить фото позже.`
     );
   } catch (error) {
     console.error('Error in handleProductStockInput:', error);
@@ -195,9 +195,7 @@ export async function handleProductImageInput(ctx) {
     } else if (ctx.message.text && ctx.message.text.toLowerCase() === 'пропустить') {
       imageUrl = null;
     } else {
-      await ctx.reply(
-        '❌ Пожалуйста, отправьте фото или напишите "пропустить".'
-      );
+      await ctx.reply('❌ Пожалуйста, отправьте фото или напишите "пропустить".');
       return;
     }
 
@@ -225,16 +223,15 @@ export async function handleProductImageInput(ctx) {
 
       await ctx.reply(
         `✅ Товар успешно добавлен!\n\n` +
-        `📦 ${product.name}\n` +
-        `💰 Цена: $${product.price}\n` +
-        `📊 В наличии: ${product.stock}\n\n` +
-        `Товар теперь доступен для покупателей!`,
+          `📦 ${product.name}\n` +
+          `💰 Цена: $${product.price}\n` +
+          `📊 В наличии: ${product.stock}\n\n` +
+          `Товар теперь доступен для покупателей!`,
         backToSellerMenuKeyboard()
       );
     } else {
       await ctx.reply(
-        `❌ Ошибка создания товара: ${result.error}\n\n` +
-        `Попробуйте еще раз.`,
+        `❌ Ошибка создания товара: ${result.error}\n\n` + `Попробуйте еще раз.`,
         backToSellerMenuKeyboard()
       );
     }
@@ -258,15 +255,12 @@ export async function handleViewProducts(ctx, shopId) {
 
       if (products.length === 0) {
         await ctx.editMessageText(
-          `📦 Товары магазина\n\n` +
-          `У вас пока нет товаров.\n\n` +
-          `Добавьте первый товар!`,
+          `📦 Товары магазина\n\n` + `У вас пока нет товаров.\n\n` + `Добавьте первый товар!`,
           productListKeyboard([])
         );
       } else {
         await ctx.editMessageText(
-          `📦 Товары магазина (${products.length})\n\n` +
-          `Выберите товар для просмотра:`,
+          `📦 Товары магазина (${products.length})\n\n` + `Выберите товар для просмотра:`,
           productListKeyboard(products)
         );
       }
@@ -295,7 +289,7 @@ export async function handleViewProductDetail(ctx, productId) {
       description: 'Product description',
       price: 100,
       stock: 10,
-      imageUrl: null
+      imageUrl: null,
     };
 
     let message = `📦 ${product.name}\n\n`;
@@ -319,8 +313,7 @@ export async function handleDeleteProduct(ctx, productId) {
       await ctx.answerCbQuery('✅ Товар удален');
 
       await ctx.editMessageText(
-        `✅ Товар успешно удален!\n\n` +
-        `Товар больше не доступен для покупателей.`,
+        `✅ Товар успешно удален!\n\n` + `Товар больше не доступен для покупателей.`,
         backToSellerMenuKeyboard()
       );
     } else {
@@ -338,8 +331,7 @@ export async function handleMyOrders(ctx) {
     await ctx.answerCbQuery();
 
     await ctx.editMessageText(
-      `📦 Мои заказы\n\n` +
-      `Выберите категорию заказов:`,
+      `📦 Мои заказы\n\n` + `Выберите категорию заказов:`,
       ordersMenuKeyboard()
     );
   } catch (error) {
@@ -366,27 +358,36 @@ export async function handleOrdersByStatus(ctx, status) {
       let orders = result.data;
 
       // Filter by status
-      orders = orders.filter(o => o.status === status);
+      orders = orders.filter((o) => o.status === status);
 
       if (orders.length === 0) {
-        const statusText = status === 'new' ? 'новых' :
-                          status === 'processing' ? 'в обработке' :
-                          status === 'completed' ? 'завершенных' :
-                          'отмененных';
+        const statusText =
+          status === 'new'
+            ? 'новых'
+            : status === 'processing'
+              ? 'в обработке'
+              : status === 'completed'
+                ? 'завершенных'
+                : 'отмененных';
 
         await ctx.editMessageText(
-          `📦 Заказы\n\n` +
-          `У вас нет ${statusText} заказов.`,
+          `📦 Заказы\n\n` + `У вас нет ${statusText} заказов.`,
           ordersMenuKeyboard()
         );
       } else {
         let ordersList = `📦 Заказы (${orders.length})\n\n`;
 
         orders.slice(0, 10).forEach((order, index) => {
-          const statusEmoji = order.status === 'new' ? '🆕' :
-                             order.status === 'processing' ? '⏳' :
-                             order.status === 'shipped' ? '📦' :
-                             order.status === 'completed' ? '✅' : '❌';
+          const statusEmoji =
+            order.status === 'new'
+              ? '🆕'
+              : order.status === 'processing'
+                ? '⏳'
+                : order.status === 'shipped'
+                  ? '📦'
+                  : order.status === 'completed'
+                    ? '✅'
+                    : '❌';
 
           ordersList += `${index + 1}. ${statusEmoji} Заказ #${order.id}\n`;
           ordersList += `   Покупатель: ${order.buyer?.username || 'N/A'}\n`;
@@ -418,16 +419,22 @@ export async function handleUpdateOrderStatus(ctx, orderId, newStatus) {
     const result = await updateOrderStatus(orderId, newStatus);
 
     if (result.success) {
-      const statusText = newStatus === 'processing' ? 'принят в обработку' :
-                        newStatus === 'shipped' ? 'отправлен' :
-                        newStatus === 'completed' ? 'завершен' :
-                        newStatus === 'rejected' ? 'отклонен' : 'обновлен';
-      
+      const statusText =
+        newStatus === 'processing'
+          ? 'принят в обработку'
+          : newStatus === 'shipped'
+            ? 'отправлен'
+            : newStatus === 'completed'
+              ? 'завершен'
+              : newStatus === 'rejected'
+                ? 'отклонен'
+                : 'обновлен';
+
       await ctx.answerCbQuery('✅ Статус обновлен');
 
       await ctx.editMessageText(
         `✅ Заказ #${orderId} ${statusText}\n\n` +
-        `Покупатель получит уведомление об изменении статуса.`,
+          `Покупатель получит уведомление об изменении статуса.`,
         backToSellerMenuKeyboard()
       );
 
@@ -450,12 +457,12 @@ export async function handleOpenWebappSeller(ctx) {
 
     await ctx.editMessageText(
       `🌐 Веб-приложение\n\n` +
-      `Откройте полную версию панели управления для:\n` +
-      `• Расширенного управления товарами\n` +
-      `• Детальной аналитики продаж\n` +
-      `• Управления заказами\n` +
-      `• Настройки магазина\n\n` +
-      `🔗 [Открыть веб-приложение](${webappUrl}/seller)`,
+        `Откройте полную версию панели управления для:\n` +
+        `• Расширенного управления товарами\n` +
+        `• Детальной аналитики продаж\n` +
+        `• Управления заказами\n` +
+        `• Настройки магазина\n\n` +
+        `🔗 [Открыть веб-приложение](${webappUrl}/seller)`,
       {
         parse_mode: 'Markdown',
         reply_markup: {

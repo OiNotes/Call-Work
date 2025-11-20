@@ -31,12 +31,12 @@ const showPrompt = async (ctx) => {
     }
 
     // Get active orders to show count
-    const orders = await orderApi.getShopOrders(
-      ctx.session.shopId,
-      ctx.session.token,
-      { status: 'confirmed' }
+    const orders = await orderApi.getShopOrders(ctx.session.shopId, ctx.session.token, {
+      status: 'confirmed',
+    });
+    const activeOrders = orders.filter((order) =>
+      ['confirmed', 'processing'].includes(order.status)
     );
-    const activeOrders = orders.filter((order) => ['confirmed', 'processing'].includes(order.status));
 
     if (activeOrders.length === 0) {
       await ctx.editMessageText(
@@ -59,15 +59,17 @@ const showPrompt = async (ctx) => {
     };
 
     // Format orders list (same logic as in orders.js)
-    const ordersList = activeOrders.map((order, index) => {
-      const buyer = order.buyer_username
-        ? `@${order.buyer_username}`
-        : (order.buyer_first_name || 'Покупатель');
-      const productName = order.product_name || order.productName || 'Товар';
-      const quantity = order.quantity ?? 1;
-      const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
-      return `${index + 1}. ${buyer} — ${productName} (${quantity} шт) — $${totalPrice}`;
-    }).join('\n');
+    const ordersList = activeOrders
+      .map((order, index) => {
+        const buyer = order.buyer_username
+          ? `@${order.buyer_username}`
+          : order.buyer_first_name || 'Покупатель';
+        const productName = order.product_name || order.productName || 'Товар';
+        const quantity = order.quantity ?? 1;
+        const totalPrice = formatPrice(order.total_price ?? order.totalPrice ?? 0);
+        return `${index + 1}. ${buyer} — ${productName} (${quantity} шт) — $${totalPrice}`;
+      })
+      .join('\n');
 
     const message = `${sellerMessages.bulkShip.prompt}
 
@@ -84,7 +86,6 @@ ${ordersList}
     );
 
     return ctx.wizard.next();
-
   } catch (error) {
     logger.error('Error in markOrdersShipped showPrompt:', error);
     await ctx.editMessageText(generalMessages.actionFailed);
@@ -136,10 +137,10 @@ const handleInput = async (ctx) => {
     }
 
     // Map parsed numbers to actual order IDs
-    const selectedOrders = parseResult.numbers.map(num => activeOrders[num - 1]);
+    const selectedOrders = parseResult.numbers.map((num) => activeOrders[num - 1]);
 
     // Check if all orders exist
-    const invalidIndexes = parseResult.numbers.filter(num => num > activeOrders.length);
+    const invalidIndexes = parseResult.numbers.filter((num) => num > activeOrders.length);
     if (invalidIndexes.length > 0) {
       await ctx.reply(
         sellerMessages.bulkShip.invalidNumbers(invalidIndexes),
@@ -164,12 +165,11 @@ ${ordersList}
       confirmMessage,
       Markup.inlineKeyboard([
         [Markup.button.callback(buttonText.confirm, 'confirm_ship')],
-        [Markup.button.callback(buttonText.cancel, 'cancel_ship')]
+        [Markup.button.callback(buttonText.cancel, 'cancel_ship')],
       ])
     );
 
     return ctx.wizard.next();
-
   } catch (error) {
     logger.error('Error in markOrdersShipped handleInput:', error);
     await ctx.reply(generalMessages.actionFailed);
@@ -204,7 +204,7 @@ const handleConfirmation = async (ctx) => {
       }
 
       // Get order IDs
-      const orderIds = selectedOrders.map(o => o.id);
+      const orderIds = selectedOrders.map((o) => o.id);
 
       // Update orders via API
       try {
@@ -213,7 +213,7 @@ const handleConfirmation = async (ctx) => {
         logger.info('mark_orders_shipped:success', {
           userId: ctx.from.id,
           orderIds,
-          count: orderIds.length
+          count: orderIds.length,
         });
 
         // Send notifications to buyers
@@ -224,12 +224,11 @@ const handleConfirmation = async (ctx) => {
           sellerMessages.bulkShip.success(selectedOrders.length),
           Markup.inlineKeyboard([
             [Markup.button.callback('📦 Активные заказы', 'seller:active_orders')],
-            [Markup.button.callback('↩️ В меню', 'seller:menu')]
+            [Markup.button.callback('↩️ В меню', 'seller:menu')],
           ])
         );
 
         return await ctx.scene.leave();
-
       } catch (error) {
         logger.error('Error bulk updating orders:', error);
         const errorMsg = error.response?.data?.error || generalMessages.actionFailed;
@@ -237,7 +236,6 @@ const handleConfirmation = async (ctx) => {
         return await ctx.scene.leave();
       }
     }
-
   } catch (error) {
     logger.error('Error in markOrdersShipped handleConfirmation:', error);
     await ctx.editMessageText(generalMessages.actionFailed);
@@ -273,14 +271,13 @@ async function sendBuyerNotifications(ctx, orders) {
 
       logger.info('mark_orders_shipped:buyer_notified', {
         orderId: order.id,
-        buyerId: order.buyer_telegram_id
+        buyerId: order.buyer_telegram_id,
       });
-
     } catch (error) {
       logger.error('Error sending buyer notification:', {
         orderId: order.id,
         buyerId: order.buyer_telegram_id,
-        error: error.message
+        error: error.message,
       });
       // Continue with other notifications even if one fails
     }
@@ -301,7 +298,7 @@ const markOrdersShippedScene = new Scenes.WizardScene(
 // Handle scene leave
 markOrdersShippedScene.leave(async (ctx) => {
   // P1-BOT-007: Delete user messages
-  const userMsgIds = ctx.wizard.state.userMessageIds || [];
+  const userMsgIds = ctx.wizard?.state?.userMessageIds || [];
   for (const msgId of userMsgIds) {
     try {
       await ctx.deleteMessage(msgId);
@@ -310,7 +307,11 @@ markOrdersShippedScene.leave(async (ctx) => {
     }
   }
 
-  ctx.wizard.state = {};
+  // ✅ P1-2 FIX: Clear wizard state to prevent memory leak
+  if (ctx.wizard) {
+    delete ctx.wizard.state;
+  }
+  ctx.scene.state = {};
   logger.info(`User ${ctx.from?.id} left markOrdersShipped scene`);
 });
 
@@ -322,7 +323,6 @@ markOrdersShippedScene.action('cancel_scene', async (ctx) => {
 
     await ctx.editMessageText(sellerMessages.bulkShip.cancelled);
     await ctx.scene.leave();
-
   } catch (error) {
     logger.error('Error in cancel_scene handler:', error);
     try {

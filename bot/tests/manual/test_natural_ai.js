@@ -1,11 +1,11 @@
 /**
  * Test: Natural AI responses (without templates)
- * 
+ *
  * This test verifies that AI generates natural responses
  * instead of using hardcoded templates like:
  * - "${name} обновлён: цена: ${old} → ${new}"
  * - "Готово, ${product.name}: ${formatUsd(product.price)}"
- * 
+ *
  * After fix:
  * - AI generates responses like: "Готово, цену black car снизил с $50 до $40"
  * - No more template strings in responses
@@ -24,13 +24,13 @@ async function testNaturalAIResponses() {
     products: [
       { id: 1, name: 'iPhone 15', price: 999, stock_quantity: 10 },
       { id: 2, name: 'MacBook Pro', price: 2499, stock_quantity: 5 },
-      { id: 3, name: 'AirPods Pro', price: 249, stock_quantity: 20 }
+      { id: 3, name: 'AirPods Pro', price: 249, stock_quantity: 20 },
     ],
-    ctx: null // No Telegram context for this test
+    ctx: null, // No Telegram context for this test
   };
 
   console.log('📦 Products in catalog:');
-  context.products.forEach(p => {
+  context.products.forEach((p) => {
     console.log(`  - ${p.name}: $${p.price} (${p.stock_quantity} шт)`);
   });
   console.log('');
@@ -39,7 +39,7 @@ async function testNaturalAIResponses() {
   console.log('✅ Test 1: buildMessageFromResult function removed');
   const fs = await import('fs/promises');
   const code = await fs.readFile('src/services/productAI.js', 'utf-8');
-  
+
   if (code.includes('buildMessageFromResult')) {
     console.log('❌ FAIL: buildMessageFromResult still exists in code!');
     process.exit(1);
@@ -48,7 +48,7 @@ async function testNaturalAIResponses() {
 
   // Test 2: Check that AI generates responses
   console.log('✅ Test 2: AI response generation flow exists');
-  
+
   // Check for AI response generation code
   if (!code.includes('aiResponse.choices[0].message.content')) {
     console.log('❌ FAIL: AI response generation code not found!');
@@ -59,7 +59,7 @@ async function testNaturalAIResponses() {
   // Test 3: Check system prompt has natural response instruction
   console.log('✅ Test 3: System prompt has natural response instruction');
   const promptCode = await fs.readFile('src/utils/systemPrompts.js', 'utf-8');
-  
+
   if (!promptCode.includes('сформулируй естественный ответ своими словами')) {
     console.log('❌ FAIL: System prompt missing natural response instruction!');
     process.exit(1);
@@ -68,13 +68,13 @@ async function testNaturalAIResponses() {
 
   // Test 4: No template literals in responses
   console.log('✅ Test 4: No hardcoded template responses');
-  
+
   const templatePatterns = [
     '`${product.name}: ${formatUsd',
     '`Готово, ${product.name}:',
     '`${productName} обновлён:',
     '`Удалил ${product.name}',
-    '`Сейчас в каталоге ${items.length}'
+    '`Сейчас в каталоге ${items.length}',
   ];
 
   let foundTemplates = false;
@@ -104,7 +104,7 @@ async function testNaturalAIResponses() {
   console.log('  "Готово, ${product.name}: ${formatUsd(product.price)}"');
 }
 
-testNaturalAIResponses().catch(err => {
+testNaturalAIResponses().catch((err) => {
   console.error('❌ Test failed:', err);
   process.exit(1);
 });

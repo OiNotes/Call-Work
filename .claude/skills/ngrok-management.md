@@ -30,24 +30,24 @@ echo ""
 # Check if ngrok is running
 if pgrep -x ngrok >/dev/null 2>&1; then
   echo "✅ ngrok process is running"
-  
+
   # Get public URL
   NGROK_URL=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"https://[^"]*"' | head -1 | cut -d'"' -f4)
-  
+
   if [ -n "$NGROK_URL" ]; then
     echo "✅ Public URL: $NGROK_URL"
-    
+
     # Check if URL is working (responds to requests)
     if curl -s --head --request GET "$NGROK_URL" | grep "HTTP" >/dev/null; then
       echo "✅ Tunnel is responding to requests"
     else
       echo "⚠️  Tunnel URL not responding"
     fi
-    
+
     # Show ngrok dashboard
     echo ""
     echo "ngrok Dashboard: http://localhost:4040"
-    
+
   else
     echo "❌ ngrok running but no tunnel URL found"
     echo "   This usually means ngrok failed to start properly"
@@ -107,7 +107,7 @@ NGROK_URL=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o '"pu
 
 if [ -n "$NGROK_URL" ]; then
   echo "Current ngrok URL: $NGROK_URL"
-  
+
   # Also show where it's configured
   echo ""
   echo "Configured in:"
@@ -132,6 +132,7 @@ This project uses **Telegram Mini App** which requires HTTPS URL to work. ngrok 
 ## Common ngrok issues:
 
 ### Issue 1: Tunnel expired
+
 ```
 Symptom: Mini App not loading, "ERR_CONNECTION_REFUSED"
 Cause: ngrok free plan has 2-hour session limit
@@ -139,6 +140,7 @@ Solution: Restart tunnel with "restart ngrok" or ./start.sh
 ```
 
 ### Issue 2: After system sleep/reboot
+
 ```
 Symptom: Backend running but Mini App not accessible
 Cause: ngrok tunnel dies when system sleeps
@@ -146,6 +148,7 @@ Solution: Restart tunnel with ./start.sh
 ```
 
 ### Issue 3: Wrong URL in .env
+
 ```
 Symptom: API calls fail with 404, CORS errors
 Cause: .env files have old ngrok URL
@@ -153,6 +156,7 @@ Solution: Restart tunnel (start.sh updates all .env files)
 ```
 
 ### Issue 4: ngrok not installed
+
 ```
 Symptom: start.sh fails with "ngrok: command not found"
 Solution: brew install ngrok (macOS) or download from ngrok.com
@@ -161,6 +165,7 @@ Solution: brew install ngrok (macOS) or download from ngrok.com
 ## ngrok tunnel details:
 
 When ngrok is running:
+
 - **Local:** http://localhost:3000 → Backend API
 - **Public:** https://abc123.ngrok.io → Same Backend (public access)
 - **Dashboard:** http://localhost:4040 → Request inspector
@@ -172,17 +177,20 @@ The public URL changes every time you restart ngrok (free plan).
 When you restart tunnel, start.sh updates:
 
 1. **backend/.env**
+
    ```
    WEBAPP_URL=https://new-url.ngrok.io
    FRONTEND_URL=https://new-url.ngrok.io
    ```
 
 2. **bot/.env**
+
    ```
    WEBAPP_URL=https://new-url.ngrok.io
    ```
 
 3. **webapp/.env**
+
    ```
    VITE_API_URL=https://new-url.ngrok.io/api
    ```

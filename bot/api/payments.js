@@ -13,11 +13,15 @@ export const paymentsApi = {
    * @returns {Promise<object>} Verification result
    */
   async verify(token, orderId, txHash, currency) {
-    return await client.post('/api/payments/verify', {
-      orderId,
-      txHash,
-      currency
-    }, token);
+    return await client.post(
+      '/api/payments/verify',
+      {
+        orderId,
+        txHash,
+        currency,
+      },
+      token
+    );
   },
 
   /**
@@ -38,5 +42,5 @@ export const paymentsApi = {
    */
   async checkStatus(token, txHash) {
     return await client.get(`/api/payments/status?txHash=${encodeURIComponent(txHash)}`, token);
-  }
+  },
 };

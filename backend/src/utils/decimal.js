@@ -3,7 +3,7 @@ import Decimal from 'decimal.js';
 // Configure Decimal for crypto precision
 Decimal.set({
   precision: 20, // More than enough for crypto (18 decimals max)
-  rounding: Decimal.ROUND_DOWN // Always round down for safety
+  rounding: Decimal.ROUND_DOWN, // Always round down for safety
 });
 
 /**

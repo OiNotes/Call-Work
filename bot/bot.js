@@ -2,12 +2,7 @@ import { Telegraf, session } from 'telegraf';
 import dotenv from 'dotenv';
 
 // Import handlers
-import {
-  handleStart,
-  handleBackToMain,
-  handleHelp,
-  handleCancel
-} from './handlers/start.js';
+import { handleStart, handleBackToMain, handleHelp, handleCancel } from './handlers/start.js';
 
 import {
   handleSellerMenu,
@@ -17,7 +12,7 @@ import {
   handleShopNameInput,
   handleCancelShopCreation,
   handleMyShop,
-  handleVerifyPaymentButton
+  handleVerifyPaymentButton,
 } from './handlers/seller.js';
 
 import {
@@ -30,7 +25,7 @@ import {
   handleMySubscriptions,
   handleBuyerOrders,
   handleBuyerOrdersByStatus,
-  handleOpenWebappBuyer
+  handleOpenWebappBuyer,
 } from './handlers/buyer.js';
 
 import {
@@ -46,7 +41,7 @@ import {
   handleMyOrders,
   handleOrdersByStatus,
   handleUpdateOrderStatus,
-  handleOpenWebappSeller
+  handleOpenWebappSeller,
 } from './handlers/shop.js';
 
 // Load environment variables
@@ -62,19 +57,25 @@ if (!process.env.BOT_TOKEN) {
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Session middleware
-bot.use(session({
-  defaultSession: () => ({
-    role: null,
-    state: null,
-    data: {},
-    shopId: null
+bot.use(
+  session({
+    defaultSession: () => ({
+      role: null,
+      state: null,
+      data: {},
+      shopId: null,
+    }),
   })
-}));
+);
 
 // Error handling middleware
 bot.catch((err, ctx) => {
   console.error('❌ Bot error:', err);
-  ctx.reply('❌ Произошла ошибка. Пожалуйста, попробуйте позже или используйте /start для перезапуска.').catch(() => {});
+  ctx
+    .reply(
+      '❌ Произошла ошибка. Пожалуйста, попробуйте позже или используйте /start для перезапуска.'
+    )
+    .catch(() => {});
 });
 
 // Rate limiting (simple implementation)
@@ -89,8 +90,8 @@ setInterval(() => {
   const now = Date.now();
   for (const [userId, timestamps] of userMessageTimestamps.entries()) {
     // Remove timestamps older than 1 hour
-    const validTimestamps = timestamps.filter(ts => now - ts < CLEANUP_AGE);
-    
+    const validTimestamps = timestamps.filter((ts) => now - ts < CLEANUP_AGE);
+
     if (validTimestamps.length === 0) {
       // Remove user entry if no valid timestamps
       userMessageTimestamps.delete(userId);
@@ -109,7 +110,9 @@ bot.use(async (ctx, next) => {
   const userTimestamps = userMessageTimestamps.get(userId) || [];
 
   // Remove old timestamps
-  const recentTimestamps = userTimestamps.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  const recentTimestamps = userTimestamps.filter(
+    (timestamp) => now - timestamp < RATE_LIMIT_WINDOW
+  );
 
   if (recentTimestamps.length >= RATE_LIMIT_MAX) {
     await ctx.reply('⚠️ Слишком много запросов. Пожалуйста, подождите немного.');
@@ -280,10 +283,10 @@ bot.on('text', async (ctx) => {
   else {
     await ctx.reply(
       'Используйте кнопки меню для навигации.\n\n' +
-      'Команды:\n' +
-      '/start - Главное меню\n' +
-      '/help - Помощь\n' +
-      '/cancel - Отменить текущее действие'
+        'Команды:\n' +
+        '/start - Главное меню\n' +
+        '/help - Помощь\n' +
+        '/cancel - Отменить текущее действие'
     );
   }
 });
@@ -312,28 +315,31 @@ process.once('SIGINT', () => shutdown('SIGINT'));
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 
 // Launch bot
-bot.launch().then(() => {
-  console.log('✅ Bot started successfully!');
-  console.log(`📱 Bot username: @${bot.botInfo.username}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Backend API: ${process.env.BACKEND_URL}`);
-  console.log(`🌐 Web App: ${process.env.WEBAPP_URL}`);
-  console.log('\n🤖 Bot is running... Press Ctrl+C to stop\n');
-  
-  // Webhook configuration (alternative to polling)
-  // To enable webhook instead of polling:
-  // 1. Uncomment lines below
-  // 2. Set WEBHOOK_URL in .env (must be HTTPS)
-  // 3. Comment out bot.launch() above
-  // 
-  // const webhookUrl = process.env.WEBHOOK_URL;
-  // bot.telegram.setWebhook(webhookUrl).then(() => {
-  //   console.log(`🔗 Webhook set to: ${webhookUrl}`);
-  // });
-}).catch((error) => {
-  console.error('❌ Failed to start bot:', error);
-  process.exit(1);
-});
+bot
+  .launch()
+  .then(() => {
+    console.log('✅ Bot started successfully!');
+    console.log(`📱 Bot username: @${bot.botInfo.username}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Backend API: ${process.env.BACKEND_URL}`);
+    console.log(`🌐 Web App: ${process.env.WEBAPP_URL}`);
+    console.log('\n🤖 Bot is running... Press Ctrl+C to stop\n');
+
+    // Webhook configuration (alternative to polling)
+    // To enable webhook instead of polling:
+    // 1. Uncomment lines below
+    // 2. Set WEBHOOK_URL in .env (must be HTTPS)
+    // 3. Comment out bot.launch() above
+    //
+    // const webhookUrl = process.env.WEBHOOK_URL;
+    // bot.telegram.setWebhook(webhookUrl).then(() => {
+    //   console.log(`🔗 Webhook set to: ${webhookUrl}`);
+    // });
+  })
+  .catch((error) => {
+    console.error('❌ Failed to start bot:', error);
+    process.exit(1);
+  });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (error) => {

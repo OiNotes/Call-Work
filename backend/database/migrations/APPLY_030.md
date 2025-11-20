@@ -21,11 +21,13 @@ LIMIT 10;
 ```
 
 **Current state:**
+
 - Uses B-tree index `idx_shops_name` (cannot optimize ILIKE with wildcards)
 - Full table scan on every search
 - Slow performance on tables with 1000+ rows
 
 **After migration:**
+
 - GIN trigram indexes on `shops.name` and `users.username`
 - Index scan instead of full table scan
 - 5-100x faster searches (depending on table size)
@@ -63,6 +65,7 @@ psql $DATABASE_URL -c "
 ```
 
 **Expected output:**
+
 ```
            indexname          |                                     indexdef
 ------------------------------+---------------------------------------------------------------------------------
@@ -121,11 +124,11 @@ COMMIT;
 For typical table sizes:
 
 | Shops Count | Index Size (shops.name) | Index Size (users.username) |
-|-------------|--------------------------|------------------------------|
-| 100         | ~50 KB                   | ~50 KB                       |
-| 1,000       | ~500 KB                  | ~500 KB                      |
-| 10,000      | ~5 MB                    | ~5 MB                        |
-| 100,000     | ~50 MB                   | ~50 MB                       |
+| ----------- | ----------------------- | --------------------------- |
+| 100         | ~50 KB                  | ~50 KB                      |
+| 1,000       | ~500 KB                 | ~500 KB                     |
+| 10,000      | ~5 MB                   | ~5 MB                       |
+| 100,000     | ~50 MB                  | ~50 MB                      |
 
 Check actual size after creation:
 
@@ -141,12 +144,12 @@ WHERE indexname IN ('idx_shops_name_trgm', 'idx_users_username_trgm');
 
 ### Expected Results
 
-| Table Size | Before (ms) | After (ms) | Speedup |
-|------------|-------------|------------|---------|
-| 100 rows   | 5-10ms      | 2-3ms      | 2-3x    |
-| 1,000 rows | 20-50ms     | 3-5ms      | 5-10x   |
-| 10,000 rows| 100-300ms   | 5-10ms     | 20-30x  |
-| 100,000 rows| 1-5s       | 10-50ms    | 100x+   |
+| Table Size   | Before (ms) | After (ms) | Speedup |
+| ------------ | ----------- | ---------- | ------- |
+| 100 rows     | 5-10ms      | 2-3ms      | 2-3x    |
+| 1,000 rows   | 20-50ms     | 3-5ms      | 5-10x   |
+| 10,000 rows  | 100-300ms   | 5-10ms     | 20-30x  |
+| 100,000 rows | 1-5s        | 10-50ms    | 100x+   |
 
 ### Test with Your Data
 

@@ -16,7 +16,7 @@ import {
   cleanupTestData,
   createTestUser,
   createTestShop,
-  createTestProduct
+  createTestProduct,
 } from '../helpers/testDb.js';
 
 // Create minimal test app
@@ -95,16 +95,16 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
     // Create test data
     user = await createTestUser({
       telegramId: '9000003001',
-      username: 'webhookuser'
+      username: 'webhookuser',
     });
 
     shop = await createTestShop(user.id, {
-      name: 'Webhook Test Shop'
+      name: 'Webhook Test Shop',
     });
 
     product = await createTestProduct(shop.id, {
       name: 'Webhook Product',
-      price: '100.00'
+      price: '100.00',
     });
 
     // Create order
@@ -142,9 +142,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
       outputs: [
         {
           addresses: [invoice.address],
-          value: 100000
-        }
-      ]
+          value: 100000,
+        },
+      ],
     });
 
     describe('CVE-PS-001: Secret token verification', () => {
@@ -184,20 +184,16 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
         expect(response.body.error).toBe('Unauthorized');
 
         // Verify no payment was created
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows).toHaveLength(0);
       });
 
       it('should reject webhook with missing token', async () => {
         const payload = createWebhookPayload();
 
-        const response = await request(app)
-          .post('/webhooks/blockcypher')
-          .send(payload)
-          .expect(401);
+        const response = await request(app).post('/webhooks/blockcypher').send(payload).expect(401);
 
         expect(response.body.error).toBe('Unauthorized');
       });
@@ -209,10 +205,7 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
 
         const payload = createWebhookPayload();
 
-        const response = await request(app)
-          .post('/webhooks/blockcypher')
-          .send(payload)
-          .expect(200);
+        const response = await request(app).post('/webhooks/blockcypher').send(payload).expect(200);
 
         expect(response.body.status).toBe('success');
 
@@ -267,10 +260,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
         expect(response2.body.status).toBe('already_processed');
 
         // Verify only one payment created
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows).toHaveLength(1);
       });
 
@@ -283,7 +275,7 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           confirmations: 1,
           block_height: 700000,
           total: 100000,
-          outputs: [{ addresses: [invoice.address], value: 100000 }]
+          outputs: [{ addresses: [invoice.address], value: 100000 }],
         };
 
         const response1 = await request(app)
@@ -297,7 +289,7 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
         // Second webhook with 3 confirmations (different webhook_id)
         const payload2 = {
           ...payload1,
-          confirmations: 3
+          confirmations: 3,
         };
 
         const response2 = await request(app)
@@ -350,10 +342,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
         expect(response.body.status).toBe('success');
 
         // Verify both payment AND processed_webhook were created
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows).toHaveLength(1);
 
         const webhookId = `blockcypher_${payload.hash}_${payload.confirmations}`;
@@ -374,9 +365,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           outputs: [
             {
               addresses: ['bc1_nonexistent_address_12345'],
-              value: 100000
-            }
-          ]
+              value: 100000,
+            },
+          ],
         };
 
         const response = await request(app)
@@ -388,10 +379,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
         expect(response.body.error).toBe('Invoice not found');
 
         // Verify NOTHING was created due to rollback
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows).toHaveLength(0);
 
         // Webhook should still be marked as processed to prevent retries
@@ -413,24 +403,19 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           .expect(200);
 
         // Verify order status updated
-        const orderResult = await pool.query(
-          'SELECT * FROM orders WHERE id = $1',
-          [order.id]
-        );
+        const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [order.id]);
         expect(orderResult.rows[0].status).toBe('confirmed');
 
         // Verify invoice status updated
-        const invoiceResult = await pool.query(
-          'SELECT * FROM invoices WHERE id = $1',
-          [invoice.id]
-        );
+        const invoiceResult = await pool.query('SELECT * FROM invoices WHERE id = $1', [
+          invoice.id,
+        ]);
         expect(invoiceResult.rows[0].status).toBe('paid');
 
         // Verify payment created with confirmed status
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows[0].status).toBe('confirmed');
       });
 
@@ -444,17 +429,13 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           .expect(200);
 
         // Verify order status still pending
-        const orderResult = await pool.query(
-          'SELECT * FROM orders WHERE id = $1',
-          [order.id]
-        );
+        const orderResult = await pool.query('SELECT * FROM orders WHERE id = $1', [order.id]);
         expect(orderResult.rows[0].status).toBe('pending');
 
         // Verify payment created with pending status
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows[0].status).toBe('pending');
       });
 
@@ -471,10 +452,9 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           .expect(200);
 
         // Verify payment is pending (3 < 5)
-        const payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [payload.hash]
-        );
+        const payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [
+          payload.hash,
+        ]);
         expect(payments.rows[0].status).toBe('pending');
 
         // Reset to default
@@ -492,13 +472,13 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           outputs: [
             {
               addresses: ['bc1_other_address'],
-              value: 100000
+              value: 100000,
             },
             {
               addresses: [invoice.address], // Our address in second output
-              value: 100000
-            }
-          ]
+              value: 100000,
+            },
+          ],
         };
 
         const response = await request(app)
@@ -519,7 +499,7 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           confirmations: 1,
           block_height: 700000,
           total: 100000,
-          outputs: [{ addresses: [invoice.address], value: 100000 }]
+          outputs: [{ addresses: [invoice.address], value: 100000 }],
         };
 
         await request(app)
@@ -529,16 +509,13 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           .expect(200);
 
         // Verify payment created with pending status
-        let payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [txHash]
-        );
+        let payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [txHash]);
         expect(payments.rows[0].status).toBe('pending');
 
         // Second webhook with 3 confirmations
         const payload2 = {
           ...payload1,
-          confirmations: 3
+          confirmations: 3,
         };
 
         await request(app)
@@ -548,10 +525,7 @@ describe.skip('Webhooks - Integration Tests (REQUIRES BLOCKCYPHER MOCKS)', () =>
           .expect(200);
 
         // Verify payment updated to confirmed
-        payments = await pool.query(
-          'SELECT * FROM payments WHERE tx_hash = $1',
-          [txHash]
-        );
+        payments = await pool.query('SELECT * FROM payments WHERE tx_hash = $1', [txHash]);
         expect(payments.rows[0].status).toBe('confirmed');
         expect(payments.rows[0].confirmations).toBe(3);
       });

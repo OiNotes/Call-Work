@@ -22,7 +22,7 @@ const USDT_TRC20_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 // Initialize TronWeb for address conversions
 const tronWeb = new TronWeb({
   fullHost: TRONGRID_API,
-  headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {}
+  headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
 });
 
 // Rate limiting: TronGrid allows higher limits, but be conservative
@@ -41,9 +41,7 @@ const CACHE_TTL_MS = 60000;
 async function rateLimitWait() {
   const now = Date.now();
 
-  requestTimestamps = requestTimestamps.filter(
-    timestamp => now - timestamp < REQUEST_WINDOW_MS
-  );
+  requestTimestamps = requestTimestamps.filter((timestamp) => now - timestamp < REQUEST_WINDOW_MS);
 
   if (requestTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
     const oldestRequest = requestTimestamps[0];
@@ -51,7 +49,7 @@ async function rateLimitWait() {
 
     if (waitTime > 0) {
       logger.debug(`[TronService] Rate limit: waiting ${waitTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
   }
 
@@ -63,7 +61,9 @@ async function rateLimitWait() {
  */
 function getFromCache(key) {
   const cached = cache.get(key);
-  if (!cached) {return null;}
+  if (!cached) {
+    return null;
+  }
 
   const { value, timestamp } = cached;
   const age = Date.now() - timestamp;
@@ -82,7 +82,7 @@ function getFromCache(key) {
 function setCache(key, value) {
   cache.set(key, {
     value,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 }
 
@@ -102,14 +102,16 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
 
       if (isLastAttempt) {
         logger.error(`[TronService] All ${maxRetries} retry attempts failed:`, {
-          error: error.message
+          error: error.message,
         });
         throw error;
       }
 
       const delay = baseDelay * Math.pow(2, attempt);
-      logger.warn(`[TronService] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      logger.warn(
+        `[TronService] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -143,18 +145,15 @@ export async function getTrc20Transfers(
     logger.info(`[TronService] Fetching TRC-20 transfers for: ${address}`);
 
     const response = await retryWithBackoff(async () => {
-      return await axios.get(
-        `${TRONGRID_API}/v1/accounts/${address}/transactions/trc20`,
-        {
-          params: {
-            only_confirmed: onlyConfirmed,
-            contract_address: contractAddress,
-            limit: Math.min(limit, 200) // TronGrid max is 200
-          },
-          headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
-          timeout: 10000
-        }
-      );
+      return await axios.get(`${TRONGRID_API}/v1/accounts/${address}/transactions/trc20`, {
+        params: {
+          only_confirmed: onlyConfirmed,
+          contract_address: contractAddress,
+          limit: Math.min(limit, 200), // TronGrid max is 200
+        },
+        headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
+        timeout: 10000,
+      });
     });
 
     if (!response.data || !response.data.data) {
@@ -162,14 +161,14 @@ export async function getTrc20Transfers(
       return [];
     }
 
-    const transfers = response.data.data.map(tx => ({
+    const transfers = response.data.data.map((tx) => ({
       transactionId: tx.transaction_id,
       from: tx.from,
       to: tx.to,
       value: tx.value,
       tokenInfo: tx.token_info,
       blockTimestamp: tx.block_timestamp,
-      type: tx.type
+      type: tx.type,
     }));
 
     // Cache the result
@@ -182,7 +181,7 @@ export async function getTrc20Transfers(
     logger.error('[TronService] Failed to get TRC-20 transfers:', {
       error: error.message,
       response: error.response?.data,
-      address
+      address,
     });
     throw new Error(`Failed to get TRC-20 transfers: ${error.message}`);
   }
@@ -214,7 +213,7 @@ export async function getTransaction(txId) {
         { value: txId },
         {
           headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
-          timeout: 10000
+          timeout: 10000,
         }
       );
     });
@@ -230,7 +229,7 @@ export async function getTransaction(txId) {
       txID: tx.txID,
       rawData: tx.raw_data,
       ret: tx.ret,
-      signature: tx.signature
+      signature: tx.signature,
     };
 
     // Cache the result
@@ -240,7 +239,7 @@ export async function getTransaction(txId) {
   } catch (error) {
     logger.error('[TronService] Failed to get transaction:', {
       error: error.message,
-      txId
+      txId,
     });
     throw new Error(`Failed to get transaction: ${error.message}`);
   }
@@ -272,7 +271,7 @@ export async function getTransactionInfo(txId) {
         { value: txId },
         {
           headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
-          timeout: 10000
+          timeout: 10000,
         }
       );
     });
@@ -289,7 +288,7 @@ export async function getTransactionInfo(txId) {
       blockNumber: info.blockNumber,
       blockTimeStamp: info.blockTimeStamp,
       receipt: info.receipt,
-      log: info.log
+      log: info.log,
     };
 
     // Cache the result
@@ -299,7 +298,7 @@ export async function getTransactionInfo(txId) {
   } catch (error) {
     logger.error('[TronService] Failed to get transaction info:', {
       error: error.message,
-      txId
+      txId,
     });
     throw new Error(`Failed to get transaction info: ${error.message}`);
   }
@@ -320,7 +319,7 @@ export async function getCurrentBlockNumber() {
         {},
         {
           headers: TRONGRID_API_KEY ? { 'TRON-PRO-API-KEY': TRONGRID_API_KEY } : {},
-          timeout: 10000
+          timeout: 10000,
         }
       );
     });
@@ -328,7 +327,7 @@ export async function getCurrentBlockNumber() {
     return response.data.block_header.raw_data.number;
   } catch (error) {
     logger.error('[TronService] Failed to get current block number:', {
-      error: error.message
+      error: error.message,
     });
     throw new Error(`Failed to get current block number: ${error.message}`);
   }
@@ -351,7 +350,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Transaction not found',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -360,7 +359,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Transaction failed',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -371,7 +370,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Transaction not yet confirmed',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -382,7 +381,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Not a smart contract transaction',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -393,7 +392,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Not a USDT TRC-20 transaction',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -405,7 +404,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       return {
         verified: false,
         error: 'Not a transfer transaction',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -417,12 +416,12 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       logger.warn(`[TronService] Address mismatch:`, {
         expected: expectedAddress,
         actual: recipientAddress,
-        txId
+        txId,
       });
       return {
         verified: false,
         error: 'Address mismatch',
-        confirmations: 0
+        confirmations: 0,
       };
     }
 
@@ -436,7 +435,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
         verified: false,
         error: `Amount mismatch. Expected: ${expectedAmount} USDT, Received: ${actualAmount} USDT`,
         confirmations: 0,
-        amount: actualAmount
+        amount: actualAmount,
       };
     }
 
@@ -448,7 +447,7 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       txId,
       address: expectedAddress,
       amount: actualAmount,
-      confirmations
+      confirmations,
     });
 
     return {
@@ -456,17 +455,17 @@ export async function verifyPayment(txId, expectedAddress, expectedAmount) {
       confirmations,
       amount: actualAmount,
       blockNumber: info.blockNumber,
-      status: confirmations >= 1 ? 'confirmed' : 'pending' // Tron needs only 1 confirmation
+      status: confirmations >= 1 ? 'confirmed' : 'pending', // Tron needs only 1 confirmation
     };
   } catch (error) {
     logger.error('[TronService] Payment verification failed:', {
       error: error.message,
-      txId
+      txId,
     });
     return {
       verified: false,
       error: error.message,
-      confirmations: 0
+      confirmations: 0,
     };
   }
 }
@@ -485,7 +484,7 @@ export function hexToBase58(hexAddress) {
   } catch (error) {
     logger.error('[TronService] Failed to convert hex to base58:', {
       error: error.message,
-      hexAddress
+      hexAddress,
     });
     throw new Error(`Failed to convert hex to base58: ${error.message}`);
   }
@@ -505,7 +504,7 @@ export function base58ToHex(base58Address) {
   } catch (error) {
     logger.error('[TronService] Failed to convert base58 to hex:', {
       error: error.message,
-      base58Address
+      base58Address,
     });
     throw new Error(`Failed to convert base58 to hex: ${error.message}`);
   }
@@ -518,5 +517,5 @@ export default {
   getCurrentBlockNumber,
   verifyPayment,
   hexToBase58,
-  base58ToHex
+  base58ToHex,
 };

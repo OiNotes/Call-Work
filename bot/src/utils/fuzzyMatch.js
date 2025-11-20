@@ -12,17 +12,19 @@
 export function levenshteinDistance(str1, str2) {
   const s1 = str1.toLowerCase();
   const s2 = str2.toLowerCase();
-  
+
   const m = s1.length;
   const n = s2.length;
-  
+
   // Create 2D array
-  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-  
+  const dp = Array(m + 1)
+    .fill(null)
+    .map(() => Array(n + 1).fill(0));
+
   // Initialize first column and row
   for (let i = 0; i <= m; i++) dp[i][0] = i;
   for (let j = 0; j <= n; j++) dp[0][j] = j;
-  
+
   // Fill dp table
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -30,14 +32,14 @@ export function levenshteinDistance(str1, str2) {
         dp[i][j] = dp[i - 1][j - 1];
       } else {
         dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,     // deletion
-          dp[i][j - 1] + 1,     // insertion
-          dp[i - 1][j - 1] + 1  // substitution
+          dp[i - 1][j] + 1, // deletion
+          dp[i][j - 1] + 1, // insertion
+          dp[i - 1][j - 1] + 1 // substitution
         );
       }
     }
   }
-  
+
   return dp[m][n];
 }
 
@@ -50,10 +52,10 @@ export function levenshteinDistance(str1, str2) {
 export function similarityScore(str1, str2) {
   const distance = levenshteinDistance(str1, str2);
   const maxLength = Math.max(str1.length, str2.length);
-  
+
   if (maxLength === 0) return 1;
-  
-  return 1 - (distance / maxLength);
+
+  return 1 - distance / maxLength;
 }
 
 /**
@@ -67,37 +69,35 @@ export function fuzzySearchProducts(query, products, threshold = 0.5) {
   if (!query || !products || products.length === 0) {
     return [];
   }
-  
+
   const queryLower = query.toLowerCase();
-  
+
   // Calculate scores for each product
-  const matches = products.map(product => {
+  const matches = products.map((product) => {
     const nameLower = product.name.toLowerCase();
-    
+
     // Exact match gets score 1
     if (nameLower === queryLower) {
       return { product, score: 1.0, matchType: 'exact' };
     }
-    
+
     // Substring match gets high score
     if (nameLower.includes(queryLower)) {
       return { product, score: 0.9, matchType: 'substring' };
     }
-    
+
     // Query is substring of product name
     if (queryLower.includes(nameLower)) {
       return { product, score: 0.85, matchType: 'partial' };
     }
-    
+
     // Fuzzy match using Levenshtein
     const score = similarityScore(query, product.name);
     return { product, score, matchType: 'fuzzy' };
   });
-  
+
   // Filter by threshold and sort by score
-  return matches
-    .filter(m => m.score >= threshold)
-    .sort((a, b) => b.score - a.score);
+  return matches.filter((m) => m.score >= threshold).sort((a, b) => b.score - a.score);
 }
 
 /**
@@ -107,12 +107,12 @@ export function fuzzySearchProducts(query, products, threshold = 0.5) {
  */
 export function isNoiseCommand(text) {
   if (!text || typeof text !== 'string') return true;
-  
+
   const normalized = text.toLowerCase().trim();
-  
+
   // Too short
   if (normalized.length < 2) return true;
-  
+
   // Common noise patterns (Russian and English)
   const noisePatterns = [
     /^(привет|hello|hi|hey|здравствуй|добрый день|доброе утро|добрый вечер)$/i,
@@ -124,8 +124,8 @@ export function isNoiseCommand(text) {
     /^(помощь|help|справка|\?)$/i,
     /^(хм+|ммм+|эм+|um+|uh+)$/i,
   ];
-  
-  return noisePatterns.some(pattern => pattern.test(normalized));
+
+  return noisePatterns.some((pattern) => pattern.test(normalized));
 }
 
 /**
@@ -138,19 +138,19 @@ export function isNoiseCommand(text) {
  */
 export function extractProductNames(text) {
   if (!text) return [];
-  
+
   // Remove common verbs
   const cleaned = text
     .replace(/^(удали|delete|убери|remove|удалить)\s+/i, '')
     .replace(/\s+(товар|товары|product|products)\s*/gi, ' ')
     .trim();
-  
+
   // Split by common separators
   const names = cleaned
     .split(/[,;\n]|\s+и\s+|\s+and\s+/)
-    .map(name => name.trim())
-    .filter(name => name.length > 0);
-  
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+
   return names;
 }
 
@@ -159,5 +159,5 @@ export default {
   similarityScore,
   fuzzySearchProducts,
   isNoiseCommand,
-  extractProductNames
+  extractProductNames,
 };

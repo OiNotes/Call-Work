@@ -8,18 +8,21 @@ export function startSyncCron() {
     logger.warn('Sync cron already running');
     return;
   }
-  
-  runPeriodicSync().catch(err => logger.error('Initial sync failed:', err));
-  
-  syncInterval = setInterval(async () => {
-    try {
-      logger.info('Running periodic product sync...');
-      await runPeriodicSync();
-    } catch (error) {
-      logger.error('Periodic sync failed:', error);
-    }
-  }, 5 * 60 * 1000);
-  
+
+  runPeriodicSync().catch((err) => logger.error('Initial sync failed:', err));
+
+  syncInterval = setInterval(
+    async () => {
+      try {
+        logger.info('Running periodic product sync...');
+        await runPeriodicSync();
+      } catch (error) {
+        logger.error('Periodic sync failed:', error);
+      }
+    },
+    5 * 60 * 1000
+  );
+
   logger.info('Product sync cron started (every 5 minutes)');
 }
 

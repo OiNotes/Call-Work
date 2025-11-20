@@ -9,6 +9,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { createTestBot } from '../helpers/testBot.js';
 import { callbackUpdate, textUpdate } from '../helpers/updateFactories.js';
 import { api } from '../../src/utils/api.js';
+import { mockShopValidation } from '../helpers/commonMocks.js';
 
 describe('Add Product Flow - Price Validation (P0)', () => {
   let testBot;
@@ -21,10 +22,13 @@ describe('Add Product Flow - Price Validation (P0)', () => {
         token: 'test-jwt-token',
         user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
         shopId: 1,
-        shopName: 'Test Shop'
-      }
+        shopName: 'Test Shop',
+      },
     });
     mock = new MockAdapter(api);
+
+    // Mock shop validation (required by validateShopBeforeScene middleware)
+    mockShopValidation(mock, 1);
   });
 
   afterEach(() => {
@@ -66,8 +70,8 @@ describe('Add Product Flow - Price Validation (P0)', () => {
         price: expectedPrice,
         currency: 'USD',
         shopId: 1,
-        stockQuantity: 0
-      }
+        stockQuantity: 0,
+      },
     });
 
     await testBot.handleUpdate(textUpdate(priceWithComma));
@@ -160,8 +164,8 @@ describe('Add Product Flow - Price Validation (P0)', () => {
       mockSession: {
         token: 'test-jwt-token',
         user: { id: 1, telegramId: '123456', selectedRole: 'seller' },
-        shopId: null
-      }
+        shopId: null,
+      },
     });
 
     // Пытаемся войти в scene - handler заблокирует вход
@@ -184,7 +188,7 @@ describe('Add Product Flow - Price Validation (P0)', () => {
 
     // Add product
     mock.onPost('/products').reply(201, {
-      data: { id: 1, name: 'Product', price: 10.00, currency: 'USD', shopId: 1 }
+      data: { id: 1, name: 'Product', price: 10.0, currency: 'USD', shopId: 1 },
     });
 
     await testBot.handleUpdate(textUpdate('Product'));

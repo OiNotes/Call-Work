@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
-import { shopQueries, workerQueries } from '../models/db.js';
+import { shopQueries, workerQueries } from '../database/queries/index.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -13,7 +13,7 @@ export const verifyToken = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        error: 'No token provided. Authorization header must be in format: Bearer <token>'
+        error: 'No token provided. Authorization header must be in format: Bearer <token>',
       });
     }
 
@@ -22,7 +22,7 @@ export const verifyToken = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token format'
+        error: 'Invalid token format',
       });
     }
 
@@ -33,7 +33,7 @@ export const verifyToken = async (req, res, next) => {
     req.user = {
       id: decoded.id,
       telegram_id: decoded.telegram_id,
-      username: decoded.username
+      username: decoded.username,
     };
 
     next();
@@ -41,20 +41,20 @@ export const verifyToken = async (req, res, next) => {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token'
+        error: 'Invalid token',
       });
     }
 
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
-        error: 'Token expired'
+        error: 'Token expired',
       });
     }
 
     return res.status(500).json({
       success: false,
-      error: 'Authentication error'
+      error: 'Authentication error',
     });
   }
 };
@@ -83,7 +83,7 @@ export const optionalAuth = async (req, res, next) => {
     req.user = {
       id: decoded.id,
       telegram_id: decoded.telegram_id,
-      username: decoded.username
+      username: decoded.username,
     };
 
     next();
@@ -109,7 +109,7 @@ export const requireShopOwner = async (req, res, next) => {
       if (!shops || shops.length === 0) {
         return res.status(403).json({
           success: false,
-          error: 'Only shop owners can perform this action. Create a shop first.'
+          error: 'Only shop owners can perform this action. Create a shop first.',
         });
       }
 
@@ -123,14 +123,14 @@ export const requireShopOwner = async (req, res, next) => {
     if (!shop) {
       return res.status(404).json({
         success: false,
-        error: 'Shop not found'
+        error: 'Shop not found',
       });
     }
 
     if (shop.owner_id !== req.user.id) {
       return res.status(403).json({
         success: false,
-        error: 'Only shop owner can perform this action'
+        error: 'Only shop owner can perform this action',
       });
     }
 
@@ -141,7 +141,7 @@ export const requireShopOwner = async (req, res, next) => {
     logger.error('Shop ownership verification error', { error: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
-      error: 'Failed to verify shop ownership'
+      error: 'Failed to verify shop ownership',
     });
   }
 };
@@ -154,11 +154,11 @@ export const requireShopAccess = async (req, res, next) => {
   try {
     // Get shopId from params or body
     const shopId = req.params.shopId || req.params.id || req.body.shopId;
-    
+
     if (!shopId) {
       return res.status(400).json({
         success: false,
-        error: 'Shop ID is required'
+        error: 'Shop ID is required',
       });
     }
 
@@ -167,7 +167,7 @@ export const requireShopAccess = async (req, res, next) => {
     if (!shop) {
       return res.status(404).json({
         success: false,
-        error: 'Shop not found'
+        error: 'Shop not found',
       });
     }
 
@@ -178,7 +178,7 @@ export const requireShopAccess = async (req, res, next) => {
         shopId,
         accessType: 'owner',
         isOwner: true,
-        isWorker: false
+        isWorker: false,
       };
       return next();
     }
@@ -192,7 +192,7 @@ export const requireShopAccess = async (req, res, next) => {
         shopId,
         accessType: 'worker',
         isOwner: false,
-        isWorker: true
+        isWorker: true,
       };
       return next();
     }
@@ -200,14 +200,13 @@ export const requireShopAccess = async (req, res, next) => {
     // No access
     return res.status(403).json({
       success: false,
-      error: 'You do not have access to this shop'
+      error: 'You do not have access to this shop',
     });
-
   } catch (error) {
     logger.error('Shop access verification error', { error: error.message });
     return res.status(500).json({
       success: false,
-      error: 'Failed to verify shop access'
+      error: 'Failed to verify shop access',
     });
   }
 };
@@ -216,5 +215,5 @@ export default {
   verifyToken,
   optionalAuth,
   requireShopOwner,
-  requireShopAccess
+  requireShopAccess,
 };

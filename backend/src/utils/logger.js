@@ -12,14 +12,14 @@ const fileRotateTransport = new DailyRotateFile({
   filename: path.join(__dirname, '../../logs/combined-%DATE%.log'),
   datePattern: 'YYYY-MM-DD',
   maxFiles: '14d',
-  level: 'info'
+  level: 'info',
 });
 
 const errorRotateTransport = new DailyRotateFile({
   filename: path.join(__dirname, '../../logs/error-%DATE%.log'),
   datePattern: 'YYYY-MM-DD',
   maxFiles: '30d',
-  level: 'error'
+  level: 'error',
 });
 
 // Формат логов
@@ -33,20 +33,16 @@ const logFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: config.nodeEnv === 'production' ? 'info' : 'debug',
   format: logFormat,
-  transports: [
-    fileRotateTransport,
-    errorRotateTransport
-  ]
+  transports: [fileRotateTransport, errorRotateTransport],
 });
 
 // Console transport для development
 if (config.nodeEnv !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+    })
+  );
 }
 
 export default logger;

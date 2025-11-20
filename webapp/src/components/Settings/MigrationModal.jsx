@@ -32,19 +32,19 @@ export default function MigrationModal({ isOpen, onClose }) {
   const getDaysLabel = (count) => {
     const lastDigit = count % 10;
     const lastTwoDigits = count % 100;
-    
+
     if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
       return 'дней';
     }
-    
+
     if (lastDigit === 1) {
       return 'день';
     }
-    
+
     if (lastDigit >= 2 && lastDigit <= 4) {
       return 'дня';
     }
-    
+
     return 'дней';
   };
 
@@ -53,22 +53,22 @@ export default function MigrationModal({ isOpen, onClose }) {
       return {
         isValid: false,
         cleaned: '',
-        error: 'Введите название канала'
+        error: 'Введите название канала',
       };
     }
 
     // Remove common prefixes
     let cleaned = input.trim();
     cleaned = cleaned.replace(/^https?:\/\//, ''); // Remove https://
-    cleaned = cleaned.replace(/^t\.me\//, '');      // Remove t.me/
-    cleaned = cleaned.replace(/^@/, '');             // Remove @
-    
+    cleaned = cleaned.replace(/^t\.me\//, ''); // Remove t.me/
+    cleaned = cleaned.replace(/^@/, ''); // Remove @
+
     // Validate format: 5-32 characters, alphanumeric + underscore
     const channelRegex = /^[a-zA-Z0-9_]{5,32}$/;
-    
+
     if (!channelRegex.test(cleaned)) {
       let error = 'Неверный формат канала';
-      
+
       if (cleaned.length < 5) {
         error = 'Минимум 5 символов';
       } else if (cleaned.length > 32) {
@@ -76,18 +76,18 @@ export default function MigrationModal({ isOpen, onClose }) {
       } else {
         error = 'Только латиница, цифры и _ (подчеркивание)';
       }
-      
+
       return {
         isValid: false,
         cleaned,
-        error
+        error,
       };
     }
-    
+
     return {
       isValid: true,
       cleaned: `@${cleaned}`, // Add @ prefix back for consistency
-      error: null
+      error: null,
     };
   };
 
@@ -115,7 +115,7 @@ export default function MigrationModal({ isOpen, onClose }) {
     try {
       // Get user's shop
       const { data: shopsResponse, error: shopsError } = await get('/shops/my', {
-        timeout: 10000  // 10 second timeout to prevent infinite loading
+        timeout: 10000, // 10 second timeout to prevent infinite loading
       });
 
       if (shopsError) {
@@ -136,9 +136,12 @@ export default function MigrationModal({ isOpen, onClose }) {
       setShop(primaryShop);
 
       // Check migration eligibility
-      const { data: eligibilityData, error: eligibilityError } = await get(`/shops/${primaryShop.id}/migration/check`, {
-        timeout: 10000  // 10 second timeout to prevent infinite loading
-      });
+      const { data: eligibilityData, error: eligibilityError } = await get(
+        `/shops/${primaryShop.id}/migration/check`,
+        {
+          timeout: 10000, // 10 second timeout to prevent infinite loading
+        }
+      );
 
       if (eligibilityError) {
         setErrorMessage('Ошибка проверки прав на миграцию. Попробуйте позже.');
@@ -157,7 +160,6 @@ export default function MigrationModal({ isOpen, onClose }) {
 
       // Success - переход к step 3 (input)
       setStep(3);
-
     } catch (err) {
       console.error('Eligibility check failed:', err);
       setErrorMessage('Ошибка проверки прав. Попробуйте позже.');
@@ -172,14 +174,12 @@ export default function MigrationModal({ isOpen, onClose }) {
     setStep(step + 1);
   };
 
-
-
   const handleMigrate = async () => {
     setMigrationError(null);
-    
+
     // Validate and clean channel input
     const { isValid, cleaned, error } = parseChannelInput(newChannel);
-    
+
     if (!isValid) {
       setChannelError(error);
       await alert(error || 'Неверный формат канала');
@@ -197,7 +197,7 @@ export default function MigrationModal({ isOpen, onClose }) {
     try {
       const { data, error } = await post(`/shops/${shop.id}/migration`, {
         newChannelUrl: cleaned, // Use cleaned value
-        oldChannelUrl: shop.channel_url
+        oldChannelUrl: shop.channel_url,
       });
 
       if (error) {
@@ -218,7 +218,7 @@ export default function MigrationModal({ isOpen, onClose }) {
       // Автоматическое закрытие через 3 секунды с countdown
       setCountdown(3);
       const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
+        setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
             onClose();
@@ -235,8 +235,6 @@ export default function MigrationModal({ isOpen, onClose }) {
     }
   };
 
-
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -247,7 +245,15 @@ export default function MigrationModal({ isOpen, onClose }) {
           exit={{ opacity: 0 }}
         >
           <PageHeader
-            title={step === 1 ? 'Миграция канала' : step === 2 ? 'Проверка прав' : step === 3 ? 'Новый канал' : 'Готово'}
+            title={
+              step === 1
+                ? 'Миграция канала'
+                : step === 2
+                  ? 'Проверка прав'
+                  : step === 3
+                    ? 'Новый канал'
+                    : 'Готово'
+            }
             onBack={step === 1 ? onClose : () => setStep(step - 1)}
           />
 
@@ -274,18 +280,28 @@ export default function MigrationModal({ isOpen, onClose }) {
               >
                 {/* Error Message */}
                 {errorMessage && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4"
                   >
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <div className="flex-1">
                         <p className="text-red-400 text-sm mb-3">{errorMessage}</p>
-                        
+
                         {/* Retry Button */}
                         <motion.button
                           onClick={async () => {
@@ -299,8 +315,18 @@ export default function MigrationModal({ isOpen, onClose }) {
                                      font-medium flex items-center gap-2 transition-colors"
                           whileTap={!loading ? { scale: 0.95 } : {}}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
                           </svg>
                           {loading ? 'Проверяем...' : 'Попробовать снова'}
                         </motion.button>
@@ -312,8 +338,18 @@ export default function MigrationModal({ isOpen, onClose }) {
                 <div className="glass-card rounded-2xl p-6">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full bg-orange-primary/20 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-orange-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      <svg
+                        className="w-6 h-6 text-orange-primary"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
                       </svg>
                     </div>
                     <h2 className="text-xl font-bold text-white">Канал заблокирован?</h2>
@@ -321,7 +357,8 @@ export default function MigrationModal({ isOpen, onClose }) {
 
                   <div className="space-y-4 text-gray-300">
                     <p>
-                      Функция миграции позволяет уведомить всех ваших подписчиков о переезде на новый канал.
+                      Функция миграции позволяет уведомить всех ваших подписчиков о переезде на
+                      новый канал.
                     </p>
 
                     <div className="bg-white/5 rounded-xl p-4 space-y-3">
@@ -344,7 +381,8 @@ export default function MigrationModal({ isOpen, onClose }) {
 
                     <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
                       <p className="text-yellow-400 text-sm">
-                        ⚠️ Внимание: это действие нельзя отменить. Убедитесь, что новый канал готов к приёму подписчиков.
+                        ⚠️ Внимание: это действие нельзя отменить. Убедитесь, что новый канал готов
+                        к приёму подписчиков.
                       </p>
                     </div>
 
@@ -369,38 +407,45 @@ export default function MigrationModal({ isOpen, onClose }) {
                             <h4 className="text-sm font-semibold text-blue-400 mb-2">
                               Информация о лимитах
                             </h4>
-                            
+
                             {eligibility.limits.lastMigrationDate && (
                               <p className="text-sm text-gray-300 mb-2">
-                                Последняя миграция: {' '}
+                                Последняя миграция:{' '}
                                 <span className="text-white font-medium">
-                                  {new Date(eligibility.limits.lastMigrationDate).toLocaleDateString('ru-RU', {
+                                  {new Date(
+                                    eligibility.limits.lastMigrationDate
+                                  ).toLocaleDateString('ru-RU', {
                                     day: 'numeric',
                                     month: 'long',
-                                    year: 'numeric'
+                                    year: 'numeric',
                                   })}
                                 </span>
                               </p>
                             )}
-                            
+
                             {eligibility.limits.daysUntilNext > 0 ? (
                               <>
                                 <p className="text-sm text-gray-300 mb-3">
-                                  Следующая миграция доступна через: {' '}
+                                  Следующая миграция доступна через:{' '}
                                   <span className="text-orange-500 font-medium">
-                                    {eligibility.limits.daysUntilNext} {getDaysLabel(eligibility.limits.daysUntilNext)}
+                                    {eligibility.limits.daysUntilNext}{' '}
+                                    {getDaysLabel(eligibility.limits.daysUntilNext)}
                                   </span>
                                 </p>
-                                
+
                                 {/* Progress bar */}
                                 <div className="mt-3">
                                   <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
                                     <motion.div
                                       initial={{ width: 0 }}
-                                      animate={{ 
-                                        width: `${Math.max(0, Math.min(100, 
-                                          ((30 - eligibility.limits.daysUntilNext) / 30) * 100
-                                        ))}%` 
+                                      animate={{
+                                        width: `${Math.max(
+                                          0,
+                                          Math.min(
+                                            100,
+                                            ((30 - eligibility.limits.daysUntilNext) / 30) * 100
+                                          )
+                                        )}%`,
                                       }}
                                       transition={{ duration: 0.8, ease: 'easeOut' }}
                                       className="h-full bg-gradient-to-r from-orange-500 to-orange-400"
@@ -428,16 +473,16 @@ export default function MigrationModal({ isOpen, onClose }) {
                   disabled={eligibility?.limits?.daysUntilNext > 0}
                   className="w-full h-12 rounded-xl font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: eligibility?.limits?.daysUntilNext > 0
-                      ? 'rgba(255, 255, 255, 0.1)'
-                      : 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+                    background:
+                      eligibility?.limits?.daysUntilNext > 0
+                        ? 'rgba(255, 255, 255, 0.1)'
+                        : 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)',
                   }}
                   whileTap={eligibility?.limits?.daysUntilNext > 0 ? {} : { scale: 0.98 }}
                 >
-                  {eligibility?.limits?.daysUntilNext > 0 
+                  {eligibility?.limits?.daysUntilNext > 0
                     ? `Доступно через ${eligibility.limits.daysUntilNext} ${getDaysLabel(eligibility.limits.daysUntilNext)}`
-                    : 'Продолжить'
-                  }
+                    : 'Продолжить'}
                 </motion.button>
               </motion.div>
             ) : step === 3 ? (
@@ -449,18 +494,28 @@ export default function MigrationModal({ isOpen, onClose }) {
               >
                 {/* Migration Error Message */}
                 {migrationError && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4"
                   >
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <div className="flex-1">
                         <p className="text-red-400 text-sm mb-3">{migrationError}</p>
-                        
+
                         {/* Retry Button */}
                         <motion.button
                           onClick={async () => {
@@ -471,10 +526,22 @@ export default function MigrationModal({ isOpen, onClose }) {
                           disabled={loading || !newChannel.trim() || channelError !== null}
                           className="text-sm text-orange-500 hover:text-orange-400 disabled:opacity-50
                                      font-medium flex items-center gap-2 transition-colors"
-                          whileTap={!loading && newChannel.trim() && !channelError ? { scale: 0.95 } : {}}
+                          whileTap={
+                            !loading && newChannel.trim() && !channelError ? { scale: 0.95 } : {}
+                          }
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
                           </svg>
                           {loading ? 'Отправка...' : 'Попробовать снова'}
                         </motion.button>
@@ -488,16 +555,14 @@ export default function MigrationModal({ isOpen, onClose }) {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm text-gray-400 mb-2">
-                        Telegram канал
-                      </label>
+                      <label className="block text-sm text-gray-400 mb-2">Telegram канал</label>
                       <input
                         type="text"
                         value={newChannel}
                         onChange={(e) => {
                           const value = e.target.value;
                           setNewChannel(value);
-                          
+
                           // Real-time validation
                           if (value) {
                             const { isValid, error } = parseChannelInput(value);
@@ -518,8 +583,18 @@ export default function MigrationModal({ isOpen, onClose }) {
                           initial={{ opacity: 0, y: -5 }}
                           animate={{ opacity: 1, y: 0 }}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
                           </svg>
                           {channelError}
                         </motion.p>
@@ -533,7 +608,8 @@ export default function MigrationModal({ isOpen, onClose }) {
                           animate={{ opacity: 1, y: 0 }}
                         >
                           <p className="text-sm text-green-400">
-                            ✓ Канал будет сохранён как: <strong>{parseChannelInput(newChannel).cleaned}</strong>
+                            ✓ Канал будет сохранён как:{' '}
+                            <strong>{parseChannelInput(newChannel).cleaned}</strong>
                           </p>
                         </motion.div>
                       )}
@@ -560,11 +636,12 @@ export default function MigrationModal({ isOpen, onClose }) {
                   disabled={loading || !newChannel.trim() || channelError !== null}
                   className="w-full h-12 rounded-xl font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: (!loading && newChannel.trim() && !channelError)
-                      ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
-                      : 'rgba(255, 255, 255, 0.1)'
+                    background:
+                      !loading && newChannel.trim() && !channelError
+                        ? 'linear-gradient(135deg, #FF6B00 0%, #FF8533 100%)'
+                        : 'rgba(255, 255, 255, 0.1)',
                   }}
-                  whileTap={(!loading && newChannel.trim() && !channelError) ? { scale: 0.98 } : {}}
+                  whileTap={!loading && newChannel.trim() && !channelError ? { scale: 0.98 } : {}}
                 >
                   {loading ? 'Отправка уведомлений...' : 'Запустить миграцию'}
                 </motion.button>
@@ -583,15 +660,23 @@ export default function MigrationModal({ isOpen, onClose }) {
                     animate={{ scale: 1 }}
                     transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                   >
-                    <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-10 h-10 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   </motion.div>
 
                   <h2 className="text-2xl font-bold text-white mb-2">Миграция запущена!</h2>
-                  <p className="text-gray-400 mb-4">
-                    Уведомления отправляются всем подписчикам
-                  </p>
+                  <p className="text-gray-400 mb-4">Уведомления отправляются всем подписчикам</p>
 
                   {countdown !== null && (
                     <motion.p
@@ -627,7 +712,7 @@ export default function MigrationModal({ isOpen, onClose }) {
                   }}
                   className="w-full h-12 rounded-xl font-semibold text-white"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)'
+                    background: 'rgba(255, 255, 255, 0.1)',
                   }}
                   whileTap={{ scale: 0.98 }}
                 >
