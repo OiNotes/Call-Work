@@ -87,9 +87,6 @@ export async function GET(request: NextRequest) {
         refusalsCount: true,
         warmingUpCount: true,
         contractReviewCount: true,
-        // pushCount может отсутствовать в старых схемах, fallback ниже
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
         pushCount: true,
       },
     })
