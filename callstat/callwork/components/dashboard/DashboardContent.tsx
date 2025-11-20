@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { PulseGrid } from '@/components/dashboard/PulseGrid'
@@ -63,7 +63,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
     }
   }
 
-  const recomputeViews = (employeesList: any[], managerFilter = selectedManagerId) => {
+  const recomputeViews = useCallback((employeesList: any[], managerFilter = selectedManagerId) => {
     const filteredEmployees =
       managerFilter === 'all'
         ? employeesList
@@ -143,7 +143,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
     }
 
     setAlerts(newAlerts)
-  }
+  }, [selectedManagerId])
 
   useEffect(() => {
     async function fetchData() {
@@ -165,12 +165,12 @@ export function DashboardContent({ user }: DashboardContentProps) {
     }
 
     fetchData()
-  }, [user.role, dateRange.start, dateRange.end])
+  }, [user.role, dateRange.start, dateRange.end, recomputeViews, selectedManagerId])
 
   useEffect(() => {
     if (rawEmployees.length === 0) return
     recomputeViews(rawEmployees, selectedManagerId)
-  }, [selectedManagerId, rawEmployees])
+  }, [selectedManagerId, rawEmployees, recomputeViews])
 
   useEffect(() => {
     if (user.role !== 'MANAGER') {

@@ -1,6 +1,5 @@
 import {
   CONVERSION_BENCHMARKS,
-  DEFAULT_REFUSAL_BENCHMARK,
   FUNNEL_STAGES,
   FunnelStageId,
 } from '@/lib/config/conversionBenchmarks'

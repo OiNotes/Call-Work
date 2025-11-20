@@ -114,8 +114,6 @@ export async function GET(request: NextRequest) {
       zoom1Held: aggregate._sum.pzmConducted || 0,
       zoom2Held: aggregate._sum.vzmConducted || 0,
       contractReview: aggregate._sum.contractReviewCount || 0,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       push: (aggregate._sum.pushCount as number | null) ?? aggregate._sum.contractReviewCount ?? 0,
       deals: aggregate._sum.successfulDeals || 0,
       sales: Number(aggregate._sum.monthlySalesAmount || 0),

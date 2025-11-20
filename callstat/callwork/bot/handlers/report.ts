@@ -95,7 +95,7 @@ export async function handleDateCallback(
 
   try {
     // Вычисляем дату в зависимости от выбора
-    let selectedDate = new Date()
+    const selectedDate = new Date()
     selectedDate.setHours(0, 0, 0, 0) // Обнуляем время
 
     if (query.data === 'date_yesterday') {
@@ -167,7 +167,7 @@ export async function handleDateCallback(
 export async function handleReportInput(
   bot: TelegramBot,
   msg: TelegramBot.Message,
-  prisma: PrismaClient
+  _prisma: PrismaClient
 ): Promise<void> {
   const chatId = msg.chat.id
   const text = msg.text?.trim()

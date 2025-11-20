@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable'
 import { VirtualGong } from '@/components/leaderboard/VirtualGong'
 
@@ -21,11 +21,7 @@ export default function LeaderboardPage() {
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('month')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchLeaderboard()
-  }, [period])
-
-  async function fetchLeaderboard() {
+  const fetchLeaderboard = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/leaderboard?period=${period}`)
@@ -36,7 +32,11 @@ export default function LeaderboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [period])
+
+  useEffect(() => {
+    fetchLeaderboard()
+  }, [fetchLeaderboard])
 
   return (
     <>

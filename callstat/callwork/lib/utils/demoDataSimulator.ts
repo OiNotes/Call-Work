@@ -112,8 +112,8 @@ export function simulateLeaderboardChange(leaderboard: TVData['leaderboard']): T
   employee.progress = (employee.sales / employee.goal) * 100
 
   // Пересортировка и обновление рангов
-  newLeaderboard.sort((a, b) => b.sales - a.sales)
-  newLeaderboard.forEach((emp, idx) => {
+  newLeaderboard.sort((a: typeof newLeaderboard[0], b: typeof newLeaderboard[0]) => b.sales - a.sales)
+  newLeaderboard.forEach((emp: typeof newLeaderboard[0], idx: number) => {
     emp.rank = idx + 1
   })
 
@@ -198,7 +198,7 @@ export function simulateFullUpdate(currentData: TVData): {
   event: DemoEvent | null
 } {
   // 1. Обновляем KPI
-  let newData = simulateKPIChange(currentData)
+  const newData = simulateKPIChange(currentData)
 
   // 2. Обновляем leaderboard (50% вероятность)
   if (Math.random() > 0.5) {

@@ -66,9 +66,7 @@ export function getHeatmapColor(value: number, benchmark: number): string {
 export function calculateManagerStats(reports: Report[]): Omit<ManagerStats, 'id' | 'name'> {
   const totals = reports.reduce(
     (acc, report) => {
-      const pushCount =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (report as any).pushCount ?? report.contractReviewCount ?? 0
+      const pushCount = (report as any).pushCount ?? report.contractReviewCount ?? 0
 
       return {
         zoomBooked: acc.zoomBooked + report.zoomAppointments,
@@ -107,7 +105,7 @@ export function calculateManagerStats(reports: Report[]): Omit<ManagerStats, 'id
   const planSales = 1000000
   const planDeals = 10
   const activityScore = Math.min(100, Math.round(Math.random() * 40 + 60))
-  const trend = (Math.random() > 0.5 ? 'up' : 'down') as const
+  const trend = Math.random() > 0.5 ? 'up' : 'down'
 
   return {
     ...totals,
@@ -149,6 +147,7 @@ export function getFunnelData(stats: Omit<ManagerStats, 'id' | 'name'>): FunnelS
     const conversion = conversionMap[stage.id] ?? 100
     const benchmark =
       {
+        zoomBooked: 100,
         zoom1Held: BENCHMARKS.bookedToZoom1,
         zoom2Held: BENCHMARKS.zoom1ToZoom2,
         contractReview: BENCHMARKS.zoom2ToContract,

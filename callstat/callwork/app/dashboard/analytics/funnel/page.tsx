@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { TrendingDown, AlertCircle, ArrowLeft } from 'lucide-react'
 import { InteractiveFunnelChart } from '@/components/analytics/InteractiveFunnelChart'
@@ -66,32 +66,7 @@ export default function FunnelPage() {
   const [managers, setManagers] = useState<{ id: string; name: string }[]>([])
   const [selectedManager, setSelectedManager] = useState<string>('all')
 
-  useEffect(() => {
-    fetchFunnelData()
-  }, [dateRange, selectedManager])
-
-  const updateDatePreset = (preset: PeriodPreset, nextRange?: { start: Date; end: Date }) => {
-    setDatePreset(preset)
-    if (nextRange) {
-      setDateRange(nextRange)
-      return
-    }
-
-    const now = new Date()
-    if (preset === 'today') {
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-      setDateRange({ start, end })
-    } else if (preset === 'week') {
-      setDateRange({ start: subDays(now, 7), end: now })
-    } else if (preset === 'lastMonth') {
-      setDateRange({ start: startOfMonth(subDays(startOfMonth(now), 1)), end: endOfMonth(subDays(startOfMonth(now), 1)) })
-    } else {
-      setDateRange({ start: startOfMonth(now), end: endOfMonth(now) })
-    }
-  }
-
-  async function fetchFunnelData() {
+  const fetchFunnelData = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -118,7 +93,7 @@ export default function FunnelPage() {
         new Map(
           (json.employeeConversions || []).map((emp: EmployeeConversion) => [emp.employee_id, emp.employee_name])
         ).entries()
-      ).map(([id, name]) => ({ id, name }))
+      ).map(([id, name]) => ({ id: id as string, name: name as string }))
       setManagers(uniqueManagers)
     } catch (err) {
       console.error('Failed to fetch funnel:', err)
@@ -126,7 +101,33 @@ export default function FunnelPage() {
     } finally {
       setLoading(false)
     }
+  }, [dateRange.start, dateRange.end, selectedManager])
+
+  useEffect(() => {
+    fetchFunnelData()
+  }, [fetchFunnelData])
+
+  const updateDatePreset = (preset: PeriodPreset, nextRange?: { start: Date; end: Date }) => {
+    setDatePreset(preset)
+    if (nextRange) {
+      setDateRange(nextRange)
+      return
+    }
+
+    const now = new Date()
+    if (preset === 'today') {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      setDateRange({ start, end })
+    } else if (preset === 'week') {
+      setDateRange({ start: subDays(now, 7), end: now })
+    } else if (preset === 'lastMonth') {
+      setDateRange({ start: startOfMonth(subDays(startOfMonth(now), 1)), end: endOfMonth(subDays(startOfMonth(now), 1)) })
+    } else {
+      setDateRange({ start: startOfMonth(now), end: endOfMonth(now) })
+    }
   }
+
 
   return (
     <motion.div

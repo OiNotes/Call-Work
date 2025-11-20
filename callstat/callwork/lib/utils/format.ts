@@ -100,10 +100,8 @@ export function formatMoney(amount: number | string | null | undefined): string 
       currency: 'RUB',
       maximumFractionDigits: 0,
     }).format(numAmount)
-  } catch (error) {
+  } catch {
     // Fallback на ручное форматирование
-    console.error('Intl.NumberFormat error:', error)
-
     const formatted = Math.round(numAmount).toLocaleString('ru-RU')
     return `${formatted} ₽`
   }
@@ -134,7 +132,7 @@ export function formatNumber(num: number | string | null | undefined): string {
     return new Intl.NumberFormat('ru-RU', {
       maximumFractionDigits: 0,
     }).format(numValue)
-  } catch (error) {
+  } catch {
     return Math.round(numValue).toLocaleString('ru-RU')
   }
 }

@@ -60,7 +60,7 @@ export async function GET(req: Request) {
     })
 
     return NextResponse.json({ reports })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { TrendingDown, Users, AlertCircle } from 'lucide-react'
 
@@ -23,15 +23,7 @@ const chartVariants = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] }
-  }
-}
-
-const barVariants = {
-  initial: { scaleY: 0 },
-  animate: {
-    scaleY: 1,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+    transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const }
   }
 }
 

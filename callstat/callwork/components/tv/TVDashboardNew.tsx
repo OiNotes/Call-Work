@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { TrendingUp, Phone, Target, ArrowUpRight, Play, Power } from 'lucide-react'
 import { Toaster } from 'sonner'
 import { simulateFullUpdate, type TVData as SimulatorTVData } from '@/lib/utils/demoDataSimulator'
-import { handleDemoEvent } from '@/lib/utils/demoEventHandler.tsx'
+import { handleDemoEvent } from '@/lib/utils/demoEventHandler'
 
 // --- ANIMATION HOOK ---
 
@@ -45,7 +45,7 @@ function useAnimatedNumber(target: number, duration = 1000) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [target, duration])
+  }, [target, duration, current])
 
   return current
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export function AlertBadge() {

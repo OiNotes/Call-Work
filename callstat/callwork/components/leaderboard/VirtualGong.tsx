@@ -33,7 +33,7 @@ export function VirtualGong() {
             origin: { y: 0.6 },
             colors: ['#FFD700', '#FFA500', '#FF6B00']
           })
-        } catch (error) {
+        } catch {
           // Quietly ignore parse errors
         }
       }
@@ -42,7 +42,7 @@ export function VirtualGong() {
         // Quietly close connection on error
         eventSource?.close()
       }
-    } catch (error) {
+    } catch {
       // Quietly ignore EventSource creation errors
     }
 

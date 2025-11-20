@@ -32,7 +32,7 @@ export function broadcastActivity(data: {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth()
+    const _user = await requireAuth()
 
     const stream = new ReadableStream({
       start(controller) {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         'Connection': 'keep-alive'
       }
     })
-  } catch (error) {
+  } catch {
     return new Response('Unauthorized', { status: 401 })
   }
 }

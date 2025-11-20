@@ -45,7 +45,7 @@ export function MiniFunnelCard({ employeeId, employeeName, funnel, redZones }: M
 
       {/* Мини-воронка */}
       <div className="flex-1 flex flex-col justify-center space-y-2">
-        {funnel.map((stage, index) => {
+        {funnel.map((stage, _index) => {
           const widthPercent = (stage.value / maxValue) * 100
           const color = getConversionColor(stage.conversion, stage.isRedZone)
 

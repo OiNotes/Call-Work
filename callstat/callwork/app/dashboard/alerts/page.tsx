@@ -1,21 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AlertCard } from '@/components/alerts/AlertCard'
 import { Bell, BellOff, CheckCheck } from 'lucide-react'
 
+interface Alert {
+  id: string
+  type: 'NO_REPORTS' | 'LOW_CONVERSION' | 'NO_DEALS' | 'BEHIND_PACE'
+  severity: 'INFO' | 'WARNING' | 'CRITICAL'
+  title: string
+  description: string
+  isRead: boolean
+  createdAt: string
+  user?: {
+    id: string
+    name: string
+  }
+}
+
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState([])
+  const [alerts, setAlerts] = useState<Alert[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [severityFilter, setSeverityFilter] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchAlerts()
-  }, [filter, severityFilter])
-
-  async function fetchAlerts() {
+  const fetchAlerts = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -24,7 +34,7 @@ export default function AlertsPage() {
 
       const res = await fetch(`/api/alerts?${params}`)
       const data = await res.json()
-      
+
       setAlerts(data.alerts)
       setUnreadCount(data.unreadCount)
     } catch (error) {
@@ -32,12 +42,16 @@ export default function AlertsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, severityFilter])
+
+  useEffect(() => {
+    fetchAlerts()
+  }, [fetchAlerts])
 
   async function markAsRead(id: string) {
     try {
       await fetch(`/api/alerts/${id}/read`, { method: 'PATCH' })
-      setAlerts(alerts.map((a: any) => a.id === id ? { ...a, isRead: true } : a))
+      setAlerts(alerts.map((a) => a.id === id ? { ...a, isRead: true } : a))
       setUnreadCount(Math.max(0, unreadCount - 1))
     } catch (error) {
       console.error('Failed to mark alert as read:', error)
@@ -47,14 +61,14 @@ export default function AlertsPage() {
   async function markAllAsRead() {
     try {
       await fetch('/api/alerts', { method: 'POST' })
-      setAlerts(alerts.map((a: any) => ({ ...a, isRead: true })))
+      setAlerts(alerts.map((a) => ({ ...a, isRead: true })))
       setUnreadCount(0)
     } catch (error) {
       console.error('Failed to mark all as read:', error)
     }
   }
 
-  const filteredAlerts = alerts.filter((alert: any) => {
+  const filteredAlerts = alerts.filter((alert) => {
     if (filter === 'unread' && alert.isRead) return false
     if (severityFilter && alert.severity !== severityFilter) return false
     return true
@@ -177,7 +191,7 @@ export default function AlertsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredAlerts.map((alert: any) => (
+          {filteredAlerts.map((alert) => (
             <AlertCard
               key={alert.id}
               alert={alert}

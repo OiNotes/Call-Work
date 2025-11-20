@@ -222,7 +222,7 @@ function generateWorkdays(days: number): Date[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  let currentDate = new Date(today)
+  const currentDate = new Date(today)
   currentDate.setDate(currentDate.getDate() - days)
 
   while (currentDate <= today) {

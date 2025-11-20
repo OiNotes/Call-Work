@@ -2,12 +2,11 @@
 
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, DollarSign, TrendingUp, Users, Target, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, DollarSign, TrendingUp, Target } from 'lucide-react'
 import { FunnelChart } from '@/components/analytics/FunnelChart'
 import { RedZoneAlerts } from '@/components/analytics/RedZoneAlerts'
 import { calculateManagerStats, getFunnelData, analyzeRedZones, BENCHMARKS } from '@/lib/analytics/funnel'
 import { formatMoney } from '@/lib/utils/format'
-import { motion } from 'framer-motion'
 
 interface EmployeePageProps {
   params: Promise<{ id: string }>

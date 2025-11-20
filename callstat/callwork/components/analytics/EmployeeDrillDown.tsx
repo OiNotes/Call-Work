@@ -36,7 +36,7 @@ const modalVariants = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { duration: 0.3, ease: 'easeOut' }
+    transition: { duration: 0.3, ease: 'easeOut' as const }
   },
   exit: {
     opacity: 0,
@@ -54,7 +54,7 @@ const listItemVariants = {
     transition: {
       delay: index * 0.05,
       duration: 0.2,
-      ease: 'easeOut'
+      ease: 'easeOut' as const
     }
   })
 }

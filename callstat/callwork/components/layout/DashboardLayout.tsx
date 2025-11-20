@@ -3,7 +3,7 @@
 import { memo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, TrendingUp, BarChart, Trophy, Bell, LayoutDashboard, ClipboardList } from 'lucide-react'
+import { LogOut, TrendingUp, BarChart, Trophy, Bell, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import { AlertBadge } from '@/components/alerts/AlertBadge'
 import { motion } from 'framer-motion'
@@ -124,7 +124,7 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
         >
           {children}
         </motion.div>

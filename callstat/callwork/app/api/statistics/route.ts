@@ -39,8 +39,6 @@ export async function GET(req: Request) {
         contractReviewCount: true,
         successfulDeals: true,
         monthlySalesAmount: true,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
         pushCount: true,
       },
       _avg: {
@@ -54,8 +52,6 @@ export async function GET(req: Request) {
       zoom1Held: stats._sum.pzmConducted || 0,
       zoom2Held: stats._sum.vzmConducted || 0,
       contractReview: stats._sum.contractReviewCount || 0,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       push: (stats._sum.pushCount as number | null) ?? stats._sum.contractReviewCount ?? 0,
       deals: stats._sum.successfulDeals || 0,
       sales: Number(stats._sum.monthlySalesAmount || 0),
@@ -80,7 +76,7 @@ export async function GET(req: Request) {
       northStar: fullFunnel.northStarKpi,
       sideFlow: fullFunnel.sideFlow,
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }

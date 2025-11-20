@@ -22,7 +22,7 @@ export async function POST() {
     })
 
     return NextResponse.json({ code, expiresAt })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
