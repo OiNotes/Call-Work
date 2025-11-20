@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "bot:dev": "tsx bot/index.ts",
     "bot:start": "node --loader ts-node/esm bot/index.ts",
     "seed:tv": "npx tsx scripts/seed-tv-today.ts"
