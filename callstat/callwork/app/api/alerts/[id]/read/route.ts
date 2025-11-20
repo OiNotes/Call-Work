@@ -4,13 +4,14 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAuth()
+    const { id } = await params
 
     const alert = await prisma.alert.update({
-      where: { id: params.id },
+      where: { id },
       data: { isRead: true }
     })
 
