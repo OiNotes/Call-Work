@@ -17,7 +17,7 @@ interface FunnelStage {
 }
 
 interface EmployeeConversion {
-  employee_id: number
+  employee_id: string
   employee_name: string
   stage: string
   count: number
@@ -27,6 +27,20 @@ interface EmployeeConversion {
 interface FunnelData {
   funnel: FunnelStage[]
   employeeConversions: EmployeeConversion[]
+  sideFlow?: {
+    refusals: {
+      total: number
+      rateFromFirstZoom: number
+      byStage: Array<{ stageId: string; label: string; count: number; rate: number }>
+    }
+    warming: { count: number }
+  }
+  northStarKpi?: {
+    value: number
+    target: number
+    delta: number
+    isOnTrack: boolean
+  }
 }
 
 type DatePreset = 'today' | 'week' | 'month' | 'custom'
@@ -51,10 +65,12 @@ export default function FunnelPage() {
     start: startOfMonth(new Date()),
     end: endOfMonth(new Date())
   })
+  const [managers, setManagers] = useState<{ id: string; name: string }[]>([])
+  const [selectedManager, setSelectedManager] = useState<string>('all')
 
   useEffect(() => {
     fetchFunnelData()
-  }, [dateRange])
+  }, [dateRange, selectedManager])
 
   const updateDatePreset = (preset: DatePreset) => {
     setDatePreset(preset)
@@ -91,6 +107,9 @@ export default function FunnelPage() {
         startDate: dateRange.start.toISOString(),
         endDate: dateRange.end.toISOString()
       })
+      if (selectedManager !== 'all') {
+        params.set('userId', selectedManager)
+      }
 
       const res = await fetch(`/api/analytics/funnel?${params}`)
 
@@ -101,6 +120,13 @@ export default function FunnelPage() {
 
       const json = await res.json()
       setData(json)
+
+      const uniqueManagers = Array.from(
+        new Map(
+          (json.employeeConversions || []).map((emp: EmployeeConversion) => [emp.employee_id, emp.employee_name])
+        ).entries()
+      ).map(([id, name]) => ({ id, name }))
+      setManagers(uniqueManagers)
     } catch (err) {
       console.error('Failed to fetch funnel:', err)
       setError(err instanceof Error ? err.message : 'Произошла ошибка')
@@ -126,66 +152,84 @@ export default function FunnelPage() {
           <span className="font-medium">Назад</span>
         </button>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingDown className="w-8 h-8 text-[#007AFF]" />
-              <h1 className="text-4xl font-bold text-[#1D1D1F]">
-                Рентген воронки продаж
-              </h1>
-            </div>
-            <p className="text-[#86868B]">
-              Анализ конверсий на каждом этапе продаж с детализацией по сотрудникам
-            </p>
-          </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <TrendingDown className="w-8 h-8 text-[#007AFF]" />
+                  <h1 className="text-4xl font-bold text-[#1D1D1F]">
+                    Рентген воронки продаж
+                  </h1>
+                </div>
+                <p className="text-[#86868B]">
+                  Анализ конверсий на каждом этапе продаж с детализацией по сотрудникам
+                </p>
+              </div>
 
-          {/* Date Range Picker */}
-          <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-5 h-5 text-[#007AFF]" />
-              <span className="text-sm font-semibold text-[#1D1D1F]">Период</span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => updateDatePreset('today')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  datePreset === 'today'
-                    ? 'bg-[#007AFF] text-white shadow-md'
-                    : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                }`}
-              >
-                Сегодня
-              </button>
-              <button
-                onClick={() => updateDatePreset('week')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  datePreset === 'week'
-                    ? 'bg-[#007AFF] text-white shadow-md'
-                    : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                }`}
-              >
-                Неделя
-              </button>
-              <button
-                onClick={() => updateDatePreset('month')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  datePreset === 'month'
-                    ? 'bg-[#007AFF] text-white shadow-md'
-                    : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                }`}
-              >
-                Месяц
-              </button>
-            </div>
-            <div className="mt-3 pt-3 border-t border-[#E5E5E7]">
-              <p className="text-xs text-[#86868B]">
-                {format(dateRange.start, 'd MMMM yyyy', { locale: ru })} -{' '}
-                {format(dateRange.end, 'd MMMM yyyy', { locale: ru })}
-              </p>
+              {/* Filters */}
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="w-5 h-5 text-[#007AFF]" />
+                    <span className="text-sm font-semibold text-[#1D1D1F]">Период</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateDatePreset('today')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        datePreset === 'today'
+                          ? 'bg-[#007AFF] text-white shadow-md'
+                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
+                      }`}
+                    >
+                      Сегодня
+                    </button>
+                    <button
+                      onClick={() => updateDatePreset('week')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        datePreset === 'week'
+                          ? 'bg-[#007AFF] text-white shadow-md'
+                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
+                      }`}
+                    >
+                      Неделя
+                    </button>
+                    <button
+                      onClick={() => updateDatePreset('month')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        datePreset === 'month'
+                          ? 'bg-[#007AFF] text-white shadow-md'
+                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
+                      }`}
+                    >
+                      Месяц
+                    </button>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[#E5E5E7]">
+                    <p className="text-xs text-[#86868B]">
+                      {format(dateRange.start, 'd MMMM yyyy', { locale: ru })} -{' '}
+                      {format(dateRange.end, 'd MMMM yyyy', { locale: ru })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
+                  <p className="text-xs text-[#86868B] mb-2">Менеджер</p>
+                  <select
+                    value={selectedManager}
+                    onChange={(e) => setSelectedManager(e.target.value)}
+                    className="rounded-lg border border-[#E5E5E7] px-3 py-2 text-sm"
+                  >
+                    <option value="all">Вся команда</option>
+                    {managers.map((manager) => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Content */}
       {loading ? (
@@ -245,7 +289,11 @@ export default function FunnelPage() {
               {selectedStage && (
                 <EmployeeDrillDown
                   stage={selectedStage}
-                  employees={data.employeeConversions}
+                  employees={
+                    selectedManager === 'all'
+                      ? data.employeeConversions
+                      : data.employeeConversions.filter((e) => e.employee_id === selectedManager)
+                  }
                   onClose={() => setSelectedStage(null)}
                 />
               )}
@@ -253,6 +301,44 @@ export default function FunnelPage() {
           )}
         </>
       ) : null}
+
+      {!loading && !error && data?.sideFlow && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <div className="bg-white rounded-2xl shadow-md border border-[#E5E5E7] p-6">
+            <h3 className="text-lg font-semibold text-[#1D1D1F] mb-4">Отказы по этапам</h3>
+            <div className="space-y-2">
+              {data.sideFlow.refusals.byStage.map((item) => (
+                <div key={item.stageId} className="flex items-center justify-between text-sm">
+                  <span className="text-[#1D1D1F]">{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#86868B]">{item.count}</span>
+                    <span className={`font-semibold ${item.rate > 20 ? 'text-[#FF3B30]' : 'text-green-600'}`}>
+                      {item.rate.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md border border-[#E5E5E7] p-6">
+            <h3 className="text-lg font-semibold text-[#1D1D1F] mb-2">Главный KPI</h3>
+            <p className="text-sm text-[#86868B] mb-4">1-й Zoom → Оплата</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-[#1D1D1F]">{data.northStarKpi?.value.toFixed(1)}%</p>
+                <p className="text-xs text-[#86868B]">Цель: {data.northStarKpi?.target}%</p>
+              </div>
+              <div
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  data.northStarKpi?.isOnTrack ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                }`}
+              >
+                {data.northStarKpi?.isOnTrack ? 'В норме' : 'Ниже цели'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Banner */}
       {!loading && !error && data && data.funnel.length > 0 && (

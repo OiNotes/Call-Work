@@ -9,10 +9,8 @@
 
 import * as subscriptionService from '../services/subscriptionService.js';
 import * as subscriptionInvoiceService from '../services/subscriptionInvoiceService.js';
-import * as blockCypherService from '../services/blockCypherService.js';
-import * as etherscanService from '../services/etherscanService.js';
-import * as tronService from '../services/tronService.js';
 import { handleSubscriptionPayment } from '../services/pollingService.js';
+import paymentVerificationService from '../services/paymentVerificationService.js';
 import { invoiceQueries, paymentQueries } from '../database/queries/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors.js';
@@ -34,12 +32,17 @@ import { query, getClient } from '../config/database.js';
  */
 const paySubscription = asyncHandler(async (req, res) => {
   try {
-    const { shopId, tier, txHash, currency, paymentAddress } = req.body;
+    const { shopId, tier, txHash, currency, paymentAddress, paymentLink, txLink, transactionUrl } =
+      req.body;
     const userId = req.user.id;
 
+    const paymentProof = txHash || paymentLink || txLink || transactionUrl;
+
     // Validate required fields
-    if (!shopId || !tier || !txHash || !currency || !paymentAddress) {
-      throw new ValidationError('Missing required fields: shopId, tier, txHash, currency, paymentAddress');
+    if (!shopId || !tier || !paymentProof || !currency || !paymentAddress) {
+      throw new ValidationError(
+        'Missing required fields: shopId, tier, txHash/paymentLink, currency, paymentAddress'
+      );
     }
 
     // Verify shop ownership
@@ -54,7 +57,8 @@ const paySubscription = asyncHandler(async (req, res) => {
       tier,
       txHash,
       currency,
-      paymentAddress
+      paymentAddress,
+      paymentLink || txLink || transactionUrl
     );
 
     logger.info(
@@ -85,12 +89,17 @@ const paySubscription = asyncHandler(async (req, res) => {
  */
 const upgradeShop = asyncHandler(async (req, res) => {
   try {
-    const { shopId, txHash, currency, paymentAddress } = req.body;
+    const { shopId, txHash, currency, paymentAddress, paymentLink, txLink, transactionUrl } =
+      req.body;
     const userId = req.user.id;
 
+    const paymentProof = txHash || paymentLink || txLink || transactionUrl;
+
     // Validate required fields
-    if (!shopId || !txHash || !currency || !paymentAddress) {
-      throw new ValidationError('Missing required fields: shopId, txHash, currency, paymentAddress');
+    if (!shopId || !paymentProof || !currency || !paymentAddress) {
+      throw new ValidationError(
+        'Missing required fields: shopId, txHash/paymentLink, currency, paymentAddress'
+      );
     }
 
     // Verify shop ownership
@@ -104,7 +113,8 @@ const upgradeShop = asyncHandler(async (req, res) => {
       shopId,
       txHash,
       currency,
-      paymentAddress
+      paymentAddress,
+      paymentLink || txLink || transactionUrl
     );
 
     logger.info(`[SubscriptionController] Shop ${shopId} upgraded to PRO tier`);
@@ -513,12 +523,14 @@ const getPaymentStatus = asyncHandler(async (req, res) => {
  */
 const confirmPaymentWithTxHash = asyncHandler(async (req, res) => {
   const subscriptionId = parseInt(req.params.id, 10);
-  const { txHash } = req.body || {};
+  const { txHash, paymentLink, txLink, transactionUrl } = req.body || {};
   const userId = req.user.id;
 
-  if (!txHash) {
-    throw new ValidationError('txHash is required');
+  const proof = txHash || paymentLink || txLink || transactionUrl;
+  if (!proof) {
+    throw new ValidationError('txHash or payment link is required');
   }
+  const normalizedHash = txHash || paymentVerificationService.extractTxHash(proof);
 
   // Ownership check
   const ownershipCheck = await verifySubscriptionOwnership(subscriptionId, userId);
@@ -542,49 +554,41 @@ const confirmPaymentWithTxHash = asyncHandler(async (req, res) => {
 
   const invoice = invoiceResult.rows[0];
   const chain = (invoice.chain || '').toUpperCase();
-  const currencyMap = {
-    BTC: 'BTC',
-    LTC: 'LTC',
-    ETH: 'ETH',
-    USDT_TRC20: 'USDT',
-  };
-  const paymentCurrency = currencyMap[chain];
-
-  if (!paymentCurrency) {
-    throw new ValidationError(`Unsupported chain for manual confirmation: ${chain}`);
-  }
+  const paymentCurrency = (invoice.currency || 'USDT').toUpperCase();
 
   const expectedAmount = parseFloat(invoice.crypto_amount || invoice.expected_amount);
   const address = invoice.address;
+  const minConfirm = SUPPORTED_CURRENCIES[paymentCurrency]?.confirmations || 0;
 
-  // On-chain verification per chain
-  let verification;
-  if (chain === 'BTC' || chain === 'LTC') {
-    verification = await blockCypherService.verifyPayment(chain, txHash, address, expectedAmount);
-  } else if (chain === 'ETH') {
-    verification = await etherscanService.verifyEthPayment(txHash, address, expectedAmount);
-  } else if (chain === 'USDT_TRC20') {
-    verification = await tronService.verifyPayment(txHash, address, expectedAmount);
-  }
+  const verification = await paymentVerificationService.verifyIncomingPayment({
+    txHash: normalizedHash,
+    paymentLink: paymentLink || txLink || transactionUrl,
+    address,
+    amount: expectedAmount,
+    currency: paymentCurrency,
+    chain,
+  });
 
   if (!verification?.verified) {
     return res.status(400).json({
       error: verification?.error || 'Payment not verified on blockchain',
       confirmations: verification?.confirmations || 0,
+      code: verification?.code || 'PAYMENT_NOT_VERIFIED',
     });
   }
 
-  const minConfirm = SUPPORTED_CURRENCIES[paymentCurrency].confirmations;
   const confirmations = verification.confirmations ?? 0;
-  const status = verification.status || (confirmations >= minConfirm ? 'confirmed' : 'pending');
+  const status =
+    verification.status || (confirmations >= minConfirm ? 'confirmed' : 'pending');
+  const verifiedTxHash = verification.txHash || normalizedHash;
 
-  // Upsert payment
+  // Upsert payment record (always save that we saw the tx)
   const payment = await paymentQueries.create({
     orderId: invoice.order_id || null,
     subscriptionId: invoice.subscription_id || null,
-    txHash,
-    amount: verification.amount,
-    currency: invoice.currency,
+    txHash: verifiedTxHash,
+    amount: verification.amount ?? expectedAmount,
+    currency: paymentCurrency,
     status,
   });
 
@@ -593,14 +597,17 @@ const confirmPaymentWithTxHash = asyncHandler(async (req, res) => {
     await paymentQueries.updateStatus(payment.id, status, verification.confirmations);
   }
 
-  // Mark invoice as paid with tx hash
-  await invoiceQueries.updateStatus(invoice.id, 'paid', txHash);
+  let activation = 'pending_confirmations';
 
-  // Activate subscription if confirmed
-  let activation = 'skipped';
+  // CRITICAL FIX: Only mark invoice as PAID if blockchain actually confirmed it
   if (status === 'confirmed') {
-    invoice.tx_hash = txHash;
+    // Mark invoice as paid with tx hash
+    await invoiceQueries.updateStatus(invoice.id, 'paid', verifiedTxHash);
+
+    // Activate subscription
     try {
+      // Make sure invoice object has the tx_hash for the handler
+      invoice.tx_hash = verifiedTxHash;
       await handleSubscriptionPayment(invoice);
       activation = 'activated';
     } catch (e) {
@@ -611,6 +618,15 @@ const confirmPaymentWithTxHash = asyncHandler(async (req, res) => {
       });
       activation = `activation_error: ${e.message}`;
     }
+  } else {
+    logger.info(`[SubscriptionController] Payment found but pending confirmations (${confirmations}/${minConfirm})`, {
+      subscriptionId,
+      txHash: verifiedTxHash,
+      chain
+    });
+    // Save tx_hash but keep status='pending' for polling to track
+    // This avoids unnecessary API calls in polling service
+    await invoiceQueries.updateStatus(invoice.id, 'pending', verifiedTxHash);
   }
 
   return res.json({

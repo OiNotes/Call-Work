@@ -67,11 +67,13 @@ model Report {
   // Отказы
   refusalsCount   Int     @default(0) /// Количество отказов (бывш. rejections)
   refusalsReasons String? /// Причины отказов (бывш. rejectionReason)
+  refusalsByStage Json?   /// Распределение отказов по этапам воронки
 
   // Дополнительные этапы
   warmingUpCount      Int @default(0) /// Прогрев клиентов (бывш. warmUp)
   vzmConducted        Int @default(0) /// Проведённые вторичные встречи
   contractReviewCount Int @default(0) /// Ознакомление с договором (бывш. contractReview)
+  pushCount           Int @default(0) /// Дожимы/финальные контакты
 
   // Результаты
   successfulDeals    Int     @default(0) /// Успешные сделки (бывш. dealsClosed)

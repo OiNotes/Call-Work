@@ -283,7 +283,25 @@ export const orderValidation = {
 export const paymentValidation = {
   verify: [
     body('orderId').isInt({ min: 1 }).withMessage('Valid order ID is required'),
-    body('txHash').notEmpty().trim().withMessage('Transaction hash is required'),
+    body('txHash')
+      .optional({ nullable: true })
+      .trim(),
+    body('paymentLink')
+      .optional({ nullable: true })
+      .trim(),
+    body('txLink')
+      .optional({ nullable: true })
+      .trim(),
+    body('transactionUrl')
+      .optional({ nullable: true })
+      .trim(),
+    body('txHash').custom((value, { req }) => {
+      const proof = value || req.body.paymentLink || req.body.txLink || req.body.transactionUrl;
+      if (!proof) {
+        throw new Error('Transaction hash or payment link is required');
+      }
+      return true;
+    }),
     body('currency')
       .isIn(['BTC', 'ETH', 'USDT', 'LTC'])
       .withMessage('Currency must be BTC, ETH, USDT, or LTC'),

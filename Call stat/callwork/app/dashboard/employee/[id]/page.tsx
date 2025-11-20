@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, DollarSign, TrendingUp, Users, Target, AlertTriangle } from 'lucide-react'
 import { FunnelChart } from '@/components/analytics/FunnelChart'
 import { RedZoneAlerts } from '@/components/analytics/RedZoneAlerts'
-import { calculateManagerStats, getFunnelData, analyzeRedZones } from '@/lib/analytics/funnel'
+import { calculateManagerStats, getFunnelData, analyzeRedZones, BENCHMARKS } from '@/lib/analytics/funnel'
 import { formatMoney } from '@/lib/utils/format'
 import { motion } from 'framer-motion'
 
@@ -194,27 +194,33 @@ export default function EmployeePage({ params }: EmployeePageProps) {
               <h3 className="font-semibold mb-4">Конверсии</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-[var(--muted)]/30 rounded-lg">
-                  <span className="text-sm">Зум → ПЗМ</span>
-                  <span className={`font-mono font-bold ${stats.pzmConversion < 70 ? 'text-red-500' : 'text-green-600'}`}>
-                    {stats.pzmConversion}%
+                  <span className="text-sm">Запись → 1-й Zoom</span>
+                  <span className={`font-mono font-bold ${stats.bookedToZoom1 < BENCHMARKS.bookedToZoom1 ? 'text-red-500' : 'text-green-600'}`}>
+                    {stats.bookedToZoom1}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-[var(--muted)]/30 rounded-lg">
-                  <span className="text-sm">ПЗМ → ВЗМ</span>
-                  <span className={`font-mono font-bold ${stats.vzmConversion < 50 ? 'text-red-500' : 'text-green-600'}`}>
-                    {stats.vzmConversion}%
+                  <span className="text-sm">1-й → 2-й Zoom</span>
+                  <span className={`font-mono font-bold ${stats.zoom1ToZoom2 < BENCHMARKS.zoom1ToZoom2 ? 'text-red-500' : 'text-green-600'}`}>
+                    {stats.zoom1ToZoom2}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-[var(--muted)]/30 rounded-lg">
-                  <span className="text-sm">ВЗМ → Договор</span>
-                  <span className={`font-mono font-bold ${stats.contractConversion < 40 ? 'text-orange-500' : 'text-green-600'}`}>
-                    {stats.contractConversion}%
+                  <span className="text-sm">2-й Zoom → Договор</span>
+                  <span className={`font-mono font-bold ${stats.zoom2ToContract < BENCHMARKS.zoom2ToContract ? 'text-orange-500' : 'text-green-600'}`}>
+                    {stats.zoom2ToContract}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-[var(--muted)]/30 rounded-lg">
-                  <span className="text-sm">Договор → Сделка</span>
-                  <span className={`font-mono font-bold ${stats.dealConversion < 30 ? 'text-red-500' : 'text-green-600'}`}>
-                    {stats.dealConversion}%
+                  <span className="text-sm">Договор → Дожим</span>
+                  <span className={`font-mono font-bold ${stats.contractToPush < BENCHMARKS.contractToPush ? 'text-orange-500' : 'text-green-600'}`}>
+                    {stats.contractToPush}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-[var(--muted)]/30 rounded-lg">
+                  <span className="text-sm">Дожим → Оплата</span>
+                  <span className={`font-mono font-bold ${stats.pushToDeal < BENCHMARKS.pushToDeal ? 'text-red-500' : 'text-green-600'}`}>
+                    {stats.pushToDeal}%
                   </span>
                 </div>
               </div>

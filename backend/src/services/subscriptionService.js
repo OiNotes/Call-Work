@@ -10,7 +10,6 @@
 
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
-import * as cryptoService from './crypto.js';
 import {
   SUBSCRIPTION_PRICES,
   SUBSCRIPTION_PRICES_YEARLY,
@@ -18,6 +17,7 @@ import {
   GRACE_PERIOD_DAYS,
   calculateProratedUpgrade as calculateUpgradeAmountFromConfig,
 } from '../config/subscriptionPricing.js';
+import paymentVerificationService from './paymentVerificationService.js';
 
 function addDays(date, days) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -32,9 +32,17 @@ function addDays(date, days) {
  * @param {string} txHash - Blockchain transaction hash
  * @param {string} currency - Cryptocurrency (BTC, ETH, USDT, LTC)
  * @param {string} expectedAddress - Expected payment address
+ * @param {string} paymentLink - Optional explorer/payment link for hash extraction
  * @returns {Promise<object>} Subscription record
  */
-async function processSubscriptionPayment(shopId, tier, txHash, currency, expectedAddress) {
+async function processSubscriptionPayment(
+  shopId,
+  tier,
+  txHash,
+  currency,
+  expectedAddress,
+  paymentLink = null
+) {
   const client = await pool.connect();
 
   try {
@@ -48,13 +56,14 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
     const amount = SUBSCRIPTION_PRICES[tier];
 
     // Verify transaction on blockchain
-    logger.info(`[Subscription] Verifying ${currency} transaction ${txHash}`);
-    const verification = await cryptoService.verifyTransaction(
+    logger.info(`[Subscription] Verifying ${currency} transaction ${txHash || paymentLink}`);
+    const verification = await paymentVerificationService.verifyIncomingPayment({
       txHash,
-      expectedAddress,
+      paymentLink,
+      address: expectedAddress,
       amount,
-      currency
-    );
+      currency,
+    });
 
     if (!verification.verified) {
       logger.error(`[Subscription] Transaction verification failed: ${verification.error}`);
@@ -133,9 +142,16 @@ async function processSubscriptionPayment(shopId, tier, txHash, currency, expect
  * @param {string} txHash - Blockchain transaction hash for upgrade payment
  * @param {string} currency - Cryptocurrency
  * @param {string} expectedAddress - Expected payment address
+ * @param {string} paymentLink - Optional explorer/payment link for hash extraction
  * @returns {Promise<object>} Upgraded subscription record
  */
-async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
+async function upgradeShopToPro(
+  shopId,
+  txHash,
+  currency,
+  expectedAddress,
+  paymentLink = null
+) {
   const client = await pool.connect();
 
   try {
@@ -182,12 +198,13 @@ async function upgradeShopToPro(shopId, txHash, currency, expectedAddress) {
     logger.info(`[Subscription] Upgrade amount calculated: $${upgradeAmount} (prorated)`);
 
     // Verify transaction
-    const verification = await cryptoService.verifyTransaction(
+    const verification = await paymentVerificationService.verifyIncomingPayment({
       txHash,
-      expectedAddress,
-      upgradeAmount,
-      currency
-    );
+      paymentLink,
+      address: expectedAddress,
+      amount: upgradeAmount,
+      currency,
+    });
 
     if (!verification.verified) {
       throw new Error(verification.error || 'Transaction verification failed');

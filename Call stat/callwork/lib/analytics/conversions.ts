@@ -1,44 +1,40 @@
-// Утилиты для расчёта конверсий и анализа
-
 export interface Stats {
-  zoomAppointments: number
-  pzmConducted: number
-  vzmConducted: number
+  zoomBooked: number
+  zoom1Held: number
+  zoom2Held: number
+  contractReview: number
+  pushCount: number
   successfulDeals: number
   monthlySalesAmount: number
 }
 
 export interface Conversions {
-  pzmConversion: number        // % проведённых ПЗМ от запланированных
-  pzToVzmConversion: number    // % ВЗМ от проведённых ПЗМ
-  vzmToDealConversion: number  // % сделок от ВЗМ
-  overallConversion: number    // % сделок от запланированных ПЗМ
+  bookedToZoom1: number
+  zoom1ToZoom2: number
+  zoom2ToContract: number
+  contractToPush: number
+  pushToDeal: number
+  overallConversion: number
+  northStar: number
 }
 
 export function calculateConversions(stats: Stats): Conversions {
-  const safe = (value: number) => value || 0
-  
-  const pzmConversion = stats.zoomAppointments > 0 
-    ? Math.round((stats.pzmConducted / stats.zoomAppointments) * 100) 
-    : 0
-    
-  const pzToVzmConversion = stats.pzmConducted > 0
-    ? Math.round((stats.vzmConducted / stats.pzmConducted) * 100)
-    : 0
-    
-  const vzmToDealConversion = stats.vzmConducted > 0
-    ? Math.round((stats.successfulDeals / stats.vzmConducted) * 100)
-    : 0
-    
-  const overallConversion = stats.zoomAppointments > 0
-    ? Math.round((stats.successfulDeals / stats.zoomAppointments) * 100)
-    : 0
-  
+  const safeDiv = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
+
+  const bookedToZoom1 = safeDiv(stats.zoom1Held, stats.zoomBooked)
+  const zoom1ToZoom2 = safeDiv(stats.zoom2Held, stats.zoom1Held)
+  const zoom2ToContract = safeDiv(stats.contractReview, stats.zoom2Held)
+  const contractToPush = safeDiv(stats.pushCount, stats.contractReview)
+  const pushToDeal = safeDiv(stats.successfulDeals, stats.pushCount)
+
   return {
-    pzmConversion,
-    pzToVzmConversion,
-    vzmToDealConversion,
-    overallConversion,
+    bookedToZoom1,
+    zoom1ToZoom2,
+    zoom2ToContract,
+    contractToPush,
+    pushToDeal,
+    overallConversion: safeDiv(stats.successfulDeals, stats.zoomBooked),
+    northStar: safeDiv(stats.successfulDeals, stats.zoom1Held || stats.zoomBooked),
   }
 }
 
@@ -47,8 +43,8 @@ export type DateRange = 'week' | 'month' | 'quarter' | 'year'
 export function getDateRange(range: DateRange): { startDate: Date; endDate: Date } {
   const now = new Date()
   const endDate = now
-  let startDate = new Date()
-  
+  const startDate = new Date()
+
   switch (range) {
     case 'week':
       startDate.setDate(now.getDate() - 7)
@@ -63,6 +59,6 @@ export function getDateRange(range: DateRange): { startDate: Date; endDate: Date
       startDate.setFullYear(now.getFullYear() - 1)
       break
   }
-  
+
   return { startDate, endDate }
 }

@@ -7,14 +7,14 @@ interface TeamComparisonProps {
   employeeStats: {
     deals: number
     sales: number
-    pzmConversion: number
-    vzmConversion: number
+    bookedToZoom1: number
+    pushToDeal: number
   }
   teamAverage: {
     deals: number
     sales: number
-    pzmConversion: number
-    vzmConversion: number
+    bookedToZoom1: number
+    pushToDeal: number
   }
 }
 
@@ -26,14 +26,14 @@ export function TeamComparisonChart({ employeeStats, teamAverage }: TeamComparis
       team: teamAverage.deals
     },
     {
-      metric: 'Конв. ПЗМ',
-      employee: employeeStats.pzmConversion,
-      team: teamAverage.pzmConversion
+      metric: 'Запись → 1-й Zoom',
+      employee: employeeStats.bookedToZoom1,
+      team: teamAverage.bookedToZoom1
     },
     {
-      metric: 'Конв. ВЗМ',
-      employee: employeeStats.vzmConversion,
-      team: teamAverage.vzmConversion
+      metric: 'Дожим → Оплата',
+      employee: employeeStats.pushToDeal,
+      team: teamAverage.pushToDeal
     }
   ]
 

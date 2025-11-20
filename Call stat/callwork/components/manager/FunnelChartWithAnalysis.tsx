@@ -4,9 +4,11 @@ import { memo } from 'react'
 import { TrendingDown } from 'lucide-react'
 
 interface FunnelData {
-  zoomAppointments: number
-  pzmConducted: number
-  vzmConducted: number
+  zoomBooked: number
+  zoom1Held: number
+  zoom2Held: number
+  contractReview: number
+  pushCount: number
   successfulDeals: number
 }
 
@@ -16,13 +18,15 @@ interface FunnelChartProps {
 
 export const FunnelChartWithAnalysis = memo(function FunnelChartWithAnalysis({ data }: FunnelChartProps) {
   const stages = [
-    { label: 'Zoom встречи запланировано', value: data.zoomAppointments, color: 'bg-blue-500' },
-    { label: 'ПЗМ проведено', value: data.pzmConducted, color: 'bg-blue-600' },
-    { label: 'ВЗМ проведено', value: data.vzmConducted, color: 'bg-purple-500' },
-    { label: 'Успешные сделки', value: data.successfulDeals, color: 'bg-green-500' },
+    { label: 'Записаны на Zoom', value: data.zoomBooked, color: 'bg-blue-500' },
+    { label: '1-й Zoom проведён', value: data.zoom1Held, color: 'bg-blue-600' },
+    { label: '2-й Zoom проведён', value: data.zoom2Held, color: 'bg-indigo-500' },
+    { label: 'Разбор договора', value: data.contractReview, color: 'bg-purple-500' },
+    { label: 'Дожим', value: data.pushCount, color: 'bg-amber-500' },
+    { label: 'Оплаты', value: data.successfulDeals, color: 'bg-green-500' },
   ]
 
-  const maxValue = data.zoomAppointments || 1
+  const maxValue = data.zoomBooked || 1
 
   return (
     <div className="space-y-4">

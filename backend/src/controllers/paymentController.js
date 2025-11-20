@@ -10,9 +10,10 @@ import {
 import { getClient } from '../config/database.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors.js';
-import cryptoService from '../services/crypto.js';
+import paymentVerificationService from '../services/paymentVerificationService.js';
 import telegramService from '../services/telegram.js';
 import logger from '../utils/logger.js';
+import { amountsMatchWithTolerance } from '../utils/paymentTolerance.js';
 import QRCode from 'qrcode';
 
 /**
@@ -26,7 +27,7 @@ export const paymentController = {
     const client = await getClient();
 
     try {
-      const { orderId, txHash, currency } = req.body;
+      const { orderId, txHash, currency, paymentLink, txLink, transactionUrl } = req.body;
 
       // ✅ FIX #1: BEGIN transaction FIRST with SERIALIZABLE isolation
       await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
@@ -126,19 +127,44 @@ export const paymentController = {
         throw new NotFoundError('Shop');
       }
 
-      // Get seller's wallet address for the currency
-      const walletField = `wallet_${currency.toLowerCase()}`;
-      const sellerAddress = shop[walletField];
+      // Figure out payment context (invoice-aware)
+      const normalizedCurrency = (currency || order.currency || 'USDT').toUpperCase();
 
-      if (!sellerAddress) {
-        throw new ValidationError(`Seller has not configured ${currency} wallet`);
+      // Use latest invoice if it exists to enforce address/amount
+      let activeInvoice = null;
+      try {
+        const invoiceResult = await client.query(
+          'SELECT * FROM invoices WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+          [orderId]
+        );
+        activeInvoice = invoiceResult.rows[0] || null;
+      } catch (invoiceError) {
+        logger.warn('Invoice lookup failed', {
+          orderId,
+          error: invoiceError.message,
+        });
+      }
+
+      const paymentCurrency = (activeInvoice?.currency || normalizedCurrency).toUpperCase();
+      const chainHint = activeInvoice?.chain || null;
+      const expectedAmount = activeInvoice?.crypto_amount
+        ? parseFloat(activeInvoice.crypto_amount)
+        : parseFloat(order.total_price);
+
+      // Get seller's wallet address for the currency (fallback when no invoice address)
+      const walletField = `wallet_${paymentCurrency.toLowerCase()}`;
+      const sellerAddress = shop[walletField];
+      const targetAddress = activeInvoice?.address || sellerAddress;
+
+      if (!targetAddress) {
+        throw new ValidationError(`Seller has not configured ${paymentCurrency} wallet`);
       }
 
       // ✅ FIX #6: Check invoice not reused for different order
       const invoiceCheck = await client.query(
         `SELECT id, order_id FROM invoices
          WHERE address = $1 AND order_id != $2 FOR UPDATE`,
-        [sellerAddress, orderId]
+        [targetAddress, orderId]
       );
 
       if (invoiceCheck.rows.length > 0) {
@@ -148,7 +174,7 @@ export const paymentController = {
           txHash,
           orderId,
           conflictingOrderId: invoiceCheck.rows[0].order_id,
-          address: sellerAddress,
+          address: targetAddress,
         });
 
         return res.status(400).json({
@@ -158,49 +184,77 @@ export const paymentController = {
         });
       }
 
-      // Verify payment with blockchain using seller's address
-      const verification = await cryptoService.verifyTransaction(
+      // Verify payment with unified verifier (supports hash OR explorer link + address scan)
+      const verification = await paymentVerificationService.verifyIncomingPayment({
         txHash,
-        sellerAddress,
-        order.total_price,
-        currency
-      );
+        paymentLink: paymentLink || txLink || transactionUrl,
+        address: targetAddress,
+        amount: expectedAmount,
+        currency: paymentCurrency,
+        chain: chainHint,
+      });
 
       if (!verification.verified) {
         await client.query('ROLLBACK');
 
-        // Create failed payment record (outside transaction)
-        await paymentQueries.create({
-          orderId,
-          txHash,
-          amount: order.total_price,
-          currency,
-          status: 'failed',
-        });
+        const failedTxHash = verification.txHash || txHash;
+
+        // Save failed attempt if we have a hash to prevent reuse
+        if (failedTxHash) {
+          await paymentQueries.create({
+            orderId,
+            txHash: failedTxHash,
+            amount: expectedAmount,
+            currency: paymentCurrency,
+            status: 'failed',
+          });
+        }
 
         return res.status(400).json({
           success: false,
           error: verification.error || 'Payment verification failed',
+          code: verification.code || 'PAYMENT_NOT_VERIFIED',
         });
       }
 
-      // ✅ FIX #3: Verify amount matches order total
-      if (verification.amount < parseFloat(order.total_price)) {
+      const verifiedTxHash = verification.txHash || txHash;
+
+      // Extra safety: tolerance check on top of verifier
+      if (
+        !amountsMatchWithTolerance(
+          verification.amount,
+          expectedAmount,
+          undefined,
+          paymentCurrency
+        )
+      ) {
         await client.query('ROLLBACK');
 
         logger.error('Payment amount mismatch', {
           orderId,
-          txHash,
-          expected: order.total_price,
+          txHash: verifiedTxHash,
+          expected: expectedAmount,
           received: verification.amount,
-          shortage: parseFloat(order.total_price) - verification.amount,
         });
 
         return res.status(400).json({
           success: false,
-          error: `Payment amount insufficient. Expected ${order.total_price}, received ${verification.amount}`,
+          error: `Payment amount insufficient. Expected ${expectedAmount}, received ${verification.amount}`,
           code: 'AMOUNT_MISMATCH',
         });
+      }
+
+      // Align invoice state with verification result
+      if (activeInvoice?.id) {
+        await client.query(
+          `UPDATE invoices
+           SET status = $1,
+               tx_hash = COALESCE($3, tx_hash),
+               paid_at = CASE WHEN $1 = 'paid' THEN NOW() ELSE paid_at END,
+               updated_at = NOW()
+           WHERE id = $2`,
+          [verification.status === 'confirmed' ? 'paid' : verification.status, activeInvoice.id, verifiedTxHash]
+        );
       }
 
       let payment;
@@ -211,9 +265,9 @@ export const paymentController = {
         payment = await paymentQueries.create(
           {
             orderId,
-            txHash,
-            amount: order.total_price, // ✅ FIX #3: Use order.total_price, NOT verification.amount
-            currency,
+            txHash: verifiedTxHash,
+            amount: expectedAmount,
+            currency: paymentCurrency,
             status: verification.status,
           },
           client
@@ -234,9 +288,9 @@ export const paymentController = {
         );
 
         if (invoiceResult.rows.length > 0) {
-          const invoice = invoiceResult.rows[0];
+          const invoiceRow = invoiceResult.rows[0];
           const now = new Date();
-          const expiresAt = new Date(invoice.expires_at);
+          const expiresAt = new Date(invoiceRow.expires_at);
 
           if (now > expiresAt) {
             await client.query('UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2', [
@@ -247,8 +301,8 @@ export const paymentController = {
 
             logger.warn('Invoice expired - order cancelled', {
               orderId,
-              invoiceId: invoice.id,
-              expiresAt: invoice.expires_at,
+              invoiceId: invoiceRow.id,
+              expiresAt: invoiceRow.expires_at,
               currentTime: now.toISOString(),
               expiredAgo: Math.round((now - expiresAt) / 1000 / 60),
             });
@@ -262,7 +316,7 @@ export const paymentController = {
 
           logger.info('Invoice valid - within expiry window', {
             orderId,
-            expiresAt: invoice.expires_at,
+            expiresAt: invoiceRow.expires_at,
             remainingMinutes: Math.round((expiresAt - now) / 1000 / 60),
           });
         }
@@ -512,9 +566,9 @@ export const paymentController = {
         payment = await paymentQueries.create(
           {
             orderId,
-            txHash,
-            amount: order.total_price, // ✅ FIX #3: Use order.total_price
-            currency,
+            txHash: verifiedTxHash,
+            amount: expectedAmount,
+            currency: paymentCurrency,
             status: verification.status,
           },
           client
@@ -605,10 +659,10 @@ export const paymentController = {
 
   /**
    * Check payment status (for polling)
-   */
+  */
   checkStatus: asyncHandler(async (req, res) => {
     try {
-      const { txHash } = req.query;
+      const { txHash, paymentLink, txLink, transactionUrl } = req.query;
 
       if (!txHash) {
         throw new ValidationError('Transaction hash required');
@@ -644,38 +698,53 @@ export const paymentController = {
 
       // If payment is still pending, check blockchain again
       if (payment.status === 'pending') {
-        // Get seller's wallet address for the currency
-        const walletField = `wallet_${payment.currency.toLowerCase()}`;
-        const sellerAddress = shop[walletField];
+        const invoice = await invoiceQueries.findByOrderId(order.id);
+        const paymentCurrency = (invoice?.currency || payment.currency || order.currency).toUpperCase();
+        const chainHint = invoice?.chain || null;
+        const expectedAmount = invoice?.crypto_amount
+          ? parseFloat(invoice.crypto_amount)
+          : parseFloat(order.total_price);
+
+        const walletField = `wallet_${paymentCurrency.toLowerCase()}`;
+        const sellerAddress = invoice?.address || shop[walletField];
 
         if (!sellerAddress) {
-          throw new ValidationError(`Seller has not configured ${payment.currency} wallet`);
+          throw new ValidationError(`Seller has not configured ${paymentCurrency} wallet`);
         }
 
-        const verification = await cryptoService.verifyTransaction(
-          payment.tx_hash,
-          sellerAddress,
-          order.total_price,
-          payment.currency
-        );
+        const verification = await paymentVerificationService.verifyIncomingPayment({
+          txHash: payment.tx_hash,
+          paymentLink: req.query.paymentLink || req.query.txLink || req.query.transactionUrl,
+          address: sellerAddress,
+          amount: expectedAmount,
+          currency: paymentCurrency,
+          chain: chainHint,
+        });
 
         if (!verification.verified) {
           throw new ValidationError(verification.error || 'Payment verification failed');
         }
 
-        // ✅ FIX #3: Verify amount matches order total (checkStatus)
-        if (verification.amount < parseFloat(order.total_price)) {
+        // ✅ FIX #3: Verify amount matches order total (checkStatus) with tolerance
+        if (
+          !amountsMatchWithTolerance(
+            verification.amount,
+            expectedAmount,
+            undefined,
+            paymentCurrency
+          )
+        ) {
           logger.error('Payment amount mismatch (checkStatus)', {
             orderId: order.id,
             txHash: payment.tx_hash,
-            expected: order.total_price,
+            expected: expectedAmount,
             received: verification.amount,
-            shortage: parseFloat(order.total_price) - verification.amount,
+            shortage: expectedAmount - verification.amount,
           });
 
           return res.status(400).json({
             success: false,
-            error: `Payment amount insufficient. Expected ${order.total_price}, received ${verification.amount}`,
+            error: `Payment amount insufficient. Expected ${expectedAmount}, received ${verification.amount}`,
             code: 'AMOUNT_MISMATCH',
           });
         }
@@ -692,6 +761,19 @@ export const paymentController = {
               ['confirmed', verification.confirmations, payment.id]
             );
 
+            // Sync invoice state with payment confirmation
+            if (invoice?.id) {
+              await client.query(
+                `UPDATE invoices
+                 SET status = 'paid',
+                     tx_hash = COALESCE($2, tx_hash),
+                     paid_at = NOW(),
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [invoice.id, payment.tx_hash]
+              );
+            }
+
             // ✅ БАГ #4 FIX: Check invoice expiry
             const invoiceResult = await client.query(
               'SELECT id, expires_at FROM invoices WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
@@ -699,9 +781,9 @@ export const paymentController = {
             );
 
             if (invoiceResult.rows.length > 0) {
-              const invoice = invoiceResult.rows[0];
+              const invoiceRow = invoiceResult.rows[0];
               const now = new Date();
-              const expiresAt = new Date(invoice.expires_at);
+              const expiresAt = new Date(invoiceRow.expires_at);
 
               if (now > expiresAt) {
                 await client.query(
@@ -712,8 +794,8 @@ export const paymentController = {
 
                 logger.warn('Invoice expired - order cancelled (checkStatus)', {
                   orderId: order.id,
-                  invoiceId: invoice.id,
-                  expiresAt: invoice.expires_at,
+                  invoiceId: invoiceRow.id,
+                  expiresAt: invoiceRow.expires_at,
                   currentTime: now.toISOString(),
                   expiredAgo: Math.round((now - expiresAt) / 1000 / 60),
                 });
@@ -731,7 +813,7 @@ export const paymentController = {
 
               logger.info('Invoice valid - within expiry window (checkStatus)', {
                 orderId: order.id,
-                expiresAt: invoice.expires_at,
+                expiresAt: invoiceRow.expires_at,
                 remainingMinutes: Math.round((expiresAt - now) / 1000 / 60),
               });
             }

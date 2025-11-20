@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/get-session'
-import { calculateConversions, getDateRange } from '@/lib/analytics/conversions'
+import { calculateManagerStats } from '@/lib/analytics/funnel'
+import { calculateFullFunnel } from '@/lib/calculations/funnel'
+import { CONVERSION_BENCHMARKS } from '@/lib/config/conversionBenchmarks'
+import { getDateRange } from '@/lib/analytics/conversions'
 
 export async function GET(
   request: Request,
@@ -34,210 +37,142 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const range = (searchParams.get('range') as 'week' | 'month' | 'quarter' | 'year') || 'month'
     const { startDate, endDate } = getDateRange(range)
-    
-    // Статистика работника
-    const reports = await prisma.report.aggregate({
-      where: {
-        userId: employeeId,
-        date: {
-          gte: startDate,
-          lte: endDate
-        }
-      },
-      _sum: {
-        zoomAppointments: true,
-        pzmConducted: true,
-        refusalsCount: true,
-        warmingUpCount: true,
-        vzmConducted: true,
-        contractReviewCount: true,
-        successfulDeals: true,
-        monthlySalesAmount: true,
-      },
-      _count: true
-    })
-    
-    const stats = {
-      zoomAppointments: reports._sum.zoomAppointments || 0,
-      pzmConducted: reports._sum.pzmConducted || 0,
-      vzmConducted: reports._sum.vzmConducted || 0,
-      successfulDeals: reports._sum.successfulDeals || 0,
-      monthlySalesAmount: Number(reports._sum.monthlySalesAmount || 0),
-      refusalsCount: reports._sum.refusalsCount || 0,
-      warmingUpCount: reports._sum.warmingUpCount || 0,
-      contractReviewCount: reports._sum.contractReviewCount || 0,
-    }
-    
-    const conversions = calculateConversions(stats)
 
-    // Получить информацию о сотруднике для поиска коллег
     const employee = await prisma.user.findUnique({
       where: { id: employeeId },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        managerId: true
-      }
+      select: { id: true, name: true, role: true, managerId: true },
     })
 
     if (!employee) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
     }
 
-    // Получить всех активных сотрудников того же менеджера (коллеги)
+    const employeeReports = await prisma.report.findMany({
+      where: {
+        userId: employeeId,
+        date: { gte: startDate, lte: endDate },
+      },
+    })
+
+    const employeeStats = calculateManagerStats(employeeReports)
+
     const teamMembers = await prisma.user.findMany({
       where: {
         managerId: employee.managerId,
         isActive: true,
         role: 'EMPLOYEE',
-        NOT: { id: employeeId } // Исключить самого сотрудника
+        NOT: { id: employeeId },
       },
       include: {
         reports: {
-          where: {
-            date: { gte: startDate, lte: endDate }
-          }
-        }
-      }
+          where: { date: { gte: startDate, lte: endDate } },
+        },
+      },
     })
 
-    // Агрегировать данные команды
-    const teamTotals = teamMembers.reduce((acc, member) => {
-      const memberTotal = member.reports.reduce((sum, r) => ({
-        zoom: sum.zoom + r.zoomAppointments,
-        pzm: sum.pzm + r.pzmConducted,
-        vzm: sum.vzm + r.vzmConducted,
-        deals: sum.deals + r.successfulDeals,
-        sales: sum.sales + Number(r.monthlySalesAmount)
-      }), { zoom: 0, pzm: 0, vzm: 0, deals: 0, sales: 0 })
+    const teamReports = teamMembers.flatMap((member) => member.reports)
+    const teamTotals = calculateManagerStats(teamReports)
+    const teamCount = teamMembers.length || 1
 
-      return {
-        zoom: acc.zoom + memberTotal.zoom,
-        pzm: acc.pzm + memberTotal.pzm,
-        vzm: acc.vzm + memberTotal.vzm,
-        deals: acc.deals + memberTotal.deals,
-        sales: acc.sales + memberTotal.sales
-      }
-    }, { zoom: 0, pzm: 0, vzm: 0, deals: 0, sales: 0 })
-
-    // Средние значения (делим на количество сотрудников)
-    const teamCount = teamMembers.length
-    const teamAverage = {
-      zoomAppointments: teamCount > 0 ? Math.round(teamTotals.zoom / teamCount) : 0,
-      pzmConducted: teamCount > 0 ? Math.round(teamTotals.pzm / teamCount) : 0,
-      vzmConducted: teamCount > 0 ? Math.round(teamTotals.vzm / teamCount) : 0,
-      successfulDeals: teamCount > 0 ? Math.round(teamTotals.deals / teamCount) : 0,
-      monthlySalesAmount: teamCount > 0 ? Math.round(teamTotals.sales / teamCount) : 0,
+    const teamAverageCounts = {
+      zoomBooked: Math.round(teamTotals.zoomBooked / teamCount),
+      zoom1Held: Math.round(teamTotals.zoom1Held / teamCount),
+      zoom2Held: Math.round(teamTotals.zoom2Held / teamCount),
+      contractReview: Math.round(teamTotals.contractReview / teamCount),
+      pushCount: Math.round(teamTotals.pushCount / teamCount),
+      successfulDeals: Math.round(teamTotals.successfulDeals / teamCount),
+      salesAmount: Math.round(teamTotals.salesAmount / teamCount),
     }
 
-    // Конверсии команды
-    const teamConversions = calculateConversions({
-      zoomAppointments: teamTotals.zoom,
-      pzmConducted: teamTotals.pzm,
-      vzmConducted: teamTotals.vzm,
-      successfulDeals: teamTotals.deals,
-      monthlySalesAmount: teamTotals.sales
-    })
-
-    // Определение красных зон (где отклонение > 10%)
     const redZones = []
 
-    if (conversions.pzmConversion < teamConversions.pzmConversion - 10) {
+    if (employeeStats.bookedToZoom1 < CONVERSION_BENCHMARKS.BOOKED_TO_ZOOM1) {
       redZones.push({
-        metric: 'Конверсия ПЗМ',
-        current: conversions.pzmConversion,
-        teamAverage: teamConversions.pzmConversion,
-        gap: teamConversions.pzmConversion - conversions.pzmConversion,
-        recommendation: 'Проверьте качество подготовки к первичным встречам. Возможно, стоит улучшить скрипт приглашения.'
+        metric: 'Запись → 1-й Zoom',
+        current: employeeStats.bookedToZoom1,
+        teamAverage: teamTotals.bookedToZoom1,
+        gap: teamTotals.bookedToZoom1 - employeeStats.bookedToZoom1,
+        recommendation: 'Проверьте подтверждение записей и напоминания перед Зумом.',
       })
     }
 
-    if (conversions.pzToVzmConversion < teamConversions.pzToVzmConversion - 10) {
+    if (employeeStats.zoom1ToZoom2 < CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2) {
       redZones.push({
-        metric: 'Конверсия ВЗМ',
-        current: conversions.pzToVzmConversion,
-        teamAverage: teamConversions.pzToVzmConversion,
-        gap: teamConversions.pzToVzmConversion - conversions.pzToVzmConversion,
-        recommendation: 'Улучшите проведение первичных встреч. Фокус на выявление потребностей и презентацию ценности.'
+        metric: '1-й → 2-й Zoom',
+        current: employeeStats.zoom1ToZoom2,
+        teamAverage: teamTotals.zoom1ToZoom2,
+        gap: teamTotals.zoom1ToZoom2 - employeeStats.zoom1ToZoom2,
+        recommendation: 'Сфокусируйтесь на выявлении потребностей и назначении следующего шага.',
       })
     }
 
-    if (conversions.vzmToDealConversion < teamConversions.vzmToDealConversion - 10) {
+    if (employeeStats.pushToDeal < CONVERSION_BENCHMARKS.PUSH_TO_DEAL) {
       redZones.push({
-        metric: 'Конверсия в сделку',
-        current: conversions.vzmToDealConversion,
-        teamAverage: teamConversions.vzmToDealConversion,
-        gap: teamConversions.vzmToDealConversion - conversions.vzmToDealConversion,
-        recommendation: 'Работайте над закрытием сделок. Возможно, нужно улучшить работу с возражениями.'
+        metric: 'Дожим → Оплата',
+        current: employeeStats.pushToDeal,
+        teamAverage: teamTotals.pushToDeal,
+        gap: teamTotals.pushToDeal - employeeStats.pushToDeal,
+        recommendation: 'Пересмотрите работу с возражениями и дедлайнами оплаты.',
       })
     }
 
-    // Проверить количественные показатели
-    if (teamCount > 0 && stats.successfulDeals < teamAverage.successfulDeals * 0.7) {
+    if (employeeStats.northStar < CONVERSION_BENCHMARKS.ZOOM1_TO_DEAL_KPI) {
       redZones.push({
-        metric: 'Количество сделок',
-        current: stats.successfulDeals,
-        teamAverage: teamAverage.successfulDeals,
-        gap: teamAverage.successfulDeals - stats.successfulDeals,
-        recommendation: 'Увеличьте активность. Больше встреч = больше сделок.'
+        metric: 'Главный KPI',
+        current: employeeStats.northStar,
+        teamAverage: teamTotals.northStar,
+        gap: teamTotals.northStar - employeeStats.northStar,
+        recommendation: 'Увеличьте долю оплат от первых Zoom, слушайте проблемные записи.',
       })
     }
 
-    // Персональная воронка с сравнением
-    const funnel = [
-      {
-        stage: 'Zoom записи',
-        value: stats.zoomAppointments,
-        teamAverage: teamAverage.zoomAppointments,
-        isAboveAverage: stats.zoomAppointments >= teamAverage.zoomAppointments
-      },
-      {
-        stage: 'ПЗМ проведено',
-        value: stats.pzmConducted,
-        conversion: conversions.pzmConversion,
-        teamConversion: teamConversions.pzmConversion,
-        isAboveAverage: conversions.pzmConversion >= teamConversions.pzmConversion
-      },
-      {
-        stage: 'ВЗМ проведено',
-        value: stats.vzmConducted,
-        conversion: conversions.pzToVzmConversion,
-        teamConversion: teamConversions.pzToVzmConversion,
-        isAboveAverage: conversions.pzToVzmConversion >= teamConversions.pzToVzmConversion
-      },
-      {
-        stage: 'Сделки',
-        value: stats.successfulDeals,
-        conversion: conversions.vzmToDealConversion,
-        teamConversion: teamConversions.vzmToDealConversion,
-        isAboveAverage: conversions.vzmToDealConversion >= teamConversions.vzmToDealConversion
-      }
-    ]
+    const employeeFunnel = calculateFullFunnel({
+      zoomBooked: employeeStats.zoomBooked,
+      zoom1Held: employeeStats.zoom1Held,
+      zoom2Held: employeeStats.zoom2Held,
+      contractReview: employeeStats.contractReview,
+      push: employeeStats.pushCount,
+      deals: employeeStats.successfulDeals,
+      sales: employeeStats.salesAmount,
+      refusals: employeeStats.refusals,
+      warming: employeeStats.warming,
+    })
 
     return NextResponse.json({
       employee: {
         id: employee.id,
         name: employee.name,
-        role: employee.role
+        role: employee.role,
       },
       stats: {
-        ...stats,
-        ...conversions,
-        avgCheck: stats.successfulDeals > 0 ? Math.round(stats.monthlySalesAmount / stats.successfulDeals) : 0,
+        ...employeeStats,
+        avgCheck:
+          employeeStats.successfulDeals > 0
+            ? Math.round(employeeStats.salesAmount / employeeStats.successfulDeals)
+            : 0,
       },
       teamAverage: {
-        ...teamAverage,
-        ...teamConversions,
-        avgCheck: teamAverage.successfulDeals > 0 ? Math.round(teamAverage.monthlySalesAmount / teamAverage.successfulDeals) : 0,
+        ...teamAverageCounts,
+        bookedToZoom1: teamTotals.bookedToZoom1,
+        zoom1ToZoom2: teamTotals.zoom1ToZoom2,
+        zoom2ToContract: teamTotals.zoom2ToContract,
+        contractToPush: teamTotals.contractToPush,
+        pushToDeal: teamTotals.pushToDeal,
+        northStar: teamTotals.northStar,
+        avgCheck:
+          teamAverageCounts.successfulDeals > 0
+            ? Math.round(teamAverageCounts.salesAmount / teamAverageCounts.successfulDeals)
+            : 0,
       },
-      teamSize: teamCount,
+      teamSize: teamMembers.length,
       redZones,
-      funnel,
+      funnel: employeeFunnel.funnel,
+      sideFlow: employeeFunnel.sideFlow,
+      northStarKpi: employeeFunnel.northStarKpi,
       period: {
         start: startDate.toISOString(),
-        end: endDate.toISOString()
-      }
+        end: endDate.toISOString(),
+      },
     })
   } catch (error) {
     console.error('GET /api/employees/[id]/stats error:', error)

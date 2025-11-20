@@ -1083,22 +1083,47 @@ async function handleSubscriptionPayment(invoice) {
             [subscription.shop_id]
           );
           const owner = ownerResult.rows[0];
-          if (owner?.telegram_id) {
-            await telegramService.notifySubscriptionActivated(owner.telegram_id, {
-              shopName: owner.shop_name,
-              tier: subscription.tier,
-              nextPaymentDue: periodEnd,
+          if (owner?.telegram_id && global.botInstance) {
+            // Send notification using bot instance for guaranteed delivery
+            const tierEmoji = subscription.tier === 'pro' ? '⭐' : '✨';
+            const tierLabel = (subscription.tier || 'basic').toUpperCase();
+            const nextDue = new Date(periodEnd).toLocaleDateString('ru-RU', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
             });
-          }
 
-          // ✅ Broadcast subscription payment confirmation to frontend
-          broadcastService.broadcastToUser(subscription.user_id, {
-            type: 'subscription_payment_confirmed',
-            subscriptionId: invoice.subscription_id,
-            shopId: subscription.shop_id,
-            status: 'active',
-            tier: subscription.tier,
-          });
+            const message = `${tierEmoji} <b>Магазин активирован</b>
+
+<b>${owner.shop_name || 'Ваш магазин'}</b>
+Тариф: ${tierLabel}
+Действует до: ${nextDue}`;
+
+            try {
+              await global.botInstance.telegram.sendMessage(owner.telegram_id, message.trim(), {
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [[{ text: '📋 Перейти в меню', callback_data: 'back_to_main' }]],
+                },
+              });
+              logger.info('[PollingService] Notification sent successfully', {
+                userId: subscription.user_id,
+                telegramId: owner.telegram_id,
+              });
+            } catch (sendError) {
+              if (sendError.response?.error_code === 403) {
+                logger.warn('[PollingService] User blocked bot', {
+                  userId: subscription.user_id,
+                  telegramId: owner.telegram_id,
+                });
+              } else {
+                logger.error('[PollingService] Notification send error', {
+                  error: sendError.message,
+                  userId: subscription.user_id,
+                });
+              }
+            }
+          }
         } catch (notifError) {
           logger.error('[PollingService] Owner notification error', {
             error: notifError.message,
@@ -1186,30 +1211,49 @@ async function handleSubscriptionPayment(invoice) {
             shopName: newShop.name,
           });
 
-          // Notify user about shop creation
-          try {
-            await telegramService.notifySubscriptionActivated(user.telegram_id, {
-              shopName: newShop.name,
-              tier: subscription.tier,
-              nextPaymentDue: periodEnd,
-              autoCreated: true,
+          // Notify user about shop creation using bot instance
+          if (user.telegram_id && global.botInstance) {
+            const tierEmoji = subscription.tier === 'pro' ? '⭐' : '✨';
+            const tierLabel = (subscription.tier || 'basic').toUpperCase();
+            const nextDue = new Date(periodEnd).toLocaleDateString('ru-RU', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
             });
-          } catch (notifError) {
-            logger.error('[PollingService] Notification error', {
-              error: notifError.message,
-            });
-          }
 
-          // ✅ Broadcast subscription payment confirmation to frontend
-          broadcastService.broadcastToUser(subscription.user_id, {
-            type: 'subscription_payment_confirmed',
-            subscriptionId: invoice.subscription_id,
-            shopId: newShop.id,
-            shopName: newShop.name,
-            status: 'active',
-            tier: subscription.tier,
-            autoCreated: true,
-          });
+            const message = `${tierEmoji} <b>Магазин активирован</b>
+
+<b>${newShop.name}</b>
+Тариф: ${tierLabel}
+Действует до: ${nextDue}`;
+
+            try {
+              await global.botInstance.telegram.sendMessage(user.telegram_id, message.trim(), {
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [[{ text: '📋 Перейти в меню', callback_data: 'back_to_main' }]],
+                },
+              });
+              logger.info('[PollingService] Auto-created shop notification sent', {
+                userId: user.id,
+                telegramId: user.telegram_id,
+                shopId: newShop.id,
+                shopName: newShop.name,
+              });
+            } catch (notifError) {
+              if (notifError.response?.error_code === 403) {
+                logger.warn('[PollingService] User blocked bot', {
+                  userId: user.id,
+                  telegramId: user.telegram_id,
+                });
+              } else {
+                logger.error('[PollingService] Notification error', {
+                  error: notifError.message,
+                  userId: user.id,
+                });
+              }
+            }
+          }
         } catch (shopCreationError) {
           logger.error('[PollingService] Shop auto-creation failed', {
             error: shopCreationError.message,
@@ -1217,19 +1261,12 @@ async function handleSubscriptionPayment(invoice) {
             userId: subscription.user_id,
           });
 
-          // Notify admin about failure (critical - money was paid!)
-          try {
-            await telegramService.notifyAdminError({
-              type: 'shop_creation_failed',
-              subscriptionId: invoice.subscription_id,
-              userId: subscription.user_id,
-              error: shopCreationError.message,
-            });
-          } catch (adminNotifError) {
-            logger.error('[PollingService] Admin notification failed', {
-              error: adminNotifError.message,
-            });
-          }
+          // Note: Admin notification not implemented yet
+          logger.warn('[PollingService] Admin should be notified about shop creation failure', {
+            subscriptionId: invoice.subscription_id,
+            userId: subscription.user_id,
+            error: shopCreationError.message,
+          });
         }
       }
     } finally {

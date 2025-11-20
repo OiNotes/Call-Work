@@ -51,8 +51,8 @@ export const shopController = {
 
       // Handle subscription-based creation
       if (subscriptionId) {
-        const pool = (await import('../config/database.js')).default;
-        const client = await pool.connect();
+        const { getClient } = await import('../config/database.js');
+        const client = await getClient();
 
         try {
           await client.query('BEGIN');

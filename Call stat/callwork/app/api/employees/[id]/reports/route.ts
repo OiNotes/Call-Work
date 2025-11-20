@@ -51,10 +51,13 @@ export async function GET(
         pzmConducted: true,
         vzmConducted: true,
         contractReviewCount: true,
+        pushCount: true,
         successfulDeals: true,
         monthlySalesAmount: true,
         refusalsCount: true,
+        refusalsByStage: true,
         warmingUpCount: true,
+        comment: true,
       }
     }).then(reports =>
       reports.map(r => ({

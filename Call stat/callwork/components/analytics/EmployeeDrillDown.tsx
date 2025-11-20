@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, TrendingUp, TrendingDown, Award, AlertTriangle, Users, Filter } from 'lucide-react'
 
 interface EmployeeConversion {
-  employee_id: number
+  employee_id: string
   employee_name: string
   stage: string
   count: number

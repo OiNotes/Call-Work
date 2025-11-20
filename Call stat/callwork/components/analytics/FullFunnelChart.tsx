@@ -97,7 +97,7 @@ export function FullFunnelChart({ funnel, sideFlow, onStageClick }: FullFunnelCh
             </div>
             <div>
               <h3 className="font-semibold text-slate-900 dark:text-white">Отказы</h3>
-              <p className="text-xs text-slate-500">От ПЗМ Проведено</p>
+              <p className="text-xs text-slate-500">По этапам воронки</p>
             </div>
           </div>
 
@@ -105,25 +105,29 @@ export function FullFunnelChart({ funnel, sideFlow, onStageClick }: FullFunnelCh
             <div className="flex justify-between items-baseline">
               <span className="text-sm text-slate-600 dark:text-slate-400">Количество</span>
               <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {formatNumber(sideFlow.refusals.count)}
+                {formatNumber(sideFlow.refusals.total)}
               </span>
             </div>
             <div className="flex justify-between items-baseline">
-              <span className="text-sm text-slate-600 dark:text-slate-400">% от ПЗМ</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">% от 1-го Zoom</span>
               <span className="text-lg font-semibold text-red-600 dark:text-red-400">
-                {formatPercent(sideFlow.refusals.rate)}
+                {formatPercent(sideFlow.refusals.rateFromFirstZoom)}
               </span>
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-4 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-red-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(sideFlow.refusals.rate, 100)}%` }}
-              transition={{ duration: 1, delay: 0.5 }}
-            />
+          <div className="mt-4 space-y-2">
+            {sideFlow.refusals.byStage.map((item) => (
+              <div key={item.stageId} className="flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">{item.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">{formatNumber(item.count)}</span>
+                  <span className={`text-xs font-semibold ${item.rate > 20 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {item.rate.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/get-session'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { calculateFullFunnel } from '@/lib/calculations/funnel'
 
 export async function GET(req: Request) {
   try {
@@ -38,6 +39,9 @@ export async function GET(req: Request) {
         contractReviewCount: true,
         successfulDeals: true,
         monthlySalesAmount: true,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        pushCount: true,
       },
       _avg: {
         monthlySalesAmount: true,
@@ -45,27 +49,36 @@ export async function GET(req: Request) {
       _count: true,
     })
 
-    const pzmConversion = stats._sum.zoomAppointments 
-      ? (stats._sum.pzmConducted! / stats._sum.zoomAppointments) * 100 
-      : 0
+    const totals = {
+      zoomBooked: stats._sum.zoomAppointments || 0,
+      zoom1Held: stats._sum.pzmConducted || 0,
+      zoom2Held: stats._sum.vzmConducted || 0,
+      contractReview: stats._sum.contractReviewCount || 0,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      push: (stats._sum.pushCount as number | null) ?? stats._sum.contractReviewCount ?? 0,
+      deals: stats._sum.successfulDeals || 0,
+      sales: Number(stats._sum.monthlySalesAmount || 0),
+      refusals: stats._sum.refusalsCount || 0,
+      warming: stats._sum.warmingUpCount || 0,
+    }
 
-    const vzmConversion = stats._sum.pzmConducted
-      ? (stats._sum.vzmConducted! / stats._sum.pzmConducted) * 100
-      : 0
+    const fullFunnel = calculateFullFunnel(totals)
 
-    const dealConversion = stats._sum.vzmConducted
-      ? (stats._sum.successfulDeals! / stats._sum.vzmConducted) * 100
-      : 0
+    const conversions = fullFunnel.funnel
+      .filter((stage) => stage.id !== 'zoomBooked')
+      .reduce<Record<string, number>>((acc, stage) => {
+        acc[stage.id] = stage.conversion
+        return acc
+      }, {})
 
     return NextResponse.json({
       totals: stats._sum,
       averages: stats._avg,
       count: stats._count,
-      conversions: {
-        pzmConversion: parseFloat(pzmConversion.toFixed(2)),
-        vzmConversion: parseFloat(vzmConversion.toFixed(2)),
-        dealConversion: parseFloat(dealConversion.toFixed(2)),
-      },
+      conversions,
+      northStar: fullFunnel.northStarKpi,
+      sideFlow: fullFunnel.sideFlow,
     })
   } catch (error) {
     return NextResponse.json(

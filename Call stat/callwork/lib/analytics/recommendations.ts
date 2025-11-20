@@ -8,14 +8,16 @@ export interface RedZone {
   stage: string
 }
 
+import { CONVERSION_BENCHMARKS } from '@/lib/config/conversionBenchmarks'
+
 interface ConversionsWithTeam {
-  pzmConversion: number
-  pzToVzmConversion: number
-  vzmToDealConversion: number
+  bookedToZoom1: number
+  zoom1ToZoom2: number
+  pushToDeal: number
   teamAverage: {
-    pzmConversion: number
-    pzToVzmConversion: number
-    vzmToDealConversion: number
+    bookedToZoom1: number
+    zoom1ToZoom2: number
+    pushToDeal: number
   }
 }
 
@@ -23,42 +25,39 @@ export function analyzeRedZones(conversions: ConversionsWithTeam): RedZone[] {
   const zones: RedZone[] = []
   const { teamAverage } = conversions
   
-  // ПЗМ конверсия
-  if (conversions.pzmConversion < 65) {
+  if (conversions.bookedToZoom1 < CONVERSION_BENCHMARKS.BOOKED_TO_ZOOM1) {
     zones.push({
-      severity: conversions.pzmConversion < 50 ? 'critical' : 'warning',
-      stage: 'pzm',
-      title: 'Низкая явка на ПЗМ',
-      description: 'Много записанных клиентов не приходят на первичную встречу',
-      current: conversions.pzmConversion,
-      teamAverage: teamAverage.pzmConversion,
-      recommendation: 'Работать над подтверждением встреч. Звонить/писать напоминания за 2-3 часа до встречи.'
+      severity: conversions.bookedToZoom1 < CONVERSION_BENCHMARKS.BOOKED_TO_ZOOM1 - 10 ? 'critical' : 'warning',
+      stage: 'zoom1',
+      title: 'Низкая явка на 1-й Zoom',
+      description: 'Много записанных клиентов не доходят до первой встречи',
+      current: conversions.bookedToZoom1,
+      teamAverage: teamAverage.bookedToZoom1,
+      recommendation: 'Работать над подтверждением встреч и напоминаниями за 2-3 часа до слота.'
     })
   }
   
-  // ПЗМ → ВЗМ
-  if (conversions.pzToVzmConversion < 60) {
+  if (conversions.zoom1ToZoom2 < CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2) {
     zones.push({
-      severity: conversions.pzToVzmConversion < 50 ? 'critical' : 'warning',
-      stage: 'pz_to_vzm',
-      title: 'Мало переходов ПЗМ → ВЗМ',
+      severity: conversions.zoom1ToZoom2 < CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2 - 10 ? 'critical' : 'warning',
+      stage: 'zoom2',
+      title: 'Мало переходов 1-й → 2-й Zoom',
       description: 'Клиенты не переходят на вторичную встречу после первой',
-      current: conversions.pzToVzmConversion,
-      teamAverage: teamAverage.pzToVzmConversion,
-      recommendation: 'Улучшить презентацию на ПЗМ. Работать над возражениями и прогревом клиента.'
+      current: conversions.zoom1ToZoom2,
+      teamAverage: teamAverage.zoom1ToZoom2,
+      recommendation: 'Улучшить первую встречу: фиксировать ценность и назначать следующий шаг в календарь.'
     })
   }
   
-  // ВЗМ → Сделка
-  if (conversions.vzmToDealConversion < 70) {
+  if (conversions.pushToDeal < CONVERSION_BENCHMARKS.PUSH_TO_DEAL) {
     zones.push({
-      severity: conversions.vzmToDealConversion < 60 ? 'critical' : 'warning',
-      stage: 'vzm_to_deal',
-      title: 'Проседание на закрытии',
-      description: 'Клиенты доходят до ВЗМ, но сделки не закрываются',
-      current: conversions.vzmToDealConversion,
-      teamAverage: teamAverage.vzmToDealConversion,
-      recommendation: 'Проблема в работе с возражениями на ВЗМ. Пересмотреть скрипты закрытия сделки.'
+      severity: conversions.pushToDeal < CONVERSION_BENCHMARKS.PUSH_TO_DEAL - 10 ? 'critical' : 'warning',
+      stage: 'push_to_deal',
+      title: 'Проседание на финальном закрытии',
+      description: 'Клиенты доходят до дожима, но оплаты нет',
+      current: conversions.pushToDeal,
+      teamAverage: teamAverage.pushToDeal,
+      recommendation: 'Проверьте работу с возражениями после договора, добавьте дедлайны и ограниченные офферы.'
     })
   }
   

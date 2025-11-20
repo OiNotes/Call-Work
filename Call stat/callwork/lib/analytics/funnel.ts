@@ -1,202 +1,236 @@
 import { Report } from '@prisma/client'
+import { CONVERSION_BENCHMARKS, FUNNEL_STAGES } from '@/lib/config/conversionBenchmarks'
 
 export interface FunnelStage {
-    id: string
-    label: string
-    value: number
-    prevValue?: number
-    conversion: number
-    benchmark: number
-    isRedZone: boolean
-    dropOff?: number // Percentage of lost leads
+  id: string
+  label: string
+  value: number
+  prevValue?: number
+  conversion: number
+  benchmark: number
+  isRedZone: boolean
+  dropOff?: number
 }
 
 export interface ManagerStats {
-    id: string
-    name: string
-    zoomAppointments: number
-    pzmConducted: number
-    vzmConducted: number
-    contractReview: number
-    successfulDeals: number
-    salesAmount: number
+  id: string
+  name: string
+  zoomBooked: number
+  zoom1Held: number
+  zoom2Held: number
+  contractReview: number
+  pushCount: number
+  successfulDeals: number
+  salesAmount: number
+  refusals?: number
+  warming?: number
 
-    // Conversions
-    pzmConversion: number // Zoom -> PZM
-    vzmConversion: number // PZM -> VZM
-    contractConversion: number // VZM -> Contract
-    dealConversion: number // Contract -> Deal
+  // Conversions
+  bookedToZoom1: number // Запись → 1-й Zoom
+  zoom1ToZoom2: number // 1-й → 2-й Zoom
+  zoom2ToContract: number // 2-й Zoom → Разбор
+  contractToPush: number // Разбор → Дожим
+  pushToDeal: number // Дожим → Оплата
 
-    // Global Conversion
-    totalConversion: number // Zoom -> Deal
+  // Global Conversion
+  northStar: number // 1-й Zoom → Оплата (главный KPI)
+  totalConversion: number // Запись → Оплата
 
-    // Deepthink New Metrics
-    planSales: number // Target sales amount
-    planDeals: number // Target deal count
-    activityScore: number // Composite score (calls + tasks)
-    trend: 'up' | 'down' | 'flat' // Growth/Decline indicator
+  // Plan/Activity
+  planSales: number
+  planDeals: number
+  activityScore: number
+  trend: 'up' | 'down' | 'flat'
 }
 
 export const BENCHMARKS = {
-    pzmConversion: 70,
-    vzmConversion: 50,
-    contractConversion: 40,
-    dealConversion: 30,
-    activityScore: 80, // Example benchmark
+  bookedToZoom1: CONVERSION_BENCHMARKS.BOOKED_TO_ZOOM1,
+  zoom1ToZoom2: CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2,
+  zoom2ToContract: CONVERSION_BENCHMARKS.ZOOM2_TO_CONTRACT,
+  contractToPush: CONVERSION_BENCHMARKS.CONTRACT_TO_PUSH,
+  pushToDeal: CONVERSION_BENCHMARKS.PUSH_TO_DEAL,
+  northStar: CONVERSION_BENCHMARKS.ZOOM1_TO_DEAL_KPI,
+  activityScore: 80,
 }
 
-// Helper to determine heatmap color based on deviation from benchmark
 export function getHeatmapColor(value: number, benchmark: number): string {
-    if (value === 0) return 'bg-white text-gray-400' // No data/Zero - neutral to avoid "pink wall"
-
-    const ratio = value / benchmark
-    if (ratio >= 1.1) return 'bg-emerald-50 text-emerald-700 font-bold' // Superb
-    if (ratio >= 1.0) return 'bg-green-50 text-green-700' // Good
-    if (ratio >= 0.9) return 'bg-yellow-50 text-yellow-700' // Warning
-    if (ratio >= 0.7) return 'bg-orange-50 text-orange-700' // Bad
-    return 'bg-red-50 text-red-700 font-bold' // Critical
+  if (value === 0) return 'bg-white text-gray-400'
+  const ratio = value / benchmark
+  if (ratio >= 1.1) return 'bg-emerald-50 text-emerald-700 font-bold'
+  if (ratio >= 1.0) return 'bg-green-50 text-green-700'
+  if (ratio >= 0.9) return 'bg-yellow-50 text-yellow-700'
+  if (ratio >= 0.7) return 'bg-orange-50 text-orange-700'
+  return 'bg-red-50 text-red-700 font-bold'
 }
 
 export function calculateManagerStats(reports: Report[]): Omit<ManagerStats, 'id' | 'name'> {
-    const totals = reports.reduce(
-        (acc, report) => ({
-            zoomAppointments: acc.zoomAppointments + report.zoomAppointments,
-            pzmConducted: acc.pzmConducted + report.pzmConducted,
-            vzmConducted: acc.vzmConducted + report.vzmConducted,
-            contractReview: acc.contractReview + report.contractReviewCount,
-            successfulDeals: acc.successfulDeals + report.successfulDeals,
-            salesAmount: acc.salesAmount + Number(report.monthlySalesAmount),
-        }),
-        {
-            zoomAppointments: 0,
-            pzmConducted: 0,
-            vzmConducted: 0,
-            contractReview: 0,
-            successfulDeals: 0,
-            salesAmount: 0,
-        }
-    )
+  const totals = reports.reduce(
+    (acc, report) => {
+      const pushCount =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (report as any).pushCount ?? report.contractReviewCount ?? 0
 
-    const safeDiv = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
-
-    // Mocking Plan & Activity for MVP since they are not in DB yet
-    // In a real app, these would come from a 'Targets' table
-    const planSales = 1000000 // Example target
-    const planDeals = 10 // Example target
-    const activityScore = Math.min(100, Math.round(Math.random() * 40 + 60)) // Random 60-100 for demo
-    const trend = Math.random() > 0.5 ? 'up' : 'down' as const
-
-    return {
-        ...totals,
-        pzmConversion: safeDiv(totals.pzmConducted, totals.zoomAppointments),
-        vzmConversion: safeDiv(totals.vzmConducted, totals.pzmConducted),
-        contractConversion: safeDiv(totals.contractReview, totals.vzmConducted),
-        dealConversion: safeDiv(totals.successfulDeals, totals.contractReview),
-        totalConversion: safeDiv(totals.successfulDeals, totals.zoomAppointments),
-        planSales,
-        planDeals,
-        activityScore,
-        trend,
+      return {
+        zoomBooked: acc.zoomBooked + report.zoomAppointments,
+        zoom1Held: acc.zoom1Held + report.pzmConducted,
+        zoom2Held: acc.zoom2Held + report.vzmConducted,
+        contractReview: acc.contractReview + report.contractReviewCount,
+        pushCount: acc.pushCount + pushCount,
+        successfulDeals: acc.successfulDeals + report.successfulDeals,
+        salesAmount: acc.salesAmount + Number(report.monthlySalesAmount),
+        refusals: acc.refusals + (report.refusalsCount || 0),
+        warming: acc.warming + (report.warmingUpCount || 0),
+      }
+    },
+    {
+      zoomBooked: 0,
+      zoom1Held: 0,
+      zoom2Held: 0,
+      contractReview: 0,
+      pushCount: 0,
+      successfulDeals: 0,
+      salesAmount: 0,
+      refusals: 0,
+      warming: 0,
     }
+  )
+
+  const safeDiv = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0)
+
+  const bookedToZoom1 = safeDiv(totals.zoom1Held, totals.zoomBooked)
+  const zoom1ToZoom2 = safeDiv(totals.zoom2Held, totals.zoom1Held)
+  const zoom2ToContract = safeDiv(totals.contractReview, totals.zoom2Held)
+  const contractToPush = safeDiv(totals.pushCount, totals.contractReview)
+  const pushToDeal = safeDiv(totals.successfulDeals, totals.pushCount)
+  const northStar = safeDiv(totals.successfulDeals, totals.zoom1Held)
+
+  const planSales = 1000000
+  const planDeals = 10
+  const activityScore = Math.min(100, Math.round(Math.random() * 40 + 60))
+  const trend = (Math.random() > 0.5 ? 'up' : 'down') as const
+
+  return {
+    ...totals,
+    bookedToZoom1,
+    zoom1ToZoom2,
+    zoom2ToContract,
+    contractToPush,
+    pushToDeal,
+    northStar,
+    totalConversion: safeDiv(totals.successfulDeals, totals.zoomBooked),
+    planSales,
+    planDeals,
+    activityScore,
+    trend,
+  }
 }
 
 export function getFunnelData(stats: Omit<ManagerStats, 'id' | 'name'>): FunnelStage[] {
-    return [
-        {
-            id: 'zoom',
-            label: 'Записи на Зум',
-            value: stats.zoomAppointments,
-            conversion: 100,
-            benchmark: 100,
-            isRedZone: false,
-            dropOff: 0
-        },
-        {
-            id: 'pzm',
-            label: 'ПЗМ проведено',
-            value: stats.pzmConducted,
-            prevValue: stats.zoomAppointments,
-            conversion: stats.pzmConversion,
-            benchmark: BENCHMARKS.pzmConversion,
-            isRedZone: stats.pzmConversion < BENCHMARKS.pzmConversion,
-            dropOff: stats.zoomAppointments > 0 ? 100 - stats.pzmConversion : 0
-        },
-        {
-            id: 'vzm',
-            label: 'ВЗМ проведено',
-            value: stats.vzmConducted,
-            prevValue: stats.pzmConducted,
-            conversion: stats.vzmConversion,
-            benchmark: BENCHMARKS.vzmConversion,
-            isRedZone: stats.vzmConversion < BENCHMARKS.vzmConversion,
-            dropOff: stats.pzmConducted > 0 ? 100 - stats.vzmConversion : 0
-        },
-        {
-            id: 'contract',
-            label: 'Разбор договора',
-            value: stats.contractReview,
-            prevValue: stats.vzmConducted,
-            conversion: stats.contractConversion,
-            benchmark: BENCHMARKS.contractConversion,
-            isRedZone: stats.contractConversion < BENCHMARKS.contractConversion,
-            dropOff: stats.vzmConducted > 0 ? 100 - stats.contractConversion : 0
-        },
-        {
-            id: 'deal',
-            label: 'Сделка',
-            value: stats.successfulDeals,
-            prevValue: stats.contractReview,
-            conversion: stats.dealConversion,
-            benchmark: BENCHMARKS.dealConversion,
-            isRedZone: stats.dealConversion < BENCHMARKS.dealConversion,
-            dropOff: stats.contractReview > 0 ? 100 - stats.dealConversion : 0
-        },
-    ]
+  const stageMap = {
+    zoomBooked: stats.zoomBooked,
+    zoom1Held: stats.zoom1Held,
+    zoom2Held: stats.zoom2Held,
+    contractReview: stats.contractReview,
+    push: stats.pushCount,
+    deal: stats.successfulDeals,
+  }
+
+  const conversionMap: Record<string, number> = {
+    zoom1Held: stats.bookedToZoom1,
+    zoom2Held: stats.zoom1ToZoom2,
+    contractReview: stats.zoom2ToContract,
+    push: stats.contractToPush,
+    deal: stats.pushToDeal,
+  }
+
+  return FUNNEL_STAGES.map((stage, index) => {
+    const prevStage = FUNNEL_STAGES[index - 1]
+    const prevValue = prevStage ? stageMap[prevStage.id as keyof typeof stageMap] : undefined
+    const conversion = conversionMap[stage.id] ?? 100
+    const benchmark =
+      {
+        zoom1Held: BENCHMARKS.bookedToZoom1,
+        zoom2Held: BENCHMARKS.zoom1ToZoom2,
+        contractReview: BENCHMARKS.zoom2ToContract,
+        push: BENCHMARKS.contractToPush,
+        deal: BENCHMARKS.pushToDeal,
+      }[stage.id] || 100
+
+    return {
+      id: stage.id,
+      label: stage.label,
+      value: stageMap[stage.id as keyof typeof stageMap],
+      prevValue,
+      conversion: stage.id === 'zoomBooked' ? 100 : conversion,
+      benchmark,
+      isRedZone: stage.id === 'zoomBooked' ? false : conversion < benchmark,
+      dropOff: prevValue ? Math.max(0, 100 - conversion) : 0,
+    }
+  })
 }
 
 export function analyzeRedZones(stats: ManagerStats) {
-    const issues = []
+  const issues = []
 
-    if (stats.pzmConversion < BENCHMARKS.pzmConversion) {
-        issues.push({
-            stage: 'ПЗМ',
-            metric: 'Конверсия в явку',
-            value: stats.pzmConversion,
-            benchmark: BENCHMARKS.pzmConversion,
-            severity: 'warning'
-        })
-    }
+  if (stats.bookedToZoom1 < BENCHMARKS.bookedToZoom1) {
+    issues.push({
+      stage: 'Записи → 1-й Zoom',
+      metric: 'Конверсия в явку',
+      value: stats.bookedToZoom1,
+      benchmark: BENCHMARKS.bookedToZoom1,
+      severity: 'warning',
+    })
+  }
 
-    if (stats.vzmConversion < BENCHMARKS.vzmConversion) {
-        issues.push({
-            stage: 'ВЗМ',
-            metric: 'Квалификация лида',
-            value: stats.vzmConversion,
-            benchmark: BENCHMARKS.vzmConversion,
-            severity: 'critical'
-        })
-    }
+  if (stats.zoom1ToZoom2 < BENCHMARKS.zoom1ToZoom2) {
+    issues.push({
+      stage: '1-й Zoom → 2-й Zoom',
+      metric: 'Квалификация лида',
+      value: stats.zoom1ToZoom2,
+      benchmark: BENCHMARKS.zoom1ToZoom2,
+      severity: 'critical',
+    })
+  }
 
-    if (stats.dealConversion < BENCHMARKS.dealConversion) {
-        issues.push({
-            stage: 'Сделка',
-            metric: 'Закрытие',
-            value: stats.dealConversion,
-            benchmark: BENCHMARKS.dealConversion,
-            severity: 'critical'
-        })
-    }
+  if (stats.contractToPush < BENCHMARKS.contractToPush) {
+    issues.push({
+      stage: 'Договор → Дожим',
+      metric: 'Дожим клиентов',
+      value: stats.contractToPush,
+      benchmark: BENCHMARKS.contractToPush,
+      severity: 'warning',
+    })
+  }
 
-    // New Alert: Low Activity
-    if (stats.activityScore < BENCHMARKS.activityScore) {
-        issues.push({
-            stage: 'Активность',
-            metric: 'Индекс активности',
-            value: stats.activityScore,
-            benchmark: BENCHMARKS.activityScore,
-            severity: 'warning'
-        })
-    }
+  if (stats.pushToDeal < BENCHMARKS.pushToDeal) {
+    issues.push({
+      stage: 'Дожим → Оплата',
+      metric: 'Закрытие',
+      value: stats.pushToDeal,
+      benchmark: BENCHMARKS.pushToDeal,
+      severity: 'critical',
+    })
+  }
 
-    return issues
+  if (stats.activityScore < BENCHMARKS.activityScore) {
+    issues.push({
+      stage: 'Активность',
+      metric: 'Индекс активности',
+      value: stats.activityScore,
+      benchmark: BENCHMARKS.activityScore,
+      severity: 'warning',
+    })
+  }
+
+  if (stats.northStar < BENCHMARKS.northStar) {
+    issues.push({
+      stage: '1-й Zoom → Оплата',
+      metric: 'North Star KPI',
+      value: stats.northStar,
+      benchmark: BENCHMARKS.northStar,
+      severity: 'critical',
+    })
+  }
+
+  return issues
 }

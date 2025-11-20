@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireManager } from '@/lib/auth/get-session'
 import { calculateConversions } from '@/lib/analytics/conversions'
+import { CONVERSION_BENCHMARKS } from '@/lib/config/conversionBenchmarks'
+import { calculateManagerStats } from '@/lib/analytics/funnel'
 
 export async function GET(request: Request) {
   try {
@@ -21,49 +23,40 @@ export async function GET(request: Request) {
         managerId: manager.id,
         role: 'EMPLOYEE'
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
+      include: {
+        reports: {
+          where: {
+            date: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          orderBy: { date: 'desc' }
+        }
       }
     })
     
     // Для каждого работника посчитать статистику
     const employeesWithStats = await Promise.all(
       employees.map(async (employee) => {
-        const reports = await prisma.report.aggregate({
-          where: {
-            userId: employee.id,
-            date: {
-              gte: startDate,
-              lte: endDate
-            }
-          },
-          _sum: {
-            zoomAppointments: true,
-            pzmConducted: true,
-            vzmConducted: true,
-            successfulDeals: true,
-            monthlySalesAmount: true,
-          }
+        const stats = calculateManagerStats(employee.reports)
+        const conversions = calculateConversions({
+          zoomBooked: stats.zoomBooked,
+          zoom1Held: stats.zoom1Held,
+          zoom2Held: stats.zoom2Held,
+          contractReview: stats.contractReview,
+          pushCount: stats.pushCount,
+          successfulDeals: stats.successfulDeals,
+          monthlySalesAmount: stats.salesAmount,
         })
-        
-        const stats = {
-          zoomAppointments: reports._sum.zoomAppointments || 0,
-          pzmConducted: reports._sum.pzmConducted || 0,
-          vzmConducted: reports._sum.vzmConducted || 0,
-          successfulDeals: reports._sum.successfulDeals || 0,
-          monthlySalesAmount: Number(reports._sum.monthlySalesAmount || 0),
-        }
-        
-        const conversions = calculateConversions(stats)
         
         return {
           ...employee,
           stats: {
             ...stats,
-            ...conversions,
-            hasRedZone: conversions.pzToVzmConversion < 60 || conversions.vzmToDealConversion < 70,
+            hasRedZone:
+              conversions.zoom1ToZoom2 < CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2 ||
+              conversions.pushToDeal < CONVERSION_BENCHMARKS.PUSH_TO_DEAL,
           }
         }
       })

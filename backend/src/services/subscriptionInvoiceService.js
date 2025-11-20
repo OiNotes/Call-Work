@@ -244,12 +244,15 @@ export async function findActiveInvoiceForSubscription(subscriptionId) {
       },
     });
 
-    // Main query
+    // Main query - Relaxed to include PAID invoices so the UI doesn't crash after payment
     const result = await query(
       `SELECT * FROM invoices
        WHERE subscription_id = $1
-       AND status = 'pending'
-       AND expires_at > NOW()
+       AND (
+         (status = 'pending' AND expires_at > NOW())
+         OR
+         status IN ('paid', 'confirmed')
+       )
        ORDER BY created_at DESC
        LIMIT 1`,
       [subscriptionId]

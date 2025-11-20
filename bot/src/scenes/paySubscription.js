@@ -385,12 +385,25 @@ const paySubscriptionScene = new Scenes.WizardScene(
             
             await delay(3000); // Wait 3 seconds
 
-            // Check status again
-            const check = await subscriptionApi.getSubscriptionPaymentStatus(subscriptionId, token);
-            if (check.status === 'paid' || check.status === 'confirmed') {
-              status = 'confirmed';
-              result = check;
-              break;
+            // Check status again with error handling
+            try {
+              const check = await subscriptionApi.getSubscriptionPaymentStatus(subscriptionId, token);
+              if (check.status === 'paid' || check.status === 'confirmed') {
+                status = 'confirmed';
+                result = check;
+                break;
+              }
+            } catch (pollError) {
+               logger.warn('[PaySubscription] Polling status failed, continuing...', pollError.message);
+               // If error is 404/No Active Invoice, it MIGHT mean it's already processed.
+               // Let's try to check subscription status directly as a fallback
+               try {
+                 const subCheck = await subscriptionApi.getStatus(ctx.wizard.state.shopId, token);
+                 if (subCheck.currentSubscription?.status === 'active') {
+                    status = 'confirmed';
+                    break;
+                 }
+               } catch (e) { /* ignore */ }
             }
           }
         }

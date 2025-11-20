@@ -3,7 +3,7 @@
 import { memo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, TrendingUp, BarChart, Trophy, Bell, LayoutDashboard } from 'lucide-react'
+import { LogOut, Home, TrendingUp, BarChart, Trophy, Bell, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import { AlertBadge } from '@/components/alerts/AlertBadge'
 import { motion } from 'framer-motion'
@@ -22,6 +22,9 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    ...(session?.user?.role === 'EMPLOYEE'
+      ? [{ name: 'Отчёт', href: '/dashboard/report', icon: ClipboardList }]
+      : []),
     { name: 'Forecast', href: '/dashboard/forecast', icon: TrendingUp },
     { name: 'Funnel', href: '/dashboard/analytics/funnel', icon: BarChart },
     { name: 'Leaderboard', href: '/dashboard/leaderboard', icon: Trophy },
