@@ -9,8 +9,9 @@ import { ManagersTable } from '@/components/analytics/ManagersTable'
 import { RedZoneAlerts } from '@/components/analytics/RedZoneAlerts'
 import { PerformanceTrendChart } from '@/components/charts/PerformanceTrendChart'
 import { calculateManagerStats, getFunnelData, ManagerStats, analyzeRedZones } from '@/lib/analytics/funnel'
-import { Calendar } from 'lucide-react'
 import { calculateFullFunnel, NorthStarKpi } from '@/lib/calculations/funnel'
+import { PeriodSelector, PeriodPreset } from '@/components/filters/PeriodSelector'
+import { ManagerSelector } from '@/components/filters/ManagerSelector'
 
 interface User {
   id: string
@@ -40,7 +41,7 @@ const item = {
 
 export function DashboardContent({ user }: DashboardContentProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [managerStats, setManagerStats] = useState<ManagerStats[]>([])
   const [teamFunnel, setTeamFunnel] = useState<any[]>([])
   const [trendData, setTrendData] = useState<any[]>([])
@@ -49,30 +50,17 @@ export function DashboardContent({ user }: DashboardContentProps) {
   const [northStarKpi, setNorthStarKpi] = useState<NorthStarKpi | null>(null)
   const [rawEmployees, setRawEmployees] = useState<any[]>([])
   const [selectedManagerId, setSelectedManagerId] = useState<string>('all')
-  const [datePreset, setDatePreset] = useState<'thisMonth' | 'lastMonth' | 'week'>('thisMonth')
+  const [datePreset, setDatePreset] = useState<PeriodPreset>('thisMonth')
   const [dateRange, setDateRange] = useState(() => {
     const now = new Date()
     return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now }
   })
 
-  const getRangeByPreset = (preset: typeof datePreset) => {
-    const now = new Date()
-    if (preset === 'week') {
-      const start = new Date()
-      start.setDate(now.getDate() - 7)
-      return { start, end: now }
-    }
-    if (preset === 'lastMonth') {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const end = new Date(now.getFullYear(), now.getMonth(), 0)
-      return { start, end }
-    }
-    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now }
-  }
-
-  const handleDatePresetChange = (preset: typeof datePreset) => {
+  const handleDatePresetChange = (preset: PeriodPreset, nextRange?: { start: Date; end: Date }) => {
     setDatePreset(preset)
-    setDateRange(getRangeByPreset(preset))
+    if (nextRange) {
+      setDateRange(nextRange)
+    }
   }
 
   const recomputeViews = (employeesList: any[], managerFilter = selectedManagerId) => {
@@ -162,8 +150,6 @@ export function DashboardContent({ user }: DashboardContentProps) {
       if (user.role !== 'MANAGER') return
 
       try {
-        setLoading(true)
-
         const response = await fetch(
           `/api/employees?startDate=${dateRange.start.toISOString()}&endDate=${dateRange.end.toISOString()}`
         )
@@ -174,7 +160,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
-        setLoading(false)
+        setIsInitialLoading(false)
       }
     }
 
@@ -188,11 +174,11 @@ export function DashboardContent({ user }: DashboardContentProps) {
 
   useEffect(() => {
     if (user.role !== 'MANAGER') {
-      setLoading(false)
+      setIsInitialLoading(false)
     }
   }, [user.role])
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)]"></div>
@@ -224,60 +210,45 @@ export function DashboardContent({ user }: DashboardContentProps) {
       animate="show"
       className="space-y-8 pb-12"
     >
-      {/* Header */}
-      <div className="border-b border-[var(--border)] pb-6 space-y-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold text-[var(--foreground)] tracking-tight">
-              Центр управления продажами
-            </h1>
-            <p className="text-[var(--muted-foreground)] mt-1">
-              Оперативный контроль и аналитика
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="space-y-1">
-              <span className="text-xs text-[var(--muted-foreground)]">Фильтр по менеджеру</span>
-              <select
-                value={selectedManagerId}
-                onChange={(e) => setSelectedManagerId(e.target.value)}
-                className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm"
-              >
-                <option value="all">Вся команда</option>
-                {rawEmployees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="bg-[var(--muted)]/30 rounded-lg p-3 border border-[var(--border)] space-y-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[var(--muted-foreground)]" />
-                <span className="text-xs text-[var(--muted-foreground)]">Период</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {(['thisMonth', 'lastMonth', 'week'] as const).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => handleDatePresetChange(preset)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      datePreset === preset
-                        ? 'bg-[var(--primary)] text-white'
-                        : 'bg-white text-[var(--muted-foreground)] border border-[var(--border)]'
-                    }`}
-                  >
-                    {preset === 'thisMonth' && 'Этот месяц'}
-                    {preset === 'lastMonth' && 'Прошлый месяц'}
-                    {preset === 'week' && '7 дней'}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-[var(--muted-foreground)]">
-                {dateRange.start.toLocaleDateString('ru-RU')} — {dateRange.end.toLocaleDateString('ru-RU')}
-              </p>
-            </div>
-          </div>
+      {/* Sticky Controls Header */}
+      <div className="sticky top-0 z-30 bg-[#F5F5F7]/95 backdrop-blur supports-[backdrop-filter]:bg-[#F5F5F7]/60 py-4 border-b border-[var(--border)] -mx-4 px-4 sm:-mx-8 sm:px-8 transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           {/* Left Side: Page Title (visible in sticky header if desired, or kept minimal) */}
+           <div className="hidden md:block">
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Центр управления</h2>
+           </div>
+
+           {/* Right Side: Filters */}
+           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+             <div className="w-full sm:w-auto">
+                <ManagerSelector
+                    managers={rawEmployees}
+                    selectedManagerId={selectedManagerId}
+                    onSelectManager={setSelectedManagerId}
+                    title="Сотрудник"
+                />
+             </div>
+             <div className="w-full sm:w-auto">
+                <PeriodSelector
+                    selectedPreset={datePreset}
+                    range={dateRange}
+                    onPresetChange={(preset, next) => handleDatePresetChange(preset, next)}
+                    title="Период"
+                />
+             </div>
+           </div>
+        </div>
+      </div>
+
+      {/* Main Content Header */}
+      <div className="space-y-4 pt-2">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--foreground)] tracking-tight">
+            Центр управления продажами
+          </h1>
+          <p className="text-[var(--muted-foreground)] mt-1">
+            Оперативный контроль и аналитика
+          </p>
         </div>
       </div>
 

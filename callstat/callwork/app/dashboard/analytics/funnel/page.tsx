@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, TrendingDown, AlertCircle, ArrowLeft } from 'lucide-react'
+import { TrendingDown, AlertCircle, ArrowLeft } from 'lucide-react'
 import { InteractiveFunnelChart } from '@/components/analytics/InteractiveFunnelChart'
 import { EmployeeDrillDown } from '@/components/analytics/EmployeeDrillDown'
 import { useRouter } from 'next/navigation'
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
-import { ru } from 'date-fns/locale'
+import { subDays, startOfMonth, endOfMonth } from 'date-fns'
+import { PeriodSelector, PeriodPreset } from '@/components/filters/PeriodSelector'
 
 interface FunnelStage {
   stage: string
@@ -43,8 +43,6 @@ interface FunnelData {
   }
 }
 
-type DatePreset = 'today' | 'week' | 'month' | 'custom'
-
 const pageVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -60,7 +58,7 @@ export default function FunnelPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStage, setSelectedStage] = useState<FunnelStage | null>(null)
-  const [datePreset, setDatePreset] = useState<DatePreset>('month')
+  const [datePreset, setDatePreset] = useState<PeriodPreset>('thisMonth')
   const [dateRange, setDateRange] = useState({
     start: startOfMonth(new Date()),
     end: endOfMonth(new Date())
@@ -72,29 +70,24 @@ export default function FunnelPage() {
     fetchFunnelData()
   }, [dateRange, selectedManager])
 
-  const updateDatePreset = (preset: DatePreset) => {
+  const updateDatePreset = (preset: PeriodPreset, nextRange?: { start: Date; end: Date }) => {
     setDatePreset(preset)
-    const now = new Date()
+    if (nextRange) {
+      setDateRange(nextRange)
+      return
+    }
 
-    switch (preset) {
-      case 'today':
-        setDateRange({
-          start: new Date(now.setHours(0, 0, 0, 0)),
-          end: new Date(now.setHours(23, 59, 59, 999))
-        })
-        break
-      case 'week':
-        setDateRange({
-          start: subDays(now, 7),
-          end: now
-        })
-        break
-      case 'month':
-        setDateRange({
-          start: startOfMonth(now),
-          end: endOfMonth(now)
-        })
-        break
+    const now = new Date()
+    if (preset === 'today') {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+      setDateRange({ start, end })
+    } else if (preset === 'week') {
+      setDateRange({ start: subDays(now, 7), end: now })
+    } else if (preset === 'lastMonth') {
+      setDateRange({ start: startOfMonth(subDays(startOfMonth(now), 1)), end: endOfMonth(subDays(startOfMonth(now), 1)) })
+    } else {
+      setDateRange({ start: startOfMonth(now), end: endOfMonth(now) })
     }
   }
 
@@ -163,73 +156,35 @@ export default function FunnelPage() {
                 <p className="text-[#86868B]">
                   Анализ конверсий на каждом этапе продаж с детализацией по сотрудникам
                 </p>
-              </div>
+            </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3 items-center">
-                <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="w-5 h-5 text-[#007AFF]" />
-                    <span className="text-sm font-semibold text-[#1D1D1F]">Период</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateDatePreset('today')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        datePreset === 'today'
-                          ? 'bg-[#007AFF] text-white shadow-md'
-                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                      }`}
-                    >
-                      Сегодня
-                    </button>
-                    <button
-                      onClick={() => updateDatePreset('week')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        datePreset === 'week'
-                          ? 'bg-[#007AFF] text-white shadow-md'
-                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                      }`}
-                    >
-                      Неделя
-                    </button>
-                    <button
-                      onClick={() => updateDatePreset('month')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        datePreset === 'month'
-                          ? 'bg-[#007AFF] text-white shadow-md'
-                          : 'bg-[#F5F5F7] text-[#86868B] hover:bg-[#E5E5E7]'
-                      }`}
-                    >
-                      Месяц
-                    </button>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-[#E5E5E7]">
-                    <p className="text-xs text-[#86868B]">
-                      {format(dateRange.start, 'd MMMM yyyy', { locale: ru })} -{' '}
-                      {format(dateRange.end, 'd MMMM yyyy', { locale: ru })}
-                    </p>
-                  </div>
-                </div>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <PeriodSelector
+              selectedPreset={datePreset}
+              range={dateRange}
+              onPresetChange={(preset, next) => updateDatePreset(preset, next)}
+              title="Период"
+            />
 
-                <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
-                  <p className="text-xs text-[#86868B] mb-2">Менеджер</p>
-                  <select
-                    value={selectedManager}
-                    onChange={(e) => setSelectedManager(e.target.value)}
-                    className="rounded-lg border border-[#E5E5E7] px-3 py-2 text-sm"
-                  >
-                    <option value="all">Вся команда</option>
-                    {managers.map((manager) => (
-                      <option key={manager.id} value={manager.id}>
-                        {manager.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            <div className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7]">
+              <p className="text-xs text-[#86868B] mb-2">Менеджер</p>
+              <select
+                value={selectedManager}
+                onChange={(e) => setSelectedManager(e.target.value)}
+                className="rounded-lg border border-[#E5E5E7] px-3 py-2 text-sm"
+              >
+                <option value="all">Вся команда</option>
+                {managers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+        </div>
+      </div>
 
       {/* Content */}
       {loading ? (
