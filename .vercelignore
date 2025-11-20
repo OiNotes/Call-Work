@@ -1,0 +1,12 @@
+backend/
+bot/
+dev-scripts/
+.git/
+.github/
+node_modules/
+*.md
+.DS_Store
+docker-compose.yml
+*.log
+.env
+.env.example

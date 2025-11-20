@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd 'Call stat/callwork' && npm run vercel-build",
+  "devCommand": "cd 'Call stat/callwork' && npm run dev",
+  "installCommand": "cd 'Call stat/callwork' && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "Call stat/callwork/.next"
+}
