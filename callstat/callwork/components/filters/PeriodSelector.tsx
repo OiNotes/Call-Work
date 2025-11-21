@@ -10,21 +10,28 @@ interface PeriodSelectorProps {
   range: { start: Date; end: Date }
   onPresetChange: (preset: PeriodPreset, range: { start: Date; end: Date }) => void
   title?: string
+  orientation?: 'horizontal' | 'vertical'
 }
 
 const toDateInputValue = (date: Date) => date.toISOString().split('T')[0]
 
-export function PeriodSelector({ selectedPreset, range, onPresetChange, title = 'Период' }: PeriodSelectorProps) {
+export function PeriodSelector({ 
+  selectedPreset, 
+  range, 
+  onPresetChange, 
+  title = 'Период',
+  orientation = 'horizontal'
+}: PeriodSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const presets: Array<{ key: PeriodPreset; label: string }> = useMemo(
+  const presets: Array<{ key: PeriodPreset; label: string; short: string }> = useMemo(
     () => [
-      { key: 'today', label: 'Сегодня' },
-      { key: 'week', label: '7 дней' },
-      { key: 'thisMonth', label: 'Этот месяц' },
-      { key: 'lastMonth', label: 'Прошлый месяц' },
-      { key: 'custom', label: 'Свой диапазон' },
+      { key: 'today', label: 'Сегодня', short: '1Д' },
+      { key: 'week', label: '7 дней', short: '7Д' },
+      { key: 'thisMonth', label: 'Этот месяц', short: 'ТМ' },
+      { key: 'lastMonth', label: 'Прошлый месяц', short: 'ПМ' },
+      { key: 'custom', label: 'Свой диапазон', short: '...' },
     ],
     []
   )
@@ -85,28 +92,54 @@ export function PeriodSelector({ selectedPreset, range, onPresetChange, title = 
 
   const formattedRange = `${range.start.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} - ${range.end.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}`
   const activeLabel = presets.find(p => p.key === selectedPreset)?.label || 'Свой диапазон'
+  const activeShort = presets.find(p => p.key === selectedPreset)?.short || '...'
+
+  const isVertical = orientation === 'vertical'
 
   return (
     <div 
       ref={containerRef}
-      className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7] space-y-3 w-full sm:w-[280px]"
+      className={`bg-white rounded-2xl shadow-md border border-[#E5E5E7] transition-all duration-300 relative
+        ${isVertical ? 'p-2 w-[64px] flex flex-col items-center gap-2' : 'p-4 w-full sm:w-[280px] space-y-3'}
+      `}
     >
-      <div className="flex items-center gap-2">
-        <Calendar className="w-5 h-5 text-[#007AFF]" />
-        <span className="text-sm font-semibold text-[#1D1D1F]">{title}</span>
-      </div>
+      {/* Header */}
+      {isVertical ? (
+         <div className="text-[#007AFF] p-1">
+            <Calendar className="w-5 h-5" />
+         </div>
+      ) : (
+        <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-[#007AFF]" />
+            <span className="text-sm font-semibold text-[#1D1D1F]">{title}</span>
+        </div>
+      )}
 
-      <div className="relative">
-        <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-sm font-medium px-3 py-2 rounded-lg transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
-        >
-            <span className="truncate">{activeLabel}: {formattedRange}</span>
-            <ChevronDown className={`w-4 h-4 text-[#86868B] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
+      <div className={isVertical ? 'w-full' : 'relative'}>
+        {isVertical ? (
+             <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-10 h-10 mx-auto flex items-center justify-center bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-xs font-bold rounded-full transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
+             >
+                {activeShort}
+             </button>
+        ) : (
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-sm font-medium px-3 py-2 rounded-lg transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
+            >
+                <span className="truncate">{activeLabel}: {formattedRange}</span>
+                <ChevronDown className={`w-4 h-4 text-[#86868B] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+        )}
 
         {isOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[320px] bg-white border border-[#E5E5E7] rounded-xl shadow-xl z-50 p-4 space-y-4">
+            <div className={`absolute bg-white border border-[#E5E5E7] rounded-xl shadow-xl z-50 p-4 space-y-4
+                ${isVertical 
+                    ? 'right-full top-0 mr-3 w-[320px]' 
+                    : 'top-full right-0 mt-2 w-[320px]'
+                }
+            `}>
                 <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-[#1D1D1F]">Выберите период</span>
                     <button onClick={() => setIsOpen(false)} className="text-[#86868B] hover:text-[#1D1D1F]">
@@ -154,9 +187,11 @@ export function PeriodSelector({ selectedPreset, range, onPresetChange, title = 
         )}
       </div>
       
+      {!isVertical && (
        <p className="text-[10px] text-[#86868B]">
         {range.start.toLocaleDateString('ru-RU')} — {range.end.toLocaleDateString('ru-RU')}
       </p>
+      )}
     </div>
   )
 }

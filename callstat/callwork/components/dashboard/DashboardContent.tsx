@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { PulseGrid } from '@/components/dashboard/PulseGrid'
 import { FunnelChart } from '@/components/analytics/FunnelChart'
 import { ManagersTable } from '@/components/analytics/ManagersTable'
@@ -12,6 +12,7 @@ import { calculateManagerStats, getFunnelData, ManagerStats, analyzeRedZones } f
 import { calculateFullFunnel, NorthStarKpi } from '@/lib/calculations/funnel'
 import { PeriodSelector, PeriodPreset } from '@/components/filters/PeriodSelector'
 import { ManagerSelector } from '@/components/filters/ManagerSelector'
+import { RightPanelControls } from '@/components/dashboard/RightPanelControls'
 
 interface User {
   id: string
@@ -55,6 +56,8 @@ export function DashboardContent({ user }: DashboardContentProps) {
     const now = new Date()
     return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now }
   })
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true)
+  const headerRef = useRef<HTMLDivElement>(null)
 
   const handleDatePresetChange = (preset: PeriodPreset, nextRange?: { start: Date; end: Date }) => {
     setDatePreset(preset)
@@ -178,6 +181,16 @@ export function DashboardContent({ user }: DashboardContentProps) {
     }
   }, [user.role])
 
+  useEffect(() => {
+    const handleScroll = () => {
+      // Switch to side controls as soon as user scrolls down a bit (50px)
+      setIsHeaderVisible(window.scrollY < 50)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   if (isInitialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -208,12 +221,22 @@ export function DashboardContent({ user }: DashboardContentProps) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-8 pb-12"
+      className="space-y-8 pb-96" 
     >
-      {/* Sticky Controls Header */}
-      <div className="sticky top-0 z-30 bg-[#F5F5F7]/95 backdrop-blur supports-[backdrop-filter]:bg-[#F5F5F7]/60 py-4 border-b border-[var(--border)] -mx-4 px-4 sm:-mx-8 sm:px-8 transition-all">
+      {/* Top Controls Header - Fades out when scrolling down */}
+      <motion.div 
+        layout
+        ref={headerRef} 
+        animate={{ 
+          opacity: isHeaderVisible ? 1 : 0,
+          y: isHeaderVisible ? 0 : -20,
+          pointerEvents: isHeaderVisible ? 'auto' : 'none'
+        }}
+        transition={{ duration: 0.3 }}
+        className="relative z-30 bg-[#F5F5F7]/95 backdrop-blur supports-[backdrop-filter]:bg-[#F5F5F7]/60 py-4 border-b border-[var(--border)] -mx-4 px-4 sm:-mx-8 sm:px-8 mb-8"
+      >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-           {/* Left Side: Page Title (visible in sticky header if desired, or kept minimal) */}
+           {/* Left Side: Page Title */}
            <div className="hidden md:block">
               <h2 className="text-lg font-semibold text-[var(--foreground)]">Центр управления</h2>
            </div>
@@ -228,6 +251,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
                     title="Сотрудник"
                 />
              </div>
+             {/* Period selector */}
              <div className="w-full sm:w-auto">
                 <PeriodSelector
                     selectedPreset={datePreset}
@@ -238,7 +262,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
              </div>
            </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content Header */}
       <div className="space-y-4 pt-2">
@@ -264,11 +288,18 @@ export function DashboardContent({ user }: DashboardContentProps) {
       )}
 
       {/* L2: Management by Exception (Alerts) */}
-      {alerts.length > 0 && (
-        <motion.div variants={item}>
-          <RedZoneAlerts alerts={alerts} />
-        </motion.div>
-      )}
+      <AnimatePresence mode="popLayout">
+        {alerts.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            layout
+          >
+            <RedZoneAlerts alerts={alerts} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* L3: Team Funnel (Left Column) */}
@@ -289,12 +320,31 @@ export function DashboardContent({ user }: DashboardContentProps) {
       </div>
 
       {/* L5: Analytics & Dynamics (Bottom) - Only show if we have data */}
-      {trendData.length > 0 && (
-        <motion.div variants={item} className="glass-card p-8">
-          <h2 className="text-xl font-bold text-[var(--foreground)] mb-6">Динамика показателей</h2>
-          <PerformanceTrendChart data={trendData} className="h-[300px]" />
-        </motion.div>
-      )}
+      <AnimatePresence mode="popLayout">
+        {trendData.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            layout 
+            className="glass-card p-8"
+          >
+            <h2 className="text-xl font-bold text-[var(--foreground)] mb-6">Динамика показателей</h2>
+            <PerformanceTrendChart data={trendData} className="h-[300px]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Side Controls - Morphing sidebar when header scrolls away */}
+      <RightPanelControls
+        isVisible={!isHeaderVisible}
+        selectedPreset={datePreset}
+        range={dateRange}
+        onPresetChange={(preset, next) => handleDatePresetChange(preset, next)}
+        managers={rawEmployees}
+        selectedManagerId={selectedManagerId}
+        onSelectManager={setSelectedManagerId}
+      />
 
     </motion.div>
   )

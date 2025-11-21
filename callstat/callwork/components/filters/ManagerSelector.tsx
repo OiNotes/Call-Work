@@ -8,14 +8,22 @@ interface ManagerSelectorProps {
   selectedManagerId: string
   onSelectManager: (id: string) => void
   title?: string
+  orientation?: 'horizontal' | 'vertical'
 }
 
-export function ManagerSelector({ managers, selectedManagerId, onSelectManager, title = 'Сотрудник' }: ManagerSelectorProps) {
+export function ManagerSelector({ 
+  managers, 
+  selectedManagerId, 
+  onSelectManager, 
+  title = 'Сотрудник',
+  orientation = 'horizontal'
+}: ManagerSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const selectedManager = managers.find(m => m.id === selectedManagerId)
   const displayName = selectedManager ? selectedManager.name : (selectedManagerId === 'all' ? 'Вся команда' : 'Выберите сотрудника')
+  const displayInitials = selectedManager ? selectedManager.name.slice(0, 2).toUpperCase() : (selectedManagerId === 'all' ? 'ВС' : '??')
 
   // Close click outside
   useEffect(() => {
@@ -30,27 +38,64 @@ export function ManagerSelector({ managers, selectedManagerId, onSelectManager, 
     }
   }, [])
 
+  const isVertical = orientation === 'vertical'
+
   return (
     <div 
       ref={containerRef}
-      className="bg-white rounded-2xl p-4 shadow-md border border-[#E5E5E7] space-y-3 w-full sm:w-[280px]"
+      className={`bg-white rounded-2xl shadow-md border border-[#E5E5E7] transition-all duration-300 relative
+        ${isVertical ? 'p-2 w-[64px] flex flex-col items-center gap-2' : 'p-4 w-full sm:w-[280px] space-y-3'}
+      `}
     >
-      <div className="flex items-center gap-2">
-        <Users className="w-5 h-5 text-[#007AFF]" />
-        <span className="text-sm font-semibold text-[#1D1D1F]">{title}</span>
-      </div>
+      {/* Header (Icon + Title) */}
+      {isVertical ? (
+         // Vertical: Just the icon, maybe tooltip later
+         <div className="text-[#007AFF] p-1">
+            <Users className="w-5 h-5" />
+         </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-[#007AFF]" />
+          <span className="text-sm font-semibold text-[#1D1D1F]">{title}</span>
+        </div>
+      )}
 
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-sm font-medium px-3 py-2 rounded-lg transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
-        >
-          <span className="truncate">{displayName}</span>
-          <ChevronDown className={`w-4 h-4 text-[#86868B] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
+      {/* Control */}
+      <div className={isVertical ? 'w-full' : 'relative'}>
+        {isVertical ? (
+            // Vertical Button (Compact)
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-10 h-10 mx-auto flex items-center justify-center bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-xs font-bold rounded-full transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
+            >
+                {displayInitials}
+            </button>
+        ) : (
+            // Horizontal Button (Full)
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between bg-[#F5F5F7] hover:bg-[#E5E5E7] text-[#1D1D1F] text-sm font-medium px-3 py-2 rounded-lg transition-colors duration-200 border border-transparent focus:border-[#007AFF] outline-none"
+            >
+                <span className="truncate">{displayName}</span>
+                <ChevronDown className={`w-4 h-4 text-[#86868B] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+        )}
 
+        {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#E5E5E7] rounded-lg shadow-lg z-50 max-h-[240px] overflow-y-auto py-1">
+          <div className={`absolute bg-white border border-[#E5E5E7] rounded-lg shadow-xl z-50 overflow-y-auto py-1
+            ${isVertical 
+                ? 'right-full top-0 mr-3 w-[260px] max-h-[400px]' // Pop to left
+                : 'top-full left-0 right-0 mt-1 max-h-[240px]'   // Pop down
+            }
+          `}>
+             {/* Header for Vertical Mode */}
+             {isVertical && (
+                <div className="px-3 py-2 border-b border-[#E5E5E7] mb-1">
+                    <span className="text-xs font-bold text-[#86868B] uppercase tracking-wider">{title}</span>
+                </div>
+             )}
+
             <button
               onClick={() => {
                 onSelectManager('all')
@@ -85,9 +130,11 @@ export function ManagerSelector({ managers, selectedManagerId, onSelectManager, 
         )}
       </div>
       
-      <p className="text-[10px] text-[#86868B]">
-        {selectedManagerId === 'all' ? 'Статистика по всему отделу' : 'Персональная статистика'}
-      </p>
+      {!isVertical && (
+        <p className="text-[10px] text-[#86868B]">
+            {selectedManagerId === 'all' ? 'Статистика по всему отделу' : 'Персональная статистика'}
+        </p>
+      )}
     </div>
   )
 }
