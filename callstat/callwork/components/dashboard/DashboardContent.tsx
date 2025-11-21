@@ -8,11 +8,15 @@ import { FunnelChart } from '@/components/analytics/FunnelChart'
 import { ManagersTable } from '@/components/analytics/ManagersTable'
 import { RedZoneAlerts } from '@/components/analytics/RedZoneAlerts'
 import { PerformanceTrendChart } from '@/components/charts/PerformanceTrendChart'
-import { calculateManagerStats, getFunnelData, ManagerStats, analyzeRedZones } from '@/lib/analytics/funnel'
+import { MotivationWidget } from '@/components/dashboard/MotivationWidget'
+import { DealsList, DealCard } from '@/components/deals/DealsList'
+import { calculateManagerStatsClient, getFunnelData, ManagerStats, analyzeRedZones } from '@/lib/analytics/funnel.client'
 import { calculateFullFunnel, NorthStarKpi } from '@/lib/calculations/funnel'
 import { PeriodSelector, PeriodPreset } from '@/components/filters/PeriodSelector'
 import { ManagerSelector } from '@/components/filters/ManagerSelector'
 import { RightPanelControls } from '@/components/dashboard/RightPanelControls'
+import { MotivationCalculationResult } from '@/lib/motivation/motivationCalculator'
+import { MotivationGradeConfig } from '@/lib/config/motivationGrades'
 
 interface User {
   id: string
@@ -50,6 +54,14 @@ export function DashboardContent({ user }: DashboardContentProps) {
   const [teamStats, setTeamStats] = useState<any>(null)
   const [northStarKpi, setNorthStarKpi] = useState<NorthStarKpi | null>(null)
   const [rawEmployees, setRawEmployees] = useState<any[]>([])
+  const [motivationData, setMotivationData] = useState<MotivationCalculationResult | null>(null)
+  const [motivationGrades, setMotivationGrades] = useState<MotivationGradeConfig[]>([])
+  const [motivationLoading, setMotivationLoading] = useState(false)
+  const [motivationError, setMotivationError] = useState<string | null>(null)
+  const [motivationRefreshKey, setMotivationRefreshKey] = useState(0)
+  const [deals, setDeals] = useState<DealCard[]>([])
+  const [dealsLoading, setDealsLoading] = useState(false)
+  const [dealsError, setDealsError] = useState<string | null>(null)
   const [selectedManagerId, setSelectedManagerId] = useState<string>('all')
   const [datePreset, setDatePreset] = useState<PeriodPreset>('thisMonth')
   const [dateRange, setDateRange] = useState(() => {
@@ -75,7 +87,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
     const effectiveEmployees = filteredEmployees.length > 0 ? filteredEmployees : employeesList
 
     const processedStats = effectiveEmployees.map((emp: any) => {
-      const stats = calculateManagerStats(emp.reports || [])
+      const stats = calculateManagerStatsClient(emp.reports || [])
       return {
         id: emp.id,
         name: emp.name,
@@ -86,7 +98,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
     setManagerStats(processedStats)
 
     const teamReports = effectiveEmployees.flatMap((e: any) => e.reports || [])
-    const tStats = calculateManagerStats(teamReports)
+    const tStats = calculateManagerStatsClient(teamReports)
     setTeamStats(tStats)
     setTeamFunnel(getFunnelData(tStats))
 
@@ -171,6 +183,88 @@ export function DashboardContent({ user }: DashboardContentProps) {
   }, [user.role, dateRange.start, dateRange.end, recomputeViews, selectedManagerId])
 
   useEffect(() => {
+    if (user.role !== 'MANAGER') return
+
+    async function fetchMotivation() {
+      setMotivationLoading(true)
+      setMotivationError(null)
+      try {
+        const params = new URLSearchParams({
+          managerId: selectedManagerId,
+          startDate: dateRange.start.toISOString(),
+          endDate: dateRange.end.toISOString(),
+        })
+
+        const response = await fetch(`/api/motivation/summary?${params.toString()}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Не удалось загрузить мотивацию')
+        }
+
+        setMotivationData({
+          factTurnover: Number(data.factTurnover || 0),
+          hotTurnover: Number(data.hotTurnover || 0),
+          forecastTurnover: Number(data.forecastTurnover || 0),
+          totalPotentialTurnover: Number(data.totalPotentialTurnover || 0),
+          factRate: Number(data.factRate || 0),
+          forecastRate: Number(data.forecastRate || 0),
+          salaryFact: Number(data.salaryFact || 0),
+          salaryForecast: Number(data.salaryForecast || 0),
+          potentialGain: Number(data.potentialGain || 0),
+        })
+        setMotivationGrades((data.grades || []) as MotivationGradeConfig[])
+      } catch (error) {
+        console.error('Error fetching motivation summary:', error)
+        setMotivationError(error instanceof Error ? error.message : 'Ошибка загрузки данных')
+      } finally {
+        setMotivationLoading(false)
+      }
+    }
+
+    fetchMotivation()
+  }, [user.role, selectedManagerId, dateRange.start, dateRange.end, motivationRefreshKey])
+
+  useEffect(() => {
+    if (user.role !== 'MANAGER') return
+
+    async function fetchDeals() {
+      setDealsLoading(true)
+      setDealsError(null)
+      try {
+        const params = new URLSearchParams({
+          managerId: selectedManagerId,
+          status: 'OPEN',
+          limit: '20',
+        })
+        const response = await fetch(`/api/deals?${params.toString()}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Не удалось загрузить сделки')
+        }
+
+        setDeals(
+          (data.deals || []).map(
+            (deal: any) =>
+              ({
+                ...deal,
+                budget: Number(deal.budget || 0),
+              }) as DealCard
+          )
+        )
+      } catch (error) {
+        console.error('Error fetching deals:', error)
+        setDealsError(error instanceof Error ? error.message : 'Ошибка загрузки сделок')
+      } finally {
+        setDealsLoading(false)
+      }
+    }
+
+    fetchDeals()
+  }, [user.role, selectedManagerId, motivationRefreshKey])
+
+  useEffect(() => {
     if (rawEmployees.length === 0) return
     recomputeViews(rawEmployees, selectedManagerId)
   }, [selectedManagerId, rawEmployees, recomputeViews])
@@ -190,6 +284,44 @@ export function DashboardContent({ user }: DashboardContentProps) {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const selectedManager = selectedManagerId !== 'all'
+    ? rawEmployees.find((emp: any) => emp.id === selectedManagerId)
+    : null
+
+  const motivationTitle =
+    selectedManagerId === 'all'
+      ? 'Доход команды (Прогноз)'
+      : selectedManager
+        ? `Доход менеджера ${selectedManager.name}`
+        : 'Мой доход (Прогноз)'
+
+  const handleToggleFocus = async (dealId: string, nextValue: boolean) => {
+    setDealsError(null)
+    setDeals((prev) =>
+      prev.map((deal) => (deal.id === dealId ? { ...deal, isFocus: nextValue } : deal))
+    )
+
+    try {
+      const response = await fetch(`/api/deals/${dealId}/focus`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFocus: nextValue }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Не удалось обновить фокус')
+      }
+
+      setMotivationRefreshKey((key) => key + 1)
+    } catch (error) {
+      console.error('Failed to update deal focus', error)
+      setDeals((prev) =>
+        prev.map((deal) => (deal.id === dealId ? { ...deal, isFocus: !nextValue } : deal))
+      )
+      setDealsError(error instanceof Error ? error.message : 'Ошибка обновления сделки')
+    }
+  }
 
   if (isInitialLoading) {
     return (
@@ -287,6 +419,19 @@ export function DashboardContent({ user }: DashboardContentProps) {
         />
       )}
 
+      <motion.div variants={item}>
+        <MotivationWidget
+          title={motivationTitle}
+          data={motivationData}
+          grades={motivationGrades}
+          loading={motivationLoading}
+          onRefresh={() => setMotivationRefreshKey((key) => key + 1)}
+        />
+        {motivationError && (
+          <p className="text-sm text-[var(--danger)] mt-2">{motivationError}</p>
+        )}
+      </motion.div>
+
       {/* L2: Management by Exception (Alerts) */}
       <AnimatePresence mode="popLayout">
         {alerts.length > 0 && (
@@ -307,6 +452,14 @@ export function DashboardContent({ user }: DashboardContentProps) {
           <motion.div variants={item} className="glass-card p-8">
             <h2 className="text-xl font-bold text-[var(--foreground)] mb-6">Воронка отдела</h2>
             <FunnelChart data={teamFunnel} />
+          </motion.div>
+          <motion.div variants={item}>
+            <DealsList
+              deals={deals}
+              loading={dealsLoading}
+              error={dealsError}
+              onToggleFocus={handleToggleFocus}
+            />
           </motion.div>
         </div>
 

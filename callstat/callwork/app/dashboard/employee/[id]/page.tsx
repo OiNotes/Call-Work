@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, DollarSign, TrendingUp, Target } from 'lucide-react'
 import { FunnelChart } from '@/components/analytics/FunnelChart'
 import { RedZoneAlerts } from '@/components/analytics/RedZoneAlerts'
-import { calculateManagerStats, getFunnelData, analyzeRedZones, BENCHMARKS } from '@/lib/analytics/funnel'
+import { calculateManagerStatsClient, getFunnelData, analyzeRedZones, BENCHMARKS } from '@/lib/analytics/funnel.client'
 import { formatMoney } from '@/lib/utils/format'
 
 interface EmployeePageProps {
@@ -40,8 +40,8 @@ export default function EmployeePage({ params }: EmployeePageProps) {
         const emp = employeesData.employees?.find((e: any) => e.id === employeeId)
         setEmployee(emp)
 
-        // Calculate Stats
-        const calculatedStats = calculateManagerStats(reports)
+        // Calculate Stats (client-side without DB access)
+        const calculatedStats = calculateManagerStatsClient(reports)
         setStats(calculatedStats)
 
         // Calculate Funnel

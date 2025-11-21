@@ -64,7 +64,7 @@ async function getTVData() {
       const empReports = todayReports.filter(r => r.userId === emp.id)
       const sales = empReports.reduce((sum, r) => sum + Number(r.monthlySalesAmount), 0)
       const deals = empReports.reduce((sum, r) => sum + r.successfulDeals, 0)
-      const goal = Number(emp.monthlyGoal) || 100000
+      const goal = Number(emp.monthlyGoal) || 0 // Используем реальную цель из БД или 0
       const progress = Math.round((sales / goal) * 100)
 
       return {

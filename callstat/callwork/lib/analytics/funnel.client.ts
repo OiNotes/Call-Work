@@ -1,21 +1,77 @@
 import { Report } from '@prisma/client'
-import { GoalService } from '@/lib/services/GoalService'
+import { CONVERSION_BENCHMARKS, FUNNEL_STAGES } from '@/lib/config/conversionBenchmarks'
 
-// Re-export types and client functions from funnel.client.ts
-export type { ManagerStats, FunnelStage } from '@/lib/analytics/funnel.client'
-export { BENCHMARKS, getHeatmapColor, getFunnelData, analyzeRedZones, calculateManagerStatsClient } from '@/lib/analytics/funnel.client'
+export interface FunnelStage {
+  id: string
+  label: string
+  value: number
+  prevValue?: number
+  conversion: number
+  benchmark: number
+  isRedZone: boolean
+  dropOff?: number
+}
+
+export interface ManagerStats {
+  id: string
+  name: string
+  zoomBooked: number
+  zoom1Held: number
+  zoom2Held: number
+  contractReview: number
+  pushCount: number
+  successfulDeals: number
+  salesAmount: number
+  refusals?: number
+  warming?: number
+
+  // Conversions
+  bookedToZoom1: number
+  zoom1ToZoom2: number
+  zoom2ToContract: number
+  contractToPush: number
+  pushToDeal: number
+
+  // Global Conversion
+  northStar: number
+  totalConversion: number
+
+  // Plan/Activity
+  planSales: number
+  planDeals: number
+  activityScore: number
+  trend: 'up' | 'down' | 'flat'
+}
+
+export const BENCHMARKS = {
+  bookedToZoom1: CONVERSION_BENCHMARKS.BOOKED_TO_ZOOM1,
+  zoom1ToZoom2: CONVERSION_BENCHMARKS.ZOOM1_TO_ZOOM2,
+  zoom2ToContract: CONVERSION_BENCHMARKS.ZOOM2_TO_CONTRACT,
+  contractToPush: CONVERSION_BENCHMARKS.CONTRACT_TO_PUSH,
+  pushToDeal: CONVERSION_BENCHMARKS.PUSH_TO_DEAL,
+  northStar: CONVERSION_BENCHMARKS.ZOOM1_TO_DEAL_KPI,
+  activityScore: 80,
+}
+
+export function getHeatmapColor(value: number, benchmark: number): string {
+  if (value === 0) return 'bg-white text-gray-400'
+  const ratio = value / benchmark
+  if (ratio >= 1.1) return 'bg-emerald-50 text-emerald-700 font-bold'
+  if (ratio >= 1.0) return 'bg-green-50 text-green-700'
+  if (ratio >= 0.9) return 'bg-yellow-50 text-yellow-700'
+  if (ratio >= 0.7) return 'bg-orange-50 text-orange-700'
+  return 'bg-red-50 text-red-700 font-bold'
+}
 
 /**
- * Server-side версия calculateManagerStats с получением целей из БД
- * Требует managerId для запроса к базе данных
- *
- * ВАЖНО: Эта функция только для серверных компонентов/API routes!
- * Для клиентских компонентов используйте calculateManagerStatsClient из '@/lib/analytics/funnel.client'
+ * Client-side версия calculateManagerStats для использования в компонентах
+ * Не требует обращения к БД, использует переданные значения для планов
  */
-export async function calculateManagerStats(
+export function calculateManagerStatsClient(
   reports: Report[],
-  managerId: string
-): Promise<Omit<ManagerStats, 'id' | 'name'>> {
+  planSales: number = 0,
+  planDeals: number = 0
+): Omit<ManagerStats, 'id' | 'name'> {
   const totals = reports.reduce(
     (acc, report) => {
       const pushCount = (report as any).pushCount ?? report.contractReviewCount ?? 0
@@ -54,11 +110,6 @@ export async function calculateManagerStats(
   const pushToDeal = safeDiv(totals.successfulDeals, totals.pushCount)
   const northStar = safeDiv(totals.successfulDeals, totals.zoom1Held)
 
-  // Получаем цель из БД через единый источник данных
-  const planSales = await GoalService.getTeamGoal(managerId)
-  const planDeals = Math.max(1, Math.round(planSales / 100000)) // ~1 сделка на 100к рублей
-
-  // Рассчитываем активность на основе реальных данных
   const expectedActivity = totals.zoomBooked > 0 ? 100 : 0
   const actualActivity = Math.min(
     100,
@@ -66,7 +117,6 @@ export async function calculateManagerStats(
   )
   const activityScore = Math.round((expectedActivity + actualActivity) / 2)
 
-  // Определяем тренд на основе прогресса к цели
   const progress = planSales > 0 ? (totals.salesAmount / planSales) * 100 : 0
   const trend = progress >= 80 ? 'up' : progress >= 50 ? 'flat' : 'down'
 

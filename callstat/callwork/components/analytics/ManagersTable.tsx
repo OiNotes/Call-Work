@@ -1,6 +1,6 @@
 'use client'
 
-import { ManagerStats, BENCHMARKS, getHeatmapColor } from '@/lib/analytics/funnel'
+import { ManagerStats, BENCHMARKS, getHeatmapColor } from '@/lib/analytics/funnel.client'
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { formatMoney } from '@/lib/utils/format'
 

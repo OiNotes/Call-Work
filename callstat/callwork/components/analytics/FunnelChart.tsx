@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { FunnelStage } from '@/lib/analytics/funnel'
+import { FunnelStage } from '@/lib/analytics/funnel.client'
 import { ArrowDown } from 'lucide-react'
 
 interface FunnelChartProps {

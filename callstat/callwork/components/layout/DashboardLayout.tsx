@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { LogOut, TrendingUp, BarChart, Trophy, Bell, LayoutDashboard, ClipboardList } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import { AlertBadge } from '@/components/alerts/AlertBadge'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { motion } from 'framer-motion'
 
 interface DashboardLayoutProps {
@@ -80,6 +81,8 @@ export const DashboardLayout = memo(function DashboardLayout({ children }: Dashb
 
           {/* Right Actions */}
           <div className="flex items-center gap-4 pr-2">
+            <ThemeToggle />
+            
             {/* TV Mode Button */}
             <Link
               href="/tv"

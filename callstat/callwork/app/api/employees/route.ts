@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     // Для каждого работника посчитать статистику
     const employeesWithStats = await Promise.all(
       employees.map(async (employee) => {
-        const stats = calculateManagerStats(employee.reports)
+        const stats = await calculateManagerStats(employee.reports, employee.id)
         const conversions = calculateConversions({
           zoomBooked: stats.zoomBooked,
           zoom1Held: stats.zoom1Held,
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
           successfulDeals: stats.successfulDeals,
           monthlySalesAmount: stats.salesAmount,
         })
-        
+
         return {
           ...employee,
           stats: {

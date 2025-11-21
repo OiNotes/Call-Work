@@ -54,7 +54,7 @@ export async function GET(
       },
     })
 
-    const employeeStats = calculateManagerStats(employeeReports)
+    const employeeStats = await calculateManagerStats(employeeReports, employeeId)
 
     const teamMembers = await prisma.user.findMany({
       where: {
@@ -71,7 +71,8 @@ export async function GET(
     })
 
     const teamReports = teamMembers.flatMap((member) => member.reports)
-    const teamTotals = calculateManagerStats(teamReports)
+    // Для команды используем managerId, чтобы получить суммарную цель команды для среднего
+    const teamTotals = await calculateManagerStats(teamReports, employee.managerId!)
     const teamCount = teamMembers.length || 1
 
     const teamAverageCounts = {

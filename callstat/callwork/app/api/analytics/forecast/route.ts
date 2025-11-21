@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { calculateMonthlyForecast, generateForecastChartData } from '@/lib/calculations/forecast'
+import { GoalService } from '@/lib/services/GoalService'
 
 /**
  * GET /api/analytics/forecast
@@ -50,11 +51,10 @@ export async function GET(request: NextRequest) {
     // Получить данные пользователя
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },
-      select: { 
-        id: true, 
-        name: true, 
-        monthlyGoal: true,
-        role: true 
+      select: {
+        id: true,
+        name: true,
+        role: true
       }
     })
 
@@ -62,8 +62,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
     }
 
+    // Получить цель через единый сервис
+    const monthlyGoal = await GoalService.getUserGoal(targetUserId)
+
     // Если нет цели - вернуть ошибку
-    if (!targetUser.monthlyGoal) {
+    if (monthlyGoal === 0) {
       return NextResponse.json({
         error: 'Monthly goal not set',
         message: 'Пользователь не имеет установленной месячной цели'
@@ -108,7 +111,6 @@ export async function GET(request: NextRequest) {
     )
 
     // Рассчитать прогноз
-    const monthlyGoal = Number(targetUser.monthlyGoal)
     const forecast = calculateMonthlyForecast(currentSales, monthlyGoal)
 
     // Подготовить данные по дням для графика

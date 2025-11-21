@@ -144,11 +144,13 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const managerStats: Array<ManagerStats & { id: string; name: string }> = employees.map((emp) => ({
-      id: emp.id,
-      name: emp.name,
-      ...calculateManagerStats(emp.reports),
-    }))
+    const managerStats: Array<ManagerStats & { id: string; name: string }> = await Promise.all(
+      employees.map(async (emp) => ({
+        id: emp.id,
+        name: emp.name,
+        ...(await calculateManagerStats(emp.reports, emp.id)),
+      }))
+    )
 
     const employeeConversions: EmployeeConversionRow[] = managerStats.flatMap((stat) => {
       const transitions = [
